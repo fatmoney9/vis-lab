@@ -1,0 +1,84 @@
+import { select } from 'd3';
+import { tokenNum, tokenStr } from './tokens.js';
+
+/* ── 常量（待 token 化项登记在 specs/axes.md 待办）──────────────────── */
+const Y_LABEL_GAP_B = 8; // [AXIS-01] 形式 B：网格线与标签间距（规范定值 8px）
+const EDGE_PAD = 8;      // 无标签一侧的绘制区留白
+const X_GAP_TOP_A = 6;   // [AXIS-04] X 标签带上间距（Y 为形式 A 时）
+const X_GAP_TOP_B = 2;   // [AXIS-04] 形式 B 上间距增量：半行高 + 此值，防 Y 底标签溢入
+const X_GAP_BOTTOM = 4;  // [AXIS-04] X 标签带下间距
+
+/* 轴标签字体（Canvas 测量用），与 .dv-axis-label 的 token 保持同源 */
+export function axisFont(host) {
+  const weight = tokenStr(host, '--font-weight-axis') || '500';
+  const size = tokenStr(host, '--font-size-axis') || '12px';
+  const family = tokenStr(host, '--font-family-number') || 'sans-serif';
+  return `${weight} ${size} ${family}`;
+}
+
+let ctx;
+export function measureText(font, texts) {
+  if (!ctx) ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = font;
+  return texts.map((t) => ctx.measureText(String(t)).width);
+}
+
+/*
+ * 画布骨架：SVG + 绘制区几何。
+ * [AXIS-01] yForm 决定四周留白：
+ *   A —— 标签在网格内部，不占外部宽度（数据让位由调用方用 yLabelInset 收缩数据范围）
+ *   B —— ySide 一侧预留 yLabelWidth + 8px 标签列；顶/底标签与网格线居中对齐会
+ *        超出绘制区约半个行高，顶部留白与 X 标签带上间距相应加大
+ * [AXIS-04] X 轴标签自成容器带：带高 = 行高 + 上下间距（xBand=false 时不预留）
+ * [GRID-03] 传入 height 时绘制区高度随容器（宽高自适应）；缺省用
+ *           token --size-chart-region-height 的固定值
+ */
+export function createFrame(host, opts = {}) {
+  const { width, height, yForm = 'A', ySide = 'left', yLabelWidth = 0, xBand = true } = opts;
+  const W = Math.max(240, width ?? host.clientWidth ?? 640);
+  const lineH = tokenNum(host, '--line-height-axis') || 14;
+  const halfLabel = Math.ceil(lineH / 2);
+
+  const topPad = yForm === 'B' ? halfLabel + 2 : EDGE_PAD;
+  const xGapTop = yForm === 'B' ? halfLabel + X_GAP_TOP_B : X_GAP_TOP_A;
+  const bottomPad = xBand
+    ? xGapTop + lineH + X_GAP_BOTTOM
+    : yForm === 'B' ? halfLabel + 2 : EDGE_PAD;
+
+  const pad = { left: EDGE_PAD, right: EDGE_PAD };
+  if (yForm === 'B') pad[ySide] = Math.ceil(yLabelWidth) + Y_LABEL_GAP_B;
+
+  const gridH = height != null
+    ? Math.max(48, height - topPad - bottomPad)
+    : tokenNum(host, '--size-chart-region-height') || 160;
+  const H = topPad + gridH + bottomPad;
+
+  const svg = select(host).append('svg').attr('width', W).attr('height', H).attr('role', 'img');
+
+  const grid = {
+    left: pad.left,
+    right: W - pad.right,
+    top: topPad,
+    bottom: topPad + gridH,
+    width: W - pad.left - pad.right,
+    height: gridH,
+  };
+
+  return { svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH };
+}
+
+/* [GRID-03] 容器尺寸自适应：宽/高变化（rAF 合帧）后回调重建 */
+export function observeResize(host, cb) {
+  let raf = 0;
+  let last = { w: host.clientWidth, h: host.clientHeight };
+  const ro = new ResizeObserver(() => {
+    const w = host.clientWidth;
+    const h = host.clientHeight;
+    if (w === last.w && h === last.h) return;
+    last = { w, h };
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(cb);
+  });
+  ro.observe(host);
+  return () => ro.disconnect();
+}

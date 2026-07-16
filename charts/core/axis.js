@@ -1,0 +1,99 @@
+import { axisFont, measureText } from './frame.js';
+
+const fmt = new Intl.NumberFormat('en-US');
+export const formatValue = (v) => fmt.format(v);
+
+const MIN_X_GAP = 8; // [AXIS-06] 相邻 X 标签最小净距，低于即触发碰撞策略
+const SAFE_GAP = 8;  // [AXIS-01] 形式 A 数据让位安全间距（待 token 化）
+
+/*
+ * [AXIS-01][AXIS-03] Y 轴标签。
+ * 形式 A（默认，网格内部 + 避让网格线）：
+ *   最顶标签顶对齐、贴顶线向下——不得高过绘制区上沿（最常见错误）；
+ *   其余标签底对齐、贴线上方；0/最底标签不越下沿。
+ * 形式 B（网格外部 + 与网格线居中）：
+ *   距网格 8px，上下居中；顶/底标签超出绘制区约半行高（createFrame 已留位）。
+ * [AXIS-03] 对齐贴轴线一侧、随位置自动：内/外 × 左/右由 anchor 适配。
+ */
+export function renderYLabels(layer, frame, ticks, y, opts = {}) {
+  const { form = 'A', side = 'left', format = formatValue } = opts;
+  const topTick = Math.max(...ticks);
+  const sel = layer
+    .selectAll('text.dv-axis-label')
+    .data(ticks)
+    .join('text')
+    .attr('class', 'dv-axis-label');
+
+  if (form === 'A') {
+    sel
+      .attr('x', side === 'left' ? frame.grid.left + 2 : frame.grid.right - 2)
+      .attr('text-anchor', side === 'left' ? 'start' : 'end')
+      .attr('y', (d) => (d === topTick ? y(d) + 3 : y(d) - 4))
+      .attr('dominant-baseline', (d) => (d === topTick ? 'hanging' : 'auto'));
+  } else {
+    sel
+      .attr('x', side === 'left' ? frame.grid.left - 8 : frame.grid.right + 8)
+      .attr('text-anchor', side === 'left' ? 'end' : 'start')
+      .attr('y', (d) => y(d))
+      .attr('dominant-baseline', 'middle');
+  }
+  sel.text((d) => format(d));
+}
+
+/* [AXIS-01] 形式 A 数据让位：有标签一侧的数据边界收缩「最长标签宽 + 安全间距」 */
+export function yLabelInset(host, ticks, format = formatValue) {
+  const widths = measureText(axisFont(host), ticks.map(format));
+  return Math.ceil(Math.max(0, ...widths)) + SAFE_GAP;
+}
+
+/*
+ * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x }]，x = 类目中心）。
+ * [AXIS-05] 对齐：中间标签居中；首尾是否贴绘制区边缘由 flushFirst / flushLast
+ *           决定（数据贴边时为 true，如满幅折线）；居中标签越界时向内回收。
+ * [AXIS-06] 碰撞（任意相邻净距 < 8px 触发，策略随主题）：
+ *   segment3 —— 整体改 3 段式，只留首/中/尾（THS / Ainvest）
+ *   hide     —— 隐藏碰撞标签，首尾始终保留（iFinD-PC）
+ * [GRID-03] 容器宽度变化后必须重新调用（碰撞结果随宽度变化）。
+ */
+export function renderXLabels(layer, frame, items, opts = {}) {
+  const { collision = 'segment3', flushFirst = false, flushLast = false } = opts;
+  const n = items.length;
+  const widths = measureText(axisFont(frame.host), items.map((d) => d.label));
+
+  const boxes = items.map((d, i) => {
+    let left = d.x - widths[i] / 2;
+    if (i === 0 && flushFirst) left = frame.grid.left;
+    if (i === n - 1 && flushLast) left = frame.grid.right - widths[i];
+    left = Math.max(frame.grid.left, Math.min(left, frame.grid.right - widths[i]));
+    return { label: d.label, left, width: widths[i], i };
+  });
+
+  const collides = (a, b) => b.left - (a.left + a.width) < MIN_X_GAP;
+
+  let kept = boxes;
+  if (n > 2 && boxes.some((b, i) => i > 0 && collides(boxes[i - 1], b))) {
+    if (collision === 'segment3') {
+      const mid = boxes[Math.round((n - 1) / 2)];
+      kept = [boxes[0], mid, boxes[n - 1]];
+      if (collides(kept[0], mid) || collides(mid, kept[2])) kept = [boxes[0], boxes[n - 1]];
+    } else {
+      const last = boxes[n - 1];
+      kept = [boxes[0]];
+      for (let i = 1; i < n - 1; i++) {
+        const prev = kept[kept.length - 1];
+        if (!collides(prev, boxes[i]) && !collides(boxes[i], last)) kept.push(boxes[i]);
+      }
+      kept.push(last);
+    }
+  }
+
+  layer
+    .selectAll('text.dv-axis-label')
+    .data(kept, (d) => d.i)
+    .join('text')
+    .attr('class', 'dv-axis-label')
+    .attr('y', frame.xBandTop)
+    .attr('dominant-baseline', 'hanging')
+    .attr('x', (d) => d.left)
+    .text((d) => d.label);
+}

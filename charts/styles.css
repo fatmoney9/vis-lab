@@ -1,0 +1,27 @@
+/* charts 结构样式 —— 一切颜色/字号引用 token，源码与本文件禁止色值字面量 */
+
+/* [GRID-01] 横向网格线 + 0 轴基线加深；[GRID-02] 纵向分割线共用同一样式（默认不渲染） */
+.dv-grid-line-y,
+.dv-grid-line-x {
+  stroke: var(--color-visualization-divider);
+  stroke-width: var(--size-grid-line);
+}
+.dv-grid-baseline {
+  stroke: var(--color-visualization-divider-deep);
+  stroke-width: var(--size-grid-line);
+}
+
+/* [AXIS-07] 轴刻度线：粗细/颜色与网格线同源 */
+.dv-tick {
+  stroke: var(--color-visualization-divider);
+  stroke-width: var(--size-grid-line);
+}
+
+/* [AXIS-01] 轴标签：字体字号颜色全部走 token；字重按主题分化（--font-weight-axis） */
+.dv-axis-label {
+  fill: var(--color-text-axis);
+  font-size: var(--font-size-axis);
+  font-weight: var(--font-weight-axis);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}
