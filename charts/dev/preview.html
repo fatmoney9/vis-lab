@@ -26,6 +26,24 @@
     --color-text-primary: rgba(0, 0, 0, 0.84);
     --color-text-secondary: rgba(0, 0, 0, 0.6);
   }
+  /* 其余主题的值 token 覆盖块（PC/light 摘选，同样是 tokens.css 的临时替身）：
+     与 behavior.json 共用同一个 data-theme 开关——换主题，颜色与形态一起切 */
+  [data-theme="ifind-pc"] {
+    --font-size-axis: 14px;
+    --line-height-axis: 14px;
+    --font-weight-axis: 500;
+    --color-text-axis: #87879C;
+    --color-visualization-divider: #e9e9f2;
+  }
+  [data-theme="ainvest"] {
+    --font-size-axis: 11px;
+    --line-height-axis: 16px;
+    --font-weight-axis: 400;
+    --color-text-axis: #000;
+    --color-visualization-divider: rgba(0, 0, 0, 0.05);
+    --size-chart-region-height: 200px;
+    --size-bar-max: 32px;
+  }
   body {
     margin: 0; padding: 32px 24px 64px; background: #f5f6f8;
     font-family: system-ui, -apple-system, sans-serif; color: var(--color-text-primary);
@@ -51,32 +69,36 @@
 <h1>L1 开发预览 · 坐标轴规范还原</h1>
 <p>
   每张卡片可拖<b>右下角</b>改变宽高——网格几何、Y 轴布局留白、X 轴标签碰撞策略都会随尺寸自适应重排（GRID-03）。
-  最下方的宽卡带缩放轴：拖动两个把手改变可见窗口，Y 轴按窗口内数据重新取整（SCALE-02），
+  每张测试卡都带缩放轴：拖动两个把手改变可见窗口，Y 轴按窗口内数据重新取整（SCALE-02），
   X 轴标签密度随之重新判定（AXIS-06）。柱体为灰阶占位（色板未定稿），非规范实现。
 </p>
 
 <div class="row">
-  <div class="card">
-    <h2>形式 A（默认）· Y 左 · 数据让位 · X 碰撞 segment3 —— THS 形态</h2>
+  <div class="card" data-theme="ths">
+    <h2>data-theme="ths" → 解析出 inside / 左 / segment3 · 刻度线开启（AXIS-07 特例）</h2>
     <div class="host" id="p1"></div>
+    <div class="nav-row" id="p1-nav"></div>
   </div>
-  <div class="card">
-    <h2>形式 B · Y 左 · 与网格线居中 · X 碰撞 hide —— iFinD-PC 形态</h2>
+  <div class="card" data-theme="ifind-pc">
+    <h2>data-theme="ifind-pc" → outside / 左 / hide（14px 轴字号随值 token 同步切换）</h2>
     <div class="host" id="p2"></div>
+    <div class="nav-row" id="p2-nav"></div>
   </div>
-  <div class="card">
-    <h2>形式 B · Y 右 —— Ainvest-web 形态（AXIS-02 主 Y 右侧）</h2>
+  <div class="card" data-theme="ainvest">
+    <h2>data-theme="ainvest" + platform=pc → 端分叉命中 outside / 右</h2>
     <div class="host" id="p3"></div>
+    <div class="nav-row" id="p3-nav"></div>
   </div>
-  <div class="card">
-    <h2>形式 A · Y 左 · 刻度线显式开启（AXIS-07 默认关，此处开启供验收）</h2>
+  <div class="card" data-theme="ainvest">
+    <h2>data-theme="ainvest" + platform=mobile → 同一主题端分叉命中 inside / 右</h2>
     <div class="host" id="p4"></div>
+    <div class="nav-row" id="p4-nav"></div>
   </div>
 </div>
 
 <div class="row" style="margin-top: 20px">
-  <div class="card wide">
-    <h2>缩放轴联动（SCALE-02）· 120 个月（含负值 / 0 / null）· 形式 B / Y 右 · X 碰撞 segment3 —— 拖到不同区段看 Y 轴在负值段 / 跨零段 / 正值段间切换</h2>
+  <div class="card wide" data-theme="ainvest">
+    <h2>缩放轴联动（SCALE-02）· 120 个月（含负值 / 0 / null）· data-theme="ainvest"（outside / 右 / segment3 自动解析）—— 拖到不同区段看 Y 轴在负值段 / 跨零段 / 正值段间切换</h2>
     <div class="host" id="pz"></div>
     <div class="nav-row" id="pz-nav"></div>
   </div>
@@ -86,11 +108,14 @@
   { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
 </script>
 <script type="module">
-  import { createFrame, observeResize, axisFont, measureText } from '../core/frame.js';
+  import { createFrame, observeResize } from '../core/frame.js';
   import { niceSplit, linearY, bandX } from '../core/scale.js';
   import { renderGrid, renderTicks } from '../core/grid.js';
-  import { renderYLabels, renderXLabels, yLabelInset, formatValue } from '../core/axis.js';
+  import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../core/axis.js';
   import { tokenNum } from '../core/tokens.js';
+  import { resolveBehavior } from '../core/theme.js';
+  import { makeFormatter } from '../core/format.js';
+  import { zoomSim } from './zoom-sim.js';
 
   /* —— 开发 fixture 的示意柱体：灰阶占位，非规范实现 ——
      null → 完全不画；0 → 1px 占位细线（token size-zero-bar-placeholder）；
@@ -121,60 +146,92 @@
     return [Math.min(...nums), Math.max(...nums)];
   }
 
-  /* 直角坐标面板：按规范条目组装 L1 构件；observeResize 触发整体重排 [GRID-03] */
+  /* 直角坐标面板：形态不再手传——由 data-theme × platform 经 behavior 解析；
+     observeResize 触发整体重排 [GRID-03] */
   function cartesianPanel(sel, cfg) {
     const host = document.querySelector(sel);
+    const navHost = document.querySelector(cfg.nav);
+    let win = cfg.initial ?? [0, 1];
+
     function build() {
       if (host.clientHeight < 40) return requestAnimationFrame(build);
       host.innerHTML = '';
 
-      const split = niceSplit(...extent(cfg.values));                  // [SCALE-01][SCALE-03]
-      const yLabelWidth = cfg.yForm === 'B'
-        ? Math.max(...measureText(axisFont(host), split.ticks.map(formatValue)))
+      const count = cfg.categories.length;
+      const i0 = Math.min(Math.floor(win[0] * count), count - 2);
+      const i1 = Math.max(i0 + 2, Math.ceil(win[1] * count));
+      const categories = cfg.categories.slice(i0, i1);
+      const values = cfg.values.slice(i0, i1);
+
+      const b = resolveBehavior(host, cfg.platform);                     // [AXIS-01/02/06 主题分化]
+      const yForm = b['y-label-form'];
+      const ySide = b['y-main-side'];
+      const format = makeFormatter(b['number-format']);                  // [FORMAT-01]
+
+      const split = niceSplit(...extent(values));                        // [SCALE-01..03]
+      const yLabelWidth = yForm === 'outside'
+        ? measureYLabelWidth(host, split.ticks.map(format))              // [AXIS-08] 一次性渲染测量
         : 0;
       const frame = createFrame(host, {
         height: host.clientHeight,                                       // [GRID-03] 高度自适应
-        yForm: cfg.yForm, ySide: cfg.ySide, yLabelWidth,
+        yForm, ySide, yLabelWidth,
       });
       const y = linearY(split, frame.grid.top, frame.grid.bottom);
 
       let dataL = frame.grid.left, dataR = frame.grid.right;
-      if (cfg.yForm === 'A') {                                           // [AXIS-01] 数据让位
-        const inset = yLabelInset(host, split.ticks);
-        if (cfg.ySide === 'left') dataL += inset; else dataR -= inset;
+      if (yForm === 'inside') {                                               // [AXIS-01] 数据让位
+        const inset = yLabelInset(host, split.ticks, format);
+        if (ySide === 'left') dataL += inset; else dataR -= inset;
       }
-      const x = bandX(cfg.categories, dataL, dataR);
+      const x = bandX(categories, dataL, dataR);
 
       renderGrid(frame.svg.append('g'), frame, split.ticks, y);          // [GRID-01][GRID-02]
       renderTicks(frame.svg.append('g'), frame, split.ticks, y,
-        { side: cfg.ySide, show: !!cfg.showTicks });                     // [AXIS-07]
+        { side: ySide, show: !!cfg.showTicks, inward: yForm === 'inside' });  // [AXIS-07] inside 铺满画布，向内画
       renderYLabels(frame.svg.append('g'), frame, split.ticks, y,
-        { form: cfg.yForm, side: cfg.ySide });                           // [AXIS-01][AXIS-03]
+        { form: yForm, side: ySide, format });                           // [AXIS-01][AXIS-03][FORMAT-01]
       renderXLabels(frame.svg.append('g'), frame,
-        cfg.categories.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })),
-        { collision: cfg.collision });                                   // [AXIS-04..06]
+        categories.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })),
+        { collision: b['x-collision'] });                                // [AXIS-04..06]
 
-      drawBars(frame, cfg.categories, cfg.values, x, y);
+      drawBars(frame, categories, values, x, y);
     }
-    build();
-    observeResize(host, build);
+
+    function buildNav() {
+      navHost.innerHTML = '';
+      zoomSim(navHost, {
+        width: navHost.clientWidth,
+        initial: win,
+        onChange: (next) => { win = next; build(); },
+      });
+    }
+
+    function rebuild() {
+      /* datazoom 先完成 flex 占位，再按剩余高度计算 grid，避免初始 X 轴与其重叠。 */
+      buildNav();
+      build();
+    }
+
+    rebuild();
+    observeResize(host, rebuild);
   }
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   /* 24 个类目：含负值（利润类场景）、0 值（1px 占位）、null（完全不画） */
   const cats24 = Array.from({ length: 24 }, (_, i) => `${months[i % 12]} '${23 + Math.floor(i / 12)}`);
+  /* ×1000 让 FORMAT-01 单位换算可见：THS → 万，Ainvest → K/M，iFinD → 千分位原值 */
   const vals24 = [
     820, -340, 901, 1290, 0, 1520, -580, 1420, null, 1250, 1610, -220,
     980, 1105, null, -760, 1330, 0, 1480, 890, -410, 1275, 1560, 1120,
-  ];
+  ].map((v) => (v == null ? null : v * 1000));
 
-  cartesianPanel('#p1', { categories: cats24, values: vals24, yForm: 'A', ySide: 'left', collision: 'segment3' });
-  cartesianPanel('#p2', { categories: cats24, values: vals24, yForm: 'B', ySide: 'left', collision: 'hide' });
-  cartesianPanel('#p3', { categories: cats24, values: vals24, yForm: 'B', ySide: 'right', collision: 'segment3' });
-  cartesianPanel('#p4', { categories: cats24, values: vals24, yForm: 'A', ySide: 'left', collision: 'segment3', showTicks: true });
+  cartesianPanel('#p1', { nav: '#p1-nav', categories: cats24, values: vals24, platform: 'pc', showTicks: true });
+  cartesianPanel('#p2', { nav: '#p2-nav', categories: cats24, values: vals24, platform: 'pc' });
+  cartesianPanel('#p3', { nav: '#p3-nav', categories: cats24, values: vals24, platform: 'pc' });
+  cartesianPanel('#p4', { nav: '#p4-nav', categories: cats24, values: vals24, platform: 'mobile' });
 
-  /* —— 缩放轴联动面板 [SCALE-02]：72 个月，窗口变化 → Y 重算 —— */
-  import('./zoom-sim.js').then(({ zoomSim }) => {
+  /* —— 缩放轴联动面板 [SCALE-02]：120 个月，窗口变化 → Y 重算 —— */
+  {
     const host = document.querySelector('#pz');
     const navHost = document.querySelector('#pz-nav');
     /* 120 个月：前段以负值为主（亏损期）逐步转正，掺 0 值与 null，
@@ -184,7 +241,7 @@
     const vals = Array.from({ length: N }, (_, i) => {
       if (i % 29 === 7) return null;
       if (i % 41 === 13) return 0;
-      return Math.round(220 * Math.sin(i / 5) + (i - 45) * 11 + (i % 7) * 26);
+      return Math.round(220 * Math.sin(i / 5) + (i - 45) * 11 + (i % 7) * 26) * 1000;
     });
     let win = [0.6, 1];
 
@@ -197,18 +254,25 @@
       const vCats = cats.slice(i0, i1);
       const vVals = vals.slice(i0, i1);
 
+      const b = resolveBehavior(host, 'pc');
+      const yForm = b['y-label-form'];
+      const ySide = b['y-main-side'];
+      const format = makeFormatter(b['number-format']);                  // [FORMAT-01]
+
       /* [SCALE-02] Y 按可见窗口内的值域重算（含负值）；分割线数量不变 */
       const split = niceSplit(...extent(vVals));
-      const yLabelWidth = Math.max(...measureText(axisFont(host), split.ticks.map(formatValue)));
-      const frame = createFrame(host, { height: host.clientHeight, yForm: 'B', ySide: 'right', yLabelWidth });
+      const yLabelWidth = yForm === 'outside'
+        ? measureYLabelWidth(host, split.ticks.map(format))              // [AXIS-08] 一次性渲染测量
+        : 0;
+      const frame = createFrame(host, { height: host.clientHeight, yForm, ySide, yLabelWidth });
       const y = linearY(split, frame.grid.top, frame.grid.bottom);
       const x = bandX(vCats, frame.grid.left, frame.grid.right);
 
       renderGrid(frame.svg.append('g'), frame, split.ticks, y);
-      renderYLabels(frame.svg.append('g'), frame, split.ticks, y, { form: 'B', side: 'right' });
+      renderYLabels(frame.svg.append('g'), frame, split.ticks, y, { form: yForm, side: ySide, format });
       renderXLabels(frame.svg.append('g'), frame,
         vCats.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })),
-        { collision: 'segment3' });
+        { collision: b['x-collision'] });
       drawBars(frame, vCats, vVals, x, y);
     }
 
@@ -217,10 +281,15 @@
       zoomSim(navHost, { width: navHost.clientWidth, initial: win, onChange: (s) => { win = s; build(); } });
     }
 
-    build();
-    buildNav();
-    observeResize(host, () => { build(); buildNav(); });
-  });
+    function rebuild() {
+      /* datazoom 先完成 flex 占位，再按剩余高度计算 grid，避免初始 X 轴与其重叠。 */
+      buildNav();
+      build();
+    }
+
+    rebuild();
+    observeResize(host, rebuild);
+  }
 </script>
 </body>
 </html>

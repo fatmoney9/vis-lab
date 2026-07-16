@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+
+# apps/site 是独立仓库（自带 .git），暂不纳入本仓库版本管理；
+# 若将来并入 monorepo，删除其内部 .git 后移除本行
+apps/site/

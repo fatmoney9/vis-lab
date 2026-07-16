@@ -1,0 +1,39 @@
+{
+  "$meta": {
+    "description": "主题形态/行为矩阵。值 token 走 CSS 变量（tokens/<theme>.json），形态/行为走本文件、由 JS 逻辑消费；两条通道共用容器上的 data-theme 开关。",
+    "authority": "权威表述在规范文档（specs/axes.md 及原体系 themes/*.md），本文件为其可执行派生",
+    "value-forms": {
+      "字符串/布尔": "所有端同值",
+      "{mobile, pc}": "端分叉"
+    },
+    "keys": {
+      "y-label-form": "[AXIS-01] Y 轴标签布局：inside = 网格内部（原形式 A）/ outside = 网格外部（原形式 B）",
+      "y-main-side": "[AXIS-02] 主 Y 轴位置：left / right（副 Y 取相反侧）",
+      "y-dual-shared": "[AXIS-02] 双 Y 时左右两侧共用一份标签（iFinD-PC 特性，未实现）",
+      "x-collision": "[AXIS-06] X 轴标签碰撞策略：segment3 / hide",
+      "number-format": "[FORMAT-01] 数值显示格式：system = cn（万/百万/千万/亿/兆）/ en（K/M/B/T）/ plain（千分位）；max-decimals 最多小数位；min-abbr 缩写起始阈值（en）"
+    }
+  },
+
+  "ths": {
+    "y-label-form": "inside",
+    "y-main-side": "left",
+    "y-dual-shared": false,
+    "x-collision": "segment3",
+    "number-format": { "system": "cn", "max-decimals": 2 }
+  },
+  "ifind-pc": {
+    "y-label-form": "outside",
+    "y-main-side": "left",
+    "y-dual-shared": true,
+    "x-collision": "hide",
+    "number-format": { "system": "plain", "max-decimals": 2 }
+  },
+  "ainvest": {
+    "y-label-form": { "mobile": "inside", "pc": "outside" },
+    "y-main-side": "right",
+    "y-dual-shared": false,
+    "x-collision": "segment3",
+    "number-format": { "system": "en", "max-decimals": 1, "min-abbr": 10000 }
+  }
+}

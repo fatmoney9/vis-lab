@@ -4,19 +4,19 @@ const fmt = new Intl.NumberFormat('en-US');
 export const formatValue = (v) => fmt.format(v);
 
 const MIN_X_GAP = 8; // [AXIS-06] 相邻 X 标签最小净距，低于即触发碰撞策略
-const SAFE_GAP = 8;  // [AXIS-01] 形式 A 数据让位安全间距（待 token 化）
+const SAFE_GAP = 8;  // [AXIS-01] inside 布局数据让位安全间距（待 token 化）
 
 /*
  * [AXIS-01][AXIS-03] Y 轴标签。
- * 形式 A（默认，网格内部 + 避让网格线）：
+ * inside（原形式 A，默认；网格内部 + 避让网格线）：
  *   最顶标签顶对齐、贴顶线向下——不得高过绘制区上沿（最常见错误）；
  *   其余标签底对齐、贴线上方；0/最底标签不越下沿。
- * 形式 B（网格外部 + 与网格线居中）：
+ * outside（原形式 B；网格外部 + 与网格线居中）：
  *   距网格 8px，上下居中；顶/底标签超出绘制区约半行高（createFrame 已留位）。
  * [AXIS-03] 对齐贴轴线一侧、随位置自动：内/外 × 左/右由 anchor 适配。
  */
 export function renderYLabels(layer, frame, ticks, y, opts = {}) {
-  const { form = 'A', side = 'left', format = formatValue } = opts;
+  const { form = 'inside', side = 'left', format = formatValue } = opts;
   const topTick = Math.max(...ticks);
   const sel = layer
     .selectAll('text.dv-axis-label')
@@ -24,9 +24,9 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
     .join('text')
     .attr('class', 'dv-axis-label');
 
-  if (form === 'A') {
+  if (form === 'inside') {
     sel
-      .attr('x', side === 'left' ? frame.grid.left + 2 : frame.grid.right - 2)
+      .attr('x', side === 'left' ? frame.grid.left : frame.grid.right)
       .attr('text-anchor', side === 'left' ? 'start' : 'end')
       .attr('y', (d) => (d === topTick ? y(d) + 3 : y(d) - 4))
       .attr('dominant-baseline', (d) => (d === topTick ? 'hanging' : 'auto'));
@@ -40,9 +40,38 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
   sel.text((d) => format(d));
 }
 
-/* [AXIS-01] 形式 A 数据让位：有标签一侧的数据边界收缩「最长标签宽 + 安全间距」 */
+/*
+ * 渲染级文本测量：临时挂一棵隐藏 SVG，用真实类名走真实 CSS 级联量宽——
+ * tabular-nums 等 Canvas measureText 表达不了的字体特性全部包含，无估算误差。
+ */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function measureRendered(host, texts) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:visible';
+  const nodes = texts.map((t) => {
+    const el = document.createElementNS(SVG_NS, 'text');
+    el.setAttribute('class', 'dv-axis-label');
+    el.textContent = String(t);
+    svg.appendChild(el);
+    return el;
+  });
+  host.appendChild(svg);
+  const widths = nodes.map((el) => el.getComputedTextLength());
+  svg.remove();
+  return widths;
+}
+
+/*
+ * [AXIS-08] outside 标签列宽：每次重绘按当前刻度**一次性渲染测量**，精确贴合，
+ * 不附加余量、不做量化/滞回——列宽随缩放窗口的标签变化即时调整。
+ */
+export function measureYLabelWidth(host, labels) {
+  return Math.ceil(Math.max(0, ...measureRendered(host, labels)));
+}
+
+/* [AXIS-01] inside 布局数据让位：有标签一侧的数据边界收缩「最长标签宽 + 安全间距」 */
 export function yLabelInset(host, ticks, format = formatValue) {
-  const widths = measureText(axisFont(host), ticks.map(format));
+  const widths = measureRendered(host, ticks.map(format));
   return Math.ceil(Math.max(0, ...widths)) + SAFE_GAP;
 }
 

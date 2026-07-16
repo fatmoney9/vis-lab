@@ -51,12 +51,14 @@ export function niceSplit(minValue, maxValue, lineCount = Y_SPLIT_LINES) {
   }
 
   const { iv, negSeg } = best;
-  const min = r12(-negSeg * iv);
+  /* 刻度按「距零段数 × interval」构造而非 min 累加：
+     保证 0 点精确为零（浮点残差会破坏 0 轴判定与加深线），其余刻度同样干净 */
+  const ticks = Array.from({ length: S + 1 }, (_, i) => r12((i - negSeg) * iv));
   return {
-    min,
-    max: r12(min + iv * S),
+    min: ticks[0],
+    max: ticks[S],
     interval: iv,
-    ticks: Array.from({ length: S + 1 }, (_, i) => r12(min + i * iv)),
+    ticks,
   };
 }
 
