@@ -26,7 +26,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | AXIS-01 | 两种布局，代码取值 `inside` / `outside`（对应原文形式 A / B），**默认 `inside`**。<br>**inside（形式 A，网格内部 + 避让网格线）**：网格左右铺满画布，Y 标签紧贴网格侧边、不设内部偏移；最顶标签顶对齐贴顶线向下（不得高过绘制区上沿——最常见错误）；其余标签底对齐贴线上方；0/最底标签不越下沿；**数据让位**：有标签一侧数据边界收缩「最长标签宽 + 安全间距」。<br>**outside（形式 B，网格外部 + 与网格线居中）**：标签在绘制区外侧，与网格线上下居中，距网格 **8px**；顶/底标签允许超出绘制区约半个行高（上下留白由 frame 预留）；不收数据范围 | `core/axis.js` → `renderYLabels()` + `yLabelInset()`；留白在 `core/frame.js` | ✅ |
-| AXIS-02 | Y 轴位置（主题默认）：主 Y —— THS 左 / iFinD-PC 左 / **Ainvest 右**；副 Y 相反侧。双 Y：iFinD-PC **左右两侧共用一份标签**（非两根轴）。**副 Y 出现条件**：多系列量纲/数量级不同，或线柱组合（柱/折线各一轴）；量纲相同共用主 Y | 主题→位置/形式映射经 `tokens/behavior.json` + `core/theme.js`；**标准双 Y 已在 L2 落地**（`charts/cartesian.js`：每系列 `axis` 绑定 + `niceSplitDual` 刻度对齐 + 副轴反侧标签列/数据让位，见 [bar.md](bar.md) BAR-07）；iFinD 两侧共用一份镜像未实现 | ✅ 标准 / 📋 iFinD 镜像 |
+| AXIS-02 | Y 轴位置（主题默认）：主 Y —— THS 左 / iFinD-PC 左 / **Ainvest 右**；副 Y 相反侧。双 Y：iFinD-PC **左右两侧共用一份标签**（非两根轴）。**副 Y 出现条件**：多系列量纲/数量级不同，或线柱组合（柱/折线各一轴）；量纲相同共用主 Y | 主题→位置/形式映射经 `tokens/behavior.json` + `core/theme.js`；**标准双 Y 已在 L2 落地**（`charts/charts/cartesian/index.js`：每系列 `axis` 绑定 + `niceSplitDual` 刻度对齐 + 副轴反侧标签列/数据让位，见 [bar.md](bar.md) BAR-07）；iFinD 两侧共用一份镜像未实现 | ✅ 标准 / 📋 iFinD 镜像 |
 | AXIS-03 | 标签对齐**贴轴线一侧**、随位置自动（内/外、左/右均适用） | `renderYLabels()` 的 anchor 逻辑 | ✅ |
 | AXIS-08 | **outside 标签列宽**：每次重绘按当前刻度**一次性渲染测量**（隐藏 SVG 真实类名量宽，含 tabular-nums 等 Canvas 表达不了的特性，无估算误差、不裁字），**精确贴合、不附加余量**；缩放轴联动时列宽随标签变化即时调整。inside 布局的数据让位、X 轴标签碰撞判定（AXIS-06）的宽度测量**同源**（渲染级测量是唯一测量源，Canvas 估算路径已移除） | `core/axis.js` → `measureYLabelWidth()` + `measureRendered()` | ✅ |
 

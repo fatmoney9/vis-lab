@@ -2,171 +2,350 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<title>L2 开发预览 · 直角坐标图（CartesianChart v1 · 柱）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>L2 开发预览 · 直角坐标图（CartesianChart · 三主题 × 端 × 明暗）</title>
 <style>
-  /* 值 token 由 tokens/tokens.css 提供（按卡片 data-theme 作用域）；系列色由 palette.js 取、
-     CartesianChart 写成 --dv-series-i，预览无需任何色值替身。 */
+  /* 值 token 由 tokens/tokens.css 提供（按 data-theme / data-platform / data-mode 作用域）；
+     系列色由 palette.js 取、CartesianChart 写成 --dv-series-i，预览无需任何色值替身。
+     —— 本文件只做「预览外壳」的样式，图表内部一切颜色/字号仍走 token。 */
+  :root {
+    --shell-bg: #f4f5f7;
+    --shell-panel: #ffffff;
+    --shell-border: rgba(0, 0, 0, 0.08);
+    --shell-border-soft: rgba(0, 0, 0, 0.05);
+    --shell-text: rgba(0, 0, 0, 0.86);
+    --shell-text-2: rgba(0, 0, 0, 0.56);
+    --shell-text-3: rgba(0, 0, 0, 0.38);
+    --shell-accent: #3366ff;
+    --shell-accent-weak: rgba(51, 102, 255, 0.1);
+    --card-light-bg: #ffffff;
+    --card-dark-bg: #1a1b1e;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0; padding: 32px 24px 64px; background: #f5f6f8;
-    font-family: system-ui, -apple-system, sans-serif; color: rgba(0, 0, 0, 0.84);
+    margin: 0; background: var(--shell-bg); color: var(--shell-text);
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  h1 { font-size: 16px; margin: 0 0 4px; }
-  body > p { font-size: 12px; color: rgba(0, 0, 0, 0.6); margin: 0 0 20px; max-width: 940px; line-height: 18px; }
-  .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
-  /* 卡片定高 + resize:both → 拖右下角改宽高；chart-host flex:1 撑满剩余高度，
-     故宽、高两维变化都会被组件的 observeResize 捕获并整体重排（GRID-03）。 */
-  .card {
-    background: #fff; border-radius: 8px; padding: 12px 16px 16px;
-    display: flex; flex-direction: column; gap: 10px;
-    width: 440px; height: 360px; min-width: 280px; min-height: 220px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
+
+  /* ── 三栏骨架：左分类 / 中画布 / 右配置 ───────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr) 248px;
+    height: 100vh;
+  }
+  .pane { min-height: 0; display: flex; flex-direction: column; }
+  .pane-left  { border-right: 1px solid var(--shell-border); background: var(--shell-panel); }
+  .pane-right { border-left: 1px solid var(--shell-border); background: var(--shell-panel); }
+  .pane-main  { background: var(--shell-bg); }
+
+  /* ── 左栏：图表分类 ──────────────────────────────────────────────── */
+  .brand { padding: 20px 20px 14px; border-bottom: 1px solid var(--shell-border-soft); }
+  .brand h1 { font-size: 14px; font-weight: 600; margin: 0 0 4px; letter-spacing: 0.2px; }
+  .brand p { font-size: 11px; line-height: 16px; color: var(--shell-text-3); margin: 0; }
+
+  .nav { padding: 8px 10px 20px; overflow-y: auto; flex: 1; }
+  .nav-group-title {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.6px; text-transform: uppercase;
+    color: var(--shell-text-3); padding: 14px 10px 6px;
+  }
+  .nav-item {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    border: 0; background: transparent; font: inherit; color: var(--shell-text-2);
+    padding: 8px 10px; border-radius: 7px; line-height: 18px; font-size: 13px;
+    transition: background .12s, color .12s;
+  }
+  .nav-item:hover { background: rgba(0, 0, 0, 0.035); color: var(--shell-text); }
+  .nav-item.is-active { background: var(--shell-accent-weak); color: var(--shell-accent); font-weight: 600; }
+
+  /* ── 中栏：画布头 + 三主题卡片 ──────────────────────────────────── */
+  .canvas-head { padding: 22px 28px 14px; border-bottom: 1px solid var(--shell-border-soft); }
+  .canvas-head h2 { font-size: 17px; font-weight: 600; margin: 0 0 6px; }
+  .canvas-head p  { font-size: 12px; line-height: 18px; color: var(--shell-text-2); margin: 0; max-width: 760px; }
+
+  .canvas-body {
+    flex: 1; overflow: auto; padding: 20px 28px 36px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
+  }
+
+  /* 每个主题一张卡：卡背景跟随 明暗，图表内部字号/网格跟随 端。
+     resize:both → 拖右下角自由改宽高；chart-mount flex:1 撑满，
+     组件 observeResize 捕获宽/高两维变化并整体重排（GRID-03）。 */
+  .theme-card {
+    border-radius: 10px; border: 1px solid var(--shell-border-soft);
+    display: flex; flex-direction: column;
+    flex: none; /* 不参与列 flex 的主轴伸缩，否则 flex-shrink 会顶掉拖动出的高度 */
+    width: 100%; height: 360px; min-width: 320px; min-height: 240px;
     resize: both; overflow: auto;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    background: var(--card-light-bg);
+    transition: background .18s;
   }
-  .card h2 { font-size: 12px; font-weight: 600; margin: 0; color: rgba(0, 0, 0, 0.6); line-height: 16px; }
-  .chart-host { flex: 1; min-height: 0; }
-  .hint { font-size: 11px; color: rgba(0, 0, 0, 0.4); margin: 0; }
+  .theme-card[data-mode="dark"] { background: var(--card-dark-bg); border-color: rgba(255, 255, 255, 0.08); }
+
+  .theme-card__bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 16px; border-bottom: 1px solid var(--shell-border-soft);
+  }
+  .theme-card[data-mode="dark"] .theme-card__bar { border-bottom-color: rgba(255, 255, 255, 0.08); }
+  .theme-card__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .theme-card__name { font-size: 12px; font-weight: 600; color: var(--shell-text); }
+  .theme-card[data-mode="dark"] .theme-card__name { color: rgba(255, 255, 255, 0.9); }
+  .theme-card__meta { font-size: 11px; color: var(--shell-text-3); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .theme-card[data-mode="dark"] .theme-card__meta { color: rgba(255, 255, 255, 0.4); }
+
+  .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; }
+  .chart-host  { height: 100%; }
+
+  /* ── 右栏：配置（端 / 明暗）────────────────────────────────────── */
+  .config { padding: 20px 18px; overflow-y: auto; flex: 1; }
+  .config h3 { font-size: 12px; font-weight: 600; margin: 0 0 18px; letter-spacing: 0.2px; }
+  .field { margin-bottom: 22px; }
+  .field-label { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+  .field-label b { font-size: 12px; font-weight: 600; color: var(--shell-text); }
+  .field-label span { font-size: 11px; color: var(--shell-text-3); }
+
+  .seg { display: flex; background: rgba(0, 0, 0, 0.04); border-radius: 8px; padding: 3px; gap: 3px; }
+  .seg button {
+    flex: 1; cursor: pointer; border: 0; background: transparent; font: inherit; font-size: 12px;
+    color: var(--shell-text-2); padding: 7px 8px; border-radius: 6px; line-height: 16px;
+    transition: background .12s, color .12s, box-shadow .12s;
+  }
+  .seg button:hover:not(.is-active) { color: var(--shell-text); }
+  .seg button.is-active {
+    background: var(--shell-panel); color: var(--shell-accent); font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .config-note {
+    font-size: 11px; line-height: 17px; color: var(--shell-text-3);
+    border-top: 1px solid var(--shell-border-soft); padding-top: 16px; margin-top: 4px;
+  }
+  .config-note code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+    background: rgba(0, 0, 0, 0.05); padding: 1px 4px; border-radius: 3px;
+  }
 </style>
 <link rel="stylesheet" href="../tokens/tokens.css" />
 <link rel="stylesheet" href="../charts/styles.css" />
 </head>
 <body>
-<h1>L2 开发预览 · 直角坐标图（CartesianChart · 柱 / 堆叠 / 归一化 / 折柱组合 · 双 Y）</h1>
-<p>
-  只传<b>数据 + 语义配置</b>调 <code>CartesianChart</code>，内部拼装 frame/scale/grid/axis/legend + 取色 + 柱/线 mark。
-  三旋钮切组合形态：<code>stack</code>（分组/堆叠/归一化）· 每系列 <code>type</code>（bar/line=折柱组合）· 每系列 <code>axis</code>（primary/secondary=双 Y）。
-  <b>点击</b>图例隐藏系列、<b>hover</b> 弱化其他（LEGEND-05/06）；拖<b>右下角</b>重排（GRID-03）。
-  系列色固定槽位、柱线分色板（COLOR-05）；THS 单系列 #3366FF、一进多系列首色变浅蓝 #52BBFF（"整套换"）。
-</p>
+<div class="app">
+  <!-- 左：图表分类 -->
+  <aside class="pane pane-left">
+    <div class="brand">
+      <h1>CartesianChart</h1>
+      <p>直角坐标图 L2 预览 · 只传数据 + 语义配置</p>
+    </div>
+    <nav class="nav" id="nav"></nav>
+  </aside>
 
-<div class="row">
-  <div class="card" data-theme="ths">
-    <h2>THS · 单系列（基础柱）· 含负值 / 0 / null</h2>
-    <div class="chart-host" id="c1"></div>
-    <p class="hint">单系列默认色 #3366FF；负值向下、0 值 1px 占位、null 断口</p>
-  </div>
+  <!-- 中：当前分类 × 三主题 -->
+  <main class="pane pane-main">
+    <div class="canvas-head">
+      <h2 id="cat-title">—</h2>
+      <p id="cat-desc">—</p>
+    </div>
+    <div class="canvas-body" id="canvas"></div>
+  </main>
 
-  <div class="card" data-theme="ths">
-    <h2>THS · 分组柱（3 系列）· 验证"整套换"</h2>
-    <div class="chart-host" id="c2"></div>
-    <p class="hint">首色应为浅蓝 #52BBFF（≠ 单系列的 #3366FF）</p>
-  </div>
+  <!-- 右：端 / 明暗 -->
+  <aside class="pane pane-right">
+    <div class="config">
+      <h3>显示配置</h3>
 
-  <div class="card" data-theme="ifind-pc">
-    <h2>iFinD-PC · 分组柱（3 系列）· 24 色按序号</h2>
-    <div class="chart-host" id="c3"></div>
-    <p class="hint">Y 轴 outside / 千分位；首色 #4D5999</p>
-  </div>
+      <div class="field">
+        <div class="field-label"><b>端</b><span>data-platform</span></div>
+        <div class="seg" id="seg-platform">
+          <button data-value="pc" class="is-active">PC</button>
+          <button data-value="mobile">移动端</button>
+        </div>
+      </div>
 
-  <div class="card" data-theme="ainvest">
-    <h2>Ainvest · 分组柱（3 系列）· 8 色按序号</h2>
-    <div class="chart-host" id="c4"></div>
-    <p class="hint">Y 轴右侧 outside / K·M 缩写；首色 #265FFC</p>
-  </div>
+      <div class="field">
+        <div class="field-label"><b>明暗</b><span>data-mode</span></div>
+        <div class="seg" id="seg-mode">
+          <button data-value="light" class="is-active">浅色</button>
+          <button data-value="dark">深色</button>
+        </div>
+      </div>
 
-  <div class="card" data-theme="ths">
-    <h2>THS · 分组柱（6 系列）· 色板循环</h2>
-    <div class="chart-host" id="c5"></div>
-    <p class="hint">点掉几个系列看槽位保留、颜色不重排</p>
-  </div>
-
-  <div class="card" data-theme="ths">
-    <h2>THS · <b>堆叠</b>（stack:normal，3 系列）</h2>
-    <div class="chart-host" id="c6"></div>
-    <p class="hint">段直角、从累计基线长起；点掉一个系列看堆叠闭合、轴 refit</p>
-  </div>
-
-  <div class="card" data-theme="ainvest">
-    <h2>Ainvest · <b>归一化</b>（stack:percent，3 系列）</h2>
-    <div class="chart-host" id="c7"></div>
-    <p class="hint">每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算</p>
-  </div>
-
-  <div class="card" data-theme="ifind-pc">
-    <h2>iFinD-PC · <b>堆叠含负值</b>（stack:normal）</h2>
-    <div class="chart-host" id="c8"></div>
-    <p class="hint">正值向上累计、负值向下累计（分开）</p>
-  </div>
-
-  <div class="card" data-theme="ths">
-    <h2>THS · <b>折柱组合 + 双 Y</b>（柱=营收/成本 · 线=增速%）</h2>
-    <div class="chart-host" id="c9"></div>
-    <p class="hint">柱走主轴左、线走副轴右；两轴 0 对齐、刻度落同网格行；线含 null 断口</p>
-  </div>
-
-  <div class="card" data-theme="ainvest">
-    <h2>Ainvest · 折柱组合 + 双 Y</h2>
-    <div class="chart-host" id="c10"></div>
-    <p class="hint">主 Y 右（主题默认）、副 Y 左；线色走 line-multi（橙），柱色走 bar-multi</p>
-  </div>
-
-  <div class="card" data-theme="ifind-pc">
-    <h2>iFinD-PC · 折柱组合 + 双 Y（线用浅盘避撞）</h2>
-    <div class="chart-host" id="c11"></div>
-    <p class="hint">图例：柱显方块 marker、线显折线 marker（按真实 type）</p>
-  </div>
+      <p class="config-note">
+        端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
+        明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
+      </p>
+    </div>
+  </aside>
 </div>
 
 <script type="importmap">
   { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
 </script>
 <script type="module">
-  import { CartesianChart } from '../charts/charts/cartesian.js';
+  import { CartesianChart } from '../charts/charts/cartesian/index.js';
 
   const K = (arr) => arr.map((v) => (v == null ? null : v * 1000)); // ×1000 让 FORMAT-01 单位换算可见
   const Q = ['Q1', 'Q2', 'Q3', 'Q4'];
-
-  // 单系列：含负值 / 0 / null
   const M6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  CartesianChart(document.getElementById('c1'), {
-    categories: M6,
-    series: [{ name: '营业收入', data: K([820, -340, 0, 1290, null, 760]) }],
-  });
 
   const three = [
     { name: '营业收入', data: K([820, 910, 1290, 1120]) },
     { name: '成本', data: K([560, 620, 480, 710]) },
     { name: '利润', data: K([260, 290, 810, 410]) },
   ];
-  CartesianChart(document.getElementById('c2'), { categories: Q, series: three });
-  CartesianChart(document.getElementById('c3'), { categories: Q, series: three });
-  CartesianChart(document.getElementById('c4'), { categories: Q, series: three });
-
-  CartesianChart(document.getElementById('c5'), {
-    categories: Q,
-    series: [
-      { name: '营业收入', data: K([820, 910, 1290, 1120]) },
-      { name: '成本', data: K([560, 620, 480, 710]) },
-      { name: '利润', data: K([260, 290, 810, 410]) },
-      { name: '税费', data: K([120, 140, 180, 150]) },
-      { name: '研发投入', data: K([300, 340, 420, 390]) },
-      { name: '现金流', data: K([680, 720, 900, 810]) },
-    ],
-  });
-
-  // 堆叠 / 归一化（同一组 3 系列，只切 stack）
-  CartesianChart(document.getElementById('c6'), { categories: Q, series: three, stack: 'normal' });
-  CartesianChart(document.getElementById('c7'), { categories: Q, series: three, stack: 'percent' });
-
-  // 堆叠含负值：净利润有正有负 → 正向上累计、负向下累计
-  CartesianChart(document.getElementById('c8'), {
-    categories: Q,
-    stack: 'normal',
-    series: [
-      { name: '主营利润', data: K([620, 710, 540, 830]) },
-      { name: '投资收益', data: K([180, 240, 300, 210]) },
-      { name: '净亏损项', data: K([-260, -180, -420, -150]) },
-    ],
-  });
-
-  // 折柱组合 + 双 Y：柱=金额（主轴，×1000）、线=增速%（副轴，个位数）→ 量纲差异靠双 Y
+  const six = [
+    ...three,
+    { name: '税费', data: K([120, 140, 180, 150]) },
+    { name: '研发投入', data: K([300, 340, 420, 390]) },
+    { name: '现金流', data: K([680, 720, 900, 810]) },
+  ];
   const combo = [
     { name: '营业收入', data: K([820, 910, 1290, 1120]), type: 'bar', axis: 'primary' },
     { name: '成本', data: K([560, 620, 480, 710]), type: 'bar', axis: 'primary' },
     { name: '营收增速', data: [12, 18, null, 22], type: 'line', axis: 'secondary' },
   ];
-  CartesianChart(document.getElementById('c9'), { categories: Q, series: combo });
-  CartesianChart(document.getElementById('c10'), { categories: Q, series: combo });
-  CartesianChart(document.getElementById('c11'), { categories: Q, series: combo });
+
+  /* ── 图表分类（左栏）：每项 = 一份语义配置，横跨三主题渲染 ───────── */
+  const CATEGORIES = [
+    {
+      group: '柱状',
+      id: 'basic', label: '基础柱（单系列）',
+      desc: '单系列默认色（THS #3366FF）；含负值向下、0 值 1px 占位、null 断口。',
+      cfg: { categories: M6, series: [{ name: '营业收入', data: K([820, -340, 0, 1290, null, 760]) }] },
+    },
+    {
+      group: '柱状',
+      id: 'grouped3', label: '分组柱（3 系列）',
+      desc: '一进多「整套换」：首色应变浅蓝 #52BBFF（≠ 单系列 #3366FF）；各主题按序号取色板。',
+      cfg: { categories: Q, series: three },
+    },
+    {
+      group: '柱状',
+      id: 'grouped6', label: '分组柱（6 系列）',
+      desc: '色板循环：点掉几个系列看剩余柱整组重新居中、颜色不重排（各系列色固定不跟随）。',
+      cfg: { categories: Q, series: six },
+    },
+    {
+      group: '堆叠',
+      id: 'stack', label: '堆叠（normal）',
+      desc: '段直角、从累计基线长起；点掉一个系列看堆叠闭合、轴 refit。',
+      cfg: { categories: Q, series: three, stack: 'normal' },
+    },
+    {
+      group: '堆叠',
+      id: 'stackNeg', label: '堆叠含负值',
+      desc: '正值向上累计、负值向下累计（分开）。',
+      cfg: {
+        categories: Q, stack: 'normal',
+        series: [
+          { name: '主营利润', data: K([620, 710, 540, 830]) },
+          { name: '投资收益', data: K([180, 240, 300, 210]) },
+          { name: '净亏损项', data: K([-260, -180, -420, -150]) },
+        ],
+      },
+    },
+    {
+      group: '堆叠',
+      id: 'percent', label: '归一化（percent）',
+      desc: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。',
+      cfg: { categories: Q, series: three, stack: 'percent' },
+    },
+    {
+      group: '组合',
+      id: 'combo', label: '折柱组合 · 双 Y',
+      desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行；线含 null 断口。图例按真实 type 显方块/折线 marker。',
+      cfg: { categories: Q, series: combo },
+    },
+  ];
+
+  const THEMES = [
+    { id: 'ths', name: 'THS 同花顺', dot: '#3366FF' },
+    { id: 'ifind-pc', name: 'iFinD PC', dot: '#4D5999' },
+    { id: 'ainvest', name: 'Ainvest', dot: '#265FFC' },
+  ];
+
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light' };
+
+  /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
+  const navEl = document.getElementById('nav');
+  let lastGroup = null;
+  CATEGORIES.forEach((cat) => {
+    if (cat.group !== lastGroup) {
+      const t = document.createElement('div');
+      t.className = 'nav-group-title';
+      t.textContent = cat.group;
+      navEl.appendChild(t);
+      lastGroup = cat.group;
+    }
+    const btn = document.createElement('button');
+    btn.className = 'nav-item';
+    btn.textContent = cat.label;
+    btn.dataset.id = cat.id;
+    btn.addEventListener('click', () => { state.category = cat.id; render(); });
+    navEl.appendChild(btn);
+  });
+
+  /* ── 中栏：三主题卡片骨架（一次性建，重绘只换 chart-host）────────── */
+  const canvasEl = document.getElementById('canvas');
+  const cards = {};
+  THEMES.forEach((t) => {
+    const card = document.createElement('div');
+    card.className = 'theme-card';
+    card.dataset.theme = t.id;
+    card.innerHTML = `
+      <div class="theme-card__bar">
+        <span class="theme-card__dot" style="background:${t.dot}"></span>
+        <span class="theme-card__name">${t.name}</span>
+        <span class="theme-card__meta"></span>
+      </div>
+      <div class="chart-mount"></div>`;
+    canvasEl.appendChild(card);
+    cards[t.id] = card;
+  });
+
+  /* ── 渲染：当前分类 × 端 × 明暗 → 三卡整体重绘 ──────────────────── */
+  function render() {
+    const cat = CATEGORIES.find((c) => c.id === state.category);
+
+    document.getElementById('cat-title').textContent = cat.label;
+    document.getElementById('cat-desc').textContent = cat.desc;
+    navEl.querySelectorAll('.nav-item').forEach((b) =>
+      b.classList.toggle('is-active', b.dataset.id === state.category));
+
+    THEMES.forEach((t) => {
+      const card = cards[t.id];
+      card.dataset.mode = state.mode;         // [data-mode] 明暗
+      card.dataset.platform = state.platform; // [data-platform] 端（pc 时匹配空规则、无害）
+      card.querySelector('.theme-card__meta').textContent =
+        `${state.platform === 'pc' ? 'PC' : '移动端'} · ${state.mode === 'dark' ? '深色' : '浅色'}`;
+
+      // 重建干净的 host，避免残留 class / --dv-series-* 变量
+      const mount = card.querySelector('.chart-mount');
+      mount.textContent = '';
+      const host = document.createElement('div');
+      host.className = 'chart-host';
+      mount.appendChild(host);
+      CartesianChart(host, { ...cat.cfg, platform: state.platform });
+    });
+  }
+
+  /* ── 右栏：端 / 明暗 分段控件 ───────────────────────────────────── */
+  function wireSeg(id, key) {
+    const seg = document.getElementById(id);
+    seg.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      state[key] = btn.dataset.value;
+      seg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === btn));
+      render();
+    });
+  }
+  wireSeg('seg-platform', 'platform');
+  wireSeg('seg-mode', 'mode');
+
+  render();
 </script>
 </body>
 </html>

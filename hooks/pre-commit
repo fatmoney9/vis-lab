@@ -13,3 +13,6 @@ fi
 
 node tokens/build.mjs >/dev/null   # 校验失败 → 非零退出 → 拦截提交（错误打到 stderr）
 git add tokens/tokens.css
+
+sh hooks/lint-layers.sh >/dev/null       # 分层守卫（L1 不依赖 L2；L2 调 L1 或标 [L2-LOCAL]）→ 违规拦截提交
+node hooks/lint-spec-ids.mjs >/dev/null  # Spec ID 回引守卫（代码引用的 [ID] 必须在 specs 有定义）→ 违规拦截提交

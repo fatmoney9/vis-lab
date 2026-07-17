@@ -18,17 +18,17 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| BAR-02 | **分组排布**（`stack:none` 多柱系列，图表专属计算，留 L2）：band 内 n 根等分、组居中；柱宽不超 `size-bar-max`，系列间距 `size-bar-group-inner-gap-max`。**隐藏系列槽位保留**（位置稳定、不重排，配合 COLOR-04） | `charts/cartesian.js`（分组偏移计算） | ✅ |
-| BAR-03 | **单系列**：柱居中于 band，宽 = `min(band, size-bar-max)` | `charts/cartesian.js` | ✅ |
-| BAR-05 | **堆叠**（`stack:normal`）：每类目**单列**（band 不分组，宽 `min(band, size-bar-max)` 居中）；各系列段从上一段**累计基线**长起，**正值向上累计、负值向下累计**（分开）；段**直角**（圆角只给基础/分组柱）；**0 不占位、null 跳过**（1px 占位是基础柱专属）；值域 = 堆叠总高（`niceSplit(min负累计, max正累计)`）。**隐藏系列按可见重算**（段闭合、轴 refit，与非堆叠的稳定轴不同） | `core/mark.js` 的 `base` 参数 + `charts/cartesian.js` → `stackData()` | ✅ |
-| BAR-06 | **归一化堆叠**（`stack:percent`）：每类目缩放到 **100%**（占比 = `v / 类目正值和`，**假设正值**）；Y 轴固定 **0–100%**、百分比格式；其余同 BAR-05 | `charts/cartesian.js` → `stackData()` + `pctFormat` | ✅ |
+| BAR-02 | **分组排布**（`stack:none` 多柱系列，图表专属计算，留 L2）：band 内 n 根等分、组居中；柱宽不超 `size-bar-max`，系列间距 `size-bar-group-inner-gap-max`。**隐藏系列按可见重排**：槽位按当前可见柱数重算，剩余柱整组重新居中于 band（宽度仍受 `size-bar-max` 上限约束）。系列色由固定 `--dv-series-i` 决定、与可见性无关，故颜色不重排（COLOR-04 仍成立） | `charts/charts/cartesian/index.js`（可见过滤）+ `layout.js`（groupedBars） | ✅ |
+| BAR-03 | **单系列**：柱居中于 band，宽 = `min(band, size-bar-max)` | `charts/charts/cartesian/layout.js` | ✅ |
+| BAR-05 | **堆叠**（`stack:normal`）：每类目**单列**（band 不分组，宽 `min(band, size-bar-max)` 居中）；各系列段从上一段**累计基线**长起，**正值向上累计、负值向下累计**（分开）；段**直角**（圆角只给基础/分组柱）；**0 不占位、null 跳过**（1px 占位是基础柱专属）；值域 = 堆叠总高（`niceSplit(min负累计, max正累计)`）。**隐藏系列按可见重算**（段闭合、轴 refit，与非堆叠的稳定轴不同） | `core/mark.js` 的 `base` 参数 + `charts/charts/cartesian/layout.js` → `stackBars()` | ✅ |
+| BAR-06 | **归一化堆叠**（`stack:percent`）：每类目缩放到 **100%**（占比 = `v / 类目正值和`，**假设正值**）；Y 轴固定 **0–100%**、百分比格式；其余同 BAR-05 | `charts/charts/cartesian/layout.js` `stackBars()` + `index.js` `pctFormat` | ✅ |
 
 ## 配色与交互
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，系列 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`） | `charts/cartesian.js`（复用 legend.js 的 `renderLegend` / `applyToggle`） | ✅ |
-| BAR-07 | **折柱组合**（`type` 混用 + `axis` 绑定）：柱、折线同图；柱走 band 内分组、折线走类目中心叠加（[line.md](line.md) LINE-01）；柱线**分色板、禁交叉**（COLOR-05）。多量纲用**双 Y**——每系列 `axis: primary/secondary`，两轴 `niceSplitDual` 共享刻度 + 0 对齐（AXIS-02/SCALE-04），主轴在 `y-main-side`、副轴反侧。图例按各系列真实 type 显柱 / 线 marker（LEGEND-03） | `charts/cartesian.js`（按 axis→type 双重分区）+ `core/mark.js` `renderLine` | ✅ 主测 stack:none |
+| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，系列 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`） | `charts/charts/cartesian/index.js`（复用 legend.js 的 `renderLegend` / `applyToggle`） | ✅ |
+| BAR-07 | **折柱组合**（`type` 混用 + `axis` 绑定）：柱、折线同图；柱走 band 内分组、折线走类目中心叠加（[line.md](line.md) LINE-01）；柱线**分色板、禁交叉**（COLOR-05）。多量纲用**双 Y**——每系列 `axis: primary/secondary`，两轴 `niceSplitDual` 共享刻度 + 0 对齐（AXIS-02/SCALE-04），主轴在 `y-main-side`、副轴反侧。图例按各系列真实 type 显柱 / 线 marker（LEGEND-03） | `charts/charts/cartesian/index.js`（按 axis→type 双重分区）+ `core/mark.js` `renderLine` | ✅ 主测 stack:none |
 
 ## 样式 token
 
