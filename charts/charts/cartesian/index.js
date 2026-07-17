@@ -136,6 +136,9 @@ export function CartesianChart(host, cfg) {
     /* ── 柱（所有柱共享 band；布局见 layout.js。各柱用 yOf(axis) 选比例尺）── */
     const barMax = tokenNum(plotHost, '--size-bar-max') || 16;
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
+    const groupMaxRaw = tokenNum(plotHost, '--size-bar-group-container-max');     /* [BAR-02] 分组容器上限 */
+    const groupMax = groupMaxRaw > 0 ? groupMaxRaw : Infinity;                     /* none/0（如 THS）→ 不设上限 */
+    const gapRatio = tokenNum(plotHost, '--size-bar-group-gap-ratio');           /* [BAR-02] 内容块:两侧留白 比（Ainvest 2:1；THS/iFinD=0 不留侧白）。tokenNum 解析 "2:1"→2 */
     const band = x.bandwidth();
     if (stacked && bars.length) {
       /* [BAR-05] 单列堆叠（可见柱按可见重算，段闭合） */
@@ -150,9 +153,10 @@ export function CartesianChart(host, cfg) {
       });
     } else if (bars.length) {
       /* [BAR-02/03] 分组：按**可见**柱等分槽位 → 隐藏一根后剩余柱整组重新居中于 band
-         （宽度仍受 size-bar-max 上限约束）。系列色由固定 colorVar 决定、与可见性无关，故不重排（COLOR-04）。 */
+         （柱宽受 size-bar-max、整组宽受 size-bar-group-container-max 双重约束）。
+         系列色由固定 colorVar 决定、与可见性无关，故不重排（COLOR-04）。 */
       const visBars = bars.filter((r) => !state.hidden.has(r.name));
-      const slots = groupedBars(visBars.length, band, barMax, gap);
+      const slots = groupedBars(visBars.length, band, barMax, gap, groupMax, gapRatio);
       visBars.forEach((r, i) => {
         renderBars(seriesG('dv-bar-series', r.name), frame,
           { categories, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */

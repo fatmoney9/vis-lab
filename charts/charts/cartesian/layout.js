@@ -12,15 +12,26 @@
  *                 lo/hi 是堆叠后的值域上下限（供 domain 用）
  */
 
-/* [BAR-02/03] 分组：n 根柱在 band 内等分、整组居中；柱宽不超 barMax，系列间距 gap */
-export function groupedBars(n, band, barMax, gap) {
+/* [BAR-02/03] 分组：n 根柱在 container=min(band, containerMax) 内、整组回 band 居中。
+   柱宽上限 barMax、柱间距上限 gapMax；放不下时**柱与间距按同一比例 s 等比缩小**
+   （s=柱宽/barMax=间距/gapMax，恒保持 barMax:gapMax，如 32:2）——间距只在柱顶到 barMax 时才是满值 gapMax。
+   ratio>0（如 Ainvest 2:1）时容器内**左右两侧再留白**：内容块(柱+柱间距) : 两侧留白总和 = ratio:1，
+   内容块只能占 container 的 ratio/(ratio+1) → 进一步压小 s（THS/iFinD ratio=0，不留侧白、内容块铺满 container）。
+   containerMax = size-bar-group-container-max。定位把内容块在 band 内居中（侧白即两侧自然余量、对称）。 */
+export function groupedBars(n, band, barMax, gapMax, containerMax = Infinity, ratio = 0) {
+  const container = Math.min(band, containerMax);
   if (n === 1) {
-    const width = Math.min(band, barMax);
+    const width = Math.min(container, barMax);
     return [{ offset: (band - width) / 2, width }];
   }
-  const width = Math.min((band - (n - 1) * gap) / n, barMax);
-  const start = (band - (n * width + (n - 1) * gap)) / 2;
-  return Array.from({ length: n }, (_, i) => ({ offset: start + i * (width + gap), width }));
+  const contentRegion = ratio > 0 ? (container * ratio) / (ratio + 1) : container;
+  const contentAtMax = n * barMax + (n - 1) * gapMax;         /* 全部顶到最大时的内容块宽 */
+  const s = Math.min(1, contentRegion / contentAtMax);        /* 放不下 → 柱与间距同比缩小 */
+  const width = barMax * s;
+  const g = gapMax * s;
+  const content = n * width + (n - 1) * g;
+  const start = (band - content) / 2;
+  return Array.from({ length: n }, (_, i) => ({ offset: start + i * (width + g), width }));
 }
 
 /* [BAR-05] 堆叠：每类目一根居中的单列（所有系列段同宽同位、靠 base 叠起） */
