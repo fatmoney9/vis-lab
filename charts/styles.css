@@ -68,3 +68,13 @@
 /* [LEGEND-06] 关闭态：文字 + marker 均切 color-text-quaternary（比常态类特异性更高，胜出） */
 .dv-legend-item--off .dv-legend-marker { color: var(--color-text-quaternary); }
 .dv-legend-item--off .dv-legend-label { color: var(--color-text-quaternary); }
+
+/* [BAR-01] 柱：填充跟随所在分组 <g> 的 currentColor（= 系列色，由 L2 写 --dv-series-i）。
+   hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 移除，不在此表达。 */
+.dv-bar { fill: currentColor; }
+
+/* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
+   主题无关的结构样式（无颜色）。 */
+/* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余） */
+.dv-chart { display: flex; flex-direction: column; }
+.dv-chart__plot { flex: 1; min-height: 0; }

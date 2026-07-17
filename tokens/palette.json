@@ -1,0 +1,30 @@
+{
+  "$meta": {
+    "description": "系列色板（柱/线/饼扇区… 的数据系列色）。第三类主题数据：不进 tokens.css。",
+    "authority": "权威规则见 specs/color.md（COLOR-01..07）；取色算法见 charts/core/palette.js",
+    "notes": [
+      "系列色一律写死 hex、不走值 token；light/dark 同色、无深色派生；整套替换、绝不跨主题混用",
+      "build.mjs 不读此文件（只读 ths/ifind-pc/ainvest.json），故色板不会被输出为 CSS 变量",
+      "取色：单系列 → single-default；多系列 → bar-multi 按序号取、超出循环。count = 声明系列数（图例隐藏不重排色，见 COLOR-04）",
+      "THS 多系列柱=末行「固定第 N 色」前 N；单系列另用 single-default（#3366FF，非 bar-multi[0] 的 #52BBFF）——「整套换」非「序号叠加」",
+      "折线/折柱组合/动态条形/浅盘避撞等后续切片再补键（line-multi / combo-* / dynamic-bar / light-*）"
+    ]
+  },
+
+  "ths": {
+    "single-default": "#3366FF",
+    "bar-multi": ["#52BBFF", "#3366FF", "#FFB70F", "#CC41D9", "#14CCBD", "#83D537", "#858585"]
+  },
+  "ifind-pc": {
+    "single-default": "#4D5999",
+    "bar-multi": [
+      "#4D5999", "#3DB4CC", "#F2A355", "#458BD1", "#F261AA", "#F2D755", "#705AE0", "#A6CA46",
+      "#F26868", "#449CC2", "#AF4CE0", "#C5D962", "#363E6B", "#2A7E8F", "#A9723B", "#306191",
+      "#A84376", "#A9963B", "#4E3F9D", "#738D30", "#A84848", "#2F6C87", "#7A359C", "#8A9844"
+    ]
+  },
+  "ainvest": {
+    "single-default": "#265FFC",
+    "bar-multi": ["#265FFC", "#38D1FF", "#F564B9", "#733ED6", "#00DDCB", "#273D8F", "#FF7040", "#9EA9C7"]
+  }
+}

@@ -37,8 +37,8 @@
   .series { min-height: 72px; display: flex; align-items: flex-end; }
   .hint { font-size: 11px; color: rgba(0, 0, 0, 0.4); margin: 0; }
 </style>
-<link rel="stylesheet" href="../../tokens/tokens.css" />
-<link rel="stylesheet" href="../styles.css" />
+<link rel="stylesheet" href="../tokens/tokens.css" />
+<link rel="stylesheet" href="../charts/styles.css" />
 </head>
 <body>
 <h1>L1 开发预览 · 图例规范还原</h1>
@@ -98,8 +98,8 @@
 </script>
 <script type="module">
   import { select } from 'd3';
-  import { renderLegend, applyToggle } from '../core/legend.js';
-  import { resolveBehavior } from '../core/theme.js';
+  import { renderLegend, applyToggle } from '../charts/core/legend.js';
+  import { resolveBehavior } from '../charts/core/theme.js';
 
   /* 五系列，混合图表类型（bar/line/dot）以显 THS/iFinD 的按类型分形 */
   const SERIES = [

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>L2 开发预览 · 直角坐标图（CartesianChart v1 · 柱）</title>
+<style>
+  /* 值 token 由 tokens/tokens.css 提供（按卡片 data-theme 作用域）；系列色由 palette.js 取、
+     CartesianChart 写成 --dv-series-i，预览无需任何色值替身。 */
+  body {
+    margin: 0; padding: 32px 24px 64px; background: #f5f6f8;
+    font-family: system-ui, -apple-system, sans-serif; color: rgba(0, 0, 0, 0.84);
+  }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  body > p { font-size: 12px; color: rgba(0, 0, 0, 0.6); margin: 0 0 20px; max-width: 940px; line-height: 18px; }
+  .row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  /* 卡片定高 + resize:both → 拖右下角改宽高；chart-host flex:1 撑满剩余高度，
+     故宽、高两维变化都会被组件的 observeResize 捕获并整体重排（GRID-03）。 */
+  .card {
+    background: #fff; border-radius: 8px; padding: 12px 16px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    width: 440px; height: 360px; min-width: 280px; min-height: 220px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    resize: both; overflow: auto;
+  }
+  .card h2 { font-size: 12px; font-weight: 600; margin: 0; color: rgba(0, 0, 0, 0.6); line-height: 16px; }
+  .chart-host { flex: 1; min-height: 0; }
+  .hint { font-size: 11px; color: rgba(0, 0, 0, 0.4); margin: 0; }
+</style>
+<link rel="stylesheet" href="../tokens/tokens.css" />
+<link rel="stylesheet" href="../charts/styles.css" />
+</head>
+<body>
+<h1>L2 开发预览 · 直角坐标图（CartesianChart · 柱：基础 / 分组 / 堆叠 / 归一化）</h1>
+<p>
+  只传<b>数据 + 语义配置</b>调 <code>CartesianChart</code>，内部拼装 frame/scale/grid/axis/legend + 取色 + 柱 mark；
+  <code>stack: none|normal|percent</code> 切分组 / 堆叠 / 归一化（BAR-02/05/06）。
+  <b>点击</b>图例隐藏系列（分组留槽、堆叠重算，LEGEND-06）；<b>hover</b> 弱化其他系列（LEGEND-05）；拖<b>右下角</b>重排（GRID-03）。
+  系列色固定槽位取各主题真实色板——注意 <b>THS 单系列 #3366FF，一进多系列首色变浅蓝 #52BBFF</b>（"整套换"）。
+</p>
+
+<div class="row">
+  <div class="card" data-theme="ths">
+    <h2>THS · 单系列（基础柱）· 含负值 / 0 / null</h2>
+    <div class="chart-host" id="c1"></div>
+    <p class="hint">单系列默认色 #3366FF；负值向下、0 值 1px 占位、null 断口</p>
+  </div>
+
+  <div class="card" data-theme="ths">
+    <h2>THS · 分组柱（3 系列）· 验证"整套换"</h2>
+    <div class="chart-host" id="c2"></div>
+    <p class="hint">首色应为浅蓝 #52BBFF（≠ 单系列的 #3366FF）</p>
+  </div>
+
+  <div class="card" data-theme="ifind-pc">
+    <h2>iFinD-PC · 分组柱（3 系列）· 24 色按序号</h2>
+    <div class="chart-host" id="c3"></div>
+    <p class="hint">Y 轴 outside / 千分位；首色 #4D5999</p>
+  </div>
+
+  <div class="card" data-theme="ainvest">
+    <h2>Ainvest · 分组柱（3 系列）· 8 色按序号</h2>
+    <div class="chart-host" id="c4"></div>
+    <p class="hint">Y 轴右侧 outside / K·M 缩写；首色 #265FFC</p>
+  </div>
+
+  <div class="card" data-theme="ths">
+    <h2>THS · 分组柱（6 系列）· 色板循环</h2>
+    <div class="chart-host" id="c5"></div>
+    <p class="hint">点掉几个系列看槽位保留、颜色不重排</p>
+  </div>
+
+  <div class="card" data-theme="ths">
+    <h2>THS · <b>堆叠</b>（stack:normal，3 系列）</h2>
+    <div class="chart-host" id="c6"></div>
+    <p class="hint">段直角、从累计基线长起；点掉一个系列看堆叠闭合、轴 refit</p>
+  </div>
+
+  <div class="card" data-theme="ainvest">
+    <h2>Ainvest · <b>归一化</b>（stack:percent，3 系列）</h2>
+    <div class="chart-host" id="c7"></div>
+    <p class="hint">每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算</p>
+  </div>
+
+  <div class="card" data-theme="ifind-pc">
+    <h2>iFinD-PC · <b>堆叠含负值</b>（stack:normal）</h2>
+    <div class="chart-host" id="c8"></div>
+    <p class="hint">正值向上累计、负值向下累计（分开）</p>
+  </div>
+</div>
+
+<script type="importmap">
+  { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+</script>
+<script type="module">
+  import { CartesianChart } from '../charts/charts/cartesian.js';
+
+  const K = (arr) => arr.map((v) => (v == null ? null : v * 1000)); // ×1000 让 FORMAT-01 单位换算可见
+  const Q = ['Q1', 'Q2', 'Q3', 'Q4'];
+
+  // 单系列：含负值 / 0 / null
+  const M6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+  CartesianChart(document.getElementById('c1'), {
+    categories: M6,
+    series: [{ name: '营业收入', data: K([820, -340, 0, 1290, null, 760]) }],
+  });
+
+  const three = [
+    { name: '营业收入', data: K([820, 910, 1290, 1120]) },
+    { name: '成本', data: K([560, 620, 480, 710]) },
+    { name: '利润', data: K([260, 290, 810, 410]) },
+  ];
+  CartesianChart(document.getElementById('c2'), { categories: Q, series: three });
+  CartesianChart(document.getElementById('c3'), { categories: Q, series: three });
+  CartesianChart(document.getElementById('c4'), { categories: Q, series: three });
+
+  CartesianChart(document.getElementById('c5'), {
+    categories: Q,
+    series: [
+      { name: '营业收入', data: K([820, 910, 1290, 1120]) },
+      { name: '成本', data: K([560, 620, 480, 710]) },
+      { name: '利润', data: K([260, 290, 810, 410]) },
+      { name: '税费', data: K([120, 140, 180, 150]) },
+      { name: '研发投入', data: K([300, 340, 420, 390]) },
+      { name: '现金流', data: K([680, 720, 900, 810]) },
+    ],
+  });
+
+  // 堆叠 / 归一化（同一组 3 系列，只切 stack）
+  CartesianChart(document.getElementById('c6'), { categories: Q, series: three, stack: 'normal' });
+  CartesianChart(document.getElementById('c7'), { categories: Q, series: three, stack: 'percent' });
+
+  // 堆叠含负值：净利润有正有负 → 正向上累计、负向下累计
+  CartesianChart(document.getElementById('c8'), {
+    categories: Q,
+    stack: 'normal',
+    series: [
+      { name: '主营利润', data: K([620, 710, 540, 830]) },
+      { name: '投资收益', data: K([180, 240, 300, 210]) },
+      { name: '净亏损项', data: K([-260, -180, -420, -150]) },
+    ],
+  });
+</script>
+</body>
+</html>
