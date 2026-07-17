@@ -73,6 +73,21 @@
    hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 移除，不在此表达。 */
 .dv-bar { fill: currentColor; }
 
+/* [LINE-01] 折线 + 数据点：描边/填充跟随所在 <g> 的 currentColor（= 系列色）。
+   线宽走 --size-line-stroke；数据点描边同宽（默认态实心，hover 白心时只翻 fill）。 */
+.dv-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-line-stroke);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.dv-line-point {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: var(--size-line-stroke);
+}
+
 /* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
    主题无关的结构样式（无颜色）。 */
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余） */

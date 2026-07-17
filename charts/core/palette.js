@@ -13,23 +13,29 @@ const data = await (
 ).json();
 const { $meta, ...PALETTE } = data;
 
-/* 合同校验：每主题必备 single-default（字符串）+ bar-multi（非空数组），缺即抛错 */
+/* 合同校验：每主题必备 single-default（字符串）+ bar-multi / line-multi（非空数组），缺即抛错 */
 for (const [name, p] of Object.entries(PALETTE)) {
   if (typeof p['single-default'] !== 'string') throw new Error(`palette.json：主题「${name}」缺 single-default`);
-  if (!Array.isArray(p['bar-multi']) || p['bar-multi'].length === 0) {
-    throw new Error(`palette.json：主题「${name}」的 bar-multi 必须是非空数组`);
+  for (const key of ['bar-multi', 'line-multi']) {
+    if (!Array.isArray(p[key]) || p[key].length === 0) {
+      throw new Error(`palette.json：主题「${name}」的 ${key} 必须是非空数组`);
+    }
   }
 }
 
 /*
- * [COLOR-02..04] 按声明系列数取柱色（返回 hex 数组，与系列一一对应）。
- *   count <= 1 → [single-default]（[COLOR-03]）
- *   count >= 2 → bar-multi 按序号取、超出循环
- * count 必须是**声明的系列数**，不是当前可见数——图例隐藏/过滤不改 count，颜色不重排（[COLOR-04]）。
+ * [COLOR-02..05] 按系列类型取色（返回 hex 数组，与系列一一对应）。
+ *   单系列（length<=1） → [single-default]（[COLOR-03]，无论柱/线）
+ *   多系列 → 柱系列走 bar-multi、线系列走 line-multi，**各按自己类型的序号取、超出循环**，
+ *            柱线分色板、禁交叉（[COLOR-05]）。
+ * 入参 series = [{type}]，用**声明的系列**（图例隐藏/过滤不重排颜色，[COLOR-04]）。
  */
-export function resolveSeriesColors(host, { count }) {
+export function resolveSeriesColors(host, { series }) {
   const p = PALETTE[themeOf(host)] ?? PALETTE[DEFAULT_THEME];
-  if (count <= 1) return [p['single-default']];
-  const pal = p['bar-multi'];
-  return Array.from({ length: count }, (_, i) => pal[i % pal.length]);
+  if (series.length <= 1) return [p['single-default']];
+  let bi = 0;
+  let li = 0;
+  return series.map((s) => (s.type === 'line'
+    ? p['line-multi'][li++ % p['line-multi'].length]
+    : p['bar-multi'][bi++ % p['bar-multi'].length]));
 }

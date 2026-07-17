@@ -27,7 +27,8 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，分组 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`，Y 轴 v1 用全声明系列的稳定轴不重算） | `charts/cartesian.js`（复用 legend.js 的 `renderLegend` / `applyToggle`） | ✅ v1 |
+| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，系列 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`） | `charts/cartesian.js`（复用 legend.js 的 `renderLegend` / `applyToggle`） | ✅ |
+| BAR-07 | **折柱组合**（`type` 混用 + `axis` 绑定）：柱、折线同图；柱走 band 内分组、折线走类目中心叠加（[line.md](line.md) LINE-01）；柱线**分色板、禁交叉**（COLOR-05）。多量纲用**双 Y**——每系列 `axis: primary/secondary`，两轴 `niceSplitDual` 共享刻度 + 0 对齐（AXIS-02/SCALE-04），主轴在 `y-main-side`、副轴反侧。图例按各系列真实 type 显柱 / 线 marker（LEGEND-03） | `charts/cartesian.js`（按 axis→type 双重分区）+ `core/mark.js` `renderLine` | ✅ 主测 stack:none |
 
 ## 样式 token
 
@@ -40,7 +41,7 @@
 
 - [x] **堆叠 + 归一化**（`stack: normal / percent`）→ BAR-05 / BAR-06。
 - [ ] **归一化正负混合**：BAR-06 当前假设正值（负值按 0 计入占比）；真正正负混合的归一化语义待定。
-- [ ] **v3 折柱组合 + 双 Y**（`type: line` + `axis: secondary`）：折线 / 点 mark（`core/mark.js` 扩展）+ `niceSplitDual`（SCALE-04 已就绪）+ COLOR-05 柱线子序列。
+- [x] **折柱组合 + 双 Y**（`type: line` + `axis: secondary`）→ BAR-07 + [line.md](line.md)。主测 `stack:none`；`percent + 组合`、per-轴 unit（% 后缀）、折线数据点密度隐藏/数据标签见各篇待办。
 - [ ] **横向柱状图 HBar** 独立组件（类目轴、`size-hbar-*`）。
 - [ ] `size-bar-bar-gap-ratio`（2:1）与 `size-bar-group-inner-gap-max` 的精确取舍（当前用固定内间距）；`size-bar-group-container-max` / `size-bar-container-max` 上限接入。
 - [ ] 堆叠段圆角：当前一律直角；是否给「整根堆叠的最外端」加圆角待定。

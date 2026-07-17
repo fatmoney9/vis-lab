@@ -1,7 +1,8 @@
+import { line } from 'd3';
 import { tokenNum } from './tokens.js';
 
 /*
- * L1 · 图元标记（mark）。柱/线/点的纯渲染，供 BarChart / LineChart / 折柱组合共用。
+ * L1 · 图元标记（mark）。柱/线/点的纯渲染，供柱图 / 折线图 / 折柱组合共用。
  * 分组偏移、堆叠累加等**布局计算是图表专属**，由 L2 算好后经参数传入（见 specs/bar.md · BAR-02）。
  */
 
@@ -48,4 +49,33 @@ export function renderBars(g, frame, series, x, y) {
       const h = Math.abs(y(top) - y(d.b));
       return barPath(d.bx, yHi, width, h, r, d.v > 0 ? 'top' : 'bottom');
     });
+}
+
+/*
+ * [LINE-01] 一条折线（+ 数据点），渲染进已存在的分组 <g>。权威规范见 specs/line.md。
+ *   series = { categories, values, colorVar }
+ *   x —— bandX 比例尺（点取**类目中心** x(c)+bandwidth/2）；y —— linearY 比例尺
+ * 规则：直线（无平滑）· null 处断开（d3 line.defined）· 0 值正常连续 ·
+ *       线宽 --size-line-stroke · 数据点直径 --size-line-point（默认态实心、fill/stroke=折线色）。
+ * v3 数据点常显；密度隐藏 / 碰撞 / hover 白心 / 数据标签见 specs/line.md 待办。
+ */
+export function renderLine(g, frame, series, x, y) {
+  const { categories, values, colorVar } = series;
+  const stroke = tokenNum(frame.host, '--size-line-stroke') || 1.5;
+  const point = tokenNum(frame.host, '--size-line-point') || 6;
+  const r = Math.max(1, (point - stroke) / 2); // 直径含描边 = size-line-point
+
+  g.style('color', `var(${colorVar})`);
+
+  const pts = categories.map((c, i) => ({ key: c, v: values[i], cx: x(c) + x.bandwidth() / 2 }));
+  const gen = line().defined((d) => d.v != null).x((d) => d.cx).y((d) => y(d.v));
+
+  g.selectAll('path.dv-line').data([pts]).join('path').attr('class', 'dv-line').attr('d', gen);
+  g.selectAll('circle.dv-line-point')
+    .data(pts.filter((d) => d.v != null), (d) => d.key)
+    .join('circle')
+    .attr('class', 'dv-line-point')
+    .attr('cx', (d) => d.cx)
+    .attr('cy', (d) => y(d.v))
+    .attr('r', r);
 }

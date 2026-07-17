@@ -30,12 +30,12 @@
 <link rel="stylesheet" href="../charts/styles.css" />
 </head>
 <body>
-<h1>L2 开发预览 · 直角坐标图（CartesianChart · 柱：基础 / 分组 / 堆叠 / 归一化）</h1>
+<h1>L2 开发预览 · 直角坐标图（CartesianChart · 柱 / 堆叠 / 归一化 / 折柱组合 · 双 Y）</h1>
 <p>
-  只传<b>数据 + 语义配置</b>调 <code>CartesianChart</code>，内部拼装 frame/scale/grid/axis/legend + 取色 + 柱 mark；
-  <code>stack: none|normal|percent</code> 切分组 / 堆叠 / 归一化（BAR-02/05/06）。
-  <b>点击</b>图例隐藏系列（分组留槽、堆叠重算，LEGEND-06）；<b>hover</b> 弱化其他系列（LEGEND-05）；拖<b>右下角</b>重排（GRID-03）。
-  系列色固定槽位取各主题真实色板——注意 <b>THS 单系列 #3366FF，一进多系列首色变浅蓝 #52BBFF</b>（"整套换"）。
+  只传<b>数据 + 语义配置</b>调 <code>CartesianChart</code>，内部拼装 frame/scale/grid/axis/legend + 取色 + 柱/线 mark。
+  三旋钮切组合形态：<code>stack</code>（分组/堆叠/归一化）· 每系列 <code>type</code>（bar/line=折柱组合）· 每系列 <code>axis</code>（primary/secondary=双 Y）。
+  <b>点击</b>图例隐藏系列、<b>hover</b> 弱化其他（LEGEND-05/06）；拖<b>右下角</b>重排（GRID-03）。
+  系列色固定槽位、柱线分色板（COLOR-05）；THS 单系列 #3366FF、一进多系列首色变浅蓝 #52BBFF（"整套换"）。
 </p>
 
 <div class="row">
@@ -85,6 +85,24 @@
     <h2>iFinD-PC · <b>堆叠含负值</b>（stack:normal）</h2>
     <div class="chart-host" id="c8"></div>
     <p class="hint">正值向上累计、负值向下累计（分开）</p>
+  </div>
+
+  <div class="card" data-theme="ths">
+    <h2>THS · <b>折柱组合 + 双 Y</b>（柱=营收/成本 · 线=增速%）</h2>
+    <div class="chart-host" id="c9"></div>
+    <p class="hint">柱走主轴左、线走副轴右；两轴 0 对齐、刻度落同网格行；线含 null 断口</p>
+  </div>
+
+  <div class="card" data-theme="ainvest">
+    <h2>Ainvest · 折柱组合 + 双 Y</h2>
+    <div class="chart-host" id="c10"></div>
+    <p class="hint">主 Y 右（主题默认）、副 Y 左；线色走 line-multi（橙），柱色走 bar-multi</p>
+  </div>
+
+  <div class="card" data-theme="ifind-pc">
+    <h2>iFinD-PC · 折柱组合 + 双 Y（线用浅盘避撞）</h2>
+    <div class="chart-host" id="c11"></div>
+    <p class="hint">图例：柱显方块 marker、线显折线 marker（按真实 type）</p>
   </div>
 </div>
 
@@ -139,6 +157,16 @@
       { name: '净亏损项', data: K([-260, -180, -420, -150]) },
     ],
   });
+
+  // 折柱组合 + 双 Y：柱=金额（主轴，×1000）、线=增速%（副轴，个位数）→ 量纲差异靠双 Y
+  const combo = [
+    { name: '营业收入', data: K([820, 910, 1290, 1120]), type: 'bar', axis: 'primary' },
+    { name: '成本', data: K([560, 620, 480, 710]), type: 'bar', axis: 'primary' },
+    { name: '营收增速', data: [12, 18, null, 22], type: 'line', axis: 'secondary' },
+  ];
+  CartesianChart(document.getElementById('c9'), { categories: Q, series: combo });
+  CartesianChart(document.getElementById('c10'), { categories: Q, series: combo });
+  CartesianChart(document.getElementById('c11'), { categories: Q, series: combo });
 </script>
 </body>
 </html>
