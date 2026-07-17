@@ -31,34 +31,73 @@ function snapUp(need) {
   return r12(INTERVAL_STEPS[0] * mag * 10);
 }
 
+/* ── 单轴 / 双轴共用的四个步骤（同一套刻度规则只写一遍）──────────────── */
+
+/* 值域归一：并入 0，退化值域兜底 */
+const normExtent = ([l, h]) => {
+  const lo = Math.min(0, l);
+  let hi = Math.max(0, h);
+  if (hi - lo < 1e-9) hi = lo + 1;
+  return [lo, hi];
+};
+
+/* 负值段数的可行区间：有负值至少 1 段，有正值至多 S-1 段
+   （全正从 0 段起、全负到 S 段止——多余段位占比必然更低，会被择优淘汰） */
+const negSegRange = ([lo, hi], S) => [lo < 0 ? 1 : 0, hi > 0 ? S - 1 : S];
+
+/* 给定负值段数：正负两侧各自够用的最小 need → 数组内最小档位，并算占比 */
+const solveAt = ([lo, hi], negSeg, S) => {
+  const posSeg = S - negSeg;
+  const need = Math.max(negSeg ? -lo / negSeg : 0, posSeg ? hi / posSeg : 0);
+  const iv = snapUp(need);
+  return { iv, util: (hi - lo) / (iv * S) };
+};
+
+/* 负值段数 + interval → 三件套。刻度按「距零段数 × interval」构造而非
+   min 累加：保证 0 点精确为零（浮点残差会破坏 0 轴判定与加深线） */
+const mkSplit = (iv, negSeg, S) => {
+  const ticks = Array.from({ length: S + 1 }, (_, i) => r12((i - negSeg) * iv));
+  return { min: ticks[0], max: ticks[S], interval: iv, ticks };
+};
+
 export function niceSplit(minValue, maxValue, lineCount = Y_SPLIT_LINES) {
   const S = Math.max(1, lineCount - 1);
-  const lo = Math.min(0, minValue);
-  let hi = Math.max(0, maxValue);
-  if (hi - lo < 1e-9) hi = lo + 1;
-
-  /* 负值段数的合法取值：全正 0 段、全负 S 段、跨零 1..S-1 段 */
-  const negSegs = lo < 0 && hi > 0
-    ? Array.from({ length: S - 1 }, (_, i) => i + 1)
-    : [lo < 0 ? S : 0];
+  const ext = normExtent([minValue, maxValue]);
+  const [minNeg, maxNeg] = negSegRange(ext, S);
 
   let best = null;
-  for (const negSeg of negSegs) {
-    const posSeg = S - negSeg;
-    const need = Math.max(negSeg ? -lo / negSeg : 0, posSeg ? hi / posSeg : 0);
-    const iv = snapUp(need);
-    if (!best || iv < best.iv) best = { iv, negSeg };
+  for (let negSeg = minNeg; negSeg <= maxNeg; negSeg++) {
+    const c = { negSeg, ...solveAt(ext, negSeg, S) };
+    if (!best || c.util > best.util) best = c;
   }
+  return mkSplit(best.iv, best.negSeg, S);
+}
 
-  const { iv, negSeg } = best;
-  /* 刻度按「距零段数 × interval」构造而非 min 累加：
-     保证 0 点精确为零（浮点残差会破坏 0 轴判定与加深线），其余刻度同样干净 */
-  const ticks = Array.from({ length: S + 1 }, (_, i) => r12((i - negSeg) * iv));
+/*
+ * [SCALE-04] 双 Y 轴：共享分割线 + 0 轴恒对齐。
+ * 两轴共用同一组分割线（同数量、同像素位置），0 永远落在同一条分割线上——
+ * 实现方式：两轴**共享负值段数 negSeg**（0 的位置 = 第 negSeg 条线），
+ * interval 各自从间隔数组取（SCALE-01 硬约束对两轴分别成立）。
+ * 在两轴可行 negSeg 的交集内，选「较差一侧占比」最大的组合。
+ * 必然代价：一轴全正、另一轴跨零时，全正轴会出现空的负值段（0 对齐所致）。
+ */
+export function niceSplitDual(extentA, extentB, lineCount = Y_SPLIT_LINES) {
+  const S = Math.max(1, lineCount - 1);
+  const A = normExtent(extentA);
+  const B = normExtent(extentB);
+  const [aLo, aHi] = negSegRange(A, S);
+  const [bLo, bHi] = negSegRange(B, S);
+
+  let best = null;
+  for (let negSeg = Math.max(aLo, bLo); negSeg <= Math.min(aHi, bHi); negSeg++) {
+    const a = solveAt(A, negSeg, S);
+    const b = solveAt(B, negSeg, S);
+    const score = Math.min(a.util, b.util);
+    if (!best || score > best.score) best = { negSeg, a, b, score };
+  }
   return {
-    min: ticks[0],
-    max: ticks[S],
-    interval: iv,
-    ticks,
+    primary: mkSplit(best.a.iv, best.negSeg, S),
+    secondary: mkSplit(best.b.iv, best.negSeg, S),
   };
 }
 

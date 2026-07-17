@@ -1,27 +1,14 @@
 import { select } from 'd3';
-import { tokenNum, tokenStr } from './tokens.js';
+import { tokenNum } from './tokens.js';
 
 /* ── 常量（待 token 化项登记在 specs/axes.md 待办）──────────────────── */
-const Y_LABEL_GAP_B = 8; // [AXIS-01] outside 布局：网格线与标签间距（规范定值 8px）
-const EDGE_PAD = 8;      // outside 布局无标签一侧及纵向边缘的绘制区留白
-const X_GAP_TOP_A = 6;   // [AXIS-04] X 标签带上间距（Y 为 inside 布局时）
-const X_GAP_TOP_B = 2;   // [AXIS-04] outside 布局上间距增量：半行高 + 此值，防 Y 底标签溢入
-const X_GAP_BOTTOM = 4;  // [AXIS-04] X 标签带下间距
-
-/* 轴标签字体（Canvas 测量用），与 .dv-axis-label 的 token 保持同源 */
-export function axisFont(host) {
-  const weight = tokenStr(host, '--font-weight-axis') || '500';
-  const size = tokenStr(host, '--font-size-axis') || '12px';
-  const family = tokenStr(host, '--font-family-number') || 'sans-serif';
-  return `${weight} ${size} ${family}`;
-}
-
-let ctx;
-export function measureText(font, texts) {
-  if (!ctx) ctx = document.createElement('canvas').getContext('2d');
-  ctx.font = font;
-  return texts.map((t) => ctx.measureText(String(t)).width);
-}
+/* [AXIS-01] outside 布局：网格线与标签间距（规范定值 8px）。
+   标签绘制（axis.js renderYLabels）与列宽预留（本文件）共用此常量 */
+export const Y_LABEL_GAP_OUTSIDE = 8;
+const EDGE_PAD = 8;                // outside 布局无标签一侧及纵向边缘的绘制区留白
+const X_GAP_TOP_INSIDE = 6;        // [AXIS-04] X 标签带上间距（Y 为 inside 布局时）
+const X_GAP_TOP_OUTSIDE_EXTRA = 2; // [AXIS-04] outside 上间距增量：半行高 + 此值，防 Y 底标签溢入
+const X_GAP_BOTTOM = 4;            // [AXIS-04] X 标签带下间距
 
 /*
  * 画布骨架：SVG + 绘制区几何。
@@ -35,13 +22,20 @@ export function measureText(font, texts) {
  *           token --size-chart-region-height 的固定值
  */
 export function createFrame(host, opts = {}) {
-  const { width, height, yForm = 'inside', ySide = 'left', yLabelWidth = 0, xBand = true } = opts;
+  const {
+    width, height,
+    yForm = 'inside', ySide = 'left',
+    yLabelWidth = 0,
+    /* [AXIS-02] 双 Y：副轴（主轴反侧）的标签列宽，outside 布局时预留 */
+    yLabelWidthSecondary = 0,
+    xBand = true,
+  } = opts;
   const W = Math.max(240, width ?? host.clientWidth ?? 640);
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
   const topPad = yForm === 'outside' ? halfLabel + 2 : EDGE_PAD;
-  const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_B : X_GAP_TOP_A;
+  const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_EXTRA : X_GAP_TOP_INSIDE;
   const bottomPad = xBand
     ? xGapTop + lineH + X_GAP_BOTTOM
     : yForm === 'outside' ? halfLabel + 2 : EDGE_PAD;
@@ -49,7 +43,12 @@ export function createFrame(host, opts = {}) {
   const pad = yForm === 'inside'
     ? { left: 0, right: 0 }
     : { left: EDGE_PAD, right: EDGE_PAD };
-  if (yForm === 'outside') pad[ySide] = Math.ceil(yLabelWidth) + Y_LABEL_GAP_B;
+  if (yForm === 'outside') {
+    pad[ySide] = Math.ceil(yLabelWidth) + Y_LABEL_GAP_OUTSIDE;
+    if (yLabelWidthSecondary > 0) {
+      pad[ySide === 'left' ? 'right' : 'left'] = Math.ceil(yLabelWidthSecondary) + Y_LABEL_GAP_OUTSIDE;
+    }
+  }
 
   const gridH = height != null
     ? Math.max(48, height - topPad - bottomPad)

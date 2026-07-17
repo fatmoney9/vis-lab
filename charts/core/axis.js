@@ -1,4 +1,4 @@
-import { axisFont, measureText } from './frame.js';
+import { Y_LABEL_GAP_OUTSIDE } from './frame.js';
 
 const fmt = new Intl.NumberFormat('en-US');
 export const formatValue = (v) => fmt.format(v);
@@ -12,7 +12,8 @@ const SAFE_GAP = 8;  // [AXIS-01] inside 布局数据让位安全间距（待 to
  *   最顶标签顶对齐、贴顶线向下——不得高过绘制区上沿（最常见错误）；
  *   其余标签底对齐、贴线上方；0/最底标签不越下沿。
  * outside（原形式 B；网格外部 + 与网格线居中）：
- *   距网格 8px，上下居中；顶/底标签超出绘制区约半行高（createFrame 已留位）。
+ *   距网格 Y_LABEL_GAP_OUTSIDE（8px，与 frame.js 列宽预留同源），上下居中；
+ *   顶/底标签超出绘制区约半行高（createFrame 已留位）。
  * [AXIS-03] 对齐贴轴线一侧、随位置自动：内/外 × 左/右由 anchor 适配。
  */
 export function renderYLabels(layer, frame, ticks, y, opts = {}) {
@@ -32,7 +33,9 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
       .attr('dominant-baseline', (d) => (d === topTick ? 'hanging' : 'auto'));
   } else {
     sel
-      .attr('x', side === 'left' ? frame.grid.left - 8 : frame.grid.right + 8)
+      .attr('x', side === 'left'
+        ? frame.grid.left - Y_LABEL_GAP_OUTSIDE
+        : frame.grid.right + Y_LABEL_GAP_OUTSIDE)
       .attr('text-anchor', side === 'left' ? 'end' : 'start')
       .attr('y', (d) => y(d))
       .attr('dominant-baseline', 'middle');
@@ -43,6 +46,7 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
 /*
  * 渲染级文本测量：临时挂一棵隐藏 SVG，用真实类名走真实 CSS 级联量宽——
  * tabular-nums 等 Canvas measureText 表达不了的字体特性全部包含，无估算误差。
+ * X / Y 轴标签的一切宽度测量共用此函数（唯一测量源，[AXIS-08]）。
  */
 const SVG_NS = 'http://www.w3.org/2000/svg';
 function measureRendered(host, texts) {
@@ -82,12 +86,13 @@ export function yLabelInset(host, ticks, format = formatValue) {
  * [AXIS-06] 碰撞（任意相邻净距 < 8px 触发，策略随主题）：
  *   segment3 —— 整体改 3 段式，只留首/中/尾（THS / Ainvest）
  *   hide     —— 隐藏碰撞标签，首尾始终保留（iFinD-PC）
+ *   宽度走渲染级测量（与 AXIS-08 同源）——碰撞判定无估算误差。
  * [GRID-03] 容器宽度变化后必须重新调用（碰撞结果随宽度变化）。
  */
 export function renderXLabels(layer, frame, items, opts = {}) {
   const { collision = 'segment3', flushFirst = false, flushLast = false } = opts;
   const n = items.length;
-  const widths = measureText(axisFont(frame.host), items.map((d) => d.label));
+  const widths = measureRendered(frame.host, items.map((d) => d.label));
 
   const boxes = items.map((d, i) => {
     let left = d.x - widths[i] / 2;
