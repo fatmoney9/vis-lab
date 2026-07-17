@@ -25,3 +25,46 @@
   font-family: var(--font-family-number);
   font-variant-numeric: tabular-nums;
 }
+
+/* [LEGEND-01] 图例容器：默认左对齐、横排、宽度不足 flex-wrap 自动换行；间距/边距走 token。
+   对齐无 token（左/中/右），故左对齐为默认、中/右用修饰类切 justify-content。 */
+.dv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: var(--spacing-legend-item-h);
+  row-gap: var(--spacing-legend-row-v);
+  padding: var(--spacing-legend-container-v) var(--spacing-legend-container-h);
+}
+.dv-legend--center { justify-content: center; }
+.dv-legend--right { justify-content: flex-end; }
+
+/* [LEGEND-02] 图例项 = marker + label；整项为点击 / hover 热区 */
+.dv-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-legend-marker-label);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* [LEGEND-02][LEGEND-03] 标记容器 size-legend-marker；currentColor = 系列色（经 --dv-series-color 下发） */
+.dv-legend-marker {
+  flex: none;
+  width: var(--size-legend-marker);
+  height: var(--size-legend-marker);
+  color: var(--dv-series-color, currentColor);
+}
+
+/* [LEGEND-02] 标签：字号 / 行高 / 颜色 / 字体全部走 token */
+.dv-legend-label {
+  font-size: var(--font-size-legend);
+  line-height: var(--line-height-legend);
+  color: var(--color-text-legend);
+  font-family: var(--font-family-cn);
+}
+
+/* [LEGEND-06] 关闭态：文字 + marker 均切 color-text-quaternary（比常态类特异性更高，胜出） */
+.dv-legend-item--off .dv-legend-marker { color: var(--color-text-quaternary); }
+.dv-legend-item--off .dv-legend-label { color: var(--color-text-quaternary); }

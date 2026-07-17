@@ -1,0 +1,15 @@
+#!/bin/sh
+# 提交前：用源 JSON 重新生成 tokens/tokens.css，并把生成物一并纳入本次提交，
+# 保证 tokens.css 永不与源脱节。build 顺带跑合同/分叉/悬空-循环别名校验——
+# 坏 JSON 会让 build 退出码 1、从而拦截提交。
+#
+# 安装（每个克隆一次）：git config core.hooksPath hooks
+set -e
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "✗ pre-commit：未找到 node，无法重新生成 tokens.css（跳过校验会导致漂移）。" >&2
+  exit 1
+fi
+
+node tokens/build.mjs >/dev/null   # 校验失败 → 非零退出 → 拦截提交（错误打到 stderr）
+git add tokens/tokens.css

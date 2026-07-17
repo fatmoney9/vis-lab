@@ -56,7 +56,7 @@
 ## 待办
 
 - [ ] inside 安全间距（8px）→ token 化候选（outside 列宽策略已定为 AXIS-08 一次性渲染测量）
-- [ ] `--font-weight-axis` 并入 token 合同（当前 99 个 key 不含它，需三主题补齐）
+- [x] `--font-weight-axis` 并入 token 合同：三主题以别名录入（THS/iFinD `{font-weight-medium}`、Ainvest `{font-weight-regular}`），经 `tokens/build.mjs` 输出为 `var(--font-weight-*)`
 - [ ] AXIS-02 遗留：iFinD 双 Y「两侧共用一份标签」镜像模式；「副 Y 出现条件」（量纲判断）的自动化留给 L2 组件
 - [ ] inside 布局下 0 轴标签是否省略——沿用"不越下沿"规则，暂不省略
 - [ ] 缩放轴（datazoom）本体的规范化组件（SCALE-02 联动逻辑已验证，夹具已随 dev 预览移除）
