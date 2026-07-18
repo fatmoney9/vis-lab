@@ -88,6 +88,12 @@
   stroke-width: var(--size-line-stroke);
 }
 
+/* 数据点密度静默（specs/line.md：点数 > 13 隐藏所有点，移动/PC 一致）：
+   点留在 DOM（带 data-i）仅视觉隐藏——未来 tooltip/十字准星切片给最近类目的点挂
+   .is-active 即可唤出（规则在后、同特异性下声明序胜出，压过静默）。 */
+.points-muted .dv-line-point { opacity: 0; }
+.dv-line-point.is-active { opacity: 1; }
+
 /* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
    主题无关的结构样式（无颜色）。 */
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余） */

@@ -59,17 +59,20 @@ export function renderBars(g, frame, series, x, y) {
  *   x —— bandX 比例尺（点取**类目中心** x(c)+bandwidth/2）；y —— linearY 比例尺
  * 规则：直线（无平滑）· null 处断开（d3 line.defined）· 0 值正常连续 ·
  *       线宽 --size-line-stroke · 数据点直径 --size-line-point（默认态实心、fill/stroke=折线色）。
- * v3 数据点常显；密度隐藏 / 碰撞 / hover 白心 / 数据标签见 specs/line.md 待办。
+ * 数据点显隐（specs/line.md）：opts.showPoints=false（点数 > 13，移动/PC 一致）→ g 挂 points-muted
+ *   类使全部点静默（opacity 0、留在 DOM），线仍连续；hover 十字准星按 data-i 亮出最近点（L2 驱动）。
+ * 每点带 data-i=类目序，供 L2 跨线选中同一类目；hover 白心 / 数据标签见 specs/line.md 待办。
  */
-export function renderLine(g, frame, series, x, y) {
+export function renderLine(g, frame, series, x, y, opts = {}) {
+  const { showPoints = true } = opts;
   const { categories, values, colorVar } = series;
   const stroke = tokenNum(frame.host, '--size-line-stroke') || 1.5;
   const point = tokenNum(frame.host, '--size-line-point') || 6;
   const r = Math.max(1, (point - stroke) / 2); // 直径含描边 = size-line-point
 
-  g.style('color', `var(${colorVar})`);
+  g.style('color', `var(${colorVar})`).classed('points-muted', !showPoints);
 
-  const pts = categories.map((c, i) => ({ key: c, v: values[i], cx: x(c) + x.bandwidth() / 2 }));
+  const pts = categories.map((c, i) => ({ key: c, i, v: values[i], cx: x(c) + x.bandwidth() / 2 }));
   const gen = line().defined((d) => d.v != null).x((d) => d.cx).y((d) => y(d.v));
 
   g.selectAll('path.dv-line').data([pts]).join('path').attr('class', 'dv-line').attr('d', gen);
@@ -77,6 +80,7 @@ export function renderLine(g, frame, series, x, y) {
     .data(pts.filter((d) => d.v != null), (d) => d.key)
     .join('circle')
     .attr('class', 'dv-line-point')
+    .attr('data-i', (d) => d.i)
     .attr('cx', (d) => d.cx)
     .attr('cy', (d) => y(d.v))
     .attr('r', r);

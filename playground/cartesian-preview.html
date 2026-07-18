@@ -172,9 +172,20 @@
         </div>
       </div>
 
+      <div class="field">
+        <div class="field-label"><b>数据量</b><span>类目数</span></div>
+        <div class="seg" id="seg-density">
+          <button data-value="few" class="is-active">少 4</button>
+          <button data-value="mid">中 16</button>
+          <button data-value="many">多 36</button>
+        </div>
+      </div>
+
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
+        数据量对所有分类生效（类目数 4 / 16 / 36）：看柱容器收缩（BAR-03）、X 标签碰撞（AXIS-06）、
+        折线数据点显隐分档（&gt;13 全隐）。
       </p>
     </div>
   </aside>
@@ -187,98 +198,86 @@
   import { CartesianChart } from '../charts/charts/cartesian/index.js';
 
   const K = (arr) => arr.map((v) => (v == null ? null : v * 1000)); // ×1000 让 FORMAT-01 单位换算可见
-  const Q = ['Q1', 'Q2', 'Q3', 'Q4'];
-  const M6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
-  /* 数据量 少/中/多：单系列柱，n 越大每格 step 越窄，看 singleBar 容器（slot 模式）如何收缩（BAR-03）*/
+  /* 数据按右侧「数据量」旋钮的类目数 n 生成（cfg 是 n 的函数，所有分类同一套 n）。
+     wave 带相位 p：多系列各取不同相位得到不同形状 */
   const seq = (n) => Array.from({ length: n }, (_, i) => `${i + 1}`);
-  const wave = (n) => K(Array.from({ length: n }, (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6) + 140 * Math.cos(i * 1.7))));
+  const wave = (n, p = 0) => K(Array.from({ length: n }, (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6 + p) + 140 * Math.cos(i * 1.7 + p))));
+  /* 含负值/0/null 特性的单系列（基础柱专用：负值向下、0 值 1px 占位、null 断口全可见） */
+  const signedWave = (n) => {
+    const d = wave(n, 0.8).map((v) => v - 500000);
+    if (n > 2) d[2] = 0;
+    if (n > 4) d[4] = null;
+    return d;
+  };
+  /* 多系列正值波形：按序相移 */
+  const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, k * 0.9) }));
+  /* 负值系列（堆叠含负值用） */
+  const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
+  /* 折线：中途一个 null 断口 */
+  const lineWave = (n) => { const d = wave(n, 0.4); d[Math.floor(n / 3)] = null; return d; };
+  /* 副轴增速（%）：小数量级、与柱不同量纲 */
+  const growth = (n) => Array.from({ length: n }, (_, i) => Math.round(12 + 9 * Math.sin(i * 0.5)));
 
-  const three = [
-    { name: '营业收入', data: K([820, 910, 1290, 1120]) },
-    { name: '成本', data: K([560, 620, 480, 710]) },
-    { name: '利润', data: K([260, 290, 810, 410]) },
-  ];
-  const six = [
-    ...three,
-    { name: '税费', data: K([120, 140, 180, 150]) },
-    { name: '研发投入', data: K([300, 340, 420, 390]) },
-    { name: '现金流', data: K([680, 720, 900, 810]) },
-  ];
-  const combo = [
-    { name: '营业收入', data: K([820, 910, 1290, 1120]), type: 'bar', axis: 'primary' },
-    { name: '成本', data: K([560, 620, 480, 710]), type: 'bar', axis: 'primary' },
-    { name: '营收增速', data: [12, 18, null, 22], type: 'line', axis: 'secondary' },
-  ];
-
-  /* ── 图表分类（左栏）：每项 = 一份语义配置，横跨三主题渲染 ───────── */
+  /* ── 图表分类（左栏）：每项 cfg = 类目数 n 的函数（n 来自右侧「数据量」旋钮），横跨三主题渲染 ── */
   const CATEGORIES = [
     {
       group: '柱状',
       id: 'basic', label: '基础柱（单系列）',
-      desc: '单系列默认色（THS #3366FF）；含负值向下、0 值 1px 占位、null 断口。',
-      cfg: { categories: M6, series: [{ name: '营业收入', data: K([820, -340, 0, 1290, null, 760]) }] },
+      desc: '单系列默认色（THS #3366FF）；含负值向下、0 值 1px 占位、null 断口。数据量↑看单柱容器收缩：step 跌破上限后柱按 2:1 等比收缩保侧白（BAR-03）、X 标签碰撞（AXIS-06）。',
+      cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: signedWave(n) }] }),
     },
     {
       group: '柱状',
       id: 'grouped3', label: '分组柱（3 系列）',
-      desc: '一进多「整套换」：首色应变浅蓝 #52BBFF（≠ 单系列 #3366FF）；各主题按序号取色板。',
-      cfg: { categories: Q, series: three },
+      desc: '一进多「整套换」：首色应变浅蓝 #52BBFF（≠ 单系列 #3366FF）；各主题按序号取色板。数据量↑看分组容器收缩（BAR-02）。',
+      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']) }),
     },
     {
       group: '柱状',
       id: 'grouped6', label: '分组柱（6 系列）',
       desc: '色板循环：点掉几个系列看剩余柱整组重新居中、颜色不重排（各系列色固定不跟随）。',
-      cfg: { categories: Q, series: six },
+      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
     },
     {
       group: '堆叠',
       id: 'stack', label: '堆叠（normal）',
       desc: '段间直角、只最外端圆角（THS，正向最上/负向最下）；点掉一个系列看堆叠闭合、轴 refit。',
-      cfg: { categories: Q, series: three, stack: 'normal' },
+      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'normal' }),
     },
     {
       group: '堆叠',
       id: 'stackNeg', label: '堆叠含负值',
       desc: '正值向上累计、负值向下累计（分开）。',
-      cfg: {
-        categories: Q, stack: 'normal',
-        series: [
-          { name: '主营利润', data: K([620, 710, 540, 830]) },
-          { name: '投资收益', data: K([180, 240, 300, 210]) },
-          { name: '净亏损项', data: K([-260, -180, -420, -150]) },
-        ],
-      },
+      cfg: (n) => ({
+        categories: seq(n), stack: 'normal',
+        series: [...posSeries(n, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(n) }],
+      }),
     },
     {
       group: '堆叠',
       id: 'percent', label: '归一化（percent）',
       desc: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。',
-      cfg: { categories: Q, series: three, stack: 'percent' },
+      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'percent' }),
+    },
+    {
+      group: '折线',
+      id: 'line', label: '折线（单系列）',
+      desc: '数据点显隐分档（移动/PC 一致）：≤13 点常显（少）、>13 全隐（中/多），线仍连续；null 断口不强连。点留 DOM（data-i），hover 十字准星唤出最近点归 tooltip 切片。',
+      cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
     },
     {
       group: '组合',
       id: 'combo', label: '折柱组合 · 双 Y',
-      desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行；线含 null 断口。图例按真实 type 显方块/折线 marker。',
-      cfg: { categories: Q, series: combo },
-    },
-    {
-      group: '数据量',
-      id: 'vol-few', label: '数据量 · 少（4）',
-      desc: '每格 step 很大：容器封顶 size-bar-container-max、柱满宽（THS 16 / iFinD·Ainvest 32）居中，格间距（step−容器）很大。',
-      cfg: { categories: seq(4), series: [{ name: '成交额', data: wave(4) }] },
-    },
-    {
-      group: '数据量',
-      id: 'vol-mid', label: '数据量 · 中（16）',
-      desc: 'step 接近单柱容器上限（THS 24 / iFinD·Ainvest 48）：THS 多为满宽，而 iFinD/Ainvest 容器上限更大(48)、会更早开始收缩——同数据不同主题的容器差异在此可见。',
-      cfg: { categories: seq(16), series: [{ name: '成交额', data: wave(16) }] },
-    },
-    {
-      group: '数据量',
-      id: 'vol-many', label: '数据量 · 多（36）',
-      desc: 'step 跌破单柱容器上限 → 容器缩小、格间距压到 0、柱按 2:1 等比收缩保侧白（BAR-03 singleBar）；x 标签碰撞隐藏（AXIS-06）。屏幕很宽若仍满宽，拖卡片右下角收窄即可看到收缩。',
-      cfg: { categories: seq(36), series: [{ name: '成交额', data: wave(36) }] },
+      desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。',
+      cfg: (n) => ({
+        categories: seq(n),
+        series: [
+          { name: '营业收入', data: wave(n), type: 'bar', axis: 'primary' },
+          { name: '成本', data: wave(n, 0.9), type: 'bar', axis: 'primary' },
+          { name: '营收增速', data: growth(n), type: 'line', axis: 'secondary' },
+        ],
+      }),
     },
   ];
 
@@ -288,7 +287,8 @@
     { id: 'ainvest', name: 'Ainvest', dot: '#265FFC' },
   ];
 
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light' };
+  const DENSITY = { few: 4, mid: 16, many: 36 }; // 右侧「数据量」旋钮 → 类目数 n
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -349,7 +349,7 @@
       const host = document.createElement('div');
       host.className = 'chart-host';
       mount.appendChild(host);
-      CartesianChart(host, { ...cat.cfg, platform: state.platform });
+      CartesianChart(host, { ...cat.cfg(DENSITY[state.density]), platform: state.platform });
     });
   }
 
@@ -366,6 +366,7 @@
   }
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
+  wireSeg('seg-density', 'density');
 
   render();
 </script>

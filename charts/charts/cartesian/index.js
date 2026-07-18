@@ -173,10 +173,13 @@ export function CartesianChart(host, cfg) {
       });
     }
 
-    /* ── 线（叠加，走类目中心，各用 yOf(axis)）[LINE-01][BAR-07] ── */
+    /* ── 线（叠加，走类目中心，各用 yOf(axis)）[LINE-01][BAR-07] ──
+       数据点显隐分档（specs/line.md）：该线非 null 点数 > 13 → 全隐（移动/PC 一致）；
+       点留 DOM，hover 唤出归 tooltip/十字准星切片 */
     lines.forEach((r) => {
       if (state.hidden.has(r.name)) return;
-      renderLine(seriesG('dv-line-series', r.name), frame, { categories, values: r.data, colorVar: r.colorVar }, x, yOf(r));
+      const showPoints = r.data.filter((v) => v != null).length <= 13;
+      renderLine(seriesG('dv-line-series', r.name), frame, { categories, values: r.data, colorVar: r.colorVar }, x, yOf(r), { showPoints });
     });
 
     applyDim();
