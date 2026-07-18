@@ -116,7 +116,7 @@
   --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-2);
   --size-zero-bar-placeholder: 1px;
-  --size-bar-group-gap-ratio: 0;
+  --size-bar-group-gap-ratio: 2:1;
   --size-bar-group-container-max: none;
   --size-bar-group-inner-gap-max: 2px;
   --size-line-stroke: 1.5px;
@@ -268,7 +268,7 @@
   --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-0);
   --size-zero-bar-placeholder: 1px;
-  --size-bar-group-gap-ratio: 0;
+  --size-bar-group-gap-ratio: 2:1;
   --size-bar-group-container-max: 100px;
   --size-bar-group-inner-gap-max: 2px;
   --size-line-stroke: 2px;

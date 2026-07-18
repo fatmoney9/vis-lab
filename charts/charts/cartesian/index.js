@@ -144,7 +144,7 @@ export function CartesianChart(host, cfg) {
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
     const groupMaxRaw = tokenNum(plotHost, '--size-bar-group-container-max');     /* [BAR-02] 分组容器上限 */
     const groupMax = groupMaxRaw > 0 ? groupMaxRaw : Infinity;                     /* none/0（如 THS）→ 不设上限 */
-    const gapRatio = tokenNum(plotHost, '--size-bar-group-gap-ratio');           /* [BAR-02] 分组内容块:两侧留白 比（Ainvest 2:1；THS/iFinD=0 不留侧白）。tokenNum 解析 "2:1"→2 */
+    const gapRatio = tokenNum(plotHost, '--size-bar-group-gap-ratio');           /* [BAR-02] 分组内容块:两侧留白 比（三主题 2:1；0=不留侧白）。tokenNum 解析 "2:1"→2 */
     const barContainerMax = tokenNum(plotHost, '--size-bar-container-max') || Infinity; /* [BAR-03] 单柱容器上限（24/48） */
     const barGapRatio = tokenNum(plotHost, '--size-bar-gap-ratio');              /* [BAR-03] 单柱 柱:两侧留白 比（三主题 2:1）。"2:1"→2、0→不留侧白 */
     const band = x.bandwidth();

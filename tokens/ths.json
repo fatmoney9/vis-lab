@@ -163,7 +163,7 @@
   "size-zero-bar-placeholder": "1px",
 
   "$section-17": "分组柱状图 Grouped Bar",
-  "size-bar-group-gap-ratio": "0",
+  "size-bar-group-gap-ratio": "2:1",
   "size-bar-group-container-max": "none",
   "size-bar-group-inner-gap-max": "2px",
 

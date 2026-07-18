@@ -17,8 +17,8 @@
    组间距变大、数据多→内容块占满 band 组间距=0），与单柱同一套容器规则（见 singleBar）。
    柱宽上限 barMax、柱间距上限 gapMax；放不下时**柱与间距按同一比例 s 等比缩小**
    （s=柱宽/barMax=间距/gapMax，恒保持 barMax:gapMax，如 32:2）——间距只在柱顶到 barMax 时才是满值 gapMax。
-   ratio>0（如 Ainvest 2:1）时容器内**左右两侧再留白**：内容块(柱+柱间距) : 两侧留白总和 = ratio:1，
-   内容块只能占 container 的 ratio/(ratio+1) → 进一步压小 s（THS/iFinD ratio=0，不留侧白、内容块铺满 container）。
+   ratio>0（三主题 2:1）时容器内**左右两侧再留白**：内容块(柱+柱间距) : 两侧留白总和 = ratio:1，
+   内容块只能占 container 的 ratio/(ratio+1) → 进一步压小 s（ratio=0 退化为不留侧白、内容块铺满 container）。
    containerMax = size-bar-group-container-max。定位把内容块在 band 内居中（侧白即两侧自然余量、对称）。 */
 export function groupedBars(n, band, barMax, gapMax, containerMax = Infinity, ratio = 0) {
   const container = Math.min(band, containerMax);
