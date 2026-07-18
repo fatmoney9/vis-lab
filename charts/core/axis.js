@@ -1,10 +1,13 @@
 import { Y_LABEL_GAP_OUTSIDE } from './frame.js';
+import { tokenNum } from './tokens.js';
 
 const fmt = new Intl.NumberFormat('en-US');
 export const formatValue = (v) => fmt.format(v);
 
-const MIN_X_GAP = 8; // [AXIS-06] 相邻 X 标签最小净距，低于即触发碰撞策略
-const SAFE_GAP = 8;  // [AXIS-01] inside 布局数据让位安全间距（待 token 化）
+/* 轴标签级间距经 token 下发（源码禁字面量）：
+ *   --spacing-axis-y-inset-gap   [AXIS-01] inside 数据让位安全间距
+ *   --spacing-axis-x-label-min-gap [AXIS-06] 相邻 X 标签最小净距（碰撞阈值）
+ * frame.js 的绘制区几何留白仍为字面量（见 specs/axes.md 待办，本轮不并入）。 */
 
 /*
  * [AXIS-01][AXIS-03] Y 轴标签。
@@ -76,14 +79,14 @@ export function measureYLabelWidth(host, labels) {
 /* [AXIS-01] inside 布局数据让位：有标签一侧的数据边界收缩「最长标签宽 + 安全间距」 */
 export function yLabelInset(host, ticks, format = formatValue) {
   const widths = measureRendered(host, ticks.map(format));
-  return Math.ceil(Math.max(0, ...widths)) + SAFE_GAP;
+  return Math.ceil(Math.max(0, ...widths)) + tokenNum(host, '--spacing-axis-y-inset-gap');
 }
 
 /*
  * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x }]，x = 类目中心）。
  * [AXIS-05] 对齐：中间标签居中；首尾是否贴绘制区边缘由 flushFirst / flushLast
  *           决定（数据贴边时为 true，如满幅折线）；居中标签越界时向内回收。
- * [AXIS-06] 碰撞（任意相邻净距 < 8px 触发，策略随主题）：
+ * [AXIS-06] 碰撞（任意相邻净距 < --spacing-axis-x-label-min-gap，默认 8px，触发；策略随主题）：
  *   segment3 —— 整体改 3 段式，只留首/中/尾（THS / Ainvest）
  *   hide     —— 隐藏碰撞标签，首尾始终保留（iFinD-PC）
  *   宽度走渲染级测量（与 AXIS-08 同源）——碰撞判定无估算误差。
@@ -92,6 +95,7 @@ export function yLabelInset(host, ticks, format = formatValue) {
 export function renderXLabels(layer, frame, items, opts = {}) {
   const { collision = 'segment3', flushFirst = false, flushLast = false } = opts;
   const n = items.length;
+  const minGap = tokenNum(frame.host, '--spacing-axis-x-label-min-gap');
   const widths = measureRendered(frame.host, items.map((d) => d.label));
 
   const boxes = items.map((d, i) => {
@@ -102,7 +106,7 @@ export function renderXLabels(layer, frame, items, opts = {}) {
     return { label: d.label, left, width: widths[i], i };
   });
 
-  const collides = (a, b) => b.left - (a.left + a.width) < MIN_X_GAP;
+  const collides = (a, b) => b.left - (a.left + a.width) < minGap;
 
   let kept = boxes;
   if (n > 2 && boxes.some((b, i) => i > 0 && collides(boxes[i - 1], b))) {

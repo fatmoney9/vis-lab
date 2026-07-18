@@ -45,6 +45,7 @@ export function CartesianChart(host, cfg) {
   const yForm = b['y-label-form'];
   const ySide = b['y-main-side'];
   const oppSide = ySide === 'left' ? 'right' : 'left';
+  const mirror = b['y-dual-shared'] && !dual; /* [AXIS-02] iFinD 单轴：反侧镜像主轴同一套标签；真·双量纲仍走标准 dual（两侧各一套不同值） */
   const collision = b['x-collision'];
   const marker = b['legend-marker'];
   const selectMode = b['legend-select'];
@@ -101,24 +102,27 @@ export function CartesianChart(host, cfg) {
       pSplit = niceSplit(...axisDomain(categories, primary, stack, state.hidden));
     }
 
-    /* [AXIS-08] 列宽：outside 时主轴 + 副轴各自测量 */
+    /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
+    const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
+
+    /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量 */
     const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
-    const yLabelWidthSecondary = dual && yForm === 'outside' ? measureYLabelWidth(plotHost, sSplit.ticks.map(yFormat)) : 0;
+    const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     const frame = createFrame(plotHost, { height: plotHost.clientHeight, yForm, ySide, yLabelWidth, yLabelWidthSecondary }); /* [GRID-03] */
 
     const yP = linearY(pSplit, frame.grid.top, frame.grid.bottom);
     const yS = dual ? linearY(sSplit, frame.grid.top, frame.grid.bottom) : yP;
     const yOf = (r) => (r.axis === 'secondary' ? yS : yP);
 
-    /* [AXIS-01] inside 数据让位：双轴则两侧都让 */
+    /* [AXIS-01] inside 数据让位：反侧有标签（副轴/镜像）则两侧都让 */
     let dataL = frame.grid.left;
     let dataR = frame.grid.right;
     if (yForm === 'inside') {
       const insetP = yLabelInset(plotHost, pSplit.ticks, yFormat);
       if (ySide === 'left') dataL += insetP; else dataR -= insetP;
-      if (dual) {
-        const insetS = yLabelInset(plotHost, sSplit.ticks, yFormat);
-        if (oppSide === 'left') dataL += insetS; else dataR -= insetS;
+      if (oppTicks) {
+        const insetO = yLabelInset(plotHost, oppTicks, yFormat);
+        if (oppSide === 'left') dataL += insetO; else dataR -= insetO;
       }
     }
 
@@ -131,7 +135,7 @@ export function CartesianChart(host, cfg) {
 
     renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
     renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat }); /* [AXIS-01/03] */
-    if (dual) renderYLabels(frame.svg.append('g'), frame, sSplit.ticks, yS, { form: yForm, side: oppSide, format: yFormat }); /* [AXIS-02] 副轴反侧 */
+    if (oppTicks) renderYLabels(frame.svg.append('g'), frame, oppTicks, yS, { form: yForm, side: oppSide, format: yFormat }); /* [AXIS-02] 反侧：副轴另一套 / iFinD 镜像同一套 */
     renderXLabels(frame.svg.append('g'), frame,
       categories.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })), { collision }); /* [AXIS-04..06] */
 

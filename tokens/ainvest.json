@@ -87,6 +87,8 @@
     "mobile": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
     "pc": { "light": "#000000", "dark": "#ffffff" }
   },
+  "spacing-axis-y-inset-gap": "{spacing-8}",
+  "spacing-axis-x-label-min-gap": "{spacing-8}",
 
   "$section-09": "通用文字颜色",
   "color-text-primary": { "light": "#000000", "dark": "#ffffff" },

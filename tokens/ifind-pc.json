@@ -84,6 +84,8 @@
   "line-height-axis": "14px",
   "font-weight-axis": "{font-weight-medium}",
   "color-text-axis": { "light": "#87879C", "dark": "#A1A1B3" },
+  "spacing-axis-y-inset-gap": "{spacing-8}",
+  "spacing-axis-x-label-min-gap": "{spacing-8}",
 
   "$section-09": "通用文字颜色",
   "color-text-primary": { "light": "#292933", "dark": "#E9E9F2" },

@@ -56,6 +56,8 @@
   --line-height-axis: 12px;
   --font-weight-axis: var(--font-weight-medium);
   --color-text-axis: rgba(0, 0, 0, 0.6);
+  --spacing-axis-y-inset-gap: var(--spacing-8);
+  --spacing-axis-x-label-min-gap: var(--spacing-8);
   --color-text-primary: rgba(0, 0, 0, 0.84);
   --color-text-secondary: rgba(0, 0, 0, 0.6);
   --color-text-tertiary: rgba(0, 0, 0, 0.4);
@@ -206,6 +208,8 @@
   --line-height-axis: 14px;
   --font-weight-axis: var(--font-weight-medium);
   --color-text-axis: #87879C;
+  --spacing-axis-y-inset-gap: var(--spacing-8);
+  --spacing-axis-x-label-min-gap: var(--spacing-8);
   --color-text-primary: #292933;
   --color-text-secondary: #4F4F5E;
   --color-text-tertiary: rgba(0, 0, 0, 0.4);
@@ -360,6 +364,8 @@
   --line-height-axis: 16px;
   --font-weight-axis: var(--font-weight-regular);
   --color-text-axis: #000000;
+  --spacing-axis-y-inset-gap: var(--spacing-8);
+  --spacing-axis-x-label-min-gap: var(--spacing-8);
   --color-text-primary: #000000;
   --color-text-secondary: rgba(0, 0, 0, 0.6);
   --color-text-tertiary: rgba(0, 0, 0, 0.4);
