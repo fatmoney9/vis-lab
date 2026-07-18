@@ -111,6 +111,7 @@
   --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 16px;
   --size-bar-container-max: 24px;
+  --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-2);
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 0;
@@ -260,6 +261,7 @@
   --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 32px;
   --size-bar-container-max: 48px;
+  --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-0);
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 0;
@@ -413,6 +415,7 @@
   --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 32px;
   --size-bar-container-max: 48px;
+  --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-0);
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 2:1;

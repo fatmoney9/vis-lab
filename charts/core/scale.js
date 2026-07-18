@@ -106,11 +106,13 @@ export function linearY(split, top, bottom) {
   return scaleLinear().domain([split.min, split.max]).range([bottom, top]);
 }
 
-/* 类目 → band 位置与宽度（柱状图及延伸图表的 X 轴） */
-export function bandX(categories, left, right, { grouped = false } = {}) {
-  return scaleBand()
-    .domain(categories)
-    .range([left, right])
-    .paddingInner(grouped ? 0.25 : 1 / 3)
-    .paddingOuter(grouped ? 0.125 : 1 / 6);
+/* 类目 → band 位置与宽度（柱状图及延伸图表的 X 轴）
+   mode：
+     'slot'   所有柱（单柱 / 分组 / 堆叠）：band = step（每格铺满、格间距最小 0）。侧白与组间距全部作为
+              「容器 = min(step, 容器上限)」之外的残量——数据少→容器封顶、格间距（=step−容器内容）变大；
+              数据多→容器缩小、格间距=0。组内/单柱的具体排布与留白见 layout.js（groupedBars / singleBar）
+     'center' 纯折线等：点居 band 中心、两端留 1/6 inset */
+export function bandX(categories, left, right, { mode = 'center' } = {}) {
+  const [pi, po] = mode === 'slot' ? [0, 0] : [1 / 3, 1 / 6];
+  return scaleBand().domain(categories).range([left, right]).paddingInner(pi).paddingOuter(po);
 }

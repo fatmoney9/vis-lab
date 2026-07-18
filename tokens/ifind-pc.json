@@ -156,6 +156,7 @@
   "$section-16": "柱状图 Bar",
   "size-bar-max": "32px",
   "size-bar-container-max": "48px",
+  "size-bar-gap-ratio": "2:1",
   "radius-bar-top": "{radius-0}",
   "size-zero-bar-placeholder": "1px",
 

@@ -17,10 +17,12 @@ function barPath(x, yTop, w, h, r, side) {
 
 /*
  * [BAR-01][BAR-05] 一个柱系列的一批柱，渲染进已存在的分组 <g>（L2 每系列一个 g，便于整组控隐藏/弱化）。
- *   series = { categories, values, base?, offset, width, colorVar, rounded?, zeroBar? }
+ *   series = { categories, values, base?, offset, width, colorVar, rounded?, capped?, zeroBar? }
  *     offset/width —— L2 算好的 band 内偏移与柱宽（分组 / 堆叠排布）
  *     base         —— 每类目的基线值（默认 0=从零基线长）；堆叠时 = 累计基线数组，段 = [base, base+v]
- *     rounded      —— 是否圆角（默认 true；堆叠段传 false → 直角）
+ *     rounded      —— 整批统一是否圆角（默认 true；基础/分组柱用）
+ *     capped       —— 每类目布尔数组，逐柱决定是否圆角（给一个则**覆盖** rounded）。
+ *                     堆叠用它只给「整根最外端」那段封顶圆角（正向最上/负向最下），其余段直角（BAR-05）
  *     zeroBar      —— 0 值是否画 1px 占位（默认 true；堆叠传 false → 0 不占位）
  *     colorVar     —— 系列色 CSS 变量名，g 上 color=var(它)、柱 fill=currentColor
  *   x —— bandX 比例尺（类目→band 左沿）；y —— linearY 比例尺
@@ -28,14 +30,14 @@ function barPath(x, yTop, w, h, r, side) {
  *       段 = 值区间 [base, base+v]，正向远离基线端圆角、负向另一端。默认参数下与 v1 完全一致。
  */
 export function renderBars(g, frame, series, x, y) {
-  const { categories, values, base = null, offset, width, colorVar, rounded = true, zeroBar = true } = series;
+  const { categories, values, base = null, offset, width, colorVar, rounded = true, capped = null, zeroBar = true } = series;
   const zeroH = tokenNum(frame.host, '--size-zero-bar-placeholder') || 1;
-  const r = rounded ? tokenNum(frame.host, '--radius-bar-top') : 0;
+  const rMax = tokenNum(frame.host, '--radius-bar-top');   // 主题决定（THS=2、iFinD/Ainvest=0）
 
   g.style('color', `var(${colorVar})`);
 
   const bars = categories
-    .map((c, i) => ({ key: c, v: values[i], b: base ? base[i] : 0, bx: x(c) + offset }))
+    .map((c, i) => ({ key: c, v: values[i], b: base ? base[i] : 0, bx: x(c) + offset, r: (capped ? capped[i] : rounded) ? rMax : 0 }))
     .filter((d) => d.v != null);
 
   g.selectAll('path.dv-bar')
@@ -47,7 +49,7 @@ export function renderBars(g, frame, series, x, y) {
       const top = d.b + d.v;                              // 段的另一端（值空间）
       const yHi = y(Math.max(d.b, top));                  // 像素上沿（值大 → y 小）
       const h = Math.abs(y(top) - y(d.b));
-      return barPath(d.bx, yHi, width, h, r, d.v > 0 ? 'top' : 'bottom');
+      return barPath(d.bx, yHi, width, h, d.r, d.v > 0 ? 'top' : 'bottom');
     });
 }
 

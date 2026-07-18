@@ -190,6 +190,10 @@
   const Q = ['Q1', 'Q2', 'Q3', 'Q4'];
   const M6 = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 
+  /* 数据量 少/中/多：单系列柱，n 越大每格 step 越窄，看 singleBar 容器（slot 模式）如何收缩（BAR-03）*/
+  const seq = (n) => Array.from({ length: n }, (_, i) => `${i + 1}`);
+  const wave = (n) => K(Array.from({ length: n }, (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6) + 140 * Math.cos(i * 1.7))));
+
   const three = [
     { name: '营业收入', data: K([820, 910, 1290, 1120]) },
     { name: '成本', data: K([560, 620, 480, 710]) },
@@ -230,7 +234,7 @@
     {
       group: '堆叠',
       id: 'stack', label: '堆叠（normal）',
-      desc: '段直角、从累计基线长起；点掉一个系列看堆叠闭合、轴 refit。',
+      desc: '段间直角、只最外端圆角（THS，正向最上/负向最下）；点掉一个系列看堆叠闭合、轴 refit。',
       cfg: { categories: Q, series: three, stack: 'normal' },
     },
     {
@@ -257,6 +261,24 @@
       id: 'combo', label: '折柱组合 · 双 Y',
       desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行；线含 null 断口。图例按真实 type 显方块/折线 marker。',
       cfg: { categories: Q, series: combo },
+    },
+    {
+      group: '数据量',
+      id: 'vol-few', label: '数据量 · 少（4）',
+      desc: '每格 step 很大：容器封顶 size-bar-container-max、柱满宽（THS 16 / iFinD·Ainvest 32）居中，格间距（step−容器）很大。',
+      cfg: { categories: seq(4), series: [{ name: '成交额', data: wave(4) }] },
+    },
+    {
+      group: '数据量',
+      id: 'vol-mid', label: '数据量 · 中（16）',
+      desc: 'step 接近单柱容器上限（THS 24 / iFinD·Ainvest 48）：THS 多为满宽，而 iFinD/Ainvest 容器上限更大(48)、会更早开始收缩——同数据不同主题的容器差异在此可见。',
+      cfg: { categories: seq(16), series: [{ name: '成交额', data: wave(16) }] },
+    },
+    {
+      group: '数据量',
+      id: 'vol-many', label: '数据量 · 多（36）',
+      desc: 'step 跌破单柱容器上限 → 容器缩小、格间距压到 0、柱按 2:1 等比收缩保侧白（BAR-03 singleBar）；x 标签碰撞隐藏（AXIS-06）。屏幕很宽若仍满宽，拖卡片右下角收窄即可看到收缩。',
+      cfg: { categories: seq(36), series: [{ name: '成交额', data: wave(36) }] },
     },
   ];
 

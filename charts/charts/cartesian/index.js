@@ -29,7 +29,7 @@ import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
 import { resolveSeries } from './series.js';
 import { axisDomain } from './domain.js';
-import { groupedBars, stackedColumn, stackBars } from './layout.js';
+import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
   const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left' } = cfg;
@@ -125,7 +125,9 @@ export function CartesianChart(host, cfg) {
     const stacked = stack !== 'none';
     const bars = resolved.filter((r) => r.type === 'bar');
     const lines = resolved.filter((r) => r.type === 'line');
-    const x = bandX(categories, dataL, dataR, { grouped: !stacked && bars.length > 1 });
+    /* x 排布：有柱（单柱/分组/堆叠）一律 slot=铺满整格、格间距最小 0（侧白/组间距归容器残量，见 bandX）；纯折线点居中留 inset */
+    const xMode = bars.length ? 'slot' : 'center';
+    const x = bandX(categories, dataL, dataR, { mode: xMode });
 
     renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
     renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat }); /* [AXIS-01/03] */
@@ -138,25 +140,29 @@ export function CartesianChart(host, cfg) {
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
     const groupMaxRaw = tokenNum(plotHost, '--size-bar-group-container-max');     /* [BAR-02] 分组容器上限 */
     const groupMax = groupMaxRaw > 0 ? groupMaxRaw : Infinity;                     /* none/0（如 THS）→ 不设上限 */
-    const gapRatio = tokenNum(plotHost, '--size-bar-group-gap-ratio');           /* [BAR-02] 内容块:两侧留白 比（Ainvest 2:1；THS/iFinD=0 不留侧白）。tokenNum 解析 "2:1"→2 */
+    const gapRatio = tokenNum(plotHost, '--size-bar-group-gap-ratio');           /* [BAR-02] 分组内容块:两侧留白 比（Ainvest 2:1；THS/iFinD=0 不留侧白）。tokenNum 解析 "2:1"→2 */
+    const barContainerMax = tokenNum(plotHost, '--size-bar-container-max') || Infinity; /* [BAR-03] 单柱容器上限（24/48） */
+    const barGapRatio = tokenNum(plotHost, '--size-bar-gap-ratio');              /* [BAR-03] 单柱 柱:两侧留白 比（三主题 2:1）。"2:1"→2、0→不留侧白 */
     const band = x.bandwidth();
     if (stacked && bars.length) {
-      /* [BAR-05] 单列堆叠（可见柱按可见重算，段闭合） */
+      /* [BAR-05] 单列堆叠（可见柱按可见重算，段闭合）；列走单柱容器留白（barContainerMax + barGapRatio） */
       const visBars = bars.filter((r) => !state.hidden.has(r.name));
       const { segs } = stackBars(categories, visBars, stack);
-      const col = stackedColumn(band, barMax);
+      const col = singleBar(band, barMax, barContainerMax, barGapRatio);
       segs.forEach((seg, i) => {
         const r = visBars[i];
         renderBars(seriesG('dv-bar-series', r.name), frame,
-          { categories, values: seg.values, base: seg.base, offset: col.offset, width: col.width, colorVar: seg.colorVar, rounded: false, zeroBar: false },
+          { categories, values: seg.values, base: seg.base, offset: col.offset, width: col.width, colorVar: seg.colorVar, capped: seg.caps, zeroBar: false },
           x, yOf(r));
       });
     } else if (bars.length) {
-      /* [BAR-02/03] 分组：按**可见**柱等分槽位 → 隐藏一根后剩余柱整组重新居中于 band
-         （柱宽受 size-bar-max、整组宽受 size-bar-group-container-max 双重约束）。
+      /* 单柱系列（声明即单柱，含折柱组合里的唯一柱）走单柱容器留白（BAR-03）；
+         分组（≥2 声明）走分组容器：按**可见**柱等分槽位 → 隐藏一根后剩余柱整组重新居中（BAR-02，即便隐藏到 1 根仍用分组容器）。
          系列色由固定 colorVar 决定、与可见性无关，故不重排（COLOR-04）。 */
       const visBars = bars.filter((r) => !state.hidden.has(r.name));
-      const slots = groupedBars(visBars.length, band, barMax, gap, groupMax, gapRatio);
+      const slots = bars.length === 1
+        ? [singleBar(band, barMax, barContainerMax, barGapRatio)]
+        : groupedBars(visBars.length, band, barMax, gap, groupMax, gapRatio);
       visBars.forEach((r, i) => {
         renderBars(seriesG('dv-bar-series', r.name), frame,
           { categories, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */
