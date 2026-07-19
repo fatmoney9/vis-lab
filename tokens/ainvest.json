@@ -143,7 +143,8 @@
   "spacing-legend-marker-label": "{spacing-6}",
   "spacing-legend-item-h": "{spacing-16}",
   "spacing-legend-row-v": "{spacing-4}",
-  "spacing-legend-container-v": { "mobile": "{spacing-16}", "pc": "{spacing-12}" },
+  "spacing-legend-container-v-top": { "mobile": "{spacing-16}", "pc": "{spacing-12}" },
+  "spacing-legend-container-v-bottom": { "mobile": "{spacing-16}", "pc": "{spacing-12}" },
   "spacing-legend-container-h": "{spacing-0}",
   "opacity-visualization-dim": 0.2,
 

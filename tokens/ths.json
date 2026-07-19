@@ -10,7 +10,7 @@
     },
     "notes": [
       "系列色板未纳入，待色板组方案定稿",
-      "spacing-legend-container 原表复合值「上下 4 · 左右 0」已拆为 -v / -h",
+      "spacing-legend-container 原表复合值「上下 4 · 左右 0」已拆为 -v-top / -v-bottom / -h；下间距定 12（图例与 grid 的间距，frame 不另垫）",
       "size-donut-container 原表 160×160 为正方形，记单值",
       "「行高规则 > 字号」等非数值规则不属于 token，见规范文档"
     ]
@@ -137,7 +137,8 @@
   "spacing-legend-marker-label": "{spacing-2}",
   "spacing-legend-item-h": "{spacing-12}",
   "spacing-legend-row-v": "{spacing-4}",
-  "spacing-legend-container-v": "{spacing-4}",
+  "spacing-legend-container-v-top": "{spacing-4}",
+  "spacing-legend-container-v-bottom": "{spacing-12}",
   "spacing-legend-container-h": "{spacing-0}",
   "opacity-visualization-dim": 0.2,
 

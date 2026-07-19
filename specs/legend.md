@@ -10,7 +10,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| LEGEND-01 | 容器默认 **左对齐**、单行横排；行宽不足时 **flex-wrap 自动换行**（由容器宽度决定，不固定每行项数）。边距 `spacing-legend-container-v`（上下）/ `spacing-legend-container-h`（左右）；项水平间距 `spacing-legend-item-h`；换行行间距 `spacing-legend-row-v`。**对齐方式（左/中/右）无 token**，与主题一致默认左对齐 | `core/legend.js` → `renderLegend()`；`charts/styles.css` → `.dv-legend` | ✅ |
+| LEGEND-01 | 容器默认 **左对齐**、单行横排；行宽不足时 **flex-wrap 自动换行**（由容器宽度决定，不固定每行项数）。边距 `spacing-legend-container-v-top`（上）/ `spacing-legend-container-v-bottom`（下——即图例与 grid 的间距，frame 顶部不另留白）/ `spacing-legend-container-h`（左右）；THS 上 4 / 下 12；项水平间距 `spacing-legend-item-h`；换行行间距 `spacing-legend-row-v`。**对齐方式（左/中/右）无 token**，与主题一致默认左对齐 | `core/legend.js` → `renderLegend()`；`charts/styles.css` → `.dv-legend` | ✅ |
 | LEGEND-04 | **单系列也必须显示图例**（哪怕一条系列），让用户知道数据含义；仅当图表本身完全无系列含义可言时才省略。**图例占位优先、给绘图区让位、不与绘图区重叠**（换行 / 分页增高时绘图区相应缩小，图例不覆盖数据线 / 柱） | 展示层原则；绘图区让位属 L2 布局约束（dev 预览体现，L2 组件建成时固化） | ✅ 展示层 |
 
 ## 图例项（marker + label）
@@ -40,7 +40,7 @@
 字号 `font-size-legend` · 行高 `line-height-legend` · 颜色 `color-text-legend` ·
 标记容器 `size-legend-marker` · 标记-标签间距 `spacing-legend-marker-label` ·
 项间距 `spacing-legend-item-h` · 行间距 `spacing-legend-row-v` ·
-容器边距 `spacing-legend-container-v` / `spacing-legend-container-h` ·
+容器边距 `spacing-legend-container-v-top` / `-v-bottom` / `spacing-legend-container-h` ·
 关闭态文字/标记 `color-text-quaternary` · hover 弱化不透明度 `opacity-visualization-dim`。
 
 **标记本体尺寸 / 形状不是 token**（形态规范，走 `behavior.json` 的 `legend-marker`，见 LEGEND-03）。

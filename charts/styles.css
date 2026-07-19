@@ -35,7 +35,8 @@
   justify-content: flex-start;
   column-gap: var(--spacing-legend-item-h);
   row-gap: var(--spacing-legend-row-v);
-  padding: var(--spacing-legend-container-v) var(--spacing-legend-container-h);
+  /* [LEGEND-01] 上/下边距分开：下边距 = 图例与 grid 的间距（frame 顶部不另留白） */
+  padding: var(--spacing-legend-container-v-top) var(--spacing-legend-container-h) var(--spacing-legend-container-v-bottom);
 }
 .dv-legend--center { justify-content: center; }
 .dv-legend--right { justify-content: flex-end; }

@@ -3,9 +3,9 @@ import { tokenNum } from './tokens.js';
 
 /* ── 常量（待 token 化项登记在 specs/axes.md 待办）──────────────────── */
 /* [AXIS-01] outside 布局：网格线与标签间距（规范定值 8px）。
-   标签绘制（axis.js renderYLabels）与列宽预留（本文件）共用此常量 */
+   标签绘制（axis.js renderYLabels）与列宽预留（本文件）共用此常量。
+   注意：8px 只是「标签 ↔ 网格」间距，网格与画布边缘之间**不留白**（无标签侧贴边） */
 export const Y_LABEL_GAP_OUTSIDE = 8;
-const EDGE_PAD = 8;                // outside 布局无标签一侧及纵向边缘的绘制区留白
 const X_GAP_TOP_INSIDE = 6;        // [AXIS-04] X 标签带上间距（Y 为 inside 布局时）
 const X_GAP_TOP_OUTSIDE_EXTRA = 2; // [AXIS-04] outside 上间距增量：半行高 + 此值，防 Y 底标签溢入
 const X_GAP_BOTTOM = 4;            // [AXIS-04] X 标签带下间距
@@ -14,9 +14,10 @@ const X_GAP_BOTTOM = 4;            // [AXIS-04] X 标签带下间距
  * 画布骨架：SVG + 绘制区几何。
  * [AXIS-01] yForm 决定四周留白：
  *   inside—— 标签在网格内部，网格左右铺满画布，不占外部宽度
- *        （数据让位由调用方用 yLabelInset 收缩数据范围）
- *   outside—— ySide 一侧预留 yLabelWidth + 8px 标签列；顶/底标签
- *        与网格线居中对齐会超出绘制区约半个行高，顶部留白与 X 标签带上间距相应加大
+ *        （数据让位由调用方用 yLabelInset 收缩数据范围）；顶部不留白——
+ *        图例与 grid 的间距归图例容器 padding（--spacing-legend-container-v-bottom），frame 不重复垫
+ *   outside—— 仅有标签一侧预留 yLabelWidth + 8px 标签列，**无标签侧网格贴边**；
+ *        顶/底标签与网格线居中对齐会超出绘制区约半个行高，顶部留白与 X 标签带上间距相应加大
  * [AXIS-04] X 轴标签自成容器带：带高 = 行高 + 上下间距（xBand=false 时不预留）
  * [GRID-03] 传入 height 时绘制区高度随容器（宽高自适应）；缺省用
  *           token --size-chart-region-height 的固定值
@@ -34,15 +35,14 @@ export function createFrame(host, opts = {}) {
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
-  const topPad = yForm === 'outside' ? halfLabel + 2 : EDGE_PAD;
+  const topPad = yForm === 'outside' ? halfLabel + 2 : 0;
   const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_EXTRA : X_GAP_TOP_INSIDE;
   const bottomPad = xBand
     ? xGapTop + lineH + X_GAP_BOTTOM
-    : yForm === 'outside' ? halfLabel + 2 : EDGE_PAD;
+    : yForm === 'outside' ? halfLabel + 2 : 0;
 
-  const pad = yForm === 'inside'
-    ? { left: 0, right: 0 }
-    : { left: EDGE_PAD, right: EDGE_PAD };
+  /* [AXIS-01] 左右：仅有标签一侧预留标签列，无标签侧贴边（0，不设边缘留白） */
+  const pad = { left: 0, right: 0 };
   if (yForm === 'outside') {
     pad[ySide] = Math.ceil(yLabelWidth) + Y_LABEL_GAP_OUTSIDE;
     if (yLabelWidthSecondary > 0) {

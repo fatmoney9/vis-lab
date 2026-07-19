@@ -25,7 +25,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| AXIS-01 | 两种布局：`inside` / `outside`，**默认 `inside`**。<br>**inside（网格内部 + 避让网格线）**：网格左右铺满画布，Y 标签紧贴网格侧边、不设内部偏移；最顶标签顶对齐贴顶线向下（不得高过绘制区上沿——最常见错误）；其余标签底对齐贴线上方；0/最底标签不越下沿；**数据让位**：有标签一侧数据边界收缩「最长标签宽 + 安全间距」。<br>**outside（网格外部 + 与网格线居中）**：标签在绘制区外侧，与网格线上下居中，距网格 **8px**；顶/底标签允许超出绘制区约半个行高（上下留白由 frame 预留）；不收数据范围 | `core/axis.js` → `renderYLabels()` + `yLabelInset()`；留白在 `core/frame.js` | ✅ |
+| AXIS-01 | 两种布局：`inside` / `outside`，**默认 `inside`**。<br>**inside（网格内部 + 避让网格线）**：网格左右铺满画布，Y 标签紧贴网格侧边、不设内部偏移；最顶标签顶对齐贴顶线向下（不得高过绘制区上沿——最常见错误）；其余标签底对齐贴线上方；0/最底标签不越下沿；**数据让位**：有标签一侧数据边界收缩「最长标签宽 + 安全间距」。<br>**outside（网格外部 + 与网格线居中）**：标签在绘制区外侧，与网格线上下居中，距网格 **8px**——8px 仅是「标签 ↔ 网格」间距，**无标签一侧网格贴画布边缘、不留边缘留白**（如 Ainvest PC 单主轴的左侧）；顶/底标签允许超出绘制区约半个行高（上下留白由 frame 预留）；不收数据范围 | `core/axis.js` → `renderYLabels()` + `yLabelInset()`；留白在 `core/frame.js` | ✅ |
 | AXIS-02 | Y 轴位置（主题默认）：主 Y —— THS 左 / iFinD-PC 左 / **Ainvest 右**；副 Y 相反侧。双 Y：iFinD-PC **左右两侧共用一份标签**（非两根轴）。**副 Y 出现条件**：多系列量纲/数量级不同，或线柱组合（柱/折线各一轴）；量纲相同共用主 Y | 主题→位置/形式映射经 `tokens/behavior.json` + `core/theme.js`；**标准双 Y 已在 L2 落地**（`charts/charts/cartesian/index.js`：每系列 `axis` 绑定 + `niceSplitDual` 刻度对齐 + 副轴反侧标签列/数据让位，见 [bar.md](bar.md) BAR-07）；**iFinD 单轴镜像已落地**（`y-dual-shared` 开关：非双量纲时反侧镜像主轴同一套刻度 `mirror = y-dual-shared && !dual`，统一为 `oppTicks`；真·双量纲仍走标准 dual 两侧各一套） | ✅ |
 | AXIS-03 | 标签对齐：默认**贴轴线一侧**、随位置自动（内/外、左/右均适用）；**Ainvest 特例 = 全部右对齐**（behavior `y-label-align`: auto / right）——只需改 outside 右列（anchor 切 end、贴标签列外沿），inside 右侧与 outside 左列本就右对齐 | `renderYLabels()` 的 anchor 逻辑（`align` 参数） | ✅ |
 | AXIS-08 | **outside 标签列宽**：每次重绘按当前刻度**一次性渲染测量**（隐藏 SVG 真实类名量宽，含 tabular-nums 等 Canvas 表达不了的特性，无估算误差、不裁字），**精确贴合、不附加余量**；缩放轴联动时列宽随标签变化即时调整。inside 布局的数据让位、X 轴标签碰撞判定（AXIS-06）的宽度测量**同源**（渲染级测量是唯一测量源，Canvas 估算路径已移除） | `core/axis.js` → `measureYLabelWidth()` + `measureRendered()` | ✅ |
@@ -56,7 +56,7 @@
 ## 待办
 
 - [x] 轴标签级间距 token 化：`SAFE_GAP` → `--spacing-axis-y-inset-gap`（AXIS-01 inside 数据让位安全间距）、`MIN_X_GAP` → `--spacing-axis-x-label-min-gap`（AXIS-06 X 碰撞阈值），三主题以 `{spacing-8}` 别名录入 `$section-08`，值不变。**frame.js 绘制区几何留白**（`Y_LABEL_GAP_OUTSIDE` / `X_GAP_TOP_INSIDE` / `X_GAP_TOP_OUTSIDE_EXTRA` / `X_GAP_BOTTOM` / `EDGE_PAD`）本轮不并入，保留字面量——注：ainvest 的 X 带上间距规范为 4px（现常量统一 6px），token 化时一并按主题分叉修正
-- [ ] frame.js 绘制区几何留白 token 化（承上，含 ainvest X 带上间距 6→4 的主题分叉修正）
+- [ ] frame.js 绘制区几何留白 token 化（承上，含 ainvest X 带上间距 6→4 的主题分叉修正）。注：`EDGE_PAD` 已整体移除——outside 无标签侧、xBand:false 底部、inside 顶部全部归零（贴边）；图例与 grid 的间距由图例容器 padding（`--spacing-legend-container-v-bottom`）唯一承担，frame 不重复垫
 - [x] `--font-weight-axis` 并入 token 合同：三主题以别名录入（THS/iFinD `{font-weight-medium}`、Ainvest `{font-weight-regular}`），经 `tokens/build.mjs` 输出为 `var(--font-weight-*)`
 - [x] AXIS-02 iFinD 双 Y「两侧共用一份标签」镜像模式：`y-dual-shared` 开关驱动，`mirror = y-dual-shared && !dual`（单系列/同量纲时反侧镜像主轴同一套；真·双量纲走标准 dual 两侧各一套不同值——已按此决定落地并预览验证）
 - [ ] AXIS-02 遗留：「副 Y 出现条件」（量纲/数量级判断）的自动化——当前靠调用方显式声明 `axis:'secondary'`，自动判定留给 L2 组件

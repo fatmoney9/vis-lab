@@ -137,7 +137,8 @@
   "spacing-legend-marker-label": "{spacing-6}",
   "spacing-legend-item-h": "{spacing-20}",
   "spacing-legend-row-v": "{spacing-4}",
-  "spacing-legend-container-v": "{spacing-4}",
+  "spacing-legend-container-v-top": "{spacing-4}",
+  "spacing-legend-container-v-bottom": "{spacing-4}",
   "spacing-legend-container-h": "{spacing-0}",
   "opacity-visualization-dim": 0.1,
 
