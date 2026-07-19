@@ -3,8 +3,8 @@
  *
  * 干什么：直角坐标图（x-y 轴）的**拼装编排**。它自己几乎不算东西——而是把
  * L1 构件（frame/scale/grid/axis/legend/format/theme + palette 取色 + mark 画柱/线）
- * 按顺序拼起来，具体的「值域怎么算 / 柱怎么排 / 堆叠怎么累」分别派发给
- * 同目录的 domain.js / layout.js / series.js（命名策略），本文件只负责串流程 + 接交互。
+ * 按顺序拼起来，具体的「值域怎么算 / 柱怎么排 / 堆叠怎么累 / hover 怎么接」分别派发给
+ * 同目录的 domain.js / layout.js / series.js / hover.js，本文件只负责串流程 + 接图例。
  *
  * 组合形态靠三旋钮（≠ 样式；样式走 token/主题）：
  *   ① stack（none/normal/percent）· ② 每系列 type（bar/line）· ③ 每系列 axis（primary/secondary）
@@ -27,9 +27,8 @@ import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
-import { createTooltip } from '../../core/tooltip.js';
-import { renderCrosshairX, renderAxisTag } from '../../core/crosshair.js';
 import { resolveSeries } from './series.js';
+import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
@@ -208,64 +207,10 @@ export function CartesianChart(host, cfg) {
 
     applyDim();
 
-    /* ── hover 全链路（specs/tooltip.md）──────────────────────────────
-       [TOOLTIP-10] 三主题一致按 X 坐标最近类目触发（绘图区横向切片，无需悬停在数据项上）、
-       无过渡动画；移出按 tooltip-hide-delay 延迟隐藏——气泡 / 指示线 / 线点同步一个 timer。
-       [TOOLTIP-07] 气泡档位由 behavior 的 tooltip-position 决定（follow / top-anchor / side-fixed）。 */
-    const tooltip = createTooltip(plotHost);
-    const hoverG = frame.svg.append('g').style('display', 'none'); /* 指示线 + 贴片层，画在 mark 之上 */
-    const crossLayer = hoverG.append('g');
-    const tagLayer = hoverG.append('g');                           /* 贴片压过指示线端头 */
-    const activeLayer = hoverG.append('g');                        /* 唤出点副本层：仅让 hover 数据点压过指示线，其余层级不动 */
-    const centers = categories.map((c) => x(c) + x.bandwidth() / 2);
-    const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
-    let hideTimer = 0;
-    /* [TOOLTIP-10] 唤出当前类目可见折线点：.is-active 压过 points-muted 静默、白心填充（specs/line.md）；
-       并把这些点克隆到 activeLayer——原点仍在系列层（被指示线压过），副本带系列色 /
-       lines-multi 线宽上下文绘制在指示线之上（剔除 dv-line-series 类避免 applyDim 波及） */
-    const setActivePoints = (i) => {
-      const sel = select(plotHost).selectAll('.dv-line-point') /* 圆/菱形两种元素通吃 */
-        .classed('is-active', function () { return +this.dataset.i === i; });
-      activeLayer.node().textContent = '';
-      if (i < 0) return;
-      sel.filter(function () { return +this.dataset.i === i; }).each(function () {
-        const series = this.parentNode;
-        const wrap = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        wrap.setAttribute('class', (series.getAttribute('class') || '').replace('dv-line-series', '').trim());
-        wrap.style.color = series.style.color;
-        wrap.appendChild(this.cloneNode(true));
-        activeLayer.node().appendChild(wrap);
-      });
-    };
-    const hideHover = () => { tooltip.hide(); hoverG.style('display', 'none'); setActivePoints(-1); };
-
-    frame.svg.on('mousemove', (event) => {
-      clearTimeout(hideTimer);
-      const box = frame.svg.node().getBoundingClientRect();
-      const px = event.clientX - box.left;
-      const py = event.clientY - box.top;
-      const i = centers.reduce((best, c, k) => (Math.abs(c - px) < Math.abs(centers[best] - px) ? k : best), 0);
-
-      /* [TOOLTIP-02] 行 = 可见系列按声明序（与图例一致）；数值与 Y 轴同源 format（percent 显原值）、null → "-" */
-      const rows = resolved.filter((r) => !state.hidden.has(r.name)).map((r) => ({
-        key: r.name, label: r.name, type: r.type, colorVar: r.colorVar,
-        value: r.data[i] == null ? '-' : format(r.data[i]),
-      }));
-      if (!rows.length) return hideHover();
-
-      tooltip.show({ title: categories[i], rows }, marker);
-      tooltip.place(b['tooltip-position'], {
-        grid: frame.grid, width: frame.width, height: frame.height,
-        cx: centers[i], pointer: { x: px, y: py },
-      });
-      hoverG.style('display', null);
-      const tagTop = renderAxisTag(tagLayer, frame, { x: centers[i], label: categories[i] }); /* [TOOLTIP-09] */
-      renderCrosshairX(crossLayer, frame, centers[i], tagTop); /* [TOOLTIP-08] 竖线连到贴片上沿 */
-      setActivePoints(i);
-    });
-    frame.svg.on('mouseleave', () => {
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(hideHover, hideDelay);
+    /* ── hover 全链路（气泡 + X 指示线 + 轴贴片 + 线点唤出）：接线见 hover.js ── */
+    bindHover(plotHost, frame, {
+      categories, x, series: resolved, hidden: state.hidden,
+      format, marker, position: b['tooltip-position'],
     });
   }
 
