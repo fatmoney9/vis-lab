@@ -60,7 +60,9 @@ export function renderBars(g, frame, series, x, y) {
  *   series = { categories, values, colorVar }
  *   x —— bandX 比例尺（点取**类目中心** x(c)+bandwidth/2）；y —— linearY 比例尺
  * 规则：直线（无平滑）· null 处断开（d3 line.defined）· 0 值正常连续 ·
- *       线宽 --size-line-stroke · 数据点直径 --size-line-point（默认态实心、fill/stroke=折线色）。
+ *       线宽 --size-line-stroke · 数据点尺寸 --size-line-point 含描边（默认态实心、fill/stroke=折线色）·
+ *       数据点形状 opts.pointShape（behavior line-point-shape，L2 传入）：
+ *       circle 实心圆（THS/Ainvest）/ diamond 正方形旋转 45°（iFinD，边长含描边 = size-line-point）。
  * 数据点显隐（specs/line.md）：opts.showPoints=false（点数 > 13，移动/PC 一致）→ g 挂 points-muted
  *   类使全部点静默（opacity 0、留在 DOM），线仍连续；hover 十字准星按 data-i 亮出最近点（L2 驱动）。
  * 每点带 data-i=类目序，供 L2 跨线选中同一类目；hover 白心 / 数据标签见 specs/line.md 待办。
@@ -73,7 +75,7 @@ export function renderBars(g, frame, series, x, y) {
  *   不透明度 --opacity-line-stack-fill（0.2，样式在 styles.css）；null 断口同断；画在线下方。
  */
 export function renderLine(g, frame, series, x, y, opts = {}) {
-  const { showPoints = true, multi = false, area: withArea = false, stackFill = false } = opts;
+  const { showPoints = true, multi = false, area: withArea = false, stackFill = false, pointShape = 'circle' } = opts;
   const { categories, values, base = null, colorVar } = series;
   const stroke = tokenNum(frame.host, multi ? '--size-line-stroke-multi' : '--size-line-stroke') || 1.5;
   const point = tokenNum(frame.host, '--size-line-point') || 6;
@@ -112,12 +114,28 @@ export function renderLine(g, frame, series, x, y, opts = {}) {
   }
 
   g.selectAll('path.dv-line').data([pts]).join('path').attr('class', 'dv-line').attr('d', gen);
-  g.selectAll('circle.dv-line-point')
-    .data(pts.filter((d) => d.v != null), (d) => d.key)
-    .join('circle')
-    .attr('class', 'dv-line-point')
-    .attr('data-i', (d) => d.i)
-    .attr('cx', (d) => d.cx)
-    .attr('cy', (d) => y(d.v))
-    .attr('r', r);
+  const ptData = pts.filter((d) => d.v != null);
+  if (pointShape === 'diamond') {
+    /* 菱形 = 正方形绕中心旋 45°；边长含描边 = size-line-point（与圆的直径口径一致） */
+    const s = Math.max(1, point - stroke);
+    g.selectAll('rect.dv-line-point')
+      .data(ptData, (d) => d.key)
+      .join('rect')
+      .attr('class', 'dv-line-point')
+      .attr('data-i', (d) => d.i)
+      .attr('x', (d) => d.cx - s / 2)
+      .attr('y', (d) => y(d.v) - s / 2)
+      .attr('width', s)
+      .attr('height', s)
+      .attr('transform', (d) => `rotate(45 ${d.cx} ${y(d.v)})`);
+  } else {
+    g.selectAll('circle.dv-line-point')
+      .data(ptData, (d) => d.key)
+      .join('circle')
+      .attr('class', 'dv-line-point')
+      .attr('data-i', (d) => d.i)
+      .attr('cx', (d) => d.cx)
+      .attr('cy', (d) => y(d.v))
+      .attr('r', r);
+  }
 }

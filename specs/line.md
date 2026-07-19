@@ -8,7 +8,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| LINE-01 | 折线渲染：**直线**（数据点直连、无平滑）· **null 处断开**（不强连前后点）· 0 值正常连续；线宽 `size-line-stroke`；**默认带数据点**——直径 `size-line-point`（6px，含描边），描边宽 = 线宽、fill / 描边色 = 折线色（默认态实心点）；点走**类目中心**（`x(c)+bandwidth/2`），柱在 band 内分组时线穿中心 | `core/mark.js` → `renderLine()`；`.dv-line` / `.dv-line-point`（styles.css） | ✅ |
+| LINE-01 | 折线渲染：**直线**（数据点直连、无平滑）· **null 处断开**（不强连前后点）· 0 值正常连续；线宽 `size-line-stroke`；**默认带数据点**——尺寸 `size-line-point` 含描边（THS 6px / iFinD·Ainvest 8px），**形状随主题**（behavior `line-point-shape`）：circle 实心圆（THS / Ainvest）、diamond 正方形旋转 45°（iFinD，边长含描边）；描边宽 = 线宽、fill / 描边色 = 折线色（默认态实心点）；点走**类目中心**（`x(c)+bandwidth/2`），柱在 band 内分组时线穿中心 | `core/mark.js` → `renderLine()`（`pointShape` 参数）；`.dv-line` / `.dv-line-point`（styles.css） | ✅ |
 
 ## 颜色
 
@@ -34,14 +34,18 @@
 ## 样式 token
 
 线宽 `size-line-stroke`（THS 1.5 / iFinD 2 / Ainvest 2）· 多折线非主线更细 `size-line-stroke-multi`（已接入，主线保持标准线宽）·
-数据点直径 `size-line-point`（6px）· 渐变面积两端透明度 `opacity-line-area-from` / `-to`（0.2 → 0）·
+数据点尺寸 `size-line-point`（THS 6 / iFinD·Ainvest 8，含描边；形状走 behavior `line-point-shape`：circle / diamond）· 渐变面积两端透明度 `opacity-line-area-from` / `-to`（0.2 → 0）·
 堆叠填充带不透明度 `opacity-line-stack-fill`（0.2）。系列色见 [color.md](color.md)。
 
 ## 待办（line.md 其余条目，后续切片）
 
-- [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点 / 选中态即使隐藏也高亮当前点」归 tooltip/十字准星切片，CSS 契约已就绪（`.is-active` 压过静默）。
+- [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点」已随 tooltip 落地（[tooltip.md](tooltip.md) TOOLTIP-10，L2 按类目给 `.dv-line-point[data-i]` 挂 `.is-active` 压过静默）；「选中态即使隐藏也高亮当前点」归点击分片选中切片（tooltip.md 待办）。
 - [ ] **数据标签**（折线上方数值）：移动端 > 5 隐藏、Web 碰撞隐藏 → 依赖数据标签组件。
-- [ ] **hover / 选中态**：数据点切白心（描边不变）；选中底色（`color-background-weak`）。
+- [x] **hover 数据点中心填充**：十字准星唤出的当前点（`.is-active`）fill 切
+  `color-visualization-line-point-hover`——THS / Ainvest 亮色 #FFF、暗色 #000（白心/黑心），
+  iFinD = `currentColor`（保持实心不参与）；描边不变 = 系列色；层级压过指示线
+  （tooltip.md TOOLTIP-10 副本层）。实现 styles.css `.dv-line-point.is-active`。
+- [ ] **选中态**：选中底色（`color-background-weak`）→ 归点击分片选中切片（tooltip.md 待办）。
 - [ ] **高密度降采样**：数据量大时降采样渲染避免卡顿（不影响趋势）。
 - [x] **主线渐变面积**：series 级可开启配置 `area:true`（仅 stack:none）——渐变从**最大值**处 `opacity-line-area-from`（0.2）到 **grid 底部** `-to`（0），面积填至 grid 底部（决定：非 0 基准轴）；实现 `core/mark.js` `renderLine(opts.area)`。
 - [x] `size-line-stroke-multi` 接入：声明 ≥2 条线时**仅非主线**切换（主线=首条声明线保持 `size-line-stroke`，含数据点描边同步）；组合折柱只有 1 条线时仍用 `size-line-stroke`。

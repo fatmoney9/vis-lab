@@ -11,8 +11,9 @@ import { tokenNum } from './tokens.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/* [LEGEND-03] 按图表类型取 marker 规格：unified 全类型同形；by-type 命中类型、缺则 default 兜底 */
-function markerSpecFor(marker, type) {
+/* [LEGEND-03] 按图表类型取 marker 规格：unified 全类型同形；by-type 命中类型、缺则 default 兜底。
+   导出：tooltip 数据行的系列 marker 与图例同源（TOOLTIP-02），复用同一份规格与渲染 */
+export function markerSpecFor(marker, type) {
   if (!marker) return { shape: 'rect', w: 6, h: 6, r: 1 };
   if (marker.mode === 'unified') return { shape: marker.shape, w: marker.w, h: marker.h };
   return (marker.shapes && (marker.shapes[type] || marker.shapes.default)) || { shape: 'rect', w: 6, h: 6, r: 1 };
@@ -25,8 +26,9 @@ function markerSpecFor(marker, type) {
  *   box  —— 描边方（盒须缩略），stroke=currentColor
  *   split—— 左右两色（红绿柱），涨跌固定色 --color-price-up/-down（不跟随系列色，故 off 态不改色）
  * 颜色一律 currentColor 或 var() 引用，无色值字面量；w/h/r 为形态几何（来自 behavior）。
+ * 导出：tooltip 复用（同 markerSpecFor）。
  */
-function renderMarker(sel, spec, container) {
+export function renderMarker(sel, spec, container) {
   const node = sel.node();
   while (node.firstChild) node.removeChild(node.firstChild);
   sel.attr('width', container).attr('height', container).attr('viewBox', `0 0 ${container} ${container}`);

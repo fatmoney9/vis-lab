@@ -92,7 +92,12 @@
    点留在 DOM（带 data-i）仅视觉隐藏——未来 tooltip/十字准星切片给最近类目的点挂
    .is-active 即可唤出（规则在后、同特异性下声明序胜出，压过静默）。 */
 .points-muted .dv-line-point { opacity: 0; }
-.dv-line-point.is-active { opacity: 1; }
+/* hover 唤出点白心（specs/line.md）：中心填充切 token（THS/Ainvest 亮白暗黑、
+   iFinD = currentColor 保持实心），描边不变 = 系列色 */
+.dv-line-point.is-active {
+  opacity: 1;
+  fill: var(--color-visualization-line-point-hover);
+}
 
 /* 多折线的非主线（主线=首条声明线保持标准线宽，specs/line.md）：线与点描边切更细的 multi 线宽 */
 .lines-multi .dv-line,
@@ -112,6 +117,90 @@
 
 /* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
    主题无关的结构样式（无颜色）。 */
-/* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余） */
+/* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余）。
+   position:relative = tooltip 浮层的定位锚点（TOOLTIP-01，浮层像素与 svg 同坐标系） */
 .dv-chart { display: flex; flex-direction: column; }
-.dv-chart__plot { flex: 1; min-height: 0; }
+.dv-chart__plot { flex: 1; min-height: 0; position: relative; }
+
+/* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
+   iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
+   pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。 */
+.dv-tooltip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  display: none;
+  pointer-events: none;
+  box-sizing: border-box;
+  /* 宽度=内容真实宽（TOOLTIP-02 以最长一行为准）。不写则 absolute+left 的收缩宽度
+     受「left→容器右缘」剩余空间约束——气泡贴右侧时可用宽≈自身宽，亚像素取整差
+     会把系列名压缩换行 */
+  width: max-content;
+  background: var(--color-visualization-tooltip);
+  border: 1px solid var(--color-visualization-tooltip-border);
+  box-shadow: var(--shadow-tooltip);
+  border-radius: var(--radius-tooltip);
+  padding: var(--spacing-tooltip-pad);
+  max-width: var(--size-tooltip-max-width);
+  font-family: var(--font-family-tooltip);
+  font-size: var(--font-size-tooltip);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.4;
+}
+.dv-tooltip.is-visible { display: block; }
+
+/* [TOOLTIP-05] top-anchor 档下三角：颜色随气泡背景；几何（border-width）由 tooltip.js 常量写入 */
+.dv-tooltip__arrow {
+  display: none;
+  position: absolute;
+  top: 100%;
+  border-style: solid;
+  border-color: var(--color-visualization-tooltip) transparent transparent;
+}
+
+/* [TOOLTIP-01][TOOLTIP-02] 标题行：下边框 = iFinD 分割线特例（THS/Ainvest transparent 只占 1px 无形） */
+.dv-tooltip__title {
+  color: var(--color-text-tooltip-title);
+  padding-bottom: var(--spacing-tooltip-row);
+  border-bottom: 1px solid var(--color-visualization-tooltip-divider);
+  margin-bottom: var(--spacing-tooltip-row);
+}
+.dv-tooltip__rows { display: flex; flex-direction: column; gap: var(--spacing-tooltip-row); }
+
+/* [TOOLTIP-02][TOOLTIP-03] 数据行：marker 独立列（悬挂缩进天然成立）+ 系列名可换行 +
+   数值单行贴右；align-items:flex-start = 数值/marker 顶对齐系列名第一行 */
+.dv-tooltip__row { display: flex; align-items: flex-start; }
+.dv-tooltip__marker {
+  flex: none;
+  margin-right: var(--spacing-legend-marker-label);
+  /* marker 相对首行文字竖直居中（1.4 = 气泡行高） */
+  margin-top: calc((1.4em - var(--size-legend-marker)) / 2);
+  color: var(--dv-series-color, currentColor);
+}
+.dv-tooltip__label { color: var(--color-text-tooltip-series); min-width: 0; }
+.dv-tooltip__value {
+  margin-left: auto;
+  padding-left: var(--spacing-tooltip-row-gap); /* 两列最小间距 */
+  color: var(--color-text-tooltip-value);
+  font-weight: var(--font-weight-tooltip-value);
+  white-space: nowrap; /* [TOOLTIP-03] 数值永不换行 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* [TOOLTIP-08] X 轴竖指示线：线色/虚实随主题 token（iFinD 虚线 3 3）；线宽与网格线同源 */
+.dv-crosshair-x {
+  stroke: var(--color-visualization-highlight-line);
+  stroke-width: var(--size-grid-line);
+  stroke-dasharray: var(--dash-highlight-line);
+}
+
+/* [TOOLTIP-09] X 轴标签高亮贴片：文字样式与轴标签（.dv-axis-label）同源、色走高亮 token */
+.dv-axis-tag-bg { fill: var(--color-visualization-highlight-background-tick); }
+.dv-axis-tag-text {
+  fill: var(--color-text-highlight-tick);
+  font-size: var(--font-size-axis);
+  font-weight: var(--font-weight-axis);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}

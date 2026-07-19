@@ -11,16 +11,18 @@ export const formatValue = (v) => fmt.format(v);
 
 /*
  * [AXIS-01][AXIS-03] Y 轴标签。
- * inside（原形式 A，默认；网格内部 + 避让网格线）：
+ * inside（默认；网格内部 + 避让网格线）：
  *   最顶标签顶对齐、贴顶线向下——不得高过绘制区上沿（最常见错误）；
  *   其余标签底对齐、贴线上方；0/最底标签不越下沿。
- * outside（原形式 B；网格外部 + 与网格线居中）：
+ * outside（网格外部 + 与网格线居中）：
  *   距网格 Y_LABEL_GAP_OUTSIDE（8px，与 frame.js 列宽预留同源），上下居中；
  *   顶/底标签超出绘制区约半行高（createFrame 已留位）。
- * [AXIS-03] 对齐贴轴线一侧、随位置自动：内/外 × 左/右由 anchor 适配。
+ * [AXIS-03] 对齐：默认（align=auto）贴轴线一侧、随位置自动（内/外 × 左/右由 anchor 适配）；
+ *           align=right（Ainvest 特例，behavior y-label-align）全部右对齐——只需改 outside 右列
+ *           （anchor 切 end、贴标签列外沿 = 画布右缘），inside 右侧与 outside 左列本就右对齐。
  */
 export function renderYLabels(layer, frame, ticks, y, opts = {}) {
-  const { form = 'inside', side = 'left', format = formatValue } = opts;
+  const { form = 'inside', side = 'left', format = formatValue, align = 'auto' } = opts;
   const topTick = Math.max(...ticks);
   const sel = layer
     .selectAll('text.dv-axis-label')
@@ -35,11 +37,12 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
       .attr('y', (d) => (d === topTick ? y(d) + 3 : y(d) - 4))
       .attr('dominant-baseline', (d) => (d === topTick ? 'hanging' : 'auto'));
   } else {
+    const alignEnd = side === 'right' && align === 'right'; /* [AXIS-03] 右列右对齐特例 */
     sel
       .attr('x', side === 'left'
         ? frame.grid.left - Y_LABEL_GAP_OUTSIDE
-        : frame.grid.right + Y_LABEL_GAP_OUTSIDE)
-      .attr('text-anchor', side === 'left' ? 'end' : 'start')
+        : alignEnd ? frame.width : frame.grid.right + Y_LABEL_GAP_OUTSIDE)
+      .attr('text-anchor', side === 'left' || alignEnd ? 'end' : 'start')
       .attr('y', (d) => y(d))
       .attr('dominant-baseline', 'middle');
   }

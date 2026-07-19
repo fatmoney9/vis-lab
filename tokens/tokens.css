@@ -79,12 +79,19 @@
   --color-visualization-highlight-background-tick: #3366FF;
   --color-text-highlight-tick: #ffffff;
   --font-size-tooltip: 12px;
-  --spacing-tooltip-padding: var(--spacing-8);
+  --font-family-tooltip: var(--font-family-cn);
+  --font-weight-tooltip-value: var(--font-weight-medium);
+  --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 160px;
+  --color-visualization-tooltip-border: transparent;
+  --shadow-tooltip: none;
+  --color-visualization-tooltip-divider: transparent;
+  --dash-highlight-line: none;
   --radius-axis-label-tag: var(--radius-2);
+  --spacing-axis-label-tag-pad-h: 1px;
   --tooltip-hide-delay: 2000ms;
   --font-size-legend: 12px;
   --line-height-legend: 16px;
@@ -122,6 +129,7 @@
   --size-line-stroke: 1.5px;
   --size-line-stroke-multi: 1px;
   --size-line-point: 6px;
+  --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
@@ -155,6 +163,7 @@
   --color-grey-02: #3B3B3B;
   --color-grey-03: #575757;
   --color-grey-04: #6E6E6E;
+  --color-visualization-line-point-hover: #000000;
 }
 
 [data-theme="ifind-pc"] {
@@ -234,12 +243,19 @@
   --color-visualization-highlight-background-tick: #D1D1E0;
   --color-text-highlight-tick: #292933;
   --font-size-tooltip: 14px;
-  --spacing-tooltip-padding: var(--spacing-8);
+  --font-family-tooltip: Arial;
+  --font-weight-tooltip-value: var(--font-weight-regular);
+  --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 160px;
+  --color-visualization-tooltip-border: #ECECF7;
+  --shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --color-visualization-tooltip-divider: #ECECF7;
+  --dash-highlight-line: 3 3;
   --radius-axis-label-tag: var(--radius-4);
+  --spacing-axis-label-tag-pad-h: 1px;
   --tooltip-hide-delay: 2000ms;
   --font-size-legend: 14px;
   --line-height-legend: 14px;
@@ -276,7 +292,8 @@
   --size-bar-group-inner-gap-max: 2px;
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
-  --size-line-point: 6px;
+  --size-line-point: 8px;
+  --color-visualization-line-point-hover: currentColor;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
@@ -393,12 +410,19 @@
   --color-visualization-highlight-background-tick: #000000;
   --color-text-highlight-tick: #ffffff;
   --font-size-tooltip: 12px;
-  --spacing-tooltip-padding: var(--spacing-8);
+  --font-family-tooltip: var(--font-family-en);
+  --font-weight-tooltip-value: var(--font-weight-regular);
+  --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 160px;
+  --color-visualization-tooltip-border: transparent;
+  --shadow-tooltip: none;
+  --color-visualization-tooltip-divider: transparent;
+  --dash-highlight-line: none;
   --radius-axis-label-tag: var(--radius-4);
+  --spacing-axis-label-tag-pad-h: 3px;
   --tooltip-hide-delay: 0ms;
   --font-size-legend: 12px;
   --line-height-legend: 16px;
@@ -435,7 +459,8 @@
   --size-bar-group-inner-gap-max: 2px;
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
-  --size-line-point: 6px;
+  --size-line-point: 8px;
+  --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
@@ -477,6 +502,7 @@
   --color-grey-02: #3B3B3B;
   --color-grey-03: #575757;
   --color-grey-04: #6E6E6E;
+  --color-visualization-line-point-hover: #000000;
 }
 
 [data-theme="ainvest"][data-platform="mobile"][data-mode="dark"] {
