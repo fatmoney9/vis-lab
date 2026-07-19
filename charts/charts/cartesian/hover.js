@@ -8,14 +8,17 @@
  *
  * 只做事件接线 + hover 态 DOM（指示线层 / 贴片层 / 唤出点副本层），每次 build 重建、随 svg 一起丢弃。
  * 图例 hover（弱化其它系列 applyDim）是另一条链路，留在 index.js。
+ * [TOOLTIP-11] 指示形态分发：indicator='block'（纯分组柱，判定在 index）时竖线换 block 底色带——
+ * 画进 index 建在 mark 之下的 blockLayer（底色），显隐与气泡/贴片同一 timer。
  *   series —— resolved 系列（声明序）；hidden —— 已隐藏系列名集合（行 = 可见系列按声明序，TOOLTIP-02）
  */
 import { select } from 'd3';
 import { tokenNum } from '../../core/tokens.js';
 import { createTooltip } from '../../core/tooltip.js';
-import { renderCrosshairX, renderAxisTag } from '../../core/crosshair.js';
+import { renderCrosshairX, renderCrosshairBlock, renderAxisTag } from '../../core/crosshair.js';
 
-export function bindHover(plotHost, frame, { categories, x, series, hidden, format, marker, position }) {
+export function bindHover(plotHost, frame, { categories, x, series, hidden, format, marker, position,
+  indicator = 'line', blockLayer = null, blockWidth = 0 }) {
   const tooltip = createTooltip(plotHost);
   const hoverG = frame.svg.append('g').style('display', 'none'); /* 指示线 + 贴片层，画在 mark 之上 */
   const crossLayer = hoverG.append('g');
@@ -41,7 +44,7 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
       activeLayer.node().appendChild(wrap);
     });
   };
-  const hideHover = () => { tooltip.hide(); hoverG.style('display', 'none'); setActivePoints(-1); };
+  const hideHover = () => { tooltip.hide(); hoverG.style('display', 'none'); blockLayer?.style('display', 'none'); setActivePoints(-1); };
 
   frame.svg.on('mousemove', (event) => {
     clearTimeout(hideTimer);
@@ -64,7 +67,12 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     });
     hoverG.style('display', null);
     const tagTop = renderAxisTag(tagLayer, frame, { x: centers[i], label: categories[i] }); /* [TOOLTIP-09] */
-    renderCrosshairX(crossLayer, frame, centers[i], tagTop); /* [TOOLTIP-08] 竖线连到贴片上沿 */
+    if (indicator === 'block') {
+      blockLayer.style('display', null);
+      renderCrosshairBlock(blockLayer, frame, centers[i], blockWidth); /* [TOOLTIP-11] 纯分组柱：竖线换 block */
+    } else {
+      renderCrosshairX(crossLayer, frame, centers[i], tagTop); /* [TOOLTIP-08] 竖线连到贴片上沿 */
+    }
     setActivePoints(i);
   });
   frame.svg.on('mouseleave', () => {

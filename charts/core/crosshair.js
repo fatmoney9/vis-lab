@@ -49,3 +49,17 @@ export function renderCrosshairX(layer, frame, cx, yEnd = frame.xBandTop) {
     .attr('x1', cx).attr('x2', cx)
     .attr('y1', frame.grid.top).attr('y2', yEnd);
 }
+
+/*
+ * [TOOLTIP-11] hover 指示 block：竖指示线的另一形态（何时用哪种由 L2 判定，本模块不感知图型）——
+ * 以类目中心 cx 定位、宽 width 的底色带，贯穿 grid 全高。色经 .dv-crosshair-block 走 token。
+ * 层由调用方给：block 是底色不是遮罩，L2 把层建在 mark 之下（与 renderCrosshairX 的 hover 顶层不同）。
+ */
+export function renderCrosshairBlock(layer, frame, cx, width) {
+  layer.selectAll('rect.dv-crosshair-block').data([0]).join('rect')
+    .attr('class', 'dv-crosshair-block')
+    .attr('x', cx - width / 2)
+    .attr('width', width)
+    .attr('y', frame.grid.top)
+    .attr('height', frame.grid.bottom - frame.grid.top);
+}

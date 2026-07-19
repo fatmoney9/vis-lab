@@ -24,19 +24,21 @@
 | TOOLTIP-05 | **top-anchor · 顶部锚定式** | 下三角 + 水平跟随触发点居中 + 垂直贴 grid 上沿外侧：① 三角尖端 x = 触发坐标 x（气泡贴不贴边都成立）；② 气泡底边 y = grid 上沿 − 三角高（与坐标 y 无关）；③ 水平边缘 clamp——气泡不越出容器，贴边时气泡停、三角继续随坐标偏移；④ 无过渡动画（瞬移跟随）；⑤ 气泡是临时遮罩物，不为它预留 grid 顶间距。三角高 6px 为兜底常量（本档专属形态） | `core/tooltip.js` → `placeTooltip('top-anchor')` + `ARROW_H` | ✅ |
 | TOOLTIP-06 | **side-fixed · 两侧固定式** | 固定绘制区上方左 / 右两侧、离散两档：以**图表中点**为基准触发点反选——左半区触发 → 显示在右上角、右半区 → 左上角（永远在触发点对侧，不遮挡在看的数据）；垂直顶对齐绘制区上沿、不随鼠标纵移、不跟随插值 | `core/tooltip.js` → `placeTooltip('side-fixed')` | ✅ |
 | TOOLTIP-07 | 主题 → 档位映射走 `tokens/behavior.json` `tooltip-position`：THS `side-fixed` · iFinD-PC `follow` · Ainvest `top-anchor`。特例（无坐标系图 → `follow`，THS 饼环 / Ainvest 无轴图）随饼环切片再消费 | behavior.json + `charts/cartesian/index.js` | ✅ |
+| TOOLTIP-12 | **浮层不被容器裁剪**：气泡是临时遮罩物，可**超出图表 frame 及任意祖先容器**显示——数据行多、气泡高过 grid 上方空间时向上溢出照常可见（top-anchor 尤其，TOOLTIP-05 ⑤ 不预留顶间距的自然结果），祖先 `overflow: hidden/auto`（如可缩放卡片容器）不得裁剪。实现：DOM 仍挂 plotHost（保 `data-theme` token 作用域与销毁清理），定位用 **`position: fixed` 视口坐标**——三档几何（TOOLTIP-04..06）仍在 plotHost 局部坐标计算、输出时叠加 plotHost 视口矩形；水平 clamp 语义不变（仍以图表容器为界） | `.dv-tooltip`（styles.css `position: fixed`）· `core/tooltip.js` → `place()` 末尾视口换算 | ✅ |
 
 ## 指示线与轴标签高亮
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| TOOLTIP-08 | X 轴竖指示线：hover 即出（默认开）、贯穿 grid 全高，并**向下延伸出绘图区至轴标签区**（连接被高亮的轴标签贴片）；线色 `color-visualization-highlight-line`、线型 `dash-highlight-line`（iFinD 虚线 3 3 特例，THS / Ainvest 实线 none） | `core/crosshair.js` → `renderCrosshairX()` · `.dv-crosshair-x` | ✅ |
+| TOOLTIP-08 | X 轴竖指示线：hover 即出（默认开）、贯穿 grid 全高，并**向下延伸出绘图区至轴标签区**（连接被高亮的轴标签贴片）；线色 `color-visualization-highlight-line`、线型 `dash-highlight-line`（iFinD 虚线 3 3 特例，THS / Ainvest 实线 none）；**纯分组柱不画竖线、换 block 形态**（TOOLTIP-11） | `core/crosshair.js` → `renderCrosshairX()` · `.dv-crosshair-x` | ✅ |
 | TOOLTIP-09 | X 轴标签高亮贴片（默认开）：当前类目标签处出现完整贴片（背景比文字大一圈）——文字**字号 / 行高 / 字重与轴标签同源**（`font-size-axis` / `line-height-axis` / `font-weight-axis`）、字色 `color-text-highlight-tick`、背景 `color-visualization-highlight-background-tick`、圆角 `radius-axis-label-tag`、左右内边距 `spacing-axis-label-tag-pad-h`（THS 1px / Ainvest 3px）、上下由行高撑；**即使该标签被碰撞策略隐藏也照常显示**（贴片以类目中心定位、独立于 AXIS-06 结果） | `core/crosshair.js` → `renderAxisTag()` · `.dv-axis-tag-*` | ✅ |
 
 ## 交互行为
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| TOOLTIP-10 | 三主题一致：**按 X 坐标最近类目触发**（鼠标移到该类目横向区间即触发，无需悬停在数据项上）；**无过渡动画**（不淡入淡出、瞬移跟随）；移出绘图区按 `tooltip-hide-delay` 延迟隐藏（THS / iFinD 2000ms、Ainvest 0）；自动隐藏默认开启（常驻显示则关闭延迟——待办）；hover 同时唤出当前类目**所有可见折线的数据点**——`.is-active` 压过 `points-muted` 静默、中心填充切白心 token（样式归 specs/line.md），且**唤出点层级压过 X 指示线**（副本层实现：仅这些点抬层，指示线与 mark 的相对层级不动） | `charts/cartesian/index.js`（交互层 + 延迟 timer + 唤出点副本层） | ✅ |
+| TOOLTIP-10 | 三主题一致：**按 X 坐标最近类目触发**（鼠标移到该类目横向区间即触发，无需悬停在数据项上）；**无过渡动画**（不淡入淡出、瞬移跟随）；移出绘图区按 `tooltip-hide-delay` 延迟隐藏（THS / iFinD 2000ms、Ainvest 0）；自动隐藏默认开启（常驻显示则关闭延迟——待办）；hover 同时唤出当前类目**所有可见折线的数据点**——`.is-active` 压过 `points-muted` 静默、中心填充切白心 token（样式归 specs/line.md），且**唤出点层级压过 X 指示线**（副本层实现：仅这些点抬层，指示线与 mark 的相对层级不动） | `charts/cartesian/hover.js`（`bindHover`：交互层 + 延迟 timer + 唤出点副本层） | ✅ |
+| TOOLTIP-11 | **hover 指示形态特例：纯分组柱 → block**（判定按声明：全系列 `type:bar` + `stack:none` + ≥2 系列）：hover 时 X 指示**竖线（TOOLTIP-08）换成 block 底色带**——填充 `color-visualization-highlight-block`、以类目中心定位、**宽 = 分组柱容器宽**（`min(band, size-bar-group-container-max)`，与 BAR-02 布局同一容器；THS 无上限 → 整格）、贯穿 grid 全高；**层级在网格之上、mark 之下**（是底色不是遮罩，故不在 hover 顶层）；随 hover 切片移动、与气泡 / 贴片同一 timer 延迟隐藏（TOOLTIP-10）；轴标签贴片（TOOLTIP-09）照常显示、竖线不再绘制。**其余图型（单柱 / 堆叠 / 折线 / 组合 / 双 Y）维持竖线** | `core/crosshair.js` → `renderCrosshairBlock()` · `.dv-crosshair-block`（styles.css）· `cartesian/hover.js` `bindHover` 按 `indicator` 分发 · 判定 + block 层创建 `cartesian/index.js` | ✅ |
 
 ## 样式 token
 
@@ -45,6 +47,7 @@
 `spacing-tooltip-row-gap` · `radius-tooltip` · `size-tooltip-max-width`；iFinD 特例组
 `color-visualization-tooltip-border` / `shadow-tooltip` / `color-visualization-tooltip-divider`。
 指示线：`color-visualization-highlight-line` · `dash-highlight-line`。
+指示 block（TOOLTIP-11 纯分组柱 hover）：`color-visualization-highlight-block`（明暗各一组，三主题同值）。
 轴贴片：`color-visualization-highlight-background-tick` · `color-text-highlight-tick` ·
 `radius-axis-label-tag` · `spacing-axis-label-tag-pad-h`。
 行为：`tooltip-hide-delay`（值 token，L2 经 `tokenNum` 读取）· `tooltip-position`（behavior）。

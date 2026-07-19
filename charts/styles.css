@@ -124,9 +124,11 @@
 
 /* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
    iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
-   pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。 */
+   pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。
+   [TOOLTIP-12] fixed 视口定位：DOM 挂 plotHost（token 作用域）但不受祖先 overflow 裁剪，
+   气泡可超出图表 frame / 卡片容器；坐标由 tooltip.js place() 按 plotHost 视口矩形换算。 */
 .dv-tooltip {
-  position: absolute;
+  position: fixed;
   left: 0;
   top: 0;
   z-index: 10;
@@ -194,6 +196,9 @@
   stroke-width: var(--size-grid-line);
   stroke-dasharray: var(--dash-highlight-line);
 }
+
+/* [TOOLTIP-11] hover 指示 block（纯分组柱）：类目底色带（网格之上、mark 之下），三主题同 token */
+.dv-crosshair-block { fill: var(--color-visualization-highlight-block); }
 
 /* [TOOLTIP-09] X 轴标签高亮贴片：文字样式与轴标签（.dv-axis-label）同源、色走高亮 token */
 .dv-axis-tag-bg { fill: var(--color-visualization-highlight-background-tick); }

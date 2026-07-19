@@ -7,7 +7,9 @@ import { markerSpecFor, renderMarker } from './legend.js';
  * 职责边界：气泡本体渲染（TOOLTIP-01..03）+ 三个位置档几何（TOOLTIP-04..06）。
  * 「hover 落在哪个类目、行数据是什么、用哪一档」由 L2 组装后传入（TOOLTIP-07/10）；
  * 本模块无 if(theme)：样式全走 token（styles.css），行为差异全部经参数进入。
- * 浮层挂在 plotHost 内（须 position:relative），像素与 svg 同一坐标系（svg 充满 plotHost 左上角）。
+ * 浮层挂在 plotHost 内（token 作用域 + 随图表销毁），但定位是 fixed 视口坐标（TOOLTIP-12）：
+ * 档位几何仍按 svg 局部坐标算（svg 充满 plotHost 左上角），输出时叠加 plotHost 视口矩形——
+ * 祖先 overflow 不裁剪，气泡可超出图表 frame / 外层卡片容器。
  */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -88,7 +90,9 @@ export function createTooltip(plotHost) {
       left = clamp(left, 0, width - w);
       top = clamp(pointer.y + FOLLOW_OFFSET, 0, height - h);
     }
-    root.style('left', `${left}px`).style('top', `${top}px`);
+    /* [TOOLTIP-12] 局部坐标 → fixed 视口坐标（plotHost 视口矩形每次 place 现取，滚动/重排后自准） */
+    const box = plotHost.getBoundingClientRect();
+    root.style('left', `${box.left + left}px`).style('top', `${box.top + top}px`);
   }
 
   /* 隐藏即时执行；「移出延迟」的 timer 归 L2（与指示线 / 线点同步隐藏，TOOLTIP-10） */

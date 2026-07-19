@@ -142,6 +142,11 @@ export function CartesianChart(host, cfg) {
     renderXLabels(frame.svg.append('g'), frame,
       categories.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })), { collision }); /* [AXIS-04..06] */
 
+    /* [TOOLTIP-11] 纯分组柱（判定按声明：全 bar + stack:none + ≥2 系列）hover 指示线换 block 底色带：
+       层此刻创建 → 在网格/轴之上、后续 mark 之下（是底色不是遮罩）；渲染与显隐接线见 bindHover */
+    const hoverBlock = stack === 'none' && !lines.length && bars.length >= 2;
+    const blockLayer = hoverBlock ? frame.svg.append('g').style('display', 'none') : null;
+
     /* ── 柱（所有柱共享 band；布局见 layout.js。各柱用 yOf(axis) 选比例尺）── */
     const barMax = tokenNum(plotHost, '--size-bar-max') || 16;
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
@@ -207,10 +212,13 @@ export function CartesianChart(host, cfg) {
 
     applyDim();
 
-    /* ── hover 全链路（气泡 + X 指示线 + 轴贴片 + 线点唤出）：接线见 hover.js ── */
+    /* ── hover 全链路（气泡 + X 指示线/block + 轴贴片 + 线点唤出）：接线见 hover.js ──
+       [TOOLTIP-11] blockWidth = 分组柱容器宽（与 groupedBars 的 container 同一算法，BAR-02） */
     bindHover(plotHost, frame, {
       categories, x, series: resolved, hidden: state.hidden,
       format, marker, position: b['tooltip-position'],
+      indicator: hoverBlock ? 'block' : 'line',
+      blockLayer, blockWidth: hoverBlock ? Math.min(band, groupMax) : 0,
     });
   }
 
