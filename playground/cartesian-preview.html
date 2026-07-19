@@ -181,11 +181,21 @@
         </div>
       </div>
 
+      <div class="field">
+        <div class="field-label"><b>渐变面积</b><span>主线 area</span></div>
+        <div class="seg" id="seg-area">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
         数据量对所有分类生效（类目数 4 / 16 / 36）：看柱容器收缩（BAR-03）、X 标签碰撞（AXIS-06）、
-        折线数据点显隐分档（&gt;13 全隐）。
+        折线数据点显隐分档（&gt;13 全隐）；多数据下折线含负值区。
+        渐变面积开关给当前分类的<b>主线</b>（首条声明折线）挂 <code>area:true</code>——
+        仅含折线且非堆叠的分类生效（specs/line.md）。
       </p>
     </div>
   </aside>
@@ -214,8 +224,12 @@
   const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, k * 0.9) }));
   /* 负值系列（堆叠含负值用） */
   const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
-  /* 折线：中途一个 null 断口 */
-  const lineWave = (n) => { const d = wave(n, 0.4); d[Math.floor(n / 3)] = null; return d; };
+  /* 折线：中途一个 null 断口；多数据（>13 点）整体下移、含负值区 */
+  const lineWave = (n) => {
+    const d = wave(n, 0.4).map((v) => (n > 13 ? v - 500000 : v));
+    d[Math.floor(n / 3)] = null;
+    return d;
+  };
   /* 副轴增速（%）：小数量级、与柱不同量纲 */
   const growth = (n) => Array.from({ length: n }, (_, i) => Math.round(12 + 9 * Math.sin(i * 0.5)));
 
@@ -267,6 +281,24 @@
       cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
     },
     {
+      group: '折线',
+      id: 'line-multi', label: '多折线（3 系列）',
+      desc: '声明 ≥2 条线：主线（首条声明线）保持 size-line-stroke（THS 1.5），其余线切 size-line-stroke-multi（THS 1）；纯折线走通用 bar-multi 色板（THS 首色浅蓝 #52BBFF，与分组柱同序）——line-multi 仅折柱组合用（COLOR-05）。点显隐分档同样生效。',
+      cfg: (n) => ({
+        categories: seq(n),
+        series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
+      }),
+    },
+    {
+      group: '折线',
+      id: 'line-stack', label: '堆叠折线（normal）',
+      desc: '线沿可见线累计基线绘制（线堆线，复用 stackBars 同一份累计）；每系列在线与其基线间填同色 0.2 填充带（opacity-line-stack-fill）；值域 = 累计总高；点掉系列看堆叠闭合、轴 refit。',
+      cfg: (n) => ({
+        categories: seq(n), stack: 'normal',
+        series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
+      }),
+    },
+    {
       group: '组合',
       id: 'combo', label: '折柱组合 · 双 Y',
       desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。',
@@ -288,7 +320,7 @@
   ];
 
   const DENSITY = { few: 4, mid: 16, many: 36 }; // 右侧「数据量」旋钮 → 类目数 n
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', area: 'off' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -349,7 +381,12 @@
       const host = document.createElement('div');
       host.className = 'chart-host';
       mount.appendChild(host);
-      CartesianChart(host, { ...cat.cfg(DENSITY[state.density]), platform: state.platform });
+      const cfg = { ...cat.cfg(DENSITY[state.density]), platform: state.platform };
+      if (state.area === 'on') { /* 渐变面积开关：给主线（首条声明折线）挂 area（堆叠下 L2 自会忽略） */
+        const main = cfg.series.find((s) => s.type === 'line');
+        if (main) main.area = true;
+      }
+      CartesianChart(host, cfg);
     });
   }
 
@@ -367,6 +404,7 @@
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
+  wireSeg('seg-area', 'area');
 
   render();
 </script>

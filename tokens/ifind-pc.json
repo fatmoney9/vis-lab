@@ -171,6 +171,9 @@
   "size-line-stroke": "2px",
   "size-line-stroke-multi": "2px",
   "size-line-point": "6px",
+  "opacity-line-area-from": 0.2,
+  "opacity-line-area-to": 0,
+  "opacity-line-stack-fill": 0.2,
 
   "$section-19": "横向柱状图 HBar",
   "size-hbar-row-max": "24px",

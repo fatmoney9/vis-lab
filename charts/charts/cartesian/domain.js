@@ -3,7 +3,8 @@
  *
  * 干什么：回答「这根轴要覆盖多大的数值区间」，结果喂给 niceSplit / niceSplitDual 取整成刻度。
  * 一根轴的值域 = 该轴**柱子集**（stack:none → 数据 extent、稳定不随隐藏变；堆叠 → 可见柱累计总高）
- * 并上**线子集** extent，且始终包含 0（柱从 0 基线长）。
+ * 并上**线子集**（stack:none → extent；堆叠折线 → 可见线累计总高，与柱各自独立累计），
+ * 且始终包含 0（柱从 0 基线长）。
  *
  * 不碰 DOM / 比例尺；堆叠总高借用 layout.js 的 stackBars（同一份累计逻辑，不重复实现）。
  */
@@ -32,7 +33,10 @@ export function axisDomain(categories, axisSeries, stack, hidden) {
     const [a, c] = extentOf(bars);
     lo = Math.min(lo, a); hi = Math.max(hi, c);
   }
-  if (lines.length) {
+  if (stack !== 'none' && lines.length) {
+    const st = stackBars(categories, lines.filter((r) => !hidden.has(r.name)), stack);
+    lo = Math.min(lo, st.lo); hi = Math.max(hi, st.hi);
+  } else if (lines.length) {
     const [a, c] = extentOf(lines);
     lo = Math.min(lo, a); hi = Math.max(hi, c);
   }

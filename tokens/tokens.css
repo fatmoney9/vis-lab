@@ -122,6 +122,9 @@
   --size-line-stroke: 1.5px;
   --size-line-stroke-multi: 1px;
   --size-line-point: 6px;
+  --opacity-line-area-from: 0.2;
+  --opacity-line-area-to: 0;
+  --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
@@ -274,6 +277,9 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 6px;
+  --opacity-line-area-from: 0.2;
+  --opacity-line-area-to: 0;
+  --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
@@ -430,6 +436,9 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 6px;
+  --opacity-line-area-from: 0.2;
+  --opacity-line-area-to: 0;
+  --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;

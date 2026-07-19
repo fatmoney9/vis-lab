@@ -26,16 +26,20 @@ for (const [name, p] of Object.entries(PALETTE)) {
 /*
  * [COLOR-02..05] 按系列类型取色（返回 hex 数组，与系列一一对应）。
  *   单系列（length<=1） → [single-default]（[COLOR-03]，无论柱/线）
- *   多系列 → 柱系列走 bar-multi、线系列走 line-multi，**各按自己类型的序号取、超出循环**，
- *            柱线分色板、禁交叉（[COLOR-05]）。
+ *   多系列：
+ *     **纯折线**（无柱声明）→ 走通用 bar-multi（与多系列柱同一套色板按序号取）；
+ *     **折柱组合**（柱线混合）→ 柱走 bar-multi、线走 line-multi 子序列，
+ *       柱线分色板、禁交叉（[COLOR-05]，line-multi 仅在组合中使用）。
+ *   均按自己色板的序号取、超出循环。
  * 入参 series = [{type}]，用**声明的系列**（图例隐藏/过滤不重排颜色，[COLOR-04]）。
  */
 export function resolveSeriesColors(host, { series }) {
   const p = PALETTE[themeOf(host)] ?? PALETTE[DEFAULT_THEME];
   if (series.length <= 1) return [p['single-default']];
+  const mixed = series.some((s) => s.type === 'bar') && series.some((s) => s.type === 'line');
   let bi = 0;
   let li = 0;
-  return series.map((s) => (s.type === 'line'
+  return series.map((s) => (mixed && s.type === 'line'
     ? p['line-multi'][li++ % p['line-multi'].length]
     : p['bar-multi'][bi++ % p['bar-multi'].length]));
 }

@@ -94,6 +94,22 @@
 .points-muted .dv-line-point { opacity: 0; }
 .dv-line-point.is-active { opacity: 1; }
 
+/* 多折线的非主线（主线=首条声明线保持标准线宽，specs/line.md）：线与点描边切更细的 multi 线宽 */
+.lines-multi .dv-line,
+.lines-multi .dv-line-point { stroke-width: var(--size-line-stroke-multi); }
+
+/* 主线渐变面积（可开启配置，specs/line.md）：色随系列（currentColor），
+   两端透明度由 mark.js 从 --opacity-line-area-from/-to 写入 stop-opacity */
+.dv-line-area { pointer-events: none; }
+.dv-line-area-stop { stop-color: currentColor; }
+
+/* 堆叠折线填充带（specs/line.md）：折线与其累计基线之间，与线同色、0.2 不透明度 */
+.dv-line-stack-fill {
+  fill: currentColor;
+  fill-opacity: var(--opacity-line-stack-fill);
+  pointer-events: none;
+}
+
 /* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
    主题无关的结构样式（无颜色）。 */
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余） */

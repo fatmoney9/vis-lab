@@ -174,12 +174,31 @@ export function CartesianChart(host, cfg) {
     }
 
     /* ── 线（叠加，走类目中心，各用 yOf(axis)）[LINE-01][BAR-07] ──
-       数据点显隐分档（specs/line.md）：该线非 null 点数 > 13 → 全隐（移动/PC 一致）；
-       点留 DOM，hover 唤出归 tooltip/十字准星切片 */
-    lines.forEach((r) => {
-      if (state.hidden.has(r.name)) return;
-      const showPoints = r.data.filter((v) => v != null).length <= 13;
-      renderLine(seriesG('dv-line-series', r.name), frame, { categories, values: r.data, colorVar: r.colorVar }, x, yOf(r), { showPoints });
+       多折线（声明 ≥2 条线，判定按声明）：**主线 = 首条声明线**保持 --size-line-stroke，
+       其余线切更细的 --size-line-stroke-multi（并非所有线都切）；
+       堆叠折线：stack≠none 时线沿**可见线**累计基线绘制（线堆线、柱堆柱各自独立，
+       复用 stackBars 同一份累计，与 domain.js 值域一致），并在线与其基线间填
+       同色 0.2 填充带（--opacity-line-stack-fill，mark.js stackFill）；
+       渐变面积（series 级 area:true，仅 stack:none）：主线装饰，见 specs/line.md；
+       数据点显隐分档：该线非 null 点数 > 13 → 全隐（移动/PC 一致），hover 唤出归 tooltip 切片 */
+    const lineMulti = lines.length > 1;
+    const visLines = lines.filter((r) => !state.hidden.has(r.name));
+    let lineStack = null;
+    if (stacked && visLines.length) {
+      const { segs } = stackBars(categories, visLines, stack);
+      lineStack = new Map(segs.map((seg, i) => [visLines[i].name, {
+        values: seg.values.map((v, j) => (v == null ? null : seg.base[j] + v)),
+        base: seg.base,
+      }]));
+    }
+    visLines.forEach((r) => {
+      const st = lineStack?.get(r.name);
+      const values = st ? st.values : r.data;
+      const showPoints = values.filter((v) => v != null).length <= 13;
+      const multi = lineMulti && r.seriesIndex !== lines[0].seriesIndex; /* 非主线才切细（主线按声明定、隐藏不改变） */
+      renderLine(seriesG('dv-line-series', r.name), frame,
+        { categories, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
+        { showPoints, multi, area: r.area && !stacked, stackFill: !!st });
     });
 
     applyDim();

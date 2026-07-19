@@ -20,7 +20,7 @@
 | COLOR-02 | **按主题取色**（主题差异只在数据、取色器主题无关）：单系列 → `single-default`；多系列 → 该主题色板**按序号取、超出循环**。Ainvest（8 色）/ iFinD（24 色）本就按序号；**THS 多系列柱**取"末行固定第 N 色"前 N（`bar-multi`），与单系列不同色——"整套换"非"序号叠加" | `core/palette.js` → `resolveSeriesColors(host, { count })` | ✅ v1（柱） |
 | COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest `#265FFC`。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
 | COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色的 `count` = **声明的系列数**，不是当前可见数——隐藏一个系列，`count` 不变、其余不变色 | `CartesianChart` 传 `count: series.length` | ✅ |
-| COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色 | ✅ |
+| COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
 
 ## 样式 token / 数据边界
 
@@ -32,4 +32,4 @@
 - [x] COLOR-05 折柱组合柱/线子序列 → `line-multi` 落地（iFinD 用 7 色浅盘避撞）。
 - [ ] **THS「按系列数量整取第 N 行」基础表**（当前多系列用末行固定第 N 色，覆盖分组柱；基础表用于基础柱等场景，届时给 palette.json 加 `by-count` 结构 + resolver 加模式）。
 - [ ] **Ainvest 动态条形图 16 色**（序列 8 + 浅色变体 8，按序号循环）。
-- [ ] **标准多折线图**（非组合）的折线色板：与组合 `line-multi` 可能不同序列（THS 多折线固定第 N 色 `#3366FF→#FF9500→…`），届时区分。
+- [x] **标准多折线图**（非组合）的折线色板：**决定不设独立色板**——纯折线走通用 `bar-multi`（COLOR-05 补充），`line-multi` 仅保留为折柱组合子序列（原设想的 `line-standard` 独立序列不再需要）。

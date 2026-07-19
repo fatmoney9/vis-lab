@@ -15,6 +15,7 @@ export function resolveSeries(series) {
     data: s.data,
     type: s.type ?? 'bar',      /* ② 旋钮：图元类型 */
     axis: s.axis ?? 'primary',  /* ③ 旋钮：绑哪根 Y */
+    area: s.area ?? false,      /* 主线渐变面积装饰（可开启配置，仅 type:line 生效，specs/line.md） */
     seriesIndex: i,             /* 声明序号（配色/槽位按它，隐藏不重排） */
     colorVar: `--dv-series-${i + 1}`,
   }));
