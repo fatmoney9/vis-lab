@@ -19,7 +19,8 @@
 
 - **多折线** = 声明 ≥2 个 `type:'line'` 系列（判定按声明、与色板槽位一致）：**主线（首条声明线）
   保持 `size-line-stroke`**（THS 1.5），**其余线**切更细的 `size-line-stroke-multi`（THS 1，经
-  `lines-multi` 类）——并非所有线都切细；**纯折线走通用 `bar-multi` 色板**（与多系列柱
+  `lines-multi` 类）——并非所有线都切细；**层级：主线最高、后续声明依次递减**（渲染按声明逆序，
+  SVG 后画者在上）；**纯折线走通用 `bar-multi` 色板**（与多系列柱
   同一套按序号取）——`line-multi` 仅在折柱组合中作为折线子序列使用（COLOR-05）。
 - **堆叠折线** = 折线系列 × `stack:normal/percent`：线沿**可见线**累计基线绘制——线堆线、柱堆柱
   各自独立累计（复用 `layout.js` `stackBars` 同一份累计逻辑，值域同步 `domain.js`）；

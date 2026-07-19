@@ -191,7 +191,8 @@ export function CartesianChart(host, cfg) {
         base: seg.base,
       }]));
     }
-    visLines.forEach((r) => {
+    /* 渲染按声明逆序：SVG 后画者在上 → 主线（首条声明线）最后画、层级最高，后续声明依次递减 */
+    [...visLines].reverse().forEach((r) => {
       const st = lineStack?.get(r.name);
       const values = st ? st.values : r.data;
       const showPoints = values.filter((v) => v != null).length <= 13;
