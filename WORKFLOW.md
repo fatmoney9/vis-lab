@@ -150,8 +150,8 @@ L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（
 ## 八、当前状态与后续里程碑
 
 截至 2026-07-20，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip 等共享构件、
-`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y）、多主题 playground，以及 token 合同、分层和
-Spec ID 提交前守卫。
+`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y）、已发布到 GitHub Pages 的多主题 playground，
+以及 token 合同、分层和 Spec ID 提交前守卫。
 
 后续按以下顺序推进：
 

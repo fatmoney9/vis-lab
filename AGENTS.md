@@ -7,6 +7,7 @@
 ## 运行与验证
 
 - 启动预览：`python3 -m http.server 8123`，访问 `http://localhost:8123/playground/cartesian-preview.html`。
+- 线上预览：`https://amomonkey.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 重建 token：`node tokens/build.mjs`。
 - 提交前门禁：`sh hooks/lint-layers.sh && node hooks/lint-spec-ids.mjs`。
 - 仓库已配置 `core.hooksPath=hooks`；不要绕过 pre-commit。

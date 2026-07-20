@@ -13,6 +13,13 @@ python3 -m http.server 8123
 然后访问 <http://localhost:8123/playground/cartesian-preview.html>。当前入口展示
 `CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y，并支持三主题、PC/移动端、明暗和数据量切换。
 
+## 在线预览
+
+GitHub Pages：<https://amomonkey.github.io/vis-lab/>。
+
+站点从 `main` 分支的仓库根目录发布；根目录 `index.html` 负责进入本 Preview。推送到 `main` 后，
+以仓库 Actions 中 `pages build and deployment` 成功且上述公开地址返回正常页面为发布完成标准。
+
 ## 目录边界
 
 - `charts/core/`：可复用的图表核心组件与计算逻辑。
