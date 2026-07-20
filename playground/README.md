@@ -15,7 +15,7 @@ python3 -m http.server 8123
 
 ## 在线预览
 
-GitHub Pages：<https://amomonkey.github.io/vis-lab/>。
+GitHub Pages：<https://fatmoney9.github.io/vis-lab/>。
 
 站点从 `main` 分支的仓库根目录发布；根目录 `index.html` 负责进入本 Preview。推送到 `main` 后，
 以仓库 Actions 中 `pages build and deployment` 成功且上述公开地址返回正常页面为发布完成标准。
