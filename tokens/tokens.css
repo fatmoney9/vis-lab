@@ -32,6 +32,7 @@
   --font-weight-medium: 500;
   --font-weight-bold: 600;
   --radius-0: 0px;
+  --radius-1: 1px;
   --radius-2: 2px;
   --radius-4: 4px;
   --radius-6: 6px;
@@ -123,6 +124,9 @@
   --size-bar-container-max: 24px;
   --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-2);
+  --radius-bar-top-reduced: var(--radius-1);
+  --size-bar-radius-full-min-width: 8px;
+  --size-bar-radius-reduced-min-width: 4px;
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 2:1;
   --size-bar-group-container-max: none;
@@ -197,6 +201,7 @@
   --font-weight-medium: 500;
   --font-weight-bold: 600;
   --radius-0: 0px;
+  --radius-1: 1px;
   --radius-2: 2px;
   --radius-4: 4px;
   --radius-6: 6px;
@@ -280,7 +285,7 @@
   --color-grey-03: #B3B3B3;
   --color-grey-04: #9C9C9C;
   --color-grey-05: #858585;
-  --size-chart-region-height: 160px;
+  --size-chart-region-height: 200px;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
   --spacing-leader-line-offset: var(--spacing-8);
@@ -288,6 +293,9 @@
   --size-bar-container-max: 48px;
   --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-0);
+  --radius-bar-top-reduced: var(--radius-0);
+  --size-bar-radius-full-min-width: 8px;
+  --size-bar-radius-reduced-min-width: 4px;
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 2:1;
   --size-bar-group-container-max: 100px;
@@ -365,6 +373,7 @@
   --font-weight-medium: 500;
   --font-weight-bold: 600;
   --radius-0: 0px;
+  --radius-1: 1px;
   --radius-2: 2px;
   --radius-4: 4px;
   --radius-6: 6px;
@@ -456,6 +465,9 @@
   --size-bar-container-max: 48px;
   --size-bar-gap-ratio: 2:1;
   --radius-bar-top: var(--radius-0);
+  --radius-bar-top-reduced: var(--radius-0);
+  --size-bar-radius-full-min-width: 8px;
+  --size-bar-radius-reduced-min-width: 4px;
   --size-zero-bar-placeholder: 1px;
   --size-bar-group-gap-ratio: 2:1;
   --size-bar-group-container-max: 100px;

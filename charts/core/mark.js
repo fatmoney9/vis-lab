@@ -17,6 +17,13 @@ function barPath(x, yTop, w, h, r, side) {
     : `M${x},${yTop}V${yTop + h - r}a${r},${r} 0 0 0 ${r},${r}h${w - 2 * r}a${r},${r} 0 0 0 ${r},${-r}V${yTop}Z`;
 }
 
+/* [BAR-01] THS 的柱顶圆角随最终柱宽降级；其他主题的 rMax=0，仍保持直角。 */
+function barRadius(width, rMax, rReduced, fullMinWidth, reducedMinWidth) {
+  if (rMax <= 0 || width < reducedMinWidth) return 0;
+  if (width < fullMinWidth) return Math.min(rMax, rReduced);
+  return rMax;
+}
+
 /*
  * [BAR-01][BAR-05] 一个柱系列的一批柱，渲染进已存在的分组 <g>（L2 每系列一个 g，便于整组控隐藏/弱化）。
  *   series = { categories, values, base?, offset, width, colorVar, rounded?, capped?, zeroBar? }
@@ -35,11 +42,15 @@ export function renderBars(g, frame, series, x, y) {
   const { categories, values, base = null, offset, width, colorVar, rounded = true, capped = null, zeroBar = true } = series;
   const zeroH = tokenNum(frame.host, '--size-zero-bar-placeholder') || 1;
   const rMax = tokenNum(frame.host, '--radius-bar-top');   // 主题决定（THS=2、iFinD/Ainvest=0）
+  const rReduced = tokenNum(frame.host, '--radius-bar-top-reduced');
+  const radiusFullMinWidth = tokenNum(frame.host, '--size-bar-radius-full-min-width') || 8;
+  const radiusReducedMinWidth = tokenNum(frame.host, '--size-bar-radius-reduced-min-width') || 4;
+  const radius = barRadius(width, rMax, rReduced, radiusFullMinWidth, radiusReducedMinWidth);
 
   g.style('color', `var(${colorVar})`);
 
   const bars = categories
-    .map((c, i) => ({ key: c, v: values[i], b: base ? base[i] : 0, bx: x(c) + offset, r: (capped ? capped[i] : rounded) ? rMax : 0 }))
+    .map((c, i) => ({ key: c, v: values[i], b: base ? base[i] : 0, bx: x(c) + offset, r: (capped ? capped[i] : rounded) ? radius : 0 }))
     .filter((d) => d.v != null);
 
   g.selectAll('path.dv-bar')

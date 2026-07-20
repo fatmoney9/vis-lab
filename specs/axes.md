@@ -19,7 +19,7 @@
 |---|---|---|---|
 | GRID-01 | 横向网格线：`color-visualization-divider`，0 轴加深 `color-visualization-divider-deep`，线宽 `size-grid-line` | `core/grid.js` → `renderGrid()` | ✅ |
 | GRID-02 | X 轴分割线（纵线）默认不显示，特例经 `showXSplit` 显式开启 | 同上 | ✅ |
-| GRID-03 | **容器自适应**：容器宽/高变化时几何整体重排——绘制区随容器、分割线数量不变（SCALE-01 不受尺寸影响）、X 轴标签碰撞重新判定 | `core/frame.js` → `observeResize()` + 重建 | ✅ |
+| GRID-03 | **默认尺寸 + 容器自适应**：调用方未提供明确高度时，绘制区取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）；提供明确高度时绘制区随容器可用高度适配。容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
 
 ## Y 轴标签
 

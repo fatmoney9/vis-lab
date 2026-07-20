@@ -34,6 +34,8 @@ import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
   const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left' } = cfg;
+  /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认 grid 高度 token。 */
+  const usesContainerHeight = host.clientHeight >= 40;
 
   const resolved = resolveSeries(series);                 /* 归一化：补默认 type/axis（见 series.js） */
   const keys = resolved.map((r) => r.name);
@@ -88,7 +90,7 @@ export function CartesianChart(host, cfg) {
   /* 主流程：值域(domain) → 画布/轴/网格 → 柱布局(layout)+柱 mark → 线 mark → 交互态 */
   function build() {
     drawLegend(); /* 图例先占位，绘图区再按剩余高度算（LEGEND-04） */
-    if (plotHost.clientHeight < 40) return requestAnimationFrame(build);
+    if (usesContainerHeight && plotHost.clientHeight < 40) return requestAnimationFrame(build);
     plotHost.innerHTML = '';
 
     const primary = resolved.filter((r) => r.axis === 'primary');
@@ -111,7 +113,10 @@ export function CartesianChart(host, cfg) {
     /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量 */
     const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
     const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
-    const frame = createFrame(plotHost, { height: plotHost.clientHeight, yForm, ySide, yLabelWidth, yLabelWidthSecondary }); /* [GRID-03] */
+    const frame = createFrame(plotHost, {
+      ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
+      yForm, ySide, yLabelWidth, yLabelWidthSecondary,
+    }); /* [GRID-03] */
 
     const yP = linearY(pSplit, frame.grid.top, frame.grid.bottom);
     const yS = dual ? linearY(sSplit, frame.grid.top, frame.grid.bottom) : yP;
@@ -157,14 +162,21 @@ export function CartesianChart(host, cfg) {
     const barGapRatio = tokenNum(plotHost, '--size-bar-gap-ratio');              /* [BAR-03] 单柱 柱:两侧留白 比（三主题 2:1）。"2:1"→2、0→不留侧白 */
     const band = x.bandwidth();
     if (stacked && bars.length) {
-      /* [BAR-05] 单列堆叠（可见柱按可见重算，段闭合）；列走单柱容器留白（barContainerMax + barGapRatio） */
+      /* [BAR-05/06] 单列堆叠（可见柱按可见重算，段闭合）；列走单柱容器留白。
+         normal 仅最外段可圆角；percent 所有分段强制直角。 */
       const visBars = bars.filter((r) => !state.hidden.has(r.name));
       const { segs } = stackBars(categories, visBars, stack);
       const col = singleBar(band, barMax, barContainerMax, barGapRatio);
       segs.forEach((seg, i) => {
         const r = visBars[i];
         renderBars(seriesG('dv-bar-series', r.name), frame,
-          { categories, values: seg.values, base: seg.base, offset: col.offset, width: col.width, colorVar: seg.colorVar, capped: seg.caps, zeroBar: false },
+          {
+            categories, values: seg.values, base: seg.base, offset: col.offset, width: col.width,
+            colorVar: seg.colorVar,
+            rounded: stack === 'normal',
+            capped: stack === 'normal' ? seg.caps : null,
+            zeroBar: false,
+          },
           x, yOf(r));
       });
     } else if (bars.length) {

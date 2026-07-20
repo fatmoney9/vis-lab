@@ -13,6 +13,10 @@ python3 -m http.server 8123
 然后访问 <http://localhost:8123/playground/cartesian-preview.html>。当前入口展示
 `CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y，并支持三主题、PC/移动端、明暗和数据量切换。
 
+Preview 卡片首次按端提供默认宽度：PC 736px、移动端 390px；绘制区高度读取主题 token
+`size-chart-region-height`：THS 160px、iFinD-PC/Ainvest 200px。默认尺寸建立后仍可从卡片右下角
+双向拖拽，图表会随容器宽高重新排布。
+
 ## 在线预览
 
 GitHub Pages：<https://fatmoney9.github.io/vis-lab/>。

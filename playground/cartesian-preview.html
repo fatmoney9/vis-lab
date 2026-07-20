@@ -70,19 +70,20 @@
     display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
   }
 
-  /* 每个主题一张卡：卡背景跟随 明暗，图表内部字号/网格跟随 端。
-     resize:both → 拖右下角自由改宽高；chart-mount flex:1 撑满，
-     组件 observeResize 捕获宽/高两维变化并整体重排（GRID-03）。 */
+  /* 每个主题一张卡：首次展示按端提供默认画布（PC 736 / mobile 390），高度先由
+     --size-chart-region-height 得出并锁定；之后保留右下角双向拖拽，CartesianChart 随容器重排。 */
   .theme-card {
     border-radius: 10px; border: 1px solid var(--shell-border-soft);
     display: flex; flex-direction: column;
-    flex: none; /* 不参与列 flex 的主轴伸缩，否则 flex-shrink 会顶掉拖动出的高度 */
-    width: 100%; height: 360px; min-width: 320px; min-height: 240px;
+    flex: none;
+    min-width: 320px; min-height: 240px;
     resize: both; overflow: auto;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     background: var(--card-light-bg);
     transition: background .18s;
   }
+  .theme-card[data-platform="pc"] { width: 736px; }
+  .theme-card[data-platform="mobile"] { width: 390px; }
   .theme-card[data-mode="dark"] { background: var(--card-dark-bg); border-color: rgba(255, 255, 255, 0.08); }
 
   .theme-card__bar {
@@ -97,7 +98,7 @@
   .theme-card[data-mode="dark"] .theme-card__meta { color: rgba(255, 255, 255, 0.4); }
 
   .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; }
-  .chart-host  { height: 100%; }
+  .chart-host { height: 100%; }
 
   /* ── 右栏：配置（端 / 明暗）────────────────────────────────────── */
   .config { padding: 20px 18px; overflow-y: auto; flex: 1; }
@@ -344,6 +345,7 @@
   /* ── 中栏：三主题卡片骨架（一次性建，重绘只换 chart-host）────────── */
   const canvasEl = document.getElementById('canvas');
   const cards = {};
+  const chartInstances = {};
   THEMES.forEach((t) => {
     const card = document.createElement('div');
     card.className = 'theme-card';
@@ -377,16 +379,28 @@
 
       // 重建干净的 host，避免残留 class / --dv-series-* 变量
       const mount = card.querySelector('.chart-mount');
-      mount.textContent = '';
-      const host = document.createElement('div');
-      host.className = 'chart-host';
-      mount.appendChild(host);
       const cfg = { ...cat.cfg(DENSITY[state.density]), platform: state.platform };
       if (state.area === 'on') { /* 渐变面积开关：给主线（首条声明折线）挂 area（堆叠下 L2 自会忽略） */
         const main = cfg.series.find((s) => s.type === 'line');
         if (main) main.area = true;
       }
-      CartesianChart(host, cfg);
+
+      const mountChart = () => {
+        chartInstances[t.id]?.destroy();
+        mount.textContent = '';
+        const host = document.createElement('div');
+        host.className = 'chart-host';
+        mount.appendChild(host);
+        chartInstances[t.id] = CartesianChart(host, cfg);
+      };
+
+      mountChart();
+      if (!card.style.height) {
+        /* 首次先让 grid 走主题默认 token，再把得到的卡片总高锁住并重建一次。
+           第二次实例进入“明确容器高度”模式，之后原生 resize:both 拖动即可实时适配。 */
+        card.style.height = `${Math.ceil(card.getBoundingClientRect().height)}px`;
+        mountChart();
+      }
     });
   }
 
