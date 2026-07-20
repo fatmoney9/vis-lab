@@ -6,7 +6,7 @@
 >
 > 柱系变体不按名字分体，而是三个旋钮的组合（见 `CartesianChart` API）：
 > **① `stack`**（none / normal / percent，作用于 bar 系列）· **② 每系列 `type`**（bar / line，混用=折柱组合）·
-> **③ 每系列 `axis`**（primary / secondary，双 Y）。v1 覆盖 ①=none（基础+分组）、②全 bar、③单 Y。
+> **③ 每系列 `axis`**（primary / secondary，双 Y）。当前三个旋钮均已接入；组合边界与未完成项见文末待办。
 
 ## 图元标记（柱 mark）
 

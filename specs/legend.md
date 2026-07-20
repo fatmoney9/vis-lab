@@ -11,7 +11,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | LEGEND-01 | 容器默认 **左对齐**、单行横排；行宽不足时 **flex-wrap 自动换行**（由容器宽度决定，不固定每行项数）。边距 `spacing-legend-container-v-top`（上）/ `spacing-legend-container-v-bottom`（下——即图例与 grid 的间距，frame 顶部不另留白）/ `spacing-legend-container-h`（左右）；THS 上 4 / 下 12；项水平间距 `spacing-legend-item-h`；换行行间距 `spacing-legend-row-v`。**对齐方式（左/中/右）无 token**，与主题一致默认左对齐 | `core/legend.js` → `renderLegend()`；`charts/styles.css` → `.dv-legend` | ✅ |
-| LEGEND-04 | **单系列也必须显示图例**（哪怕一条系列），让用户知道数据含义；仅当图表本身完全无系列含义可言时才省略。**图例占位优先、给绘图区让位、不与绘图区重叠**（换行 / 分页增高时绘图区相应缩小，图例不覆盖数据线 / 柱） | 展示层原则；绘图区让位属 L2 布局约束（dev 预览体现，L2 组件建成时固化） | ✅ 展示层 |
+| LEGEND-04 | **单系列也必须显示图例**（哪怕一条系列），让用户知道数据含义；仅当图表本身完全无系列含义可言时才省略。**图例占位优先、给绘图区让位、不与绘图区重叠**（换行 / 分页增高时绘图区相应缩小，图例不覆盖数据线 / 柱） | `charts/cartesian/index.js`：先渲染图例，再按 `plotHost` 剩余高度创建 frame | ✅ |
 
 ## 图例项（marker + label）
 
@@ -52,5 +52,5 @@
 - [ ] LEGEND-09 右侧下拉选项。
 - [ ] `legend-select` 的 **per-主题 单选/多选映射**：源文档只列出两种模式、未指明各主题默认，暂三主题全 `multi`（L1 两模式均已实现，改 behavior 即切换）。
 - [ ] iFinD-PC `legend-marker` dvIcon 精确尺寸核对（源文档尺寸表述略糊，现取 线 12×3 / 方 12×12 / 圆点 8×8 占位）。
-- [ ] 系列色板未定稿：marker 的 `currentColor` 现由使用方传入系列色变量；色板入库后接入固定槽位（COLOR 规范）。
-- [ ] 暗色目检 / tokens.css 构建接入（全站统一，非图例专属）。
+- [x] 系列色板已由 `tokens/palette.json` + `core/palette.js` 接入固定槽位，marker 复用系列 `colorVar`（COLOR 规范）。
+- [x] `tokens.css` 构建已接入；playground 提供三主题明暗切换用于目检。

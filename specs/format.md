@@ -31,5 +31,6 @@
 ## 待办
 
 - [ ] iFinD-PC 正式规则（当前 plain 占位）
-- [ ] tooltip / 数据标签接入同一格式化（组件建成时）
+- [x] tooltip 已通过 `makeFormatter()` 接入同一格式化（`core/tooltip.js` 由 L2 传入格式化后的值）
+- [ ] 数据标签接入同一格式化（数据标签组件尚未实现）
 - [x] 轴标签列宽策略与本规范联动 → 已定为一次性渲染测量、精确贴合（specs/axes.md · AXIS-08），不固定宽度
