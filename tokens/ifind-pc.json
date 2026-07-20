@@ -1,7 +1,6 @@
 {
   "$meta": {
     "theme": "ifind-pc",
-    "source": "vis-design-system lite/references/tokens.md",
     "value-forms": {
       "字符串": "所有模式/端同值",
       "{light, dark}": "亮/暗模式分叉",

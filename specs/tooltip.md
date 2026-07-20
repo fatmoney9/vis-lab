@@ -1,6 +1,6 @@
 # Tooltip / 提示框 · 规范（条目化索引）
 
-> 权威源：`vis-design-system lite/references/components/tooltip.md`（形态细节表述以原文为准）。
+> 本页是项目内 Tooltip 规则的权威定义；代码注释通过稳定 ID 回引本页。
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
 > 适用范围：直角坐标图（柱 / 线 / 折柱组合 / 双 Y）的 hover 提示链路：气泡卡片、位置档、
 > 指示线、轴标签高亮、交互行为。颜色具体值全部走 token（[tokens 目录](../tokens/)，明暗各一组），
@@ -37,7 +37,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| TOOLTIP-10 | 三主题一致：**按 X 坐标最近类目触发**（鼠标移到该类目横向区间即触发，无需悬停在数据项上）；**无过渡动画**（不淡入淡出、瞬移跟随）；移出绘图区按 `tooltip-hide-delay` 延迟隐藏（THS / iFinD 2000ms、Ainvest 0）；自动隐藏默认开启（常驻显示则关闭延迟——待办）；hover 同时唤出当前类目**所有可见折线的数据点**——`.is-active` 压过 `points-muted` 静默、中心填充切白心 token（样式归 specs/line.md），且**唤出点层级压过 X 指示线**（副本层实现：仅这些点抬层，指示线与 mark 的相对层级不动） | `charts/cartesian/hover.js`（`bindHover`：交互层 + 延迟 timer + 唤出点副本层） | ✅ |
+| TOOLTIP-10 | 三主题一致：**按 X 坐标最近类目触发**（鼠标移到该类目横向区间即触发，无需悬停在数据项上）；**无过渡动画**（不淡入淡出、瞬移跟随）；移出绘图区按 `tooltip-hide-delay` 延迟隐藏（THS / iFinD 2000ms、Ainvest 0）；**页面或任意祖先滚动容器发生滚动时立即隐藏完整 hover 状态**（气泡 / 指示线或 block / 轴贴片 / 唤出点同步清除，不走延迟），避免 `position:fixed` 气泡脱离已滚走的图表；自动隐藏默认开启（常驻显示则关闭延迟——待办）；hover 同时唤出当前类目**所有可见折线的数据点**——`.is-active` 压过 `points-muted` 静默、中心填充切白心 token（样式归 specs/line.md），且**唤出点层级压过 X 指示线**（副本层实现：仅这些点抬层，指示线与 mark 的相对层级不动） | `charts/charts/cartesian/hover.js`（`bindHover`：交互层 + 延迟 timer + scroll 收口 + 唤出点副本层） | ✅ |
 | TOOLTIP-11 | **hover 指示形态特例：纯分组柱 → block**（判定按声明：全系列 `type:bar` + `stack:none` + ≥2 系列）：hover 时 X 指示**竖线（TOOLTIP-08）换成 block 底色带**——填充 `color-visualization-highlight-block`、以类目中心定位、**宽 = 分组柱容器宽**（`min(band, size-bar-group-container-max)`，与 BAR-02 布局同一容器；THS 无上限 → 整格）、贯穿 grid 全高；**层级在网格之上、mark 之下**（是底色不是遮罩，故不在 hover 顶层）；随 hover 切片移动、与气泡 / 贴片同一 timer 延迟隐藏（TOOLTIP-10）；轴标签贴片（TOOLTIP-09）照常显示、竖线不再绘制。**其余图型（单柱 / 堆叠 / 折线 / 组合 / 双 Y）维持竖线** | `core/crosshair.js` → `renderCrosshairBlock()` · `.dv-crosshair-block`（styles.css）· `cartesian/hover.js` `bindHover` 按 `indicator` 分发 · 判定 + block 层创建 `cartesian/index.js` | ✅ |
 
 ## 样式 token

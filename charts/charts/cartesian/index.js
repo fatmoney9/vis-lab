@@ -34,8 +34,8 @@ import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
   const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left' } = cfg;
-  /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认 grid 高度 token。 */
-  const usesContainerHeight = host.clientHeight >= 40;
+  /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
+  let usesContainerHeight = host.clientHeight >= 40;
 
   const resolved = resolveSeries(series);                 /* 归一化：补默认 type/axis（见 series.js） */
   const keys = resolved.map((r) => r.name);
@@ -86,9 +86,12 @@ export function CartesianChart(host, cfg) {
     g.node().dataset.key = key;
     return g;
   };
+  let stopHover = () => {};
 
   /* 主流程：值域(domain) → 画布/轴/网格 → 柱布局(layout)+柱 mark → 线 mark → 交互态 */
   function build() {
+    stopHover();
+    stopHover = () => {};
     drawLegend(); /* 图例先占位，绘图区再按剩余高度算（LEGEND-04） */
     if (usesContainerHeight && plotHost.clientHeight < 40) return requestAnimationFrame(build);
     plotHost.innerHTML = '';
@@ -226,7 +229,7 @@ export function CartesianChart(host, cfg) {
 
     /* ── hover 全链路（气泡 + X 指示线/block + 轴贴片 + 线点唤出）：接线见 hover.js ──
        [TOOLTIP-11] blockWidth = 分组柱容器宽（与 groupedBars 的 container 同一算法，BAR-02） */
-    bindHover(plotHost, frame, {
+    stopHover = bindHover(plotHost, frame, {
       categories, x, series: resolved, hidden: state.hidden,
       format, marker, position: b['tooltip-position'],
       indicator: hoverBlock ? 'block' : 'line',
@@ -235,6 +238,10 @@ export function CartesianChart(host, cfg) {
   }
 
   build();
-  const stop = observeResize(host, build); /* [GRID-03] */
-  return { destroy: () => { stop(); host.innerHTML = ''; } };
+  const naturalHostHeight = host.clientHeight;
+  const stop = observeResize(host, () => { /* [GRID-03] 默认尺寸建立后，外部改高才切容器适配 */
+    if (!usesContainerHeight && Math.abs(host.clientHeight - naturalHostHeight) > 1) usesContainerHeight = true;
+    build();
+  });
+  return { destroy: () => { stopHover(); stop(); host.innerHTML = ''; } };
 }

@@ -70,8 +70,8 @@
     display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
   }
 
-  /* 每个主题一张卡：首次展示按端提供默认画布（PC 736 / mobile 390），高度先由
-     --size-chart-region-height 得出并锁定；之后保留右下角双向拖拽，CartesianChart 随容器重排。 */
+  /* 每个主题一张卡：首次展示按端提供默认画布（PC 736 / mobile 390），高度由
+     --size-chart-region-height 自然撑开；从右下角拖动后才切容器填充，CartesianChart 随之重排。 */
   .theme-card {
     border-radius: 10px; border: 1px solid var(--shell-border-soft);
     display: flex; flex-direction: column;
@@ -98,7 +98,8 @@
   .theme-card[data-mode="dark"] .theme-card__meta { color: rgba(255, 255, 255, 0.4); }
 
   .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; }
-  .chart-host { height: 100%; }
+  .chart-host { height: auto; }
+  .theme-card.is-resized .chart-host { height: 100%; }
 
   /* ── 右栏：配置（端 / 明暗）────────────────────────────────────── */
   .config { padding: 20px 18px; overflow-y: auto; flex: 1; }
@@ -359,6 +360,10 @@
       <div class="chart-mount"></div>`;
     canvasEl.appendChild(card);
     cards[t.id] = card;
+    card.addEventListener('pointerdown', (e) => {
+      const rect = card.getBoundingClientRect();
+      if (rect.right - e.clientX <= 18 && rect.bottom - e.clientY <= 18) card.classList.add('is-resized');
+    });
   });
 
   /* ── 渲染：当前分类 × 端 × 明暗 → 三卡整体重绘 ──────────────────── */
@@ -395,12 +400,6 @@
       };
 
       mountChart();
-      if (!card.style.height) {
-        /* 首次先让 grid 走主题默认 token，再把得到的卡片总高锁住并重建一次。
-           第二次实例进入“明确容器高度”模式，之后原生 resize:both 拖动即可实时适配。 */
-        card.style.height = `${Math.ceil(card.getBoundingClientRect().height)}px`;
-        mountChart();
-      }
     });
   }
 

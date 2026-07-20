@@ -3,7 +3,8 @@
  *
  * 干什么：把 L1 的 tooltip / crosshair 构件接到绘图区鼠标事件上（specs/tooltip.md）。
  * [TOOLTIP-10] 三主题一致按 X 坐标最近类目触发（横向切片，无需悬停在数据项上）、无过渡动画；
- * 移出按 tooltip-hide-delay 延迟隐藏——气泡 / 指示线 / 线点同步一个 timer。
+ * 移出按 tooltip-hide-delay 延迟隐藏；任意页面/祖先滚动时立即隐藏——
+ * 气泡 / 指示线 / 线点同步收口，避免 fixed 气泡脱离已滚走的图表。
  * [TOOLTIP-07] 气泡档位由 behavior 的 tooltip-position 决定（follow / top-anchor / side-fixed）。
  *
  * 只做事件接线 + hover 态 DOM（指示线层 / 贴片层 / 唤出点副本层），每次 build 重建、随 svg 一起丢弃。
@@ -45,6 +46,12 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     });
   };
   const hideHover = () => { tooltip.hide(); hoverG.style('display', 'none'); blockLayer?.style('display', 'none'); setActivePoints(-1); };
+  const hideOnScroll = () => {
+    clearTimeout(hideTimer);
+    hideHover();
+  };
+  /* [TOOLTIP-10] scroll 不冒泡，capture 才能覆盖 window、页面与 Preview 内部滚动容器。 */
+  window.addEventListener('scroll', hideOnScroll, { capture: true, passive: true });
 
   frame.svg.on('mousemove', (event) => {
     clearTimeout(hideTimer);
@@ -79,4 +86,10 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     clearTimeout(hideTimer);
     hideTimer = setTimeout(hideHover, hideDelay);
   });
+
+  return () => {
+    clearTimeout(hideTimer);
+    window.removeEventListener('scroll', hideOnScroll, true);
+    frame.svg.on('mousemove', null).on('mouseleave', null);
+  };
 }

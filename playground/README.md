@@ -14,8 +14,9 @@ python3 -m http.server 8123
 `CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y，并支持三主题、PC/移动端、明暗和数据量切换。
 
 Preview 卡片首次按端提供默认宽度：PC 736px、移动端 390px；绘制区高度读取主题 token
-`size-chart-region-height`：THS 160px、iFinD-PC/Ainvest 200px。默认尺寸建立后仍可从卡片右下角
-双向拖拽，图表会随容器宽高重新排布。
+`size-chart-region-height`：THS 160px、iFinD-PC/Ainvest 200px。高度口径按 `GRID-03`：inside 为
+顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，不含 X 轴标签带、图例和卡片外壳。默认尺寸建立后
+仍可从卡片右下角双向拖拽，图表会随容器宽高重新排布。
 
 ## 在线预览
 

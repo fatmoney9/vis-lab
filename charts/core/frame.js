@@ -19,8 +19,9 @@ const X_GAP_BOTTOM = 4;            // [AXIS-04] X 标签带下间距
  *   outside—— 仅有标签一侧预留 yLabelWidth + 8px 标签列，**无标签侧网格贴边**；
  *        顶/底标签与网格线居中对齐会超出绘制区约半个行高，顶部留白与 X 标签带上间距相应加大
  * [AXIS-04] X 轴标签自成容器带：带高 = 行高 + 上下间距（xBand=false 时不预留）
- * [GRID-03] 传入 height 时绘制区高度随容器（宽高自适应）；缺省用
- *           token --size-chart-region-height 的固定值
+ * [GRID-03] 传入 height 时 SVG 高度随容器（宽高自适应）；缺省时
+ *   --size-chart-region-height 表示 Y 方向的图表高度包络：
+ *   inside = 顶/底轴线间距；outside = 顶/底 Y 标签外缘间距（轴线间距需扣两端半行高）。
  */
 export function createFrame(host, opts = {}) {
   const {
@@ -50,9 +51,10 @@ export function createFrame(host, opts = {}) {
     }
   }
 
+  const regionH = tokenNum(host, '--size-chart-region-height') || 160;
   const gridH = height != null
     ? Math.max(48, height - topPad - bottomPad)
-    : tokenNum(host, '--size-chart-region-height') || 160;
+    : Math.max(48, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
   const H = topPad + gridH + bottomPad;
 
   const svg = select(host).append('svg').attr('width', W).attr('height', H).attr('role', 'img');

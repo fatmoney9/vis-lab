@@ -1,6 +1,6 @@
 # 直角坐标系 · 轴与网格规范（条目化索引）
 
-> 权威源：`vis-design-system lite/references/components/axes.md`（形态细节表述以原文为准）。
+> 本页是项目内轴与网格规则的权威定义；代码注释通过稳定 ID 回引本页。
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
 > 适用范围：所有 x/y 轴坐标图表（柱状图、折线图及延伸图表）。
 
@@ -19,7 +19,7 @@
 |---|---|---|---|
 | GRID-01 | 横向网格线：`color-visualization-divider`，0 轴加深 `color-visualization-divider-deep`，线宽 `size-grid-line` | `core/grid.js` → `renderGrid()` | ✅ |
 | GRID-02 | X 轴分割线（纵线）默认不显示，特例经 `showXSplit` 显式开启 | 同上 | ✅ |
-| GRID-03 | **默认尺寸 + 容器自适应**：调用方未提供明确高度时，绘制区取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）；提供明确高度时绘制区随容器可用高度适配。容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
+| GRID-03 | **默认图表高度包络 + 容器自适应**：调用方未提供明确高度时，Y 方向图表高度取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）。`inside` 的口径是最顶部轴线到最底部轴线；`outside` 的口径是最顶部 Y 标签外缘到最底部 Y 标签外缘（两端标签以轴线为中心，故轴线间距 = token − 两端半行高）。X 轴标签带、图例、卡片标题和外壳 padding 均不计入该高度。调用方提供明确高度后，SVG 随容器可用高度适配；容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
 
 ## Y 轴标签
 
