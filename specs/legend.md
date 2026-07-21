@@ -11,7 +11,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | LEGEND-01 | 容器默认 **左对齐**、单行横排；行宽不足时 **flex-wrap 自动换行**（由容器宽度决定，不固定每行项数）。边距 `spacing-legend-container-v-top`（上）/ `spacing-legend-container-v-bottom`（下——即图例与 grid 的间距，frame 顶部不另留白）/ `spacing-legend-container-h`（左右）；THS 上 4 / 下 12；项水平间距 `spacing-legend-item-h`；换行行间距 `spacing-legend-row-v`。**对齐方式（左/中/右）无 token**，与主题一致默认左对齐 | `core/legend.js` → `renderLegend()`；`charts/styles.css` → `.dv-legend` | ✅ |
-| LEGEND-04 | **单系列也必须显示图例**（哪怕一条系列），让用户知道数据含义；仅当图表本身完全无系列含义可言时才省略。**图例占位优先、给绘图区让位、不与绘图区重叠**（换行 / 分页增高时绘图区相应缩小，图例不覆盖数据线 / 柱） | `charts/cartesian/index.js`：先渲染图例，再按 `plotHost` 剩余高度创建 frame | ✅ |
+| LEGEND-04 | **单系列也必须显示图例**（哪怕一条系列），让用户知道数据含义；仅当图表本身完全无系列含义可言时才省略。**图例占位优先、给绘图区让位、不与绘图区重叠**（换行 / 分页增高时绘图区相应缩小，图例不覆盖数据线 / 柱） | `charts/charts/cartesian/index.js`：先渲染图例，再按 `plotHost` 剩余高度创建 frame | ✅ |
 
 ## 图例项（marker + label）
 

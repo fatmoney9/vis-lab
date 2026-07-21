@@ -56,9 +56,12 @@ node tokens/build.mjs
 所有提交至少运行：
 
 ```bash
+node --experimental-default-type=module --test tests
 sh hooks/lint-layers.sh
 node hooks/lint-spec-ids.mjs
 ```
+
+测试分层、用例规范、视觉基线和失败处理规则见 [TESTING.md](TESTING.md)。
 
 Git 提交信息使用中文，标题说明结果，例如：
 
