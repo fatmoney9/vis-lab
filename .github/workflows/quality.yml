@@ -1,0 +1,42 @@
+name: 质量门禁
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: token、分层与规范检查
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: 重建并核对 token
+        run: |
+          node tokens/build.mjs
+          git diff --exit-code -- tokens/tokens.css
+
+      - name: 检查 JavaScript 语法
+        run: find charts hooks tokens -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+
+      - name: 检查分层依赖
+        run: sh hooks/lint-layers.sh
+
+      - name: 检查 Spec ID 回引
+        run: node hooks/lint-spec-ids.mjs

@@ -22,6 +22,7 @@
 - `charts/core/` 是 L1 共享构件，`charts/charts/` 是 L2 图表编排，`specs/` 是规则 ID 权威定义。
 - `playground/` 只做开发预览；组件 API 只收数据与语义配置，不收样式参数。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
+- 多人分支、中文提交、验证和 PR 约定以 `CONTRIBUTING.md` 为准。
 
 ## 当前状态与下一步
 

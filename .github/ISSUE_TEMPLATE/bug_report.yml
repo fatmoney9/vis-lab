@@ -1,0 +1,64 @@
+name: 缺陷报告
+description: 报告可以复现的图表、规范或 Preview 问题
+title: "[缺陷] "
+body:
+  - type: markdown
+    attributes:
+      value: 请提供最小可复现信息；涉及视觉问题时请附截图或录屏。
+  - type: input
+    id: spec-id
+    attributes:
+      label: 相关规范 ID
+      description: 不确定时可以留空，例如 TOOLTIP-10。
+      placeholder: TOOLTIP-10
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开……
+        2. 切换到……
+        3. 执行……
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 端
+      multiple: true
+      options:
+        - PC
+        - 移动端
+        - 两端都有
+        - 与端无关
+    validations:
+      required: true
+  - type: dropdown
+    id: theme
+    attributes:
+      label: 主题
+      multiple: true
+      options:
+        - THS
+        - iFinD-PC
+        - Ainvest
+        - 三主题都有
+        - 与主题无关
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图、录屏或补充信息
