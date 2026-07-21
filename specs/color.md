@@ -10,16 +10,16 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | COLOR-01 | **系列色是第三类主题数据，不进 tokens.css**：一律写死 hex、不走值 token；**light / dark 同色、无深色派生**；整套替换、绝不跨主题混用。原因：取色是**算法**（依赖图型 / 系列数 / 序号 / 柱线归属），CSS 变量表达不了；且设计源明确"写死 hex"。数据在 `tokens/palette.json`，取色器在 `charts/core/palette.js`（`build.mjs` 不读 palette.json，故不会被输出为 CSS 变量） | `tokens/palette.json` + `core/palette.js` | ✅ |
-| COLOR-07 | **禁止引入色板外颜色**作为系列色（组件源码无 hex 字面量——hex 只在 palette.json；组件里只有 `currentColor` / `var(--dv-series-i)`） | 约定 + token-lint | ✅ |
+| COLOR-07 | **禁止引入色板外颜色**作为系列色（组件源码无 hex 字面量——hex 只在 palette.json；组件里只有 `currentColor` / `var(--dv-series-i)`） | 当前由约定与 review 保证；自动 token lint 见 `WORKFLOW.md` 待办 | ⚠️ 规则已满足，自动门禁待接入 |
 | COLOR-06 | **涨跌色不在系列色板内**，走值 token `color-price-up` / `color-price-down`（红绿柱、盒须、K 线等语义色） | `tokens/*.json` | ✅ |
 
 ## 取色规则
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| COLOR-02 | **按主题取色**（主题差异只在数据、取色器主题无关）：单系列 → `single-default`；多系列 → 该主题色板**按序号取、超出循环**。Ainvest（8 色）/ iFinD（24 色）本就按序号；**THS 多系列柱**取"末行固定第 N 色"前 N（`bar-multi`），与单系列不同色——"整套换"非"序号叠加" | `core/palette.js` → `resolveSeriesColors(host, { count })` | ✅ v1（柱） |
+| COLOR-02 | **按主题取色**（主题差异只在数据、取色器主题无关）：单系列 → `single-default`；多系列 → 该主题色板**按序号取、超出循环**。Ainvest（8 色）/ iFinD（24 色）本就按序号；**THS 多系列柱**取"末行固定第 N 色"前 N（`bar-multi`），与单系列不同色——"整套换"非"序号叠加" | `core/palette.js` → `resolveSeriesColors(host, { series })` | ✅ |
 | COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest `#265FFC`。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
-| COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色的 `count` = **声明的系列数**，不是当前可见数——隐藏一个系列，`count` 不变、其余不变色 | `CartesianChart` 传 `count: series.length` | ✅ |
+| COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色使用**完整的声明系列列表**，不是当前可见系列——隐藏一个系列不会重新调用取色或改变其余系列的固定槽位 | `CartesianChart` 传入归一化后的 `series`，并按 `seriesIndex` 固定 `--dv-series-i` | ✅ |
 | COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
 
 ## 样式 token / 数据边界

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   quality:
-    name: token、分层与规范检查
+    name: token、单测、分层与规范检查
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -33,7 +33,10 @@ jobs:
           git diff --exit-code -- tokens/tokens.css
 
       - name: 检查 JavaScript 语法
-        run: find charts hooks tokens -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+        run: find charts hooks tokens tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+
+      - name: 运行逻辑单元测试
+        run: node --experimental-default-type=module --test tests
 
       - name: 检查分层依赖
         run: sh hooks/lint-layers.sh

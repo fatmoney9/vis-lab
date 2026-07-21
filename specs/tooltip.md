@@ -6,7 +6,7 @@
 > 指示线、轴标签高亮、交互行为。颜色具体值全部走 token（[tokens 目录](../tokens/)，明暗各一组），
 > 参与几何计算的档位差异走 `tokens/behavior.json`。
 > 分层：气泡 / 定位（`core/tooltip.js`）与指示线 / 轴贴片（`core/crosshair.js`）是 **L1 纯渲染**构件；
-> 「hover 落在哪个类目、取哪些系列的值」由 L2 组装后传参（`charts/cartesian/index.js`）。
+> 「hover 落在哪个类目、取哪些系列的值」由 L2 组装后传参（`charts/charts/cartesian/index.js`）。
 
 ## 气泡卡片
 
@@ -23,7 +23,7 @@
 | TOOLTIP-04 | **follow · 跟随式** | 默认显示在触发点**右下方**、连续跟随（**无半区反选规则**）；仅当右侧与容器碰撞放不下时自动翻到触发点左侧躲避；垂直不超出绘制区顶部 / 底部（clamp） | `core/tooltip.js` → `placeTooltip('follow')` | ✅ |
 | TOOLTIP-05 | **top-anchor · 顶部锚定式** | 下三角 + 水平跟随触发点居中 + 垂直贴 grid 上沿外侧：① 三角尖端 x = 触发坐标 x（气泡贴不贴边都成立）；② 气泡底边 y = grid 上沿 − 三角高（与坐标 y 无关）；③ 水平边缘 clamp——气泡不越出容器，贴边时气泡停、三角继续随坐标偏移；④ 无过渡动画（瞬移跟随）；⑤ 气泡是临时遮罩物，不为它预留 grid 顶间距。三角高 6px 为兜底常量（本档专属形态） | `core/tooltip.js` → `placeTooltip('top-anchor')` + `ARROW_H` | ✅ |
 | TOOLTIP-06 | **side-fixed · 两侧固定式** | 固定绘制区上方左 / 右两侧、离散两档：以**图表中点**为基准触发点反选——左半区触发 → 显示在右上角、右半区 → 左上角（永远在触发点对侧，不遮挡在看的数据）；垂直顶对齐绘制区上沿、不随鼠标纵移、不跟随插值 | `core/tooltip.js` → `placeTooltip('side-fixed')` | ✅ |
-| TOOLTIP-07 | 主题 → 档位映射走 `tokens/behavior.json` `tooltip-position`：THS `side-fixed` · iFinD-PC `follow` · Ainvest `top-anchor`。特例（无坐标系图 → `follow`，THS 饼环 / Ainvest 无轴图）随饼环切片再消费 | behavior.json + `charts/cartesian/index.js` | ✅ |
+| TOOLTIP-07 | 主题 → 档位映射走 `tokens/behavior.json` `tooltip-position`：THS `side-fixed` · iFinD-PC `follow` · Ainvest `top-anchor`。特例（无坐标系图 → `follow`，THS 饼环 / Ainvest 无轴图）随饼环切片再消费 | behavior.json + `charts/charts/cartesian/index.js` | ✅ |
 | TOOLTIP-12 | **浮层不被容器裁剪**：气泡是临时遮罩物，可**超出图表 frame 及任意祖先容器**显示——数据行多、气泡高过 grid 上方空间时向上溢出照常可见（top-anchor 尤其，TOOLTIP-05 ⑤ 不预留顶间距的自然结果），祖先 `overflow: hidden/auto`（如可缩放卡片容器）不得裁剪。实现：DOM 仍挂 plotHost（保 `data-theme` token 作用域与销毁清理），定位用 **`position: fixed` 视口坐标**——三档几何（TOOLTIP-04..06）仍在 plotHost 局部坐标计算、输出时叠加 plotHost 视口矩形；水平 clamp 语义不变（仍以图表容器为界） | `.dv-tooltip`（styles.css `position: fixed`）· `core/tooltip.js` → `place()` 末尾视口换算 | ✅ |
 
 ## 指示线与轴标签高亮
