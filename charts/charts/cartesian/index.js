@@ -22,12 +22,13 @@ import { niceSplit, niceSplitDual, linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
 import { tokenNum } from '../../core/tokens.js';
-import { resolveBehavior } from '../../core/theme.js';
+import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
 import { renderDataZoom } from '../../core/datazoom.js';
+import { renderWatermark } from '../../core/watermark.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
@@ -64,6 +65,7 @@ export function CartesianChart(host, cfg) {
   const dzShadow = b['datazoom-data-shadow'];
   const dzHandle = b['datazoom-handle'];
   const dzLabel = b['datazoom-label']; /* [DATAZOOM-05] 手柄两侧标签仅 iFinD 显示 */
+  const wm = b['watermark'];           /* [WATERMARK-01..05] 水印品牌 logo（三主题恒有，见 behavior.json） */
   const dzHandleH = dzHandle.shape === 'circle' ? dzHandle.w : dzHandle.h;
   const N = categories.length;
   const zoomOn = !!zoom && N >= 2;
@@ -275,6 +277,10 @@ export function CartesianChart(host, cfg) {
         onChange: (w) => { win = w; build(); },
       });
     }
+
+    /* [WATERMARK-05] 水印置顶：build 末尾追加 = DOM 顺序最上、贴数据图形之上不被裁剪；
+       低透明 + pointer-events:none（CSS）不干扰 hover/tooltip。锚 frame.grid 绘图区角、随 resize 重排。 */
+    if (wm) renderWatermark(frame.svg.append('g').attr('class', 'dv-watermark-layer'), frame, { spec: wm, mode: modeOf(host) });
   }
 
   build();

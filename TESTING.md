@@ -45,7 +45,8 @@ node hooks/lint-spec-ids.mjs
 - `charts/core/format.js`：主题数值格式边界；
 - `charts/charts/cartesian/series.js`：默认值和固定系列槽位；
 - `charts/charts/cartesian/layout.js`：分组、单柱、普通堆叠和百分比堆叠；
-- `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计。
+- `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计；
+- `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。
