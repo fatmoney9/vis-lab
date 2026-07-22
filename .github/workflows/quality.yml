@@ -32,8 +32,13 @@ jobs:
           node tokens/build.mjs
           git diff --exit-code -- tokens/tokens.css
 
+      - name: 重建并核对水印资源模块
+        run: |
+          node assets/build-watermark-assets.mjs
+          git diff --exit-code -- charts/core/watermark-assets.js
+
       - name: 检查 JavaScript 语法
-        run: find charts hooks tokens tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
+        run: find charts hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
 
       - name: 运行逻辑单元测试
         run: node --test tests/*.mjs

@@ -128,6 +128,10 @@
      放行让其渲染进卡片内边距、不被切平。图元本身都在 grid 内，不受影响。 */
 .dv-chart__plot > svg { display: block; overflow: visible; }
 
+/* [WATERMARK-05] 水印：品牌 logo <image>，颜色/透明度烘焙在 SVG 内、明暗各一份（不走 token 链路）。
+   pointer-events:none —— 永不抢鼠标，贴数据之上也不影响 hover/tooltip 命中。 */
+.dv-watermark { pointer-events: none; }
+
 /* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
    iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
    pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。

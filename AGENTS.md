@@ -28,4 +28,4 @@
 
 ## 当前状态与下一步
 
-当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路和缩放轴（datazoom，见 `specs/datazoom.md`）。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
+当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）和水印（watermark，见 `specs/watermark.md`）。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

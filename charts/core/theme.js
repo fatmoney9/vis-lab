@@ -33,6 +33,11 @@ export function themeOf(host) {
   return host.closest('[data-theme]')?.dataset.theme ?? DEFAULT_THEME;
 }
 
+/* [WATERMARK-04] light/dark 开关：最近 [data-mode] 祖先（缺省 light）——供选水印明暗资源 */
+export function modeOf(host) {
+  return host.closest('[data-mode]')?.dataset.mode ?? 'light';
+}
+
 /* 返回当前主题 × 端展开后的形态表（纯值，无嵌套） */
 export function resolveBehavior(host, platform = 'pc') {
   const profile = BEHAVIOR[themeOf(host)] ?? BEHAVIOR[DEFAULT_THEME];
