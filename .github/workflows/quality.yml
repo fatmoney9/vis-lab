@@ -36,7 +36,7 @@ jobs:
         run: find charts hooks tokens tests -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
 
       - name: 运行逻辑单元测试
-        run: node --experimental-default-type=module --test tests
+        run: node --test tests/*.mjs
 
       - name: 检查分层依赖
         run: sh hooks/lint-layers.sh
