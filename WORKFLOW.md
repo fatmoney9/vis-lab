@@ -78,7 +78,7 @@ L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（
 
 - 规范正文用 markdown 写，按主题分文件（color / axis / tooltip / 每种图表一篇）
 - 每条规则一个稳定 ID，格式 `{类别}-{序号}`：
-  `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 ·
+  `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `DATAZOOM-` 缩放轴 ·
   `MARK-` 图形标记 · `LEGEND-` 图例 · `TEXT-` 文本 · `TOOLTIP-` 浮层 · `MOTION-` 动效
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
@@ -151,14 +151,14 @@ L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-07-21，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip 等共享构件、
-`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y）、已发布到 GitHub Pages 的多主题 playground，
+截至 2026-07-22，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip 等共享构件、
+`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom）、已发布到 GitHub Pages 的多主题 playground，
 以及 token 合同、首批纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
 
 后续按以下顺序推进：
 
 1. **上视觉保险**：Playwright 视觉回归接入 CI；补组件色值字面量 lint 与色板 CVD/对比度校验。
-2. **补未完成规范**：datazoom、图例溢出、数据标签、移动端触摸等以 `specs/*.md` 待办为准。
+2. **补未完成规范**：图例溢出、数据标签、移动端触摸等以 `specs/*.md` 待办为准（datazoom 已落地 [specs/datazoom.md](specs/datazoom.md)）。
 3. **规范站产品化**：决定是否把当前 `specs/` + `playground/` 迁入独立站点；迁移前当前目录就是权威入口。
 4. **进阶工具**：token 对照表自动生成与更多图型预览。
 

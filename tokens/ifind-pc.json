@@ -143,10 +143,15 @@
   "opacity-visualization-dim": 0.1,
 
   "$section-13": "缩放轴 Axes Navigator",
-  "color-visualization-datazoom-filler": "rgba(95, 146, 228, 0.2)",
-  "color-visualization-datazoom-data-bg": { "light": "rgba(0, 0, 0, 0.08)", "dark": "rgba(255, 255, 255, 0.12)" },
-  "color-visualization-datazoom-data-select": "rgba(51, 102, 255, 0.16)",
+  "color-datazoom-filler": "rgba(95, 146, 228, 0.2)",
+  "color-datazoom-data-bg": { "light": "rgba(0, 0, 0, 0.08)", "dark": "rgba(255, 255, 255, 0.12)" },
+  "color-datazoom-data-select": "rgba(51, 102, 255, 0.16)",
+  "color-datazoom-handle": { "light": "#1B63D9", "dark": "#3371FF" },
+  "color-datazoom-handle-border": { "light": "#1B63D9", "dark": "#3371FF" },
+  "color-datazoom-handle-grip": "rgba(255, 255, 255, 0.9)",
+  "shadow-datazoom-handle": "none",
   "size-slider-height": "16px",
+  "size-slider-handle-border": "1px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-4}",
 

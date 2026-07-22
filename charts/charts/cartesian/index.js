@@ -27,13 +27,14 @@ import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
+import { renderDataZoom } from '../../core/datazoom.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left' } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -56,6 +57,23 @@ export function CartesianChart(host, cfg) {
   const selectMode = b['legend-select'];
   const format = makeFormatter(b['number-format']);       /* [FORMAT-01] */
   const pctFormat = (v) => `${Math.round(v * 100)}%`;     /* [BAR-06] 归一化轴 */
+
+  /* [DATAZOOM-02/03/04] 缩放轴形态（behavior）+ 初始窗口。zoom 语义配置（WORKFLOW §四 铁律4 允许 initialZoom 一类）：
+     true = 启用全窗；{start,end}（0..1 比例）= 启用并设初始窗口；缺省/假值 = 不启用（布局与原状一致）。 */
+  const dzAlign = b['datazoom-align'];
+  const dzShadow = b['datazoom-data-shadow'];
+  const dzHandle = b['datazoom-handle'];
+  const dzLabel = b['datazoom-label']; /* [DATAZOOM-05] 手柄两侧标签仅 iFinD 显示 */
+  const dzHandleH = dzHandle.shape === 'circle' ? dzHandle.w : dzHandle.h;
+  const N = categories.length;
+  const zoomOn = !!zoom && N >= 2;
+  let win = { i0: 0, i1: Math.max(0, N - 1) };
+  if (zoomOn && zoom !== true) {
+    const s = Math.max(0, Math.min(1, zoom.start ?? 0));
+    const e = Math.max(s, Math.min(1, zoom.end ?? 1));
+    win = { i0: Math.min(N - 1, Math.floor(s * N)), i1: Math.max(0, Math.min(N - 1, Math.ceil(e * N) - 1)) };
+    if (win.i1 < win.i0) win.i1 = win.i0;
+  }
 
   const legendItems = resolved.map((r) => ({ key: r.name, label: r.name, type: r.type, colorVar: r.colorVar }));
   const state = { hidden: new Set() };
@@ -96,18 +114,24 @@ export function CartesianChart(host, cfg) {
     if (usesContainerHeight && plotHost.clientHeight < 40) return requestAnimationFrame(build);
     plotHost.innerHTML = '';
 
-    const primary = resolved.filter((r) => r.axis === 'primary');
-    const secondary = resolved.filter((r) => r.axis === 'secondary');
+    /* [DATAZOOM-07] 可见窗口切片：主图只吃窗口内类目/数据 → 下游 niceSplit / bandX / mark / hover
+       全部对可见数据成立（SCALE-02：Y 按可见值域重算、分割线数不变；X 碰撞 AXIS-06、outside 列宽 AXIS-08 即时重判）。
+       缩放轴本体（下方）仍拿全量 categories/resolved 画迷你阴影。 */
+    const viewCats = zoomOn ? categories.slice(win.i0, win.i1 + 1) : categories;
+    const viewResolved = zoomOn ? resolved.map((r) => ({ ...r, data: r.data.slice(win.i0, win.i1 + 1) })) : resolved;
+
+    const primary = viewResolved.filter((r) => r.axis === 'primary');
+    const secondary = viewResolved.filter((r) => r.axis === 'secondary');
     const yFormat = stack === 'percent' ? pctFormat : format;
 
     /* [SCALE-01/04] 值域（见 domain.js）：双轴共享刻度 + 0 对齐；单轴普通 niceSplit */
     let pSplit;
     let sSplit;
     if (dual) {
-      const dd = niceSplitDual(axisDomain(categories, primary, stack, state.hidden), axisDomain(categories, secondary, stack, state.hidden));
+      const dd = niceSplitDual(axisDomain(viewCats, primary, stack, state.hidden), axisDomain(viewCats, secondary, stack, state.hidden));
       pSplit = dd.primary; sSplit = dd.secondary;
     } else {
-      pSplit = niceSplit(...axisDomain(categories, primary, stack, state.hidden));
+      pSplit = niceSplit(...axisDomain(viewCats, primary, stack, state.hidden));
     }
 
     /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
@@ -116,10 +140,14 @@ export function CartesianChart(host, cfg) {
     /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量 */
     const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
     const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
+    /* [DATAZOOM-01] 缩放带高度：启用时预留「上间距 6 + max(轨道高, 手柄高) + 下间距 6」；不启用为 0（无回归）。
+       上下 6px 为结构留白常量（比 X 带的 4px 略大，给缩放轴与 X 标签多留分隔；待 token 化）。 */
+    const dzSliderH = zoomOn ? (tokenNum(plotHost, '--size-slider-height') || 16) : 0;
+    const navH = zoomOn ? 6 + Math.max(dzSliderH, dzHandleH) + 6 : 0;
     const frame = createFrame(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
-      yForm, ySide, yLabelWidth, yLabelWidthSecondary,
-    }); /* [GRID-03] */
+      yForm, ySide, yLabelWidth, yLabelWidthSecondary, navH,
+    }); /* [GRID-03][DATAZOOM-01] */
 
     const yP = linearY(pSplit, frame.grid.top, frame.grid.bottom);
     const yS = dual ? linearY(sSplit, frame.grid.top, frame.grid.bottom) : yP;
@@ -138,17 +166,17 @@ export function CartesianChart(host, cfg) {
     }
 
     const stacked = stack !== 'none';
-    const bars = resolved.filter((r) => r.type === 'bar');
-    const lines = resolved.filter((r) => r.type === 'line');
+    const bars = viewResolved.filter((r) => r.type === 'bar');
+    const lines = viewResolved.filter((r) => r.type === 'line');
     /* x 排布：有柱（单柱/分组/堆叠）一律 slot=铺满整格、格间距最小 0（侧白/组间距归容器残量，见 bandX）；纯折线点居中留 inset */
     const xMode = bars.length ? 'slot' : 'center';
-    const x = bandX(categories, dataL, dataR, { mode: xMode });
+    const x = bandX(viewCats, dataL, dataR, { mode: xMode });
 
     renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
     renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03] */
     if (oppTicks) renderYLabels(frame.svg.append('g'), frame, oppTicks, yS, { form: yForm, side: oppSide, format: yFormat, align: yAlign }); /* [AXIS-02] 反侧：副轴另一套 / iFinD 镜像同一套 */
     renderXLabels(frame.svg.append('g'), frame,
-      categories.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })), { collision }); /* [AXIS-04..06] */
+      viewCats.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })), { collision }); /* [AXIS-04..06] */
 
     /* [TOOLTIP-11] 纯分组柱（判定按声明：全 bar + stack:none + ≥2 系列）hover 指示线换 block 底色带：
        层此刻创建 → 在网格/轴之上、后续 mark 之下（是底色不是遮罩）；渲染与显隐接线见 bindHover */
@@ -168,13 +196,13 @@ export function CartesianChart(host, cfg) {
       /* [BAR-05/06] 单列堆叠（可见柱按可见重算，段闭合）；列走单柱容器留白。
          normal 仅最外段可圆角；percent 所有分段强制直角。 */
       const visBars = bars.filter((r) => !state.hidden.has(r.name));
-      const { segs } = stackBars(categories, visBars, stack);
+      const { segs } = stackBars(viewCats, visBars, stack);
       const col = singleBar(band, barMax, barContainerMax, barGapRatio);
       segs.forEach((seg, i) => {
         const r = visBars[i];
         renderBars(seriesG('dv-bar-series', r.name), frame,
           {
-            categories, values: seg.values, base: seg.base, offset: col.offset, width: col.width,
+            categories: viewCats, values: seg.values, base: seg.base, offset: col.offset, width: col.width,
             colorVar: seg.colorVar,
             rounded: stack === 'normal',
             capped: stack === 'normal' ? seg.caps : null,
@@ -192,7 +220,7 @@ export function CartesianChart(host, cfg) {
         : groupedBars(visBars.length, band, barMax, gap, groupMax, gapRatio);
       visBars.forEach((r, i) => {
         renderBars(seriesG('dv-bar-series', r.name), frame,
-          { categories, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */
+          { categories: viewCats, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */
       });
     }
 
@@ -208,7 +236,7 @@ export function CartesianChart(host, cfg) {
     const visLines = lines.filter((r) => !state.hidden.has(r.name));
     let lineStack = null;
     if (stacked && visLines.length) {
-      const { segs } = stackBars(categories, visLines, stack);
+      const { segs } = stackBars(viewCats, visLines, stack);
       lineStack = new Map(segs.map((seg, i) => [visLines[i].name, {
         values: seg.values.map((v, j) => (v == null ? null : seg.base[j] + v)),
         base: seg.base,
@@ -221,7 +249,7 @@ export function CartesianChart(host, cfg) {
       const showPoints = values.filter((v) => v != null).length <= 13;
       const multi = lineMulti && r.seriesIndex !== lines[0].seriesIndex; /* 非主线才切细（主线按声明定、隐藏不改变） */
       renderLine(seriesG('dv-line-series', r.name), frame,
-        { categories, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
+        { categories: viewCats, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
         { showPoints, multi, area: r.area && !stacked, stackFill: !!st, pointShape });
     });
 
@@ -230,11 +258,23 @@ export function CartesianChart(host, cfg) {
     /* ── hover 全链路（气泡 + X 指示线/block + 轴贴片 + 线点唤出）：接线见 hover.js ──
        [TOOLTIP-11] blockWidth = 分组柱容器宽（与 groupedBars 的 container 同一算法，BAR-02） */
     stopHover = bindHover(plotHost, frame, {
-      categories, x, series: resolved, hidden: state.hidden,
+      categories: viewCats, x, series: viewResolved, hidden: state.hidden,
       format, marker, position: b['tooltip-position'],
       indicator: hoverBlock ? 'block' : 'line',
       blockLayer, blockWidth: hoverBlock ? Math.min(band, groupMax) : 0,
     });
+
+    /* [DATAZOOM-04..07] 缩放轴：拿**全量** categories/resolved 画迷你阴影（每类目取可见系列 |值| 包络）+
+       窗口高亮；拖手柄/拖选区/点击轨道经 onChange 改 win 后整图重绘（Y 轴随之按新窗口重算 = SCALE-02）。 */
+    if (zoomOn) {
+      const visAll = resolved.filter((r) => !state.hidden.has(r.name));
+      const shadowVals = categories.map((_, i) => Math.max(0, ...visAll.map((r) => Math.abs(r.data[i] ?? 0))));
+      renderDataZoom(frame.svg.append('g').attr('class', 'dv-datazoom'), frame, {
+        categories, shadow: dzShadow ? shadowVals : null, win, platform,
+        align: dzAlign, handle: dzHandle, sliderH: dzSliderH, showShadow: dzShadow, showLabel: dzLabel,
+        onChange: (w) => { win = w; build(); },
+      });
+    }
   }
 
   build();

@@ -6,9 +6,9 @@ import { tokenNum } from './tokens.js';
    标签绘制（axis.js renderYLabels）与列宽预留（本文件）共用此常量。
    注意：8px 只是「标签 ↔ 网格」间距，网格与画布边缘之间**不留白**（无标签侧贴边） */
 export const Y_LABEL_GAP_OUTSIDE = 8;
-const X_GAP_TOP_INSIDE = 6;        // [AXIS-04] X 标签带上间距（Y 为 inside 布局时）
-const X_GAP_TOP_OUTSIDE_EXTRA = 2; // [AXIS-04] outside 上间距增量：半行高 + 此值，防 Y 底标签溢入
-const X_GAP_BOTTOM = 4;            // [AXIS-04] X 标签带下间距
+const X_GAP_TOP_INSIDE = 4;          // [AXIS-04] inside：底部网格线 → X 标签顶部
+const X_GAP_TOP_OUTSIDE_LABEL = 4;   // [AXIS-04] outside：底部 Y 标签外缘 → X 标签顶部
+const X_GAP_BOTTOM = 4;              // [AXIS-04] X 标签底部 → 标签带下沿
 
 /*
  * 画布骨架：SVG + 绘制区几何。
@@ -31,13 +31,18 @@ export function createFrame(host, opts = {}) {
     /* [AXIS-02] 双 Y：副轴（主轴反侧）的标签列宽，outside 布局时预留 */
     yLabelWidthSecondary = 0,
     xBand = true,
+    /* [DATAZOOM-01] 缩放轴带：在 X 标签带下方额外预留的高度（含手柄溢出与上下间距）。
+       默认 0 = 无缩放轴，几何与原状逐像素一致。带宽 = grid 宽（与网格/X 轴对齐，天然不含 outside 的 Y 标签列）。 */
+    navH = 0,
   } = opts;
   const W = Math.max(240, width ?? host.clientWidth ?? 640);
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
   const topPad = yForm === 'outside' ? halfLabel + 2 : 0;
-  const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_EXTRA : X_GAP_TOP_INSIDE;
+  /* outside 的底部 Y 标签以末条网格线为垂直中心，会向下溢出 halfLabel；
+     因此 X 标签位置 = 网格线 + halfLabel + 规范净距 4px。 */
+  const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_LABEL : X_GAP_TOP_INSIDE;
   const bottomPad = xBand
     ? xGapTop + lineH + X_GAP_BOTTOM
     : yForm === 'outside' ? halfLabel + 2 : 0;
@@ -52,10 +57,12 @@ export function createFrame(host, opts = {}) {
   }
 
   const regionH = tokenNum(host, '--size-chart-region-height') || 160;
+  /* [DATAZOOM-01] 缩放轴带占容器高度：显式高度时从绘图区扣除 navH（SVG 总高仍 = 容器高）；
+     缺省高度时缩放轴带加在图表包络之下（绘图区维持 region 高度不变） */
   const gridH = height != null
-    ? Math.max(48, height - topPad - bottomPad)
+    ? Math.max(48, height - topPad - bottomPad - navH)
     : Math.max(48, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
-  const H = topPad + gridH + bottomPad;
+  const H = topPad + gridH + bottomPad + navH;
 
   const svg = select(host).append('svg').attr('width', W).attr('height', H).attr('role', 'img');
 
@@ -68,7 +75,9 @@ export function createFrame(host, opts = {}) {
     height: gridH,
   };
 
-  return { svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH };
+  /* [DATAZOOM-01] navTop = X 标签带下沿（= 绘图区底 + bottomPad）；navBottom = SVG 底 */
+  const navTop = topPad + gridH + bottomPad;
+  return { svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH, navTop, navBottom: navTop + navH, navH };
 }
 
 /* [GRID-03] 容器尺寸自适应：宽/高变化（rAF 合帧）后回调重建 */

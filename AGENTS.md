@@ -9,8 +9,8 @@
 - 启动预览：`python3 -m http.server 8123`，访问 `http://localhost:8123/playground/cartesian-preview.html`。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 重建 token：`node tokens/build.mjs`。
-- 运行单元测试：`node --experimental-default-type=module --test tests`。
-- 提交前门禁：`node --experimental-default-type=module --test tests && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.mjs`。
+- 运行单元测试：`node --test tests/*.mjs`。
+- 提交前门禁：`node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.mjs`。
 - 仓库已配置 `core.hooksPath=hooks`；不要绕过 pre-commit。
 - 完整测试分层、覆盖矩阵和基线规则见 `TESTING.md`。
 
@@ -28,4 +28,4 @@
 
 ## 当前状态与下一步
 
-当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y 和 hover/tooltip 链路。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
+当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路和缩放轴（datazoom，见 `specs/datazoom.md`）。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

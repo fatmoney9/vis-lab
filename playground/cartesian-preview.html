@@ -191,6 +191,14 @@
         </div>
       </div>
 
+      <div class="field">
+        <div class="field-label"><b>缩放轴</b><span>datazoom</span></div>
+        <div class="seg" id="seg-zoom">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
@@ -198,6 +206,9 @@
         折线数据点显隐分档（&gt;13 全隐）；多数据下折线含负值区。
         渐变面积开关给当前分类的<b>主线</b>（首条声明折线）挂 <code>area:true</code>——
         仅含折线且非堆叠的分类生效（specs/line.md）。
+        缩放轴开关给图表挂 <code>zoom:{start,end}</code>（初始窗口后 65% 类目）：主图只画窗口内类目、
+        拖手柄/拖选区/点击轨道即改窗口，Y 轴随可见数据重算（SCALE-02 / specs/datazoom.md）；
+        THS/iFinD 轨道内双色迷你阴影、Ainvest 纯轨道（<code>datazoom-data-shadow:false</code>）。
       </p>
     </div>
   </aside>
@@ -322,7 +333,7 @@
   ];
 
   const DENSITY = { few: 4, mid: 16, many: 36 }; // 右侧「数据量」旋钮 → 类目数 n
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', area: 'off' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', area: 'off', zoom: 'off' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -389,6 +400,7 @@
         const main = cfg.series.find((s) => s.type === 'line');
         if (main) main.area = true;
       }
+      if (state.zoom === 'on') cfg.zoom = { start: 0.35, end: 1 }; /* 缩放轴：初始窗口 = 后 65% 类目（演示窗口 + Y 轴联动重算 SCALE-02） */
 
       const mountChart = () => {
         chartInstances[t.id]?.destroy();
@@ -418,6 +430,7 @@
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-area', 'area');
+  wireSeg('seg-zoom', 'zoom');
 
   render();
 </script>
