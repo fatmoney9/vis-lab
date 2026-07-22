@@ -122,6 +122,11 @@
    position:relative = tooltip 浮层的定位锚点（TOOLTIP-01，浮层像素与 svg 同坐标系） */
 .dv-chart { display: flex; flex-direction: column; }
 .dv-chart__plot { flex: 1; min-height: 0; position: relative; }
+/* 绘图 SVG：
+   · display:block —— 消除 inline 替换元素的基线降部空隙（否则 plot 容器比 svg 高约半行的降部、下方多一条空白）。
+   · [DATAZOOM-01] overflow:visible —— 贴边的缩放轴手柄其居中描边外半 + 投影会溢出 grid 边（= 无标签侧的视口边），
+     放行让其渲染进卡片内边距、不被切平。图元本身都在 grid 内，不受影响。 */
+.dv-chart__plot > svg { display: block; overflow: visible; }
 
 /* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
    iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
@@ -210,3 +215,38 @@
   font-family: var(--font-family-number);
   font-variant-numeric: tabular-nums;
 }
+
+/* [DATAZOOM-04] 缩放轴 · 轨道/数据阴影/选区：色全走 §13「缩放轴 Axes Navigator」token。
+   纯视觉层（背景/数据阴影/提示文本/grip）关指针，交互只由透明热区 + 选区 + 手柄接管。 */
+.dv-datazoom-bg { fill: var(--color-background-weak); pointer-events: none; }
+.dv-datazoom-data { fill: var(--color-datazoom-data-bg); pointer-events: none; }
+.dv-datazoom-data-select { fill: var(--color-datazoom-data-select); pointer-events: none; }
+.dv-datazoom-filler { fill: var(--color-datazoom-filler); }
+
+/* [DATAZOOM-03] 手柄：填充/边框/grip 走 §13 手柄 token；本仓库代码现画（非 SVG 图片资源）。
+   1px 描边为结构常量（同 .dv-tooltip 的 1px 边框口径），非色值字面量。 */
+.dv-datazoom-handle {
+  fill: var(--color-datazoom-handle);
+  stroke: var(--color-datazoom-handle-border);
+  stroke-width: var(--size-slider-handle-border);
+  filter: var(--shadow-datazoom-handle); /* [DATAZOOM-03] 手柄投影：仅 Ainvest 有值，THS/iFinD 为 none */
+}
+.dv-datazoom-grip {
+  stroke: var(--color-datazoom-handle-grip);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+/* [DATAZOOM-05] 提示文本：字体与轴标签同源，色走轴文本 token。
+   默认隐藏，hover 缩放轴或拖动（plotHost 挂 .dz-dragging）时才显示——不常显。 */
+.dv-datazoom-label {
+  fill: var(--color-text-axis);
+  font-size: var(--font-size-axis);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+}
+.dv-datazoom:hover .dv-datazoom-label,
+.dz-dragging .dv-datazoom-label { opacity: 1; }

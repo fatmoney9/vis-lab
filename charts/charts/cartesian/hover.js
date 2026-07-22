@@ -58,6 +58,8 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     const box = frame.svg.node().getBoundingClientRect();
     const px = event.clientX - box.left;
     const py = event.clientY - box.top;
+    /* [DATAZOOM-01] 缩放带在绘图区之下：指针落到缩放带内不触发绘图区 tooltip/指示线（无缩放轴时 navTop=svg 底，恒不触发） */
+    if (frame.navH > 0 && py > frame.navTop) return hideHover();
     const i = centers.reduce((best, c, k) => (Math.abs(c - px) < Math.abs(centers[best] - px) ? k : best), 0);
 
     /* [TOOLTIP-02] 行 = 可见系列按声明序（与图例一致）；数值与 Y 轴同源 format（percent 显原值）、null → "-" */
