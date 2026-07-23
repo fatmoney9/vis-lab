@@ -319,108 +319,14 @@
     { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
   </script>
   <script type="module">
-    import { CartesianChart } from './charts/charts/cartesian/index.js';
+    import { mountExample } from './demos/registry.js';
+    import { examplesFor, groupsFor, THEMES, DENSITY, INITIAL_ZOOM, capabilitiesOf } from './demos/examples.js';
 
-    const K = (values) => values.map((value) => (value == null ? null : value * 1000));
-    const seq = (count) => Array.from({ length: count }, (_, index) => `${index + 1}`);
-    const wave = (count, phase = 0) => K(Array.from(
-      { length: count },
-      (_, index) => Math.round(560 + 360 * Math.sin(index * .6 + phase) + 140 * Math.cos(index * 1.7 + phase)),
-    ));
-    const signedWave = (count) => {
-      const values = wave(count, .8).map((value) => value - 500000);
-      if (count > 2) values[2] = 0;
-      if (count > 4) values[4] = null;
-      return values;
-    };
-    const posSeries = (count, names) => names.map((name, index) => ({ name, data: wave(count, index * .9) }));
-    const negWave = (count) => wave(count, 2).map((value) => -Math.round(value * .4));
-    const lineWave = (count) => {
-      const values = wave(count, .4).map((value) => (count > 13 ? value - 500000 : value));
-      values[Math.floor(count / 3)] = null;
-      return values;
-    };
-    const growth = (count) => Array.from({ length: count }, (_, index) => Math.round(12 + 9 * Math.sin(index * .5)));
+    /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
+       加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
+    const EXAMPLES = examplesFor('index');
+    const GROUPS = ['全部示例', ...groupsFor('index')];
 
-    const EXAMPLES = [
-      {
-        group: '柱状图', id: 'basic', title: '基础柱状图', spec: 'BAR-01 / BAR-03',
-        description: '单系列柱状图，覆盖正负值、0 值占位与 null 断口。',
-        cfg: (count) => ({ categories: seq(count), series: [{ name: '营业收入', data: signedWave(count) }] }),
-      },
-      {
-        group: '柱状图', id: 'grouped3', title: '三系列分组柱', spec: 'BAR-02',
-        description: '三系列分组排布，系列颜色固定槽位，隐藏后重新居中。',
-        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']) }),
-      },
-      {
-        group: '柱状图', id: 'grouped6', title: '多系列分组柱', spec: 'BAR-02 / COLOR-04',
-        description: '六系列场景，用于检查色板循环、图例换行与显隐逻辑。',
-        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
-      },
-      {
-        group: '堆叠图', id: 'stack', title: '普通堆叠柱', spec: 'BAR-05',
-        description: '正值逐段累计，段间直角，仅整根堆叠外端保留主题圆角。',
-        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']), stack: 'normal' }),
-      },
-      {
-        group: '堆叠图', id: 'stackNeg', title: '正负堆叠柱', spec: 'BAR-05',
-        description: '正值向上累计、负值向下累计，分别闭合。',
-        cfg: (count) => ({
-          categories: seq(count),
-          stack: 'normal',
-          series: [...posSeries(count, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(count) }],
-        }),
-      },
-      {
-        group: '堆叠图', id: 'percent', title: '归一化堆叠柱', spec: 'BAR-06',
-        description: '每个类目归一到 100%，隐藏系列后占比重新计算。',
-        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']), stack: 'percent' }),
-      },
-      {
-        group: '折线图', id: 'line', title: '基础折线图', spec: 'LINE-01',
-        description: '折线直连，null 处断开；数据点显隐随密度分档。',
-        cfg: (count) => ({ categories: seq(count), series: [{ name: '指数', data: lineWave(count), type: 'line' }] }),
-      },
-      {
-        group: '折线图', id: 'line-multi', title: '多折线图', spec: 'LINE-01 / COLOR-05',
-        description: '主线保持标准线宽，其余线使用多折线细线 token。',
-        cfg: (count) => ({
-          categories: seq(count),
-          series: posSeries(count, ['沪深300', '中证500', '创业板指']).map((series) => ({ ...series, type: 'line' })),
-        }),
-      },
-      {
-        group: '折线图', id: 'line-stack', title: '堆叠折线图', spec: 'LINE-01',
-        description: '折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
-        cfg: (count) => ({
-          categories: seq(count),
-          stack: 'normal',
-          series: posSeries(count, ['沪深300', '中证500', '创业板指']).map((series) => ({ ...series, type: 'line' })),
-        }),
-      },
-      {
-        group: '组合图', id: 'combo', title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04',
-        description: '柱走主轴、线走副轴，两轴共享网格并保持 0 轴对齐。',
-        cfg: (count) => ({
-          categories: seq(count),
-          series: [
-            { name: '营业收入', data: wave(count), type: 'bar', axis: 'primary' },
-            { name: '成本', data: wave(count, .9), type: 'bar', axis: 'primary' },
-            { name: '营收增速', data: growth(count), type: 'line', axis: 'secondary' },
-          ],
-        }),
-      },
-    ];
-
-    const GROUPS = ['全部示例', ...new Set(EXAMPLES.map((example) => example.group))];
-    const THEMES = [
-      { id: 'ths', label: 'THS 同花顺' },
-      { id: 'ifind-pc', label: 'iFinD PC' },
-      { id: 'ainvest', label: 'Ainvest' },
-    ];
-    const DENSITY = { few: 4, mid: 16, many: 36 };
-    const INITIAL_ZOOM = { start: .35, end: 1 };
     const state = {
       group: '全部示例',
       query: '',
@@ -439,11 +345,6 @@
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
     let charts = [];
-
-    function supportsArea(example) {
-      const cfg = example.cfg(4);
-      return cfg.stack == null && cfg.series.some((series) => series.type === 'line');
-    }
 
     function destroyCharts() {
       charts.forEach((chart) => chart.destroy());
@@ -466,15 +367,11 @@
       }).join('');
     }
 
+    /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
+       两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
     function mountChart(host, example, overrides = {}) {
-      const count = DENSITY[overrides.density || state.density];
-      const cfg = { ...example.cfg(count), platform: overrides.platform || state.platform };
-      if (overrides.zoom ?? state.zoom) cfg.zoom = { ...INITIAL_ZOOM };
-      if (supportsArea(example) && (overrides.area ?? state.area)) {
-        const mainLine = cfg.series.find((series) => series.type === 'line');
-        if (mainLine) mainLine.area = true;
-      }
-      charts.push(CartesianChart(host, cfg));
+      const { instance, cfg } = mountExample(host, example, { ...state, ...overrides });
+      charts.push(instance);
       return cfg;
     }
 
@@ -531,14 +428,16 @@
         })),
         stack: cfg.stack || 'none',
         zoom: state.zoom ? INITIAL_ZOOM : false,
-        ...(supportsArea(example) ? { area: state.area } : {}),
+        ...(capabilitiesOf(example).area ? { area: state.area } : {}),
       };
     }
 
     function renderDetail() {
       const example = state.detail;
       const theme = THEMES.find((item) => item.id === state.theme);
-      const areaAvailable = supportsArea(example);
+      /* 旋钮按图表类型能力显隐——接入饼 / 环等无类目轴的图表时，缩放轴等开关自动不出现 */
+      const caps = capabilitiesOf(example);
+      const areaAvailable = caps.area;
 
       main.innerHTML = `<div class="detail">
         <div class="detail__main">
@@ -579,7 +478,7 @@
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
-            <div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>
+            ${caps.zoom ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${areaAvailable ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">主线渐变面积</span><span class="field__hint">非堆叠折线语义配置</span></div><label class="switch" aria-label="主线渐变面积"><input id="area-switch" type="checkbox"${state.area ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             <button class="button" id="reset-button" type="button">恢复默认配置</button>
           </div>
@@ -608,7 +507,7 @@
         state.density = event.target.value;
         rerenderDetail();
       });
-      document.getElementById('zoom-switch').addEventListener('change', (event) => {
+      document.getElementById('zoom-switch')?.addEventListener('change', (event) => {
         state.zoom = event.target.checked;
         rerenderDetail();
       });

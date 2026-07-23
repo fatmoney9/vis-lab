@@ -22,14 +22,14 @@
 ES Modules，Node 运行 `.js` 模块时需要显式指定默认模块类型：
 
 ```sh
-node --experimental-default-type=module --test tests
+node --test tests/*.mjs
 ```
 
 所有改动至少运行：
 
 ```sh
 node tokens/build.mjs
-node --experimental-default-type=module --test tests
+node --test tests/*.mjs
 sh hooks/lint-layers.sh
 node hooks/lint-spec-ids.mjs
 ```

@@ -100,7 +100,7 @@
 
   "$section-10": "可视化分割线、背景与高亮反馈",
   "color-visualization-divider": { "light": "rgba(0, 0, 0, 0.06)", "dark": "rgba(255, 255, 255, 0.06)" },
-  "color-visualization-divider-deep": "#858585",
+  "color-visualization-divider-deep": "{color-visualization-divider}",
   "color-background-weak": { "light": "rgba(0, 0, 0, 0.04)", "dark": "rgba(255, 255, 255, 0.06)" },
 
   "color-visualization-tooltip": "#3B3B3B",
@@ -200,5 +200,14 @@
   "$section-20": "环形图 Donut",
   "size-donut-container": "160px",
   "size-donut-radius": "70px",
-  "size-donut-ring-width": "28px"
+  "size-donut-ring-width": "28px",
+
+  "$section-21": "数据标签 Data Label",
+  "color-text-data-label-on-light": "rgba(0, 0, 0, 0.84)",
+  "color-text-data-label-on-dark": "{color-text-inverse-primary}",
+  "font-size-data-label": "{font-size-xxs}",
+  "font-weight-data-label": "{font-weight-medium}",
+  "line-height-data-label": "{line-height-axis}",
+  "spacing-data-label-gap": "{spacing-4}",
+  "spacing-data-label-min-gap": "{spacing-4}"
 }

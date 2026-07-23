@@ -13,8 +13,10 @@
  * 只吃数据 + 语义配置，不暴露样式参数（颜色按 COLOR 固定槽位、不接受配置）。
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
- *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left' }
+ *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left',
+ *           zoom, dataLabel='auto' }
  *         type 默认 bar / axis 默认 primary
+ *         dataLabel（语义配置，非样式）：'auto' 按图表类型定默认 / true 全开 / false 全关（LABEL-05）
  */
 import { select } from 'd3';
 import { createFrame, observeResize } from '../../core/frame.js';
@@ -29,13 +31,14 @@ import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
 import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
+import { renderDataLabels } from '../../core/label.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto' } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -43,8 +46,12 @@ export function CartesianChart(host, cfg) {
   const keys = resolved.map((r) => r.name);
   const dual = resolved.some((r) => r.axis === 'secondary'); /* 用声明判定，副轴存在性稳定 */
 
-  /* [COLOR-02..05] 按类型固定槽位配色：柱走 bar-multi、线走 line-multi；写成 host 上的 CSS 变量 */
-  resolveSeriesColors(host, { series: resolved }).forEach((hex, i) => host.style.setProperty(resolved[i].colorVar, hex));
+  /* [COLOR-02..05] 按类型固定槽位配色：柱走 bar-multi、线走 line-multi；写成 host 上的 CSS 变量。
+     hex 顺手留在 resolved 上——数据标签档② 要按背景明暗反色（LABEL-04），需要色值本身而非变量名。 */
+  resolveSeriesColors(host, { series: resolved }).forEach((hex, i) => {
+    host.style.setProperty(resolved[i].colorVar, hex);
+    resolved[i].colorHex = hex;
+  });
 
   const b = resolveBehavior(host, platform);
   const yForm = b['y-label-form'];
@@ -86,10 +93,11 @@ export function CartesianChart(host, cfg) {
   const legendHost = select(host).append('div').node();
   const plotHost = select(host).append('div').attr('class', 'dv-chart__plot').node();
 
-  /* [LEGEND-05] hover 弱化：柱 / 线系列 <g> 的 opacity，图例本身不动 */
+  /* [LEGEND-05] hover 弱化：柱 / 线系列 <g> 的 opacity，图例本身不动。
+     数据标签也按系列分组（dataset.key 同名），随其所属系列一起弱化——否则柱变淡、数字仍全黑。 */
   function applyDim() {
     const dim = getComputedStyle(host).getPropertyValue('--opacity-visualization-dim').trim() || '1';
-    select(plotHost).selectAll('g.dv-bar-series, g.dv-line-series')
+    select(plotHost).selectAll('g.dv-bar-series, g.dv-line-series, g.dv-data-label-series')
       .attr('opacity', function () { return hoverKey && this.dataset.key !== hoverKey ? dim : 1; });
   }
 
@@ -185,6 +193,29 @@ export function CartesianChart(host, cfg) {
     const hoverBlock = stack === 'none' && !lines.length && bars.length >= 2;
     const blockLayer = hoverBlock ? frame.svg.append('g').style('display', 'none') : null;
 
+    /* ── [LABEL-01/05/07] 数据标签：本层只算「摆哪、要不要摆、写什么」，渲染 / 碰撞 / 反色归 L1 ──
+       默认显隐按图表类型（LABEL-05）——只在「一个类目一个值」时默认出标签：
+         柱：仅**单柱系列**（声明 1 个 bar 系列，含折柱组合里的唯一柱）；分组柱、堆叠、归一堆叠都不出
+         线：仅**纯折线且单条**；多折线不出；**折柱组合里的折线也不出**（有柱在场，标签让给柱）
+       dataLabel:true/false 强制覆盖（true 时分组 / 堆叠也画，走同一套放不下就不放的规则）。
+       文本走与轴 / tooltip 同一份 makeFormatter（LABEL-07）。
+       锚点在各 mark 分支里顺手算进 labelBatches（复用同一批 slots / segs，不重算布局），
+       统一到所有 mark 之后渲染 —— 层级见 LABEL-08。 */
+    const showBarLabel = dataLabel === true || (dataLabel !== false && !stacked && bars.length === 1);
+    const showLineLabel = dataLabel === true || (dataLabel !== false && !bars.length && lines.length === 1);
+    /* [LABEL-06①] 密度阈值：**柱与线统一**——某系列在当前可见窗口内的非 null 值多于 5 个 →
+       该系列标签整体不出（不是逐个挑着显示）。5 与 line.md 的数据点 >13 同属规范值常量。
+       缩放后窗口内 ≤5 会重新出现（与 SCALE-02 的窗口重算同一口径）。 */
+    const withinLabelDensity = (values) => values.filter((v) => v != null).length <= 5;
+    const labelGap = tokenNum(plotHost, '--spacing-data-label-gap');
+    const labelLineH = tokenNum(plotHost, '--line-height-data-label');
+    /* [LABEL-01] 净距一律从**图元边缘**算起：柱是柱顶边，折线是数据点外缘——故折线要再让开点的半高，
+       否则 4px 全被点吃掉（THS 点直径 6 → 半高 3，净距只剩 1px）。
+       半高：circle = 直径/2；diamond（iFinD）= 正方形绕中心转 45°，含描边的半对角 = 直径 × √2/2。 */
+    const linePointH = (tokenNum(plotHost, '--size-line-point') || 6) * (pointShape === 'diamond' ? Math.SQRT1_2 : 0.5);
+    const labelText = (v) => (v == null ? null : (stack === 'percent' ? pctFormat : format)(v));
+    const labelBatches = [];
+
     /* ── 柱（所有柱共享 band；布局见 layout.js。各柱用 yOf(axis) 选比例尺）── */
     const barMax = tokenNum(plotHost, '--size-bar-max') || 16;
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
@@ -211,6 +242,33 @@ export function CartesianChart(host, cfg) {
             zeroBar: false,
           },
           x, yOf(r));
+        /* [LABEL-01] 堆叠段：段内垂直居中、压在填充上 → 走档②（按段色明暗反色，LABEL-04）。
+           [LABEL-06③] 放不下就不放：段高不足一行标签高（含 0 值无高度段）在此判；
+           横向放不下（文本宽 > 柱宽）由 L1 用 maxWidth 判——档② 的字一旦横向溢出色块，
+           溢出部分落到画布底色上（浅底白字）直接看不见，比不画更糟。 */
+        if (showBarLabel && withinLabelDensity(seg.values)) {
+          const yy = yOf(r);
+          labelBatches.push({
+            key: r.name,
+            colorVar: seg.colorVar,
+            items: viewCats.map((c, j) => {
+              const v = seg.values[j];
+              if (v == null) return null;
+              const yTop = yy(seg.base[j] + v);
+              const yBot = yy(seg.base[j]);
+              if (Math.abs(yBot - yTop) < labelLineH) return null;
+              return {
+                x: x(c) + col.offset + col.width / 2,
+                y: (yTop + yBot) / 2,
+                baseline: 'middle',
+                inside: true,
+                bgHex: r.colorHex,
+                maxWidth: col.width,
+                text: labelText(v),
+              };
+            }).filter(Boolean),
+          });
+        }
       });
     } else if (bars.length) {
       /* 单柱系列（声明即单柱，含折柱组合里的唯一柱）走单柱容器留白（BAR-03）；
@@ -223,6 +281,26 @@ export function CartesianChart(host, cfg) {
       visBars.forEach((r, i) => {
         renderBars(seriesG('dv-bar-series', r.name), frame,
           { categories: viewCats, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */
+        /* [LABEL-01] 基础 / 分组柱：柱顶外侧——正值在柱顶上方（文字底对齐锚点）、
+           负值在柱底下方（顶对齐），水平居中于该柱；落在图形外空白区 → 档①（跟随系列色，LABEL-03）。 */
+        if (showBarLabel && withinLabelDensity(r.data)) {
+          const yy = yOf(r);
+          labelBatches.push({
+            key: r.name,
+            colorVar: r.colorVar,
+            items: viewCats.map((c, j) => {
+              const v = r.data[j];
+              if (v == null) return null;
+              const up = v >= 0;
+              return {
+                x: x(c) + slots[i].offset + slots[i].width / 2,
+                y: up ? yy(v) - labelGap : yy(v) + labelGap,
+                baseline: up ? 'auto' : 'hanging',
+                text: labelText(v),
+              };
+            }).filter(Boolean),
+          });
+        }
       });
     }
 
@@ -253,7 +331,42 @@ export function CartesianChart(host, cfg) {
       renderLine(seriesG('dv-line-series', r.name), frame,
         { categories: viewCats, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
         { showPoints, multi, area: r.area && !stacked, stackFill: !!st, pointShape });
+      /* [LABEL-01] 折线：数据点正上方（类目中心），落在图形外 → 档①。
+         [LABEL-06①] 非 null 点数 > 5 → 整条线不出标签（与柱同一阈值、全端统一）。
+         堆叠折线：位置取累计后的点（values），文本取该系列**自身**的段值（= 累计值 − 基线）。 */
+      if (showLineLabel && withinLabelDensity(values)) {
+        const yy = yOf(r);
+        labelBatches.push({
+          key: r.name,
+          colorVar: r.colorVar,
+          items: viewCats.map((c, j) => {
+            const v = values[j];
+            if (v == null) return null;
+            return {
+              x: x(c) + x.bandwidth() / 2,
+              y: yy(v) - labelGap - linePointH, /* 净距从数据点外缘算，不是圆心 */
+              baseline: 'auto',
+              text: labelText(st ? v - st.base[j] : v),
+            };
+          }).filter(Boolean),
+        });
+      }
     });
+
+    /* [LABEL-08] 标签层在所有 mark 之后追加 = 压在柱 / 线之上（层级 = DOM 顺序，同 WATERMARK-05），
+       水印仍在最末。每系列一个 <g>：color 下发系列色供档① 的 currentColor 取（LABEL-03），
+       dataset.key 让图例 hover 弱化连同标签一起生效（applyDim）。
+       每次调用传入的是「一个系列跨类目」= 同一行，故一律开碰撞过滤（LABEL-06②）。 */
+    if (labelBatches.length) {
+      const labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
+      labelBatches.forEach((batch) => {
+        const g = labelLayer.append('g')
+          .attr('class', 'dv-data-label-series')
+          .style('color', `var(${batch.colorVar})`);
+        g.node().dataset.key = batch.key;
+        renderDataLabels(g, frame, batch.items);
+      });
+    }
 
     applyDim();
 

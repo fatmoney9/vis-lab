@@ -69,7 +69,7 @@
   --color-text-inverse-quaternary: rgba(255, 255, 255, 0.24);
   --color-text-link: #4167D9;
   --color-visualization-divider: rgba(0, 0, 0, 0.06);
-  --color-visualization-divider-deep: #858585;
+  --color-visualization-divider-deep: var(--color-visualization-divider);
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: #3B3B3B;
   --color-text-tooltip-title: rgba(255, 255, 255, 0.6);
@@ -149,6 +149,13 @@
   --size-donut-container: 160px;
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
+  --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
+  --color-text-data-label-on-dark: var(--color-text-inverse-primary);
+  --font-size-data-label: var(--font-size-xxs);
+  --font-weight-data-label: var(--font-weight-medium);
+  --line-height-data-label: var(--line-height-axis);
+  --spacing-data-label-gap: var(--spacing-4);
+  --spacing-data-label-min-gap: var(--spacing-4);
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -325,6 +332,13 @@
   --size-donut-container: 160px;
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
+  --color-text-data-label-on-light: #292933;
+  --color-text-data-label-on-dark: var(--color-text-inverse-primary);
+  --font-size-data-label: var(--font-size-extra-small);
+  --font-weight-data-label: var(--font-weight-medium);
+  --line-height-data-label: var(--line-height-axis);
+  --spacing-data-label-gap: var(--spacing-4);
+  --spacing-data-label-min-gap: var(--spacing-4);
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -504,6 +518,13 @@
   --size-donut-container: 160px;
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
+  --color-text-data-label-on-light: #000000;
+  --color-text-data-label-on-dark: var(--color-text-inverse-primary);
+  --font-size-data-label: var(--font-size-xxs);
+  --font-weight-data-label: var(--font-weight-medium);
+  --line-height-data-label: var(--line-height-axis);
+  --spacing-data-label-gap: var(--spacing-4);
+  --spacing-data-label-min-gap: var(--spacing-4);
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {
