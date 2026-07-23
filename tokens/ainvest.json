@@ -206,5 +206,14 @@
   "$section-20": "环形图 Donut",
   "size-donut-container": "160px",
   "size-donut-radius": "70px",
-  "size-donut-ring-width": "28px"
+  "size-donut-ring-width": "28px",
+
+  "$section-21": "数据标签 Data Label",
+  "color-text-data-label-on-light": "#000000",
+  "color-text-data-label-on-dark": "{color-text-inverse-primary}",
+  "font-size-data-label": "{font-size-xxs}",
+  "font-weight-data-label": "{font-weight-medium}",
+  "line-height-data-label": "{line-height-axis}",
+  "spacing-data-label-gap": "{spacing-4}",
+  "spacing-data-label-min-gap": "{spacing-4}"
 }

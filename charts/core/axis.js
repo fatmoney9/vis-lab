@@ -1,5 +1,6 @@
 import { Y_LABEL_GAP_OUTSIDE } from './frame.js';
 import { tokenNum } from './tokens.js';
+import { measureTexts } from './measure.js';
 
 const fmt = new Intl.NumberFormat('en-US');
 export const formatValue = (v) => fmt.format(v);
@@ -50,26 +51,11 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
 }
 
 /*
- * 渲染级文本测量：临时挂一棵隐藏 SVG，用真实类名走真实 CSS 级联量宽——
- * tabular-nums 等 Canvas measureText 表达不了的字体特性全部包含，无估算误差。
- * X / Y 轴标签的一切宽度测量共用此函数（唯一测量源，[AXIS-08]）。
+ * [AXIS-08] 渲染级文本测量：X / Y 轴标签的一切宽度测量共用同一个源——实现已抽到
+ * core/measure.js（数据标签 label.js 复用同一份，且该模块零依赖、可被 node 加载）。
+ * 本处只固定「轴标签类名」这一个参数。
  */
-const SVG_NS = 'http://www.w3.org/2000/svg';
-function measureRendered(host, texts) {
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:visible';
-  const nodes = texts.map((t) => {
-    const el = document.createElementNS(SVG_NS, 'text');
-    el.setAttribute('class', 'dv-axis-label');
-    el.textContent = String(t);
-    svg.appendChild(el);
-    return el;
-  });
-  host.appendChild(svg);
-  const widths = nodes.map((el) => el.getComputedTextLength());
-  svg.remove();
-  return widths;
-}
+const measureRendered = (host, texts) => measureTexts(host, texts, 'dv-axis-label');
 
 /*
  * [AXIS-08] outside 标签列宽：每次重绘按当前刻度**一次性渲染测量**，精确贴合，

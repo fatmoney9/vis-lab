@@ -116,6 +116,24 @@
   pointer-events: none;
 }
 
+/* [LABEL-02][LABEL-03][LABEL-08] 数据标签：字号是唯一主题分化项（--font-size-data-label）；
+   默认 fill=currentColor = 所在 <g> 的系列色（档①，图形外空白区）；
+   pointer-events:none 永不抢 hover 命中（标签层在 mark 之上）。 */
+.dv-data-label {
+  fill: currentColor;
+  font-size: var(--font-size-data-label);
+  font-weight: var(--font-weight-data-label);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+/* [LABEL-04] 档②：标签压在色块上时按底色明暗切换（浅底深字 / 深底浅字），
+   档次由 label.js 的 labelTone(hex) 判定后挂类，此处只做 token 取色。
+   两个 token 都**不随明暗模式翻转**——标签底色是系列色而非页面底色，
+   用会翻转的 --color-text-primary 会让暗色模式下浅色系列拿到白字（白底白字）。 */
+.dv-data-label--on-light { fill: var(--color-text-data-label-on-light); }
+.dv-data-label--on-dark { fill: var(--color-text-data-label-on-dark); }
+
 /* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
    主题无关的结构样式（无颜色）。 */
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余）。

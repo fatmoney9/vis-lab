@@ -17,7 +17,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| GRID-01 | 横向网格线：`color-visualization-divider`，0 轴加深 `color-visualization-divider-deep`，线宽 `size-grid-line` | `core/grid.js` → `renderGrid()` | ✅ |
+| GRID-01 | 横向网格线：`color-visualization-divider`，0 轴走 `color-visualization-divider-deep`，线宽 `size-grid-line`。**是否加深随主题**——iFinD-PC / Ainvest 加深（`#87879C` / `#858585`）；**THS 不加深**：该 token 别名回 `{color-visualization-divider}`，0 轴与其余网格线同色。分化只在 token 值上，`grid.js` 与 CSS 不含主题分支（0 轴仍单独挂 `.dv-grid-baseline` 类，改回加深只需改 token） | `core/grid.js` → `renderGrid()`；`tokens/*.json` → `color-visualization-divider-deep` | ✅ |
 | GRID-02 | X 轴分割线（纵线）默认不显示，特例经 `showXSplit` 显式开启 | 同上 | ✅ |
 | GRID-03 | **默认图表高度包络 + 容器自适应**：调用方未提供明确高度时，Y 方向图表高度取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）。`inside` 的口径是最顶部轴线到最底部轴线；`outside` 的口径是最顶部 Y 标签外缘到最底部 Y 标签外缘（两端标签以轴线为中心，故轴线间距 = token − 两端半行高）。X 轴标签带、图例、卡片标题和外壳 padding 均不计入该高度。调用方提供明确高度后，SVG 随容器可用高度适配；容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
 
@@ -28,7 +28,7 @@
 | AXIS-01 | 两种布局：`inside` / `outside`，**默认 `inside`**。<br>**inside（网格内部 + 避让网格线）**：网格左右铺满画布，Y 标签紧贴网格侧边、不设内部偏移；最顶标签顶对齐贴顶线向下（不得高过绘制区上沿——最常见错误）；其余标签底对齐贴线上方；0/最底标签不越下沿；**数据让位**：有标签一侧数据边界收缩「最长标签宽 + 安全间距」。<br>**outside（网格外部 + 与网格线居中）**：标签在绘制区外侧，与网格线上下居中，距网格 **8px**——8px 仅是「标签 ↔ 网格」间距，**无标签一侧网格贴画布边缘、不留边缘留白**（如 Ainvest PC 单主轴的左侧）；顶/底标签允许超出绘制区约半个行高（上下留白由 frame 预留）；不收数据范围 | `core/axis.js` → `renderYLabels()` + `yLabelInset()`；留白在 `core/frame.js` | ✅ |
 | AXIS-02 | Y 轴位置（主题默认）：主 Y —— THS 左 / iFinD-PC 左 / **Ainvest 右**；副 Y 相反侧。iFinD-PC 在**未声明副轴时**于反侧镜像主轴同一套标签；真·双量纲仍是两根轴、两侧显示各自刻度。**副 Y 出现条件**：多系列量纲/数量级不同，或线柱组合（柱/折线各一轴）；量纲相同共用主 Y | 主题→位置/形式映射经 `tokens/behavior.json` + `core/theme.js`；**标准双 Y 已在 L2 落地**（`charts/charts/cartesian/index.js`：每系列 `axis` 绑定 + `niceSplitDual` 刻度对齐 + 副轴反侧标签列/数据让位，见 [bar.md](bar.md) BAR-07）；**iFinD 单轴镜像已落地**（`y-dual-shared` 开关：非双量纲时反侧镜像主轴同一套刻度 `mirror = y-dual-shared && !dual`，统一为 `oppTicks`；真·双量纲仍走标准 dual 两侧各一套） | ✅ |
 | AXIS-03 | 标签对齐：默认**贴轴线一侧**、随位置自动（内/外、左/右均适用）；**Ainvest 特例 = 全部右对齐**（behavior `y-label-align`: auto / right）——只需改 outside 右列（anchor 切 end、贴标签列外沿），inside 右侧与 outside 左列本就右对齐 | `renderYLabels()` 的 anchor 逻辑（`align` 参数） | ✅ |
-| AXIS-08 | **outside 标签列宽**：每次重绘按当前刻度**一次性渲染测量**（隐藏 SVG 真实类名量宽，含 tabular-nums 等 Canvas 表达不了的特性，无估算误差、不裁字），**精确贴合、不附加余量**；缩放轴联动时列宽随标签变化即时调整。inside 布局的数据让位、X 轴标签碰撞判定（AXIS-06）的宽度测量**同源**（渲染级测量是唯一测量源，Canvas 估算路径已移除） | `core/axis.js` → `measureYLabelWidth()` + `measureRendered()` | ✅ |
+| AXIS-08 | **outside 标签列宽**：每次重绘按当前刻度**一次性渲染测量**（隐藏 SVG 真实类名量宽，含 tabular-nums 等 Canvas 表达不了的特性，无估算误差、不裁字），**精确贴合、不附加余量**；缩放轴联动时列宽随标签变化即时调整。inside 布局的数据让位、X 轴标签碰撞判定（AXIS-06）、**数据标签碰撞判定（LABEL-06②）**的宽度测量全部**同源**（渲染级测量是唯一测量源，Canvas 估算路径已移除） | `core/measure.js` → `measureTexts(host, texts, className)`（零依赖、可被 node 加载）；`core/axis.js` → `measureYLabelWidth()` 固定轴标签类名调用之 | ✅ |
 
 ## X 轴标签
 

@@ -40,7 +40,7 @@
 ## 待办（line.md 其余条目，后续切片）
 
 - [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点」已随 tooltip 落地（[tooltip.md](tooltip.md) TOOLTIP-10，L2 按类目给 `.dv-line-point[data-i]` 挂 `.is-active` 压过静默）；「选中态即使隐藏也高亮当前点」归点击分片选中切片（tooltip.md 待办）。
-- [ ] **数据标签**（折线上方数值）：移动端 > 5 隐藏、Web 碰撞隐藏 → 依赖数据标签组件。
+- [x] **数据标签**（折线上方数值）：已落地 [data-label.md](data-label.md)（LABEL-01..08）——**全端统一**「非 null 点数 > 5 隐藏该线全部标签」+ 未超阈值时碰撞过滤（决定：统一阈值取代原文「移动端计数 / Web 碰撞」端分叉，同本页数据点 >13 的处理）；该阈值**柱线通用**（非折线专属）。默认显隐：纯折线且单条才显示，多折线与折柱组合中的折线均不显示（标签让给柱）。
 - [x] **hover 数据点中心填充**：十字准星唤出的当前点（`.is-active`）fill 切
   `color-visualization-line-point-hover`——THS / Ainvest 亮色 #FFF、暗色 #000（白心/黑心），
   iFinD = `currentColor`（保持实心不参与）；描边不变 = 系列色；层级压过指示线
@@ -49,4 +49,6 @@
 - [ ] **高密度降采样**：数据量大时降采样渲染避免卡顿（不影响趋势）。
 - [x] **主线渐变面积**：series 级可开启配置 `area:true`（仅 stack:none）——渐变从**最大值**处 `opacity-line-area-from`（0.2）到 **grid 底部** `-to`（0），面积填至 grid 底部（决定：非 0 基准轴）；实现 `core/mark.js` `renderLine(opts.area)`。
 - [x] `size-line-stroke-multi` 接入：声明 ≥2 条线时**仅非主线**切换（主线=首条声明线保持 `size-line-stroke`，含数据点描边同步）；组合折柱只有 1 条线时仍用 `size-line-stroke`。
-- [ ] 图与数据标签最大占画布高 95%（顶部 5% 喘息）——当前靠 niceSplit 取整余量，未显式预留。
+- [ ] 图与数据标签最大占画布高 95%（顶部 5% 喘息）——当前靠 niceSplit 取整余量，未显式预留；
+  已与 [data-label.md](data-label.md) 的「顶部空间预留」待办合并（SCALE-03 占比可达 100% 时标签越顶，
+  现靠 svg `overflow:visible` 溢出到卡片留白）。
