@@ -3,13 +3,689 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="refresh" content="0; url=./playground/cartesian-preview.html" />
-  <title>Vis Lab</title>
-  <script>
-    window.location.replace(`./playground/cartesian-preview.html${window.location.search}${window.location.hash}`);
-  </script>
+  <title>Vis Lab · 可视化组件库</title>
+  <link rel="stylesheet" href="./tokens/tokens.css" />
+  <link rel="stylesheet" href="./charts/styles.css" />
+  <style>
+    :root {
+      color-scheme: light;
+      --shell-bg: #f5f6f8;
+      --shell-panel: #fff;
+      --shell-weak: rgba(15, 23, 42, .04);
+      --shell-brand-weak: rgba(51, 102, 255, .1);
+      --shell-divider: rgba(15, 23, 42, .08);
+      --shell-divider-strong: rgba(15, 23, 42, .14);
+      --shell-text: rgba(15, 23, 42, .88);
+      --shell-text-2: rgba(15, 23, 42, .62);
+      --shell-text-3: rgba(15, 23, 42, .42);
+      --shell-text-4: rgba(15, 23, 42, .28);
+      --shell-brand: #3366ff;
+      --shell-link: #4167d9;
+      --shell-success: #07ab4b;
+      --shell-dark: #1a1b1e;
+      --shell-hover: rgba(15, 23, 42, .045);
+      --shell-click: rgba(15, 23, 42, .1);
+      --shell-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+      --topbar-h: 64px;
+      --sidebar-w: 224px;
+      --settings-w: 304px;
+      --content-max: 1280px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--shell-bg);
+      color: var(--shell-text);
+      font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    .topbar {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 20;
+      height: var(--topbar-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--shell-divider);
+      background: var(--shell-panel);
+    }
+    .brand {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .brand::before {
+      content: "";
+      width: 2px;
+      height: 32px;
+      margin-right: 12px;
+      border-radius: 2px;
+      background: var(--shell-brand);
+    }
+    .brand__copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
+    .brand__name { display: flex; gap: 6px; font-size: 18px; line-height: 22px; font-weight: 600; }
+    .brand__name-accent { color: var(--shell-brand); }
+    .brand__sub { color: var(--shell-text-3); font-size: 11px; line-height: 14px; }
+    .topnav { align-self: stretch; display: flex; gap: 24px; }
+    .topnav__item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      color: var(--shell-text-2);
+      font-size: 14px;
+      line-height: 18px;
+    }
+    .topnav__item:hover { color: var(--shell-text); }
+    .topnav__item--active { color: var(--shell-brand); font-weight: 500; }
+    .topnav__item--active::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--shell-brand);
+    }
+
+    .workspace { min-height: 100vh; padding-top: var(--topbar-h); }
+    .workspace--detail .sidebar { display: none; }
+    .workspace--detail .main { margin-left: 0; }
+    .sidebar {
+      position: fixed;
+      inset: var(--topbar-h) auto 0 0;
+      z-index: 10;
+      width: var(--sidebar-w);
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--shell-divider);
+      background: var(--shell-panel);
+    }
+    .sidebar__head { display: flex; flex-direction: column; gap: 4px; padding: 24px 16px 12px; }
+    .sidebar__head strong { font-size: 16px; line-height: 20px; font-weight: 500; }
+    .sidebar__eyebrow { color: var(--shell-text-3); font-size: 11px; line-height: 14px; letter-spacing: .04em; }
+    .search { padding: 8px 16px 12px; }
+    .search__wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 35px;
+      padding: 0 10px;
+      border-radius: 4px;
+      background: var(--shell-bg);
+    }
+    .search__input {
+      min-width: 0;
+      flex: 1;
+      border: 0;
+      outline: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--shell-text);
+      font-size: 14px;
+    }
+    .search__input::placeholder { color: var(--shell-text-4); }
+    .search__clear {
+      display: none;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: var(--shell-text-3);
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .search__clear.is-visible { display: block; }
+    .category-nav { flex: 1; overflow-y: auto; padding: 4px 10px 16px; }
+    .nav-item {
+      position: relative;
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      border: 0;
+      border-radius: 4px;
+      padding: 8px 10px;
+      background: transparent;
+      color: var(--shell-text-2);
+      cursor: pointer;
+      text-align: left;
+      font-size: 14px;
+    }
+    .nav-item:hover { background: var(--shell-hover); color: var(--shell-text); }
+    .nav-item--active { background: var(--shell-brand-weak); color: var(--shell-brand); font-weight: 500; }
+    .nav-item__count { color: var(--shell-text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .sidebar__foot {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--shell-divider);
+      color: var(--shell-text-3);
+      font-size: 11px;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--shell-success); }
+
+    .main { min-height: calc(100vh - var(--topbar-h)); margin-left: var(--sidebar-w); }
+    .gallery { width: min(100%, var(--content-max)); margin: 0 auto; padding: 40px 24px 64px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 32px; }
+    .page-head h1 { margin: 0 0 8px; font-size: 24px; line-height: 30px; }
+    .page-head p { max-width: 680px; margin: 0; color: var(--shell-text-2); font-size: 14px; line-height: 20px; }
+    .page-head__meta { flex: none; color: var(--shell-text-3); font-size: 13px; }
+    .gallery-section + .gallery-section { margin-top: 40px; }
+    .section-title { margin: 0 0 16px; font-size: 18px; line-height: 22px; font-weight: 500; }
+    .example-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 292px), 1fr)); gap: 20px; }
+    .example-card {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--shell-divider);
+      border-radius: 8px;
+      background: var(--shell-panel);
+      cursor: pointer;
+      transition: border-color .16s, box-shadow .16s, transform .16s;
+    }
+    .example-card:hover { border-color: var(--shell-divider-strong); box-shadow: var(--shell-shadow); transform: translateY(-2px); }
+    .example-card:focus-visible { outline: 0; border-color: var(--shell-link); box-shadow: var(--shell-shadow); }
+    .example-card__preview { min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
+    .example-card__preview .chart-host { pointer-events: none; }
+    .example-card__body { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; }
+    .example-card__title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
+    .example-card__tag { flex: none; color: var(--shell-text-3); font-size: 11px; }
+    .empty-state { min-height: 280px; display: grid; place-items: center; color: var(--shell-text-2); }
+
+    .detail { min-height: calc(100vh - var(--topbar-h)); display: grid; grid-template-columns: minmax(0, 1fr) var(--settings-w); }
+    .detail__main { min-width: 0; padding: 24px; overflow: auto; }
+    .detail-head, .stage, .logic-card { max-width: 960px; margin-right: auto; margin-left: auto; }
+    .detail-head { margin-bottom: 20px; }
+    .breadcrumb { display: flex; align-items: center; min-width: 0; gap: 8px; margin-bottom: 16px; color: var(--shell-text-3); font-size: 13px; }
+    .breadcrumb__link { flex: none; color: var(--shell-link); }
+    .breadcrumb__link:hover { text-decoration: underline; }
+    .breadcrumb__separator { color: var(--shell-text-4); }
+    .breadcrumb__current { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--shell-text-2); }
+    .detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+    .detail-title-row h1 { margin: 0 0 8px; font-size: 20px; line-height: 24px; }
+    .detail-title-row p { max-width: 720px; margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
+    .spec-chip { flex: none; padding: 4px 8px; border-radius: 4px; background: var(--shell-brand-weak); color: var(--shell-brand); font-size: 11px; }
+    .stage { overflow: hidden; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
+    .stage__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--shell-divider); }
+    .stage__theme { font-size: 13px; font-weight: 500; }
+    .stage__meta { color: var(--shell-text-3); font-size: 11px; }
+    .stage__canvas { min-height: 360px; padding: 40px 24px; overflow: auto; }
+    .stage__surface { min-width: 320px; margin: 0 auto; padding: 16px; background: var(--shell-panel); transition: width .16s; }
+    .stage__surface[data-platform="pc"] { width: min(100%, 736px); }
+    .stage__surface[data-platform="mobile"] { width: min(100%, 390px); }
+    .stage__surface[data-mode="dark"] { background: var(--shell-dark); }
+    .logic-card { margin-top: 20px; padding: 16px; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
+    .logic-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
+    .logic-card p { margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
+
+    .settings { position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); overflow-y: auto; border-left: 1px solid var(--shell-divider); background: var(--shell-panel); }
+    .tab { border-bottom: 1px solid var(--shell-divider); }
+    .tab__list { display: flex; height: 40px; padding: 0 16px; }
+    .tab__item { position: relative; flex: 1; border: 0; background: transparent; color: var(--shell-text-2); cursor: pointer; font-size: 14px; }
+    .tab__item--active { color: var(--shell-text); font-weight: 500; }
+    .tab__indicator { position: absolute; inset: auto 50% 0 auto; width: 12px; height: 3px; transform: translateX(50%); border-radius: 2px; background: var(--shell-brand); opacity: 0; }
+    .tab__item--active .tab__indicator { opacity: 1; }
+    .settings__panel { padding: 16px; }
+    .settings__panel[hidden] { display: none; }
+    .field { padding: 12px 0; border-bottom: 1px solid var(--shell-divider); }
+    .field:first-child { padding-top: 0; }
+    .field__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .field__copy { min-width: 0; }
+    .field__label { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
+    .field__hint { display: block; margin-top: 4px; color: var(--shell-text-3); font-size: 11px; line-height: 14px; }
+    .select { width: 128px; min-width: 0; border: 1px solid var(--shell-divider-strong); border-radius: 4px; padding: 8px 10px; outline: 0; background: var(--shell-panel); color: var(--shell-text); font-size: 13px; }
+    .segment { display: flex; margin-top: 8px; padding: 4px; border-radius: 4px; background: var(--shell-weak); }
+    .segment__item { flex: 1; border: 0; border-radius: 2px; padding: 8px; background: transparent; color: var(--shell-text-2); cursor: pointer; font-size: 13px; }
+    .segment__item--active { background: var(--shell-panel); color: var(--shell-text); font-weight: 500; box-shadow: var(--shell-shadow); }
+    .switch { position: relative; display: inline-block; width: 39px; height: 24px; flex: none; }
+    .switch input { position: absolute; width: 0; height: 0; opacity: 0; }
+    .switch__track { position: absolute; inset: 0; border-radius: 12px; background: var(--shell-divider-strong); cursor: pointer; transition: background .16s; }
+    .switch__knob { position: absolute; top: 2.5px; left: 2.5px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: var(--shell-shadow); transition: left .16s; }
+    .switch input:checked ~ .switch__track { background: var(--shell-brand); }
+    .switch input:checked ~ .switch__track .switch__knob { left: 17.5px; }
+    .code-block { margin: 0; overflow: auto; border-radius: 4px; padding: 12px; background: var(--shell-bg); color: var(--shell-text); font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+    .logic-note { margin-top: 16px; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
+    .button { width: 100%; margin-top: 16px; border: 1px solid var(--shell-divider-strong); border-radius: 4px; padding: 10px; background: var(--shell-panel); cursor: pointer; font-size: 13px; }
+
+    @media (max-width: 900px) {
+      .topnav { display: none; }
+      .detail { grid-template-columns: minmax(0, 1fr) 280px; }
+      .gallery { padding-right: 16px; padding-left: 16px; }
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 0 16px; }
+      .sidebar { position: static; width: auto; border-right: 0; border-bottom: 1px solid var(--shell-divider); }
+      .sidebar__head, .sidebar__foot { display: none; }
+      .search { padding-top: 12px; }
+      .category-nav { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 12px; }
+      .nav-item { flex: none; width: auto; }
+      .main { margin-left: 0; }
+      .detail { grid-template-columns: 1fr; }
+      .settings { position: static; height: auto; border-top: 1px solid var(--shell-divider); border-left: 0; }
+      .page-head { align-items: flex-start; flex-direction: column; margin-bottom: 24px; }
+      .detail__main { padding: 16px; }
+      .stage__canvas { padding: 16px 0; }
+      .stage__surface { min-width: 0; }
+    }
+  </style>
 </head>
 <body>
-  <p>正在进入 <a href="./playground/cartesian-preview.html">Vis Lab Preview</a>…</p>
+  <header class="topbar">
+    <a class="brand" href="#all" aria-label="Vis Lab 首页">
+      <span class="brand__copy">
+        <span class="brand__name"><span>Vis</span><span class="brand__name-accent">Lab</span></span>
+        <span class="brand__sub">可视化组件库</span>
+      </span>
+    </a>
+    <nav class="topnav" aria-label="主导航">
+      <a class="topnav__item topnav__item--active" href="#all">图表示例</a>
+      <a class="topnav__item" href="./specs/axes.md">设计规范</a>
+      <a class="topnav__item" href="./WORKFLOW.md">工作流</a>
+    </nav>
+  </header>
+
+  <div class="workspace" id="workspace">
+    <aside class="sidebar">
+      <div class="sidebar__head">
+        <span class="sidebar__eyebrow">CartesianChart</span>
+        <strong>直角坐标图</strong>
+      </div>
+      <div class="search">
+        <div class="search__wrap">
+          <input class="search__input" id="search-input" type="search" placeholder="搜索示例" aria-label="搜索图表示例" />
+          <button class="search__clear" id="search-clear" type="button">清除</button>
+        </div>
+      </div>
+      <nav class="category-nav" id="category-nav" aria-label="图表分类"></nav>
+      <div class="sidebar__foot">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>已接入 10 个活示例</span>
+      </div>
+    </aside>
+    <main class="main" id="main-content"></main>
+  </div>
+
+  <script type="importmap">
+    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+  </script>
+  <script type="module">
+    import { CartesianChart } from './charts/charts/cartesian/index.js';
+
+    const K = (values) => values.map((value) => (value == null ? null : value * 1000));
+    const seq = (count) => Array.from({ length: count }, (_, index) => `${index + 1}`);
+    const wave = (count, phase = 0) => K(Array.from(
+      { length: count },
+      (_, index) => Math.round(560 + 360 * Math.sin(index * .6 + phase) + 140 * Math.cos(index * 1.7 + phase)),
+    ));
+    const signedWave = (count) => {
+      const values = wave(count, .8).map((value) => value - 500000);
+      if (count > 2) values[2] = 0;
+      if (count > 4) values[4] = null;
+      return values;
+    };
+    const posSeries = (count, names) => names.map((name, index) => ({ name, data: wave(count, index * .9) }));
+    const negWave = (count) => wave(count, 2).map((value) => -Math.round(value * .4));
+    const lineWave = (count) => {
+      const values = wave(count, .4).map((value) => (count > 13 ? value - 500000 : value));
+      values[Math.floor(count / 3)] = null;
+      return values;
+    };
+    const growth = (count) => Array.from({ length: count }, (_, index) => Math.round(12 + 9 * Math.sin(index * .5)));
+
+    const EXAMPLES = [
+      {
+        group: '柱状图', id: 'basic', title: '基础柱状图', spec: 'BAR-01 / BAR-03',
+        description: '单系列柱状图，覆盖正负值、0 值占位与 null 断口。',
+        cfg: (count) => ({ categories: seq(count), series: [{ name: '营业收入', data: signedWave(count) }] }),
+      },
+      {
+        group: '柱状图', id: 'grouped3', title: '三系列分组柱', spec: 'BAR-02',
+        description: '三系列分组排布，系列颜色固定槽位，隐藏后重新居中。',
+        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']) }),
+      },
+      {
+        group: '柱状图', id: 'grouped6', title: '多系列分组柱', spec: 'BAR-02 / COLOR-04',
+        description: '六系列场景，用于检查色板循环、图例换行与显隐逻辑。',
+        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
+      },
+      {
+        group: '堆叠图', id: 'stack', title: '普通堆叠柱', spec: 'BAR-05',
+        description: '正值逐段累计，段间直角，仅整根堆叠外端保留主题圆角。',
+        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']), stack: 'normal' }),
+      },
+      {
+        group: '堆叠图', id: 'stackNeg', title: '正负堆叠柱', spec: 'BAR-05',
+        description: '正值向上累计、负值向下累计，分别闭合。',
+        cfg: (count) => ({
+          categories: seq(count),
+          stack: 'normal',
+          series: [...posSeries(count, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(count) }],
+        }),
+      },
+      {
+        group: '堆叠图', id: 'percent', title: '归一化堆叠柱', spec: 'BAR-06',
+        description: '每个类目归一到 100%，隐藏系列后占比重新计算。',
+        cfg: (count) => ({ categories: seq(count), series: posSeries(count, ['营业收入', '成本', '利润']), stack: 'percent' }),
+      },
+      {
+        group: '折线图', id: 'line', title: '基础折线图', spec: 'LINE-01',
+        description: '折线直连，null 处断开；数据点显隐随密度分档。',
+        cfg: (count) => ({ categories: seq(count), series: [{ name: '指数', data: lineWave(count), type: 'line' }] }),
+      },
+      {
+        group: '折线图', id: 'line-multi', title: '多折线图', spec: 'LINE-01 / COLOR-05',
+        description: '主线保持标准线宽，其余线使用多折线细线 token。',
+        cfg: (count) => ({
+          categories: seq(count),
+          series: posSeries(count, ['沪深300', '中证500', '创业板指']).map((series) => ({ ...series, type: 'line' })),
+        }),
+      },
+      {
+        group: '折线图', id: 'line-stack', title: '堆叠折线图', spec: 'LINE-01',
+        description: '折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
+        cfg: (count) => ({
+          categories: seq(count),
+          stack: 'normal',
+          series: posSeries(count, ['沪深300', '中证500', '创业板指']).map((series) => ({ ...series, type: 'line' })),
+        }),
+      },
+      {
+        group: '组合图', id: 'combo', title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04',
+        description: '柱走主轴、线走副轴，两轴共享网格并保持 0 轴对齐。',
+        cfg: (count) => ({
+          categories: seq(count),
+          series: [
+            { name: '营业收入', data: wave(count), type: 'bar', axis: 'primary' },
+            { name: '成本', data: wave(count, .9), type: 'bar', axis: 'primary' },
+            { name: '营收增速', data: growth(count), type: 'line', axis: 'secondary' },
+          ],
+        }),
+      },
+    ];
+
+    const GROUPS = ['全部示例', ...new Set(EXAMPLES.map((example) => example.group))];
+    const THEMES = [
+      { id: 'ths', label: 'THS 同花顺' },
+      { id: 'ifind-pc', label: 'iFinD PC' },
+      { id: 'ainvest', label: 'Ainvest' },
+    ];
+    const DENSITY = { few: 4, mid: 16, many: 36 };
+    const INITIAL_ZOOM = { start: .35, end: 1 };
+    const state = {
+      group: '全部示例',
+      query: '',
+      detail: null,
+      theme: 'ths',
+      platform: 'pc',
+      mode: 'light',
+      density: 'few',
+      area: false,
+      zoom: false,
+    };
+
+    const main = document.getElementById('main-content');
+    const workspace = document.getElementById('workspace');
+    const categoryNav = document.getElementById('category-nav');
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
+    let charts = [];
+
+    function supportsArea(example) {
+      const cfg = example.cfg(4);
+      return cfg.stack == null && cfg.series.some((series) => series.type === 'line');
+    }
+
+    function destroyCharts() {
+      charts.forEach((chart) => chart.destroy());
+      charts = [];
+    }
+
+    function filteredExamples() {
+      const query = state.query.trim().toLowerCase();
+      return EXAMPLES.filter((example) =>
+        (state.group === '全部示例' || example.group === state.group)
+        && (!query || `${example.title}${example.description}${example.spec}`.toLowerCase().includes(query)));
+    }
+
+    function renderNavigation() {
+      categoryNav.innerHTML = GROUPS.map((group) => {
+        const count = group === '全部示例' ? EXAMPLES.length : EXAMPLES.filter((example) => example.group === group).length;
+        return `<button class="nav-item${state.group === group ? ' nav-item--active' : ''}" type="button" data-group="${group}">
+          <span>${group}</span><span class="nav-item__count">${count}</span>
+        </button>`;
+      }).join('');
+    }
+
+    function mountChart(host, example, overrides = {}) {
+      const count = DENSITY[overrides.density || state.density];
+      const cfg = { ...example.cfg(count), platform: overrides.platform || state.platform };
+      if (overrides.zoom ?? state.zoom) cfg.zoom = { ...INITIAL_ZOOM };
+      if (supportsArea(example) && (overrides.area ?? state.area)) {
+        const mainLine = cfg.series.find((series) => series.type === 'line');
+        if (mainLine) mainLine.area = true;
+      }
+      charts.push(CartesianChart(host, cfg));
+      return cfg;
+    }
+
+    function renderGallery() {
+      const items = filteredExamples();
+      const sections = state.group === '全部示例' && !state.query
+        ? [...new Set(items.map((item) => item.group))].map((group) => ({
+          group,
+          items: items.filter((item) => item.group === group),
+        }))
+        : [{ group: state.group === '全部示例' ? '搜索结果' : state.group, items }];
+
+      main.innerHTML = `<div class="gallery">
+        <header class="page-head">
+          <div>
+            <h1>图表示例</h1>
+            <p>按图表族浏览已验证能力。进入详情后，可编辑主题、终端、明暗、数据密度与缩放窗口等语义配置。</p>
+          </div>
+          <span class="page-head__meta">${items.length} 个结果</span>
+        </header>
+        ${items.length ? sections.map((section) => `<section class="gallery-section">
+          <h2 class="section-title">${section.group}</h2>
+          <div class="example-grid">${section.items.map((item) => `<a class="example-card" href="#${item.id}" data-id="${item.id}">
+            <div class="example-card__preview" data-theme="ths" data-platform="pc" data-mode="light"><div class="chart-host"></div></div>
+            <div class="example-card__body"><span class="example-card__title">${item.title}</span><span class="example-card__tag">${item.spec.split(' / ')[0]}</span></div>
+          </a>`).join('')}</div>
+        </section>`).join('') : '<div class="empty-state">没有匹配的图表示例</div>'}
+      </div>`;
+
+      main.querySelectorAll('.example-card').forEach((card) => {
+        const example = EXAMPLES.find((item) => item.id === card.dataset.id);
+        mountChart(card.querySelector('.chart-host'), example, {
+          density: 'few', platform: 'pc', area: false, zoom: false,
+        });
+      });
+    }
+
+    function segment(name, options, value) {
+      return `<div class="segment" data-segment="${name}">${options.map(([id, label]) =>
+        `<button class="segment__item${value === id ? ' segment__item--active' : ''}" type="button" data-value="${id}">${label}</button>`).join('')}</div>`;
+    }
+
+    function currentConfig(example) {
+      const cfg = example.cfg(DENSITY[state.density]);
+      return {
+        theme: state.theme,
+        platform: state.platform,
+        mode: state.mode,
+        categories: `Array(${cfg.categories.length})`,
+        series: cfg.series.map((series) => ({
+          name: series.name,
+          type: series.type || 'bar',
+          axis: series.axis || 'primary',
+        })),
+        stack: cfg.stack || 'none',
+        zoom: state.zoom ? INITIAL_ZOOM : false,
+        ...(supportsArea(example) ? { area: state.area } : {}),
+      };
+    }
+
+    function renderDetail() {
+      const example = state.detail;
+      const theme = THEMES.find((item) => item.id === state.theme);
+      const areaAvailable = supportsArea(example);
+
+      main.innerHTML = `<div class="detail">
+        <div class="detail__main">
+          <header class="detail-head">
+            <nav class="breadcrumb" aria-label="面包屑导航">
+              <a class="breadcrumb__link" href="#all">图表示例</a>
+              <span class="breadcrumb__separator" aria-hidden="true">/</span>
+              <span class="breadcrumb__current" aria-current="page">${example.title}</span>
+            </nav>
+            <div class="detail-title-row">
+              <div><h1>${example.title}</h1><p>${example.description}</p></div>
+              <span class="spec-chip">${example.spec}</span>
+            </div>
+          </header>
+          <section class="stage">
+            <div class="stage__bar">
+              <span class="stage__theme">${theme.label}</span>
+              <span class="stage__meta">${state.platform === 'pc' ? 'PC' : '移动端'} · ${state.mode === 'light' ? '浅色' : '深色'} · ${DENSITY[state.density]} 类目</span>
+            </div>
+            <div class="stage__canvas">
+              <div class="stage__surface" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}">
+                <div class="chart-host"></div>
+              </div>
+            </div>
+          </section>
+          <section class="logic-card">
+            <h2>配置边界</h2>
+            <p>面板只编辑当前主分支组件真实支持的数据与语义配置。颜色、字号、线宽、圆角和主题形态仍由 token 与 behavior 控制；水印按主题规范恒开，不提供实例开关。</p>
+          </section>
+        </div>
+        <aside class="settings" aria-label="示例配置">
+          <div class="tab"><div class="tab__list">
+            <button class="tab__item tab__item--active" type="button" role="tab" aria-selected="true" data-panel="settings-panel">参数<span class="tab__indicator"></span></button>
+            <button class="tab__item" type="button" role="tab" aria-selected="false" data-panel="logic-panel">逻辑<span class="tab__indicator"></span></button>
+          </div></div>
+          <div class="settings__panel" id="settings-panel">
+            <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="theme-select">主题</label><span class="field__hint">data-theme</span></div><select class="select" id="theme-select">${THEMES.map((item) => `<option value="${item.id}"${state.theme === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>
+            <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
+            <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
+            <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
+            <div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>
+            ${areaAvailable ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">主线渐变面积</span><span class="field__hint">非堆叠折线语义配置</span></div><label class="switch" aria-label="主线渐变面积"><input id="area-switch" type="checkbox"${state.area ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
+            <button class="button" id="reset-button" type="button">恢复默认配置</button>
+          </div>
+          <div class="settings__panel" id="logic-panel" hidden>
+            <pre class="code-block">${JSON.stringify(currentConfig(example), null, 2)}</pre>
+            <p class="logic-note">缩放窗口通过语义参数进入 L2；主题同时控制值 token、behavior 与恒开水印。</p>
+          </div>
+        </aside>
+      </div>`;
+
+      mountChart(main.querySelector('.stage .chart-host'), example);
+      wireDetail();
+    }
+
+    function rerenderDetail() {
+      destroyCharts();
+      renderDetail();
+    }
+
+    function wireDetail() {
+      document.getElementById('theme-select').addEventListener('change', (event) => {
+        state.theme = event.target.value;
+        rerenderDetail();
+      });
+      document.getElementById('density-select').addEventListener('change', (event) => {
+        state.density = event.target.value;
+        rerenderDetail();
+      });
+      document.getElementById('zoom-switch').addEventListener('change', (event) => {
+        state.zoom = event.target.checked;
+        rerenderDetail();
+      });
+      document.getElementById('area-switch')?.addEventListener('change', (event) => {
+        state.area = event.target.checked;
+        rerenderDetail();
+      });
+      document.getElementById('reset-button').addEventListener('click', () => {
+        Object.assign(state, {
+          theme: 'ths', platform: 'pc', mode: 'light', density: 'few', area: false, zoom: false,
+        });
+        rerenderDetail();
+      });
+      main.querySelectorAll('[data-segment]').forEach((control) => {
+        control.addEventListener('click', (event) => {
+          const button = event.target.closest('button');
+          if (!button) return;
+          state[control.dataset.segment] = button.dataset.value;
+          rerenderDetail();
+        });
+      });
+      main.querySelectorAll('.tab__item').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          main.querySelectorAll('.tab__item').forEach((item) => {
+            const active = item === tab;
+            item.classList.toggle('tab__item--active', active);
+            item.setAttribute('aria-selected', String(active));
+          });
+          ['settings-panel', 'logic-panel'].forEach((id) => {
+            document.getElementById(id).hidden = id !== tab.dataset.panel;
+          });
+        });
+      });
+    }
+
+    function render() {
+      destroyCharts();
+      workspace.classList.toggle('workspace--detail', Boolean(state.detail));
+      renderNavigation();
+      if (state.detail) renderDetail();
+      else renderGallery();
+    }
+
+    categoryNav.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-group]');
+      if (!button) return;
+      state.group = button.dataset.group;
+      state.detail = null;
+      window.history.pushState({}, '', '#all');
+      render();
+    });
+    searchInput.addEventListener('input', (event) => {
+      state.query = event.target.value;
+      searchClear.classList.toggle('is-visible', Boolean(state.query));
+      state.detail = null;
+      render();
+    });
+    searchClear.addEventListener('click', () => {
+      searchInput.value = '';
+      searchInput.focus();
+      state.query = '';
+      searchClear.classList.remove('is-visible');
+      render();
+    });
+
+    function syncRoute() {
+      const id = window.location.hash.slice(1);
+      const nextDetail = EXAMPLES.find((example) => example.id === id) || null;
+      if ((state.detail?.id || null) === (nextDetail?.id || null)) return;
+      state.detail = nextDetail;
+      render();
+    }
+
+    window.addEventListener('popstate', syncRoute);
+    window.addEventListener('hashchange', syncRoute);
+    state.detail = EXAMPLES.find((example) => example.id === window.location.hash.slice(1)) || null;
+    render();
+  </script>
 </body>
 </html>
