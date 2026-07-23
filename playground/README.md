@@ -10,8 +10,10 @@
 python3 -m http.server 8123
 ```
 
-然后访问 <http://localhost:8123/playground/cartesian-preview.html>。当前入口展示
-`CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y，并支持三主题、PC/移动端、明暗和数据量切换。
+然后访问 <http://localhost:8123/playground/cartesian-preview.html>。当前入口按「示例总览 → 单例详情」
+组织 `CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y：总览按图表族展示活预览，点击示例后
+外露主题、PC/移动端、明暗、数据量、缩放轴、X 轴参考线和主线面积等语义配置，并可查看当前配置逻辑。
+水印按主题规范恒开，不提供实例开关。
 
 Preview 卡片首次按端提供默认宽度：PC 736px、移动端 390px；绘制区高度读取主题 token
 `size-chart-region-height`：THS 160px、iFinD-PC/Ainvest 200px。高度口径按 `GRID-03`：inside 为

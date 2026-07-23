@@ -13,7 +13,8 @@
  * 只吃数据 + 语义配置，不暴露样式参数（颜色按 COLOR 固定槽位、不接受配置）。
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
- *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left' }
+ *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit,
+ *           align='left', zoom, showXSplit=false }
  *         type 默认 bar / axis 默认 primary
  */
 import { select } from 'd3';
@@ -35,7 +36,10 @@ import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom } = cfg;
+  const {
+    categories, series, stack = 'none', platform = 'pc', unit, align = 'left',
+    zoom, showXSplit = false,
+  } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -174,7 +178,10 @@ export function CartesianChart(host, cfg) {
     const xMode = bars.length ? 'slot' : 'center';
     const x = bandX(viewCats, dataL, dataR, { mode: xMode });
 
-    renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
+    renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP, {
+      showXSplit,
+      xPositions: viewCats.map((category) => x(category) + x.bandwidth() / 2),
+    }); /* [GRID-01/02] 网格用主轴刻度像素位；X 参考线仅经语义配置显式开启 */
     renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03] */
     if (oppTicks) renderYLabels(frame.svg.append('g'), frame, oppTicks, yS, { form: yForm, side: oppSide, format: yFormat, align: yAlign }); /* [AXIS-02] 反侧：副轴另一套 / iFinD 镜像同一套 */
     renderXLabels(frame.svg.append('g'), frame,
