@@ -6,7 +6,7 @@
 
 ## 运行与验证
 
-- 启动预览：`python3 -m http.server 8123`，访问 `http://localhost:8123/playground/cartesian-preview.html`。
+- 启动预览：`python3 -m http.server 8123`，访问 `http://localhost:8123/`。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 重建 token：`node tokens/build.mjs`。
 - 运行单元测试：`node --test tests/*.mjs`。

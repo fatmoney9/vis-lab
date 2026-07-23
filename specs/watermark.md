@@ -30,7 +30,7 @@
 
 ## 活 demo
 
-`playground/cartesian-preview.html` 三主题横向卡片天然各显其水印：THS / iFinD-PC 右下角淡 logo（右缘距 grid 右沿约 36px）、Ainvest 左上角 logo；右栏切 dark 三主题转白色变体。水印恒开、无开关（见 API）。
+根目录 `index.html` 三主题横向卡片天然各显其水印：THS / iFinD-PC 右下角淡 logo（右缘距 grid 右沿约 36px）、Ainvest 左上角 logo；右栏切 dark 三主题转白色变体。水印恒开、无开关（见 API）。
 
 ## Do / Don't
 

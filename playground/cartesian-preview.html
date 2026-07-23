@@ -3,53 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vis Lab · 可视化组件库</title>
-  <link rel="stylesheet" href="../tokens/tokens.css" />
-  <link rel="stylesheet" href="../charts/styles.css" />
-  <link rel="stylesheet" href="./preview.css?v=20260723-1" />
+  <meta http-equiv="refresh" content="0; url=../index.html" />
+  <title>正在进入 Vis Lab</title>
+  <script>
+    window.location.replace(`../index.html${window.location.search}${window.location.hash}`);
+  </script>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <a class="brand" href="#all" aria-label="Vis Lab 首页">
-        <span class="brand__copy">
-          <span class="brand__name"><span>Vis</span><span class="brand__name-accent">Lab</span></span>
-          <span class="brand__sub">可视化组件库</span>
-        </span>
-      </a>
-      <nav class="topnav" aria-label="主导航">
-        <a class="topnav__item topnav__item--active" href="#all">图表示例</a>
-        <a class="topnav__item" href="../specs/axes.md">设计规范</a>
-        <a class="topnav__item" href="../WORKFLOW.md">工作流</a>
-      </nav>
-    </header>
-
-    <div class="workspace" id="workspace">
-      <aside class="sidebar">
-        <div class="sidebar__head">
-          <span class="sidebar__eyebrow">CartesianChart</span>
-          <strong>直角坐标图</strong>
-        </div>
-        <div class="search-bar">
-          <div class="search-bar__input-wrap">
-            <input class="search-bar__input" id="search-input" type="search" placeholder="搜索示例" aria-label="搜索图表示例" />
-            <button class="search-bar__clear" id="search-clear" type="button">清除</button>
-          </div>
-        </div>
-        <nav class="category-nav" id="category-nav" aria-label="图表分类"></nav>
-        <div class="sidebar__foot">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span>已接入 10 个活示例</span>
-        </div>
-      </aside>
-
-      <main class="main" id="main-content"></main>
-    </div>
-  </div>
-
-  <script type="importmap">
-    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
-  </script>
-  <script type="module" src="./preview.js?v=20260723-1"></script>
+  <p>正在进入 <a href="../index.html">Vis Lab</a>…</p>
 </body>
 </html>
