@@ -1,47 +1,26 @@
-# Playground
+# Playground · 开发验收面
 
-用于存放图表组件的拼装、主题对比和开发预览页面。
+三主题横向并排的开发预览，用于规范验收和视觉目检。与根目录 `index.html`（对外站点）
+是**同源不同展示**的两个面：示例定义共用 `demos/examples.js` 一份，本目录只决定「怎么展示」。
 
-## 启动
+- 入口：<http://localhost:8123/playground/cartesian-preview.html>（需 HTTP 服务，见根 [README](../README.md)）
+- 加示例 / 接新图表类型改 `demos/`，不改本目录——步骤见 `demos/examples.js` 文件头
+- 分层与目录边界见 [WORKFLOW.md](../WORKFLOW.md)，本页不复述
 
-在仓库根目录运行：
+## 与对外站点的差异
 
-```sh
-python3 -m http.server 8123
-```
+| | 本页 | `index.html` |
+|---|---|---|
+| 主题 | 三主题横向并排对比 | 单主题下拉切换 |
+| 旋钮 | 全套（含 `dataLabel` 等验收用开关） | 只暴露稳定的语义配置 |
+| 尺寸 | 卡片可拖拽 resize | 固定布局 |
+| 示例 | `surfaces` 含 `playground` 的全部 | `surfaces` 含 `index` 的部分 |
 
-然后访问 <http://localhost:8123/playground/cartesian-preview.html>。当前入口展示
-`CartesianChart` 的柱、堆叠、折线、折柱组合和双 Y，并支持三主题、PC/移动端、明暗和数据量切换。
+## 卡片尺寸口径
 
-Preview 卡片首次按端提供默认宽度：PC 736px、移动端 390px；绘制区高度读取主题 token
-`size-chart-region-height`：THS 160px、iFinD-PC/Ainvest 200px。高度口径按 `GRID-03`：inside 为
-顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，不含 X 轴标签带、图例和卡片外壳。默认尺寸建立后
-仍可从卡片右下角双向拖拽，图表会随容器宽高重新排布。
+卡片首次按端给默认宽度：PC 736px、移动端 390px。绘制区高度读主题 token
+`size-chart-region-height`（THS 160px、iFinD-PC / Ainvest 200px），口径按 `GRID-03`：
+inside 为顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，**不含** X 轴标签带、图例和卡片外壳。
 
-## 在线预览
-
-GitHub Pages：<https://fatmoney9.github.io/vis-lab/>。
-
-站点从 `main` 分支的仓库根目录发布；根目录 `index.html` 负责进入本 Preview。推送到 `main` 后，
-以仓库 Actions 中 `pages build and deployment` 成功且上述公开地址返回正常页面为发布完成标准。
-
-## 目录边界
-
-- `charts/core/`：可复用的图表核心组件与计算逻辑。
-- `charts/styles.css`：主题无关的图表结构样式。
-- `tokens/`：主题值与行为配置的权威源。
-- `playground/`：组合上述能力进行开发调试和视觉验收，不作为生产组件源码。
-
-## 后续建议结构
-
-```text
-playground/
-├── index.html          # Playground 入口（按需要增加）
-├── legend/             # Legend 单组件或组合预览
-├── axis/               # Axis 单组件或组合预览
-├── charts/             # 拼装后的完整图表
-├── themes/             # 多主题、多端、明暗模式对比
-└── shared/             # 仅供 Playground 使用的公共代码与样式
-```
-
-Preview 页面应通过本地 HTTP 服务访问，不要直接使用 `file://` 打开，以保证 ES Module 和 JSON `fetch()` 正常工作。
+默认尺寸建立后可从卡片右下角双向拖拽，图表随容器宽高重排——用于验收 `GRID-03` 的容器自适应、
+`AXIS-06` 的 X 标签碰撞与 `LABEL-06` 的数据标签碰撞。

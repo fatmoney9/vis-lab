@@ -6,7 +6,7 @@
 
 ## 运行与验证
 
-- 启动预览：`python3 -m http.server 8123`，访问 `http://localhost:8123/playground/cartesian-preview.html`。
+- 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/cartesian-preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 重建 token：`node tokens/build.mjs`。
 - 运行单元测试：`node --test tests/*.mjs`。
@@ -22,10 +22,13 @@
 
 - `tokens/` 是主题值、行为和系列色板的权威源；不要手改生成的 `tokens/tokens.css`。
 - `charts/core/` 是 L1 共享构件，`charts/charts/` 是 L2 图表编排，`specs/` 是规则 ID 权威定义。
-- `playground/` 只做开发预览；组件 API 只收数据与语义配置，不收样式参数。
+- `demos/` 是两个预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
+  `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
+  `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
+- `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
 - 多人分支、中文提交、验证和 PR 约定以 `CONTRIBUTING.md` 为准。
 
 ## 当前状态与下一步
 
-当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）和水印（watermark，见 `specs/watermark.md`）。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
+当前已实现 CartesianChart 的柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）和数据标签（data label，见 `specs/data-label.md`）。下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

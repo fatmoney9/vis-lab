@@ -17,7 +17,7 @@ git config core.hooksPath hooks
 python3 -m http.server 8123
 ```
 
-访问 `http://localhost:8123/playground/cartesian-preview.html`。
+对外站点访问 `http://localhost:8123/`，开发验收面访问 `http://localhost:8123/playground/cartesian-preview.html`（两面的分工见 [README](README.md)）。
 
 ## 领取任务与建分支
 
@@ -56,7 +56,7 @@ node tokens/build.mjs
 所有提交至少运行：
 
 ```bash
-node --experimental-default-type=module --test tests
+node --test tests/*.mjs
 sh hooks/lint-layers.sh
 node hooks/lint-spec-ids.mjs
 ```

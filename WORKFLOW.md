@@ -35,18 +35,31 @@
 | **L0 · Design tokens** | 主题值 JSON、行为配置与系列色板；构建生成 CSS 变量 | `tokens/` |
 | **L1 · 共享构件** | 跨图表复用的渲染与计算单元：轴、网格、图例、tooltip、比例尺、格式化等 | `charts/core/` |
 | **L2 · 图表组件** | 把 L1 构件按固定方式拼好，只暴露数据 + 语义配置；图表专属计算留在组件内部 | `charts/charts/` |
-| **L3 · 规范与预览** | 条目化规范 + 活 demo；独立规范站尚未并入本仓库 | `specs/` + `playground/` |
+| **L3 · 规范与预览** | 条目化规范 + 活 demo；两个预览面共享同一份示例数据源 | `specs/` + `demos/` + `index.html` + `playground/` |
 
 **粒度判断标准（机械执行，计算逻辑与可见构件同样适用）：**
 - 两种以上图表都要遵守的规范 → 沉到 L1（例：刻度算法，柱状图和折线图共用同一份）
 - 只属于一种图表的逻辑 → 留在该 L2 组件内部
 - 不为"将来可能用到"提前抽象
 
+**L3 的两个预览面（同源不同展示）：**
+
+| 面 | 位置 | 职责 |
+|---|---|---|
+| **对外站点** | `index.html` | 画廊 + 详情页、单主题切换；GitHub Pages 发布的就是它 |
+| **开发验收** | `playground/cartesian-preview.html` | 三主题横向并排、旋钮更全、可拖拽 resize，用于规范验收 |
+
+**示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 主题/密度档位 + 配置装配），
+`demos/registry.js` 登记「图表类型 → L2 组件」。两面 import 同一份、各自决定怎么展示，
+故加示例只加一处、不会漂移；示例用 `surfaces` 字段声明进哪个面（缺省两面都进），
+用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（饼 / 环 / 横向条形…）的步骤写在
+`demos/examples.js` 文件头——两个面本身都不用改。
+
 **依赖链全景：**
 
 ```
-L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（含计算模块）──import──▶ d3（仅计算函数）
-                                                └──读取──▶ CSS 变量（L0 tokens）
+L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件 ──调用──▶ L1 构件 ──import──▶ d3（仅计算函数）
+        └──▶ demos/examples（纯数据，无 d3、无 DOM）              └──读取──▶ CSS 变量（L0 tokens）
 ```
 
 ---
@@ -79,7 +92,8 @@ L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（
 - 规范正文用 markdown 写，按主题分文件（color / axis / tooltip / 每种图表一篇）
 - 每条规则一个稳定 ID，格式 `{类别}-{序号}`：
   `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `DATAZOOM-` 缩放轴 ·
-  `MARK-` 图形标记 · `LEGEND-` 图例 · `TEXT-` 文本 · `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印
+  `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 · `TOOLTIP-` 浮层 ·
+  `MOTION-` 动效 · `WATERMARK-` 水印
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
 ---
@@ -151,16 +165,20 @@ L3 demo ──只认──▶ L2 图表组件 ──调用──▶ L1 构件（
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-07-22，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip 等共享构件、
-`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark）、已发布到 GitHub Pages 的多主题 playground，
+截至 2026-07-23，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签等共享构件、
+`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label）、
+共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
 以及 token 合同、首批纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
 
 后续按以下顺序推进：
 
 1. **上视觉保险**：Playwright 视觉回归接入 CI；补组件色值字面量 lint 与色板 CVD/对比度校验。
-2. **补未完成规范**：图例溢出、数据标签、移动端触摸等以 `specs/*.md` 待办为准（datazoom、watermark 已落地 [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md)）。
-3. **规范站产品化**：决定是否把当前 `specs/` + `playground/` 迁入独立站点；迁移前当前目录就是权威入口。
-4. **进阶工具**：token 对照表自动生成与更多图型预览。
+2. **补未完成规范**：图例溢出、移动端触摸等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签已落地
+   [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md)）。
+3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
+   也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
+4. **接入更多图型**：饼 / 环 / 横向条形等——L2 组件 + `demos/registry.js` 登记，两个预览面无需改动。
+5. **进阶工具**：token 对照表自动生成。
 
 ---
 

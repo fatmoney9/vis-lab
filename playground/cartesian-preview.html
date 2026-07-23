@@ -184,6 +184,15 @@
       </div>
 
       <div class="field">
+        <div class="field-label"><b>数据标签</b><span>dataLabel</span></div>
+        <div class="seg" id="seg-label">
+          <button data-value="auto" class="is-active">默认</button>
+          <button data-value="on">全开</button>
+          <button data-value="off">全关</button>
+        </div>
+      </div>
+
+      <div class="field">
         <div class="field-label"><b>渐变面积</b><span>主线 area</span></div>
         <div class="seg" id="seg-area">
           <button data-value="off" class="is-active">关</button>
@@ -218,122 +227,13 @@
   { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
 </script>
 <script type="module">
-  import { CartesianChart } from '../charts/charts/cartesian/index.js';
+  import { mountExample } from '../demos/registry.js';
+  import { examplesFor, THEMES, capabilitiesOf } from '../demos/examples.js';
 
-  const K = (arr) => arr.map((v) => (v == null ? null : v * 1000)); // ×1000 让 FORMAT-01 单位换算可见
-
-  /* 数据按右侧「数据量」旋钮的类目数 n 生成（cfg 是 n 的函数，所有分类同一套 n）。
-     wave 带相位 p：多系列各取不同相位得到不同形状 */
-  const seq = (n) => Array.from({ length: n }, (_, i) => `${i + 1}`);
-  const wave = (n, p = 0) => K(Array.from({ length: n }, (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6 + p) + 140 * Math.cos(i * 1.7 + p))));
-  /* 含负值/0/null 特性的单系列（基础柱专用：负值向下、0 值 1px 占位、null 断口全可见） */
-  const signedWave = (n) => {
-    const d = wave(n, 0.8).map((v) => v - 500000);
-    if (n > 2) d[2] = 0;
-    if (n > 4) d[4] = null;
-    return d;
-  };
-  /* 多系列正值波形：按序相移 */
-  const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, k * 0.9) }));
-  /* 负值系列（堆叠含负值用） */
-  const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
-  /* 折线：中途一个 null 断口；多数据（>13 点）整体下移、含负值区 */
-  const lineWave = (n) => {
-    const d = wave(n, 0.4).map((v) => (n > 13 ? v - 500000 : v));
-    d[Math.floor(n / 3)] = null;
-    return d;
-  };
-  /* 副轴增速（%）：小数量级、与柱不同量纲 */
-  const growth = (n) => Array.from({ length: n }, (_, i) => Math.round(12 + 9 * Math.sin(i * 0.5)));
-
-  /* ── 图表分类（左栏）：每项 cfg = 类目数 n 的函数（n 来自右侧「数据量」旋钮），横跨三主题渲染 ── */
-  const CATEGORIES = [
-    {
-      group: '柱状',
-      id: 'basic', label: '基础柱（单系列）',
-      desc: '单系列默认色（THS #3366FF）；含负值向下、0 值 1px 占位、null 断口。数据量↑看单柱容器收缩：step 跌破上限后柱按 2:1 等比收缩保侧白（BAR-03）、X 标签碰撞（AXIS-06）。',
-      cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: signedWave(n) }] }),
-    },
-    {
-      group: '柱状',
-      id: 'grouped3', label: '分组柱（3 系列）',
-      desc: '一进多「整套换」：首色应变浅蓝 #52BBFF（≠ 单系列 #3366FF）；各主题按序号取色板。数据量↑看分组容器收缩（BAR-02）。',
-      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']) }),
-    },
-    {
-      group: '柱状',
-      id: 'grouped6', label: '分组柱（6 系列）',
-      desc: '色板循环：点掉几个系列看剩余柱整组重新居中、颜色不重排（各系列色固定不跟随）。',
-      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
-    },
-    {
-      group: '堆叠',
-      id: 'stack', label: '堆叠（normal）',
-      desc: '段间直角、只最外端圆角（THS，正向最上/负向最下）；点掉一个系列看堆叠闭合、轴 refit。',
-      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'normal' }),
-    },
-    {
-      group: '堆叠',
-      id: 'stackNeg', label: '堆叠含负值',
-      desc: '正值向上累计、负值向下累计（分开）。',
-      cfg: (n) => ({
-        categories: seq(n), stack: 'normal',
-        series: [...posSeries(n, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(n) }],
-      }),
-    },
-    {
-      group: '堆叠',
-      id: 'percent', label: '归一化（percent）',
-      desc: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。',
-      cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'percent' }),
-    },
-    {
-      group: '折线',
-      id: 'line', label: '折线（单系列）',
-      desc: '数据点显隐分档（移动/PC 一致）：≤13 点常显（少）、>13 全隐（中/多），线仍连续；null 断口不强连。点留 DOM（data-i），hover 十字准星唤出最近点归 tooltip 切片。',
-      cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
-    },
-    {
-      group: '折线',
-      id: 'line-multi', label: '多折线（3 系列）',
-      desc: '声明 ≥2 条线：主线（首条声明线）保持 size-line-stroke（THS 1.5），其余线切 size-line-stroke-multi（THS 1）；纯折线走通用 bar-multi 色板（THS 首色浅蓝 #52BBFF，与分组柱同序）——line-multi 仅折柱组合用（COLOR-05）。点显隐分档同样生效。',
-      cfg: (n) => ({
-        categories: seq(n),
-        series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
-      }),
-    },
-    {
-      group: '折线',
-      id: 'line-stack', label: '堆叠折线（normal）',
-      desc: '线沿可见线累计基线绘制（线堆线，复用 stackBars 同一份累计）；每系列在线与其基线间填同色 0.2 填充带（opacity-line-stack-fill）；值域 = 累计总高；点掉系列看堆叠闭合、轴 refit。',
-      cfg: (n) => ({
-        categories: seq(n), stack: 'normal',
-        series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
-      }),
-    },
-    {
-      group: '组合',
-      id: 'combo', label: '折柱组合 · 双 Y',
-      desc: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。',
-      cfg: (n) => ({
-        categories: seq(n),
-        series: [
-          { name: '营业收入', data: wave(n), type: 'bar', axis: 'primary' },
-          { name: '成本', data: wave(n, 0.9), type: 'bar', axis: 'primary' },
-          { name: '营收增速', data: growth(n), type: 'line', axis: 'secondary' },
-        ],
-      }),
-    },
-  ];
-
-  const THEMES = [
-    { id: 'ths', name: 'THS 同花顺', dot: '#3366FF' },
-    { id: 'ifind-pc', name: 'iFinD PC', dot: '#4D5999' },
-    { id: 'ainvest', name: 'Ainvest', dot: '#265FFC' },
-  ];
-
-  const DENSITY = { few: 4, mid: 16, many: 36 }; // 右侧「数据量」旋钮 → 类目数 n
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', area: 'off', zoom: 'off' };
+  /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
+     加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
+  const CATEGORIES = examplesFor('playground');
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', area: 'off', zoom: 'off' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -348,7 +248,7 @@
     }
     const btn = document.createElement('button');
     btn.className = 'nav-item';
-    btn.textContent = cat.label;
+    btn.textContent = cat.title;
     btn.dataset.id = cat.id;
     btn.addEventListener('click', () => { state.category = cat.id; render(); });
     navEl.appendChild(btn);
@@ -365,7 +265,7 @@
     card.innerHTML = `
       <div class="theme-card__bar">
         <span class="theme-card__dot" style="background:${t.dot}"></span>
-        <span class="theme-card__name">${t.name}</span>
+        <span class="theme-card__name">${t.label}</span>
         <span class="theme-card__meta"></span>
       </div>
       <div class="chart-mount"></div>`;
@@ -381,10 +281,18 @@
   function render() {
     const cat = CATEGORIES.find((c) => c.id === state.category);
 
-    document.getElementById('cat-title').textContent = cat.label;
-    document.getElementById('cat-desc').textContent = cat.desc;
+    document.getElementById('cat-title').textContent = cat.title;
+    /* 开发验收要点（notes）优先；没写 notes 的示例回落到对外说明 */
+    document.getElementById('cat-desc').textContent = cat.notes ?? cat.description;
     navEl.querySelectorAll('.nav-item').forEach((b) =>
       b.classList.toggle('is-active', b.dataset.id === state.category));
+
+    /* 旋钮按当前示例的能力显隐（demos/examples.js 的 CHART_CAPABILITIES ∩ 本示例配置形态）：
+       将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
+    const caps = capabilitiesOf(cat);
+    document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
+    document.getElementById('seg-area').closest('.field').hidden = !caps.area;
+    document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
 
     THEMES.forEach((t) => {
       const card = cards[t.id];
@@ -395,23 +303,20 @@
 
       // 重建干净的 host，避免残留 class / --dv-series-* 变量
       const mount = card.querySelector('.chart-mount');
-      const cfg = { ...cat.cfg(DENSITY[state.density]), platform: state.platform };
-      if (state.area === 'on') { /* 渐变面积开关：给主线（首条声明折线）挂 area（堆叠下 L2 自会忽略） */
-        const main = cfg.series.find((s) => s.type === 'line');
-        if (main) main.area = true;
-      }
-      if (state.zoom === 'on') cfg.zoom = { start: 0.35, end: 1 }; /* 缩放轴：初始窗口 = 后 65% 类目（演示窗口 + Y 轴联动重算 SCALE-02） */
-
-      const mountChart = () => {
-        chartInstances[t.id]?.destroy();
-        mount.textContent = '';
-        const host = document.createElement('div');
-        host.className = 'chart-host';
-        mount.appendChild(host);
-        chartInstances[t.id] = CartesianChart(host, cfg);
-      };
-
-      mountChart();
+      chartInstances[t.id]?.destroy();
+      mount.textContent = '';
+      const host = document.createElement('div');
+      host.className = 'chart-host';
+      mount.appendChild(host);
+      /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
+         两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
+      chartInstances[t.id] = mountExample(host, cat, {
+        density: state.density,
+        platform: state.platform,
+        zoom: state.zoom === 'on',
+        area: state.area === 'on',
+        dataLabel: state.label,
+      }).instance;
     });
   }
 
@@ -429,6 +334,7 @@
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
+  wireSeg('seg-label', 'label');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');
 
