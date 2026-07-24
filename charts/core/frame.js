@@ -19,6 +19,8 @@ const X_GAP_BOTTOM = 4;              // [AXIS-04] X 标签底部 → 标签带�
  *   outside—— 仅有标签一侧预留 yLabelWidth + 8px 标签列，**无标签侧网格贴边**；
  *        顶/底标签与网格线居中对齐会超出绘制区约半个行高，顶部留白与 X 标签带上间距相应加大
  * [AXIS-04] X 轴标签自成容器带：带高 = 行高 + 上下间距（xBand=false 时不预留）
+ * [AXISTITLE-02] 轴标题各自成带：Y 标题带在 Y 标签带之上、X 标题带在 X 标签带之下
+ *   （缩放轴带恒在最下）。带高由调用方用 axisTitleBand() 算好传入，缺省 0 = 无标题、几何不变。
  * [GRID-03] 传入 height 时 SVG 高度随容器（宽高自适应）；缺省时
  *   --size-chart-region-height 表示 Y 方向的图表高度包络：
  *   inside = 顶/底轴线间距；outside = 顶/底 Y 标签外缘间距（轴线间距需扣两端半行高）。
@@ -34,18 +36,25 @@ export function createFrame(host, opts = {}) {
     /* [DATAZOOM-01] 缩放轴带：在 X 标签带下方额外预留的高度（含手柄溢出与上下间距）。
        默认 0 = 无缩放轴，几何与原状逐像素一致。带宽 = grid 宽（与网格/X 轴对齐，天然不含 outside 的 Y 标签列）。 */
     navH = 0,
+    /* [AXISTITLE-02] 轴标题带高（= 4 + 行高 + 4，由 axisTitleBand() 算）与带内上间距；
+       默认 0 = 无标题，几何与原状逐像素一致。 */
+    titleTopH = 0,
+    titleBottomH = 0,
+    titleGap = 0,
   } = opts;
   const W = Math.max(240, width ?? host.clientWidth ?? 640);
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
-  const topPad = yForm === 'outside' ? halfLabel + 2 : 0;
+  /* [AXISTITLE-02] Y 标题带叠在 Y 标签带之上（标签带自身的留白口径不变） */
+  const topPad = titleTopH + (yForm === 'outside' ? halfLabel + 2 : 0);
   /* outside 的底部 Y 标签以末条网格线为垂直中心，会向下溢出 halfLabel；
      因此 X 标签位置 = 网格线 + halfLabel + 规范净距 4px。 */
   const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_LABEL : X_GAP_TOP_INSIDE;
-  const bottomPad = xBand
+  /* [AXISTITLE-02] X 标题带接在 X 标签带下沿之后 */
+  const bottomPad = (xBand
     ? xGapTop + lineH + X_GAP_BOTTOM
-    : yForm === 'outside' ? halfLabel + 2 : 0;
+    : yForm === 'outside' ? halfLabel + 2 : 0) + titleBottomH;
 
   /* [AXIS-01] 左右：仅有标签一侧预留标签列，无标签侧贴边（0，不设边缘留白） */
   const pad = { left: 0, right: 0 };
@@ -75,9 +84,15 @@ export function createFrame(host, opts = {}) {
     height: gridH,
   };
 
-  /* [DATAZOOM-01] navTop = X 标签带下沿（= 绘图区底 + bottomPad）；navBottom = SVG 底 */
+  /* [DATAZOOM-01] navTop = 底部各带的下沿（= 绘图区底 + bottomPad，含 X 标题带）；navBottom = SVG 底 */
   const navTop = topPad + gridH + bottomPad;
-  return { svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH, navTop, navBottom: navTop + navH, navH };
+  /* [AXISTITLE-02] 标题文字上沿（hanging 基线）：Y 标题在 SVG 顶部的标题带内、X 标题在其带内，各让出带内上间距 */
+  const titleTop = titleGap;
+  const xTitleTop = navTop - titleBottomH + titleGap;
+  return {
+    svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH,
+    navTop, navBottom: navTop + navH, navH, titleTop, xTitleTop,
+  };
 }
 
 /* [GRID-03] 容器尺寸自适应：宽/高变化（rAF 合帧）后回调重建 */

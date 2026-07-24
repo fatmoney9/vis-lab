@@ -26,6 +26,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* [AXISTITLE-05] 轴标题与 Y 轴标签**共用同一套文字样式规则**：§22 的四个 token 逐一别名到
+   轴标签同名项（color-text-axis / font-size-axis / line-height-axis / font-weight-axis），
+   主题 × 端 × 明暗的分叉全部由轴标签那套自带，此处不重复声明——改标签样式，标题自动跟随。
+   保留 *-axis-title 语义名（不直接写 --font-size-axis）：将来要分家改 token 一行即可，本文件不动。
+   唯一不跟的是字体：轴标签为数值等宽走 font-family-number + tabular-nums，
+   标题是文案不是数值 → font-family-cn（同图例文本），不加 tabular-nums。 */
+.dv-axis-title {
+  fill: var(--color-text-axis-title);
+  font-size: var(--font-size-axis-title);
+  font-weight: var(--font-weight-axis-title);
+  font-family: var(--font-family-cn);
+}
+
 /* [LEGEND-01] 图例容器：默认左对齐、横排、宽度不足 flex-wrap 自动换行；间距/边距走 token。
    对齐无 token（左/中/右），故左对齐为默认、中/右用修饰类切 justify-content。 */
 .dv-legend {

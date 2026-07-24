@@ -20,7 +20,7 @@
 
 卡片首次按端给默认宽度：PC 736px、移动端 390px。绘制区高度读主题 token
 `size-chart-region-height`（THS 160px、iFinD-PC / Ainvest 200px），口径按 `GRID-03`：
-inside 为顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，**不含** X 轴标签带、图例和卡片外壳。
+inside 为顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，**不含** X 轴标签带、轴标题带、图例和卡片外壳。
 
 默认尺寸建立后可从卡片右下角双向拖拽，图表随容器宽高重排——用于验收 `GRID-03` 的容器自适应、
 `AXIS-06` 的 X 标签碰撞与 `LABEL-06` 的数据标签碰撞。

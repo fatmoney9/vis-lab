@@ -75,10 +75,16 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  *   zoom      缩放轴（DATAZOOM-01..07，需要类目轴）
  *   area      主线渐变面积（仅非堆叠且含折线的 cartesian 配置，见 supportsArea）
  *   dataLabel 数据标签三态（LABEL-05）
+ *   axisTitle 轴标题开关（AXISTITLE-01，默认不显示；开时注入 { y, y2, x } 文案）
  */
 export const CHART_CAPABILITIES = {
-  cartesian: { zoom: true, area: true, dataLabel: true },
+  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true },
 };
+
+/* [AXISTITLE-01] 轴标题旋钮打开时注入的通用文案；示例可用自己的 axisTitle 字段覆盖（给更贴切的文案）。
+   文案是内容不是样式——两面共用这一份，避免各写各的。
+   **y2 是否落进最终 cfg 由 buildConfig 按图表形态实判**（见那里的注释），不靠逐示例记得写。 */
+export const AXIS_TITLES = { y: '单位：元', y2: '副轴', x: '交易日' };
 
 /* ── 示例清单 ────────────────────────────────────────────────── */
 
@@ -161,7 +167,8 @@ export const EXAMPLES = [
     id: 'combo', group: '组合图', chart: 'cartesian',
     title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04', surfaces: BOTH,
     description: '柱走主轴、线走副轴，两轴共享网格并保持 0 轴对齐。',
-    notes: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。两根柱=分组，故柱也不出数据标签。',
+    notes: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。两根柱=分组，故柱也不出数据标签。开轴标题：这是**真·双量纲**（声明了副轴），故三主题反侧都出 y2「增速（%）」（AXISTITLE-03）。对照基础柱状图在 iFinD-PC 上：反侧只是主轴镜像标签、没有第二根轴，那里就不出标题。',
+    axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
     cfg: (n) => ({
       categories: seq(n),
       series: [
@@ -175,7 +182,8 @@ export const EXAMPLES = [
     id: 'combo-single', group: '组合图', chart: 'cartesian',
     title: '折柱组合 · 单柱 + 线', spec: 'BAR-07 / LABEL-05', surfaces: BOTH,
     description: '一柱一线的组合，数据标签只跟柱走。',
-    notes: '一柱一线的组合：数据标签只跟柱走——柱是「一个类目一个值」故默认出标签，折线在有柱在场时不出（LABEL-05）。对比上一项（两柱=分组，柱也不出标签）。',
+    notes: '一柱一线的组合：数据标签只跟柱走——柱是「一个类目一个值」故默认出标签，折线在有柱在场时不出（LABEL-05）。对比上一项（两柱=分组，柱也不出标签）。轴标题同样是真·双量纲，反侧出 y2「增速（%）」。',
+    axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
     cfg: (n) => ({
       categories: seq(n),
       series: [
@@ -205,21 +213,31 @@ export const supportsArea = (example) => {
 /* 该示例实际可用的旋钮（图表类型能力 ∩ 本示例配置形态） */
 export const capabilitiesOf = (example) => {
   const caps = CHART_CAPABILITIES[example.chart] ?? {};
-  return { zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, area: supportsArea(example) };
+  return { zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle, area: supportsArea(example) };
 };
 
 /*
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
- *   state = { density='few', platform='pc', zoom, area, dataLabel } —— 各项皆可缺省
+ *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle } —— 各项皆可缺省
  * 主题与明暗不进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 + behavior 解析。
  */
 export function buildConfig(example, state = {}) {
-  const { density = 'few', platform = 'pc', zoom = false, area = false, dataLabel = 'auto' } = state;
+  const { density = 'few', platform = 'pc', zoom = false, area = false, dataLabel = 'auto', axisTitle = false } = state;
   const caps = capabilitiesOf(example);
   const cfg = { ...example.cfg(DENSITY[density] ?? DENSITY.few), platform };
 
   if (caps.zoom && zoom) cfg.zoom = { ...INITIAL_ZOOM };
+  /* [AXISTITLE-01/03] 默认不显示；旋钮打开才注入文案（示例自带的 axisTitle 优先，可给更贴切的措辞）。
+     **y2 按 cfg 的实际形态判、不按示例记得没记得写**（同 supportsArea 的做法）：
+     真·双量纲才留 y2、否则删掉。两个方向都兜住——双 Y 示例漏写 y2 不会静默丢标题，
+     非双 Y 示例误写 y2 也不会混进 cfg（组件侧 showY2Title 还有一道，但预览面的
+     「逻辑」面板直接展示这份 cfg，展示的必须就是真正生效的）。 */
+  if (caps.axisTitle && axisTitle) {
+    const titles = { ...(example.axisTitle ?? AXIS_TITLES) };
+    if (!cfg.series.some((s) => s.axis === 'secondary')) delete titles.y2;
+    cfg.axisTitle = titles;
+  }
   if (caps.area && area) {
     const mainLine = cfg.series.find((s) => s.type === 'line');
     if (mainLine) mainLine.area = true;

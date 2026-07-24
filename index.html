@@ -320,7 +320,7 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, groupsFor, THEMES, DENSITY, INITIAL_ZOOM, capabilitiesOf } from './demos/examples.js';
+    import { examplesFor, groupsFor, THEMES, DENSITY, INITIAL_ZOOM, AXIS_TITLES, capabilitiesOf } from './demos/examples.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -337,6 +337,7 @@
       density: 'few',
       area: false,
       zoom: false,
+      axisTitle: false,
     };
 
     const main = document.getElementById('main-content');
@@ -404,7 +405,7 @@
       main.querySelectorAll('.example-card').forEach((card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
-          density: 'few', platform: 'pc', area: false, zoom: false,
+          density: 'few', platform: 'pc', area: false, zoom: false, axisTitle: false,
         });
       });
     }
@@ -429,6 +430,8 @@
         stack: cfg.stack || 'none',
         zoom: state.zoom ? INITIAL_ZOOM : false,
         ...(capabilitiesOf(example).area ? { area: state.area } : {}),
+        /* [AXISTITLE-01] 默认不显示；开关打开才有文案（示例自带的优先，如双 Y 的 y2） */
+        axisTitle: state.axisTitle ? { ...(example.axisTitle ?? AXIS_TITLES) } : false,
       };
     }
 
@@ -479,6 +482,7 @@
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
             ${caps.zoom ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
+            ${caps.axisTitle ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标题</span><span class="field__hint">AXISTITLE-01..06 · 默认不显示</span></div><label class="switch" aria-label="轴标题"><input id="axis-title-switch" type="checkbox"${state.axisTitle ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${areaAvailable ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">主线渐变面积</span><span class="field__hint">非堆叠折线语义配置</span></div><label class="switch" aria-label="主线渐变面积"><input id="area-switch" type="checkbox"${state.area ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             <button class="button" id="reset-button" type="button">恢复默认配置</button>
           </div>
@@ -515,9 +519,13 @@
         state.area = event.target.checked;
         rerenderDetail();
       });
+      document.getElementById('axis-title-switch')?.addEventListener('change', (event) => {
+        state.axisTitle = event.target.checked;
+        rerenderDetail();
+      });
       document.getElementById('reset-button').addEventListener('click', () => {
         Object.assign(state, {
-          theme: 'ths', platform: 'pc', mode: 'light', density: 'few', area: false, zoom: false,
+          theme: 'ths', platform: 'pc', mode: 'light', density: 'few', area: false, zoom: false, axisTitle: false,
         });
         rerenderDetail();
       });
