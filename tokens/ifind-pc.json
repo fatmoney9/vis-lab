@@ -209,5 +209,12 @@
   "font-weight-data-label": "{font-weight-medium}",
   "line-height-data-label": "{line-height-axis}",
   "spacing-data-label-gap": "{spacing-4}",
-  "spacing-data-label-min-gap": "{spacing-4}"
+  "spacing-data-label-min-gap": "{spacing-4}",
+
+  "$section-22": "轴标题 Axis Title",
+  "font-size-axis-title": "{font-size-axis}",
+  "line-height-axis-title": "{line-height-axis}",
+  "font-weight-axis-title": "{font-weight-axis}",
+  "color-text-axis-title": "{color-text-axis}",
+  "spacing-axis-title-gap": "{spacing-4}"
 }

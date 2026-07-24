@@ -156,6 +156,11 @@
   --line-height-data-label: var(--line-height-axis);
   --spacing-data-label-gap: var(--spacing-4);
   --spacing-data-label-min-gap: var(--spacing-4);
+  --font-size-axis-title: var(--font-size-axis);
+  --line-height-axis-title: var(--line-height-axis);
+  --font-weight-axis-title: var(--font-weight-axis);
+  --color-text-axis-title: var(--color-text-axis);
+  --spacing-axis-title-gap: var(--spacing-4);
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -339,6 +344,11 @@
   --line-height-data-label: var(--line-height-axis);
   --spacing-data-label-gap: var(--spacing-4);
   --spacing-data-label-min-gap: var(--spacing-4);
+  --font-size-axis-title: var(--font-size-axis);
+  --line-height-axis-title: var(--line-height-axis);
+  --font-weight-axis-title: var(--font-weight-axis);
+  --color-text-axis-title: var(--color-text-axis);
+  --spacing-axis-title-gap: var(--spacing-4);
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -525,6 +535,11 @@
   --line-height-data-label: var(--line-height-axis);
   --spacing-data-label-gap: var(--spacing-4);
   --spacing-data-label-min-gap: var(--spacing-4);
+  --font-size-axis-title: var(--font-size-axis);
+  --line-height-axis-title: var(--line-height-axis);
+  --font-weight-axis-title: var(--font-weight-axis);
+  --color-text-axis-title: var(--color-text-axis);
+  --spacing-axis-title-gap: var(--spacing-4);
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

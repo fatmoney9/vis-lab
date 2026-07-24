@@ -12,6 +12,7 @@
 | `scale.js` | 比例尺与刻度算法（含双轴 0 对齐） | axes.md（SCALE-01..04） |
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞 | axes.md（AXIS-01..08） |
+| `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |
 | `measure.js` | 渲染级文本测量，全库唯一测量源（零依赖，可被 node 加载） | axes.md（AXIS-08） |
 | `mark.js` | 柱 / 线 / 数据点的图元渲染 | bar.md、line.md |
 | `label.js` | 数据标签渲染、明暗反色与碰撞过滤 | data-label.md（LABEL-01..08） |

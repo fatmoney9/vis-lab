@@ -14,9 +14,10 @@
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
  *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left',
- *           zoom, dataLabel='auto' }
+ *           zoom, dataLabel='auto', axisTitle }
  *         type 默认 bar / axis 默认 primary
  *         dataLabel（语义配置，非样式）：'auto' 按图表类型定默认 / true 全开 / false 全关（LABEL-05）
+ *         axisTitle（语义配置，文案即内容）：{ y, y2, x } 三个可选字符串，默认不显示（AXISTITLE-01）
  */
 import { select } from 'd3';
 import { createFrame, observeResize } from '../../core/frame.js';
@@ -32,13 +33,14 @@ import { renderLegend, applyToggle } from '../../core/legend.js';
 import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { renderDataLabels } from '../../core/label.js';
+import { axisTitleBand, axisTitleAnchor, renderAxisTitles } from '../../core/axis-title.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto' } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -58,6 +60,10 @@ export function CartesianChart(host, cfg) {
   const ySide = b['y-main-side'];
   const oppSide = ySide === 'left' ? 'right' : 'left';
   const mirror = b['y-dual-shared'] && !dual; /* [AXIS-02] iFinD 单轴：反侧镜像主轴同一套标签；真·双量纲仍走标准 dual（两侧各一套不同值） */
+  /* [AXISTITLE-01/03] 轴标题：默认不显示——不给文案就没有标题（带高 0，几何与不带标题时逐像素一致）。
+     y2 只在**真·双量纲**（声明了 axis:'secondary'）时出：iFinD 的镜像反侧是主轴同一套刻度、不是第二根轴。 */
+  const titles = axisTitle ?? {};
+  const showY2Title = !!titles.y2 && dual;
   const collision = b['x-collision'];
   const yAlign = b['y-label-align'];        /* [AXIS-03] Ainvest 右对齐特例 */
   const pointShape = b['line-point-shape']; /* [LINE-01] 数据点形状（iFinD 菱形特例） */
@@ -147,17 +153,25 @@ export function CartesianChart(host, cfg) {
     /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
     const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
 
-    /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量 */
+    /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量。
+       轴标题不参与——它贴画布外缘，与标签列宽无关（AXISTITLE-04）。 */
     const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
     const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     /* [DATAZOOM-01] 缩放带高度：启用时预留「上间距 6 + max(轨道高, 手柄高) + 下间距 6」；不启用为 0（无回归）。
        上下 6px 为结构留白常量（比 X 带的 4px 略大，给缩放轴与 X 标签多留分隔；待 token 化）。 */
     const dzSliderH = zoomOn ? (tokenNum(plotHost, '--size-slider-height') || 16) : 0;
     const navH = zoomOn ? 6 + Math.max(dzSliderH, dzHandleH) + 6 : 0;
+    /* [AXISTITLE-02] 标题带高：Y（主/副任一有标题）在顶、X 在底；无标题即 0，几何与原状一致。 */
+    const titleGap = tokenNum(plotHost, '--spacing-axis-title-gap');
+    const titleLineH = tokenNum(plotHost, '--line-height-axis-title');
+    const titleBand = axisTitleBand(titleLineH, titleGap);
+    const titleTopH = titles.y || showY2Title ? titleBand : 0;
+    const titleBottomH = titles.x ? titleBand : 0;
     const frame = createFrame(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
       yForm, ySide, yLabelWidth, yLabelWidthSecondary, navH,
-    }); /* [GRID-03][DATAZOOM-01] */
+      titleTopH, titleBottomH, titleGap,
+    }); /* [GRID-03][DATAZOOM-01][AXISTITLE-02] */
 
     const yP = linearY(pSplit, frame.grid.top, frame.grid.bottom);
     const yS = dual ? linearY(sSplit, frame.grid.top, frame.grid.bottom) : yP;
@@ -366,6 +380,18 @@ export function CartesianChart(host, cfg) {
         g.node().dataset.key = batch.key;
         renderDataLabels(g, frame, batch.items);
       });
+    }
+
+    /* [AXISTITLE-01..06] 轴标题：带高已在 createFrame 前预留，这里只定「摆哪、写什么」。
+       主 Y 跟随 ySide、副 Y 在反侧（真·双量纲才有，AXISTITLE-03）、X 右对齐绘图区右缘。
+       对齐口径（AXISTITLE-04：贴所在侧的画布外缘，左轴左对齐 / 右轴右对齐）与
+       「放不下就不放」（AXISTITLE-06）都在 L1；本层只给它 side 与画布宽，不自算几何。 */
+    const titleItems = [];
+    if (titles.y) titleItems.push({ text: titles.y, band: 'top', y: frame.titleTop, ...axisTitleAnchor({ side: ySide, width: frame.width }) });
+    if (showY2Title) titleItems.push({ text: titles.y2, band: 'top', y: frame.titleTop, ...axisTitleAnchor({ side: oppSide, width: frame.width }) });
+    if (titles.x) titleItems.push({ text: titles.x, band: 'bottom', y: frame.xTitleTop, x: frame.grid.right, anchor: 'end' });
+    if (titleItems.length) {
+      renderAxisTitles(frame.svg.append('g').attr('class', 'dv-axis-title-layer'), frame, titleItems);
     }
 
     applyDim();

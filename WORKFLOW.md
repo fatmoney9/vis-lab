@@ -91,9 +91,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 - 规范正文用 markdown 写，按主题分文件（color / axis / tooltip / 每种图表一篇）
 - 每条规则一个稳定 ID，格式 `{类别}-{序号}`：
-  `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `DATAZOOM-` 缩放轴 ·
-  `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 · `TOOLTIP-` 浮层 ·
-  `MOTION-` 动效 · `WATERMARK-` 水印
+  `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `AXISTITLE-` 轴标题 ·
+  `DATAZOOM-` 缩放轴 · `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
+  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
 ---
@@ -165,16 +165,16 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-07-23，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签等共享构件、
-`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label）、
+截至 2026-07-24，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题等共享构件、
+`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
 以及 token 合同、首批纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
 
 后续按以下顺序推进：
 
 1. **上视觉保险**：Playwright 视觉回归接入 CI；补组件色值字面量 lint 与色板 CVD/对比度校验。
-2. **补未完成规范**：图例溢出、移动端触摸等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签已落地
-   [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md)）。
+2. **补未完成规范**：图例溢出、移动端触摸等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签、轴标题已落地
+   [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md)）。
 3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
    也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
 4. **接入更多图型**：饼 / 环 / 横向条形等——L2 组件 + `demos/registry.js` 登记，两个预览面无需改动。

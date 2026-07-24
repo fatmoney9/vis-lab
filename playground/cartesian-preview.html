@@ -193,6 +193,14 @@
       </div>
 
       <div class="field">
+        <div class="field-label"><b>轴标题</b><span>axisTitle</span></div>
+        <div class="seg" id="seg-axis-title">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
+      <div class="field">
         <div class="field-label"><b>渐变面积</b><span>主线 area</span></div>
         <div class="seg" id="seg-area">
           <button data-value="off" class="is-active">关</button>
@@ -213,6 +221,13 @@
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
         数据量对所有分类生效（类目数 4 / 16 / 36）：看柱容器收缩（BAR-03）、X 标签碰撞（AXIS-06）、
         折线数据点显隐分档（&gt;13 全隐）；多数据下折线含负值区。
+        轴标题开关给图表挂 <code>axisTitle:{y,x}</code>（双 Y 分类另有 <code>y2</code>）：默认不显示，开后
+        Y 标题在 Y 标签带上方另起一带、X 标题在 X 标签带下方另起一带；Y 标题<b>贴自己那一侧的画布外缘</b>
+        （左轴左对齐、右轴右对齐，标题多长都不会被裁），X 标题右对齐绘图区右缘
+        （specs/axis-title.md AXISTITLE-02/04）。文字样式<b>与同卡片的 Y 轴标签同款</b>——色 / 字号 / 行高 / 字重
+        四个 token 都别名到 <code>*-axis</code>，主题与端的分叉由轴标签自带（AXISTITLE-05）。
+        <code>y2</code> 仅<b>真·双量纲</b>（声明副轴）出，故折柱组合
+        三主题都出；iFinD-PC 非双量纲时的镜像反侧只是主轴同一套标签、不是第二根轴，那里不出标题（AXISTITLE-03）。
         渐变面积开关给当前分类的<b>主线</b>（首条声明折线）挂 <code>area:true</code>——
         仅含折线且非堆叠的分类生效（specs/line.md）。
         缩放轴开关给图表挂 <code>zoom:{start,end}</code>（初始窗口后 65% 类目）：主图只画窗口内类目、
@@ -233,7 +248,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', area: 'off', zoom: 'off' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', axisTitle: 'off', area: 'off', zoom: 'off' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -291,6 +306,7 @@
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
+    document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
 
@@ -316,6 +332,7 @@
         zoom: state.zoom === 'on',
         area: state.area === 'on',
         dataLabel: state.label,
+        axisTitle: state.axisTitle === 'on',
       }).instance;
     });
   }
@@ -335,6 +352,7 @@
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-label', 'label');
+  wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');
 
