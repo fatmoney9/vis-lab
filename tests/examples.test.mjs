@@ -33,6 +33,21 @@ test('AXISTITLE-03：非双量纲示例不带 y2（误写也会被剔掉）', ()
   }
 });
 
+/* 动效与其他旋钮方向相反：组件默认就播，故「cfg 里没有 animation」= 开，只有关才落进 cfg。
+   写反了不会报错、只会让预览面永远不播（或永远播），是典型的静默错误。 */
+test('MOTION-07：默认开——不传旋钮时 cfg 里没有 animation（= 走组件默认）', () => {
+  for (const e of EXAMPLES) {
+    assert.equal(buildConfig(e, {}).animation, undefined, `示例「${e.id}」默认不该显式带 animation`);
+    assert.equal(buildConfig(e, { animation: true }).animation, undefined, `示例「${e.id}」开着时也不必写进 cfg`);
+  }
+});
+
+test('MOTION-07：关掉时必须显式落进 cfg，否则组件仍会播', () => {
+  for (const e of EXAMPLES) {
+    assert.equal(buildConfig(e, { animation: false }).animation, false, `示例「${e.id}」关动效没落进 cfg`);
+  }
+});
+
 test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）', () => {
   for (const e of EXAMPLES) {
     const { axisTitle } = buildConfig(e, { axisTitle: true });

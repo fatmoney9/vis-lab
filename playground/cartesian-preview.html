@@ -110,6 +110,7 @@
   .field-label span { font-size: 11px; color: var(--shell-text-3); }
 
   .seg { display: flex; background: rgba(0, 0, 0, 0.04); border-radius: 8px; padding: 3px; gap: 3px; }
+  .seg + .seg { margin-top: 6px; }
   .seg button {
     flex: 1; cursor: pointer; border: 0; background: transparent; font: inherit; font-size: 12px;
     color: var(--shell-text-2); padding: 7px 8px; border-radius: 6px; line-height: 16px;
@@ -216,6 +217,17 @@
         </div>
       </div>
 
+      <div class="field">
+        <div class="field-label"><b>动效</b><span>animation</span></div>
+        <div class="seg" id="seg-animation">
+          <button data-value="on" class="is-active">开</button>
+          <button data-value="off">关</button>
+        </div>
+        <div class="seg" id="seg-replay">
+          <button type="button">重播生长</button>
+        </div>
+      </div>
+
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
@@ -233,6 +245,15 @@
         缩放轴开关给图表挂 <code>zoom:{start,end}</code>（初始窗口后 65% 类目）：主图只画窗口内类目、
         拖手柄/拖选区/点击轨道即改窗口，Y 轴随可见数据重算（SCALE-02 / specs/datazoom.md）；
         THS/iFinD 轨道内双色迷你阴影、Ainvest 纯轨道（<code>datazoom-data-shadow:false</code>）。
+        动效开关控制<b>入场生长</b>（specs/motion.md）：柱从 0 轴竖向长高、折线自左向右拉线，
+        面积 / 堆叠填充带 / 数据点跟随同一条前沿；堆叠是<b>整根一起长</b>而非逐段接力（MOTION-06）。
+        时长<b>处处统一 480ms</b>（MOTION-02，<code>motion-duration-grow</code>）——切任意示例 / 数据量 / 主题都不变，
+        三主题横排时三张卡同时起跑、同时收束；缓动统一 <code>cubicOut</code>。
+        （源规范原本按生长占比分 320 / 480 两档，本仓库实测 33 种组合里只有 2 种落短档，故取消分档，见 specs/motion.md 偏差 1。）
+        <b>只在实例首次挂载时播一次</b>：拖缩放轴手柄、点图例显隐、拖拽卡片改尺寸都<b>不得重放</b>
+        （三处任一出现重放即缺陷，MOTION-04）；「重播生长」按钮重建三张卡片再看一遍，动任意旋钮同理。
+        生长期间数据标签整层不出、结束瞬间出现，坐标系 / 图例 / 轴标题 / 水印全程就位不参与生长（MOTION-05）。
+        关掉后应与不带动效时逐像素一致；系统开启「减弱动态效果」时开着也直接出终态（MOTION-07）。
       </p>
     </div>
   </aside>
@@ -248,7 +269,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', axisTitle: 'off', area: 'off', zoom: 'off' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -309,6 +330,7 @@
     document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
+    document.getElementById('seg-animation').closest('.field').hidden = !caps.animation;
 
     THEMES.forEach((t) => {
       const card = cards[t.id];
@@ -333,6 +355,7 @@
         area: state.area === 'on',
         dataLabel: state.label,
         axisTitle: state.axisTitle === 'on',
+        animation: state.animation === 'on',
       }).instance;
     });
   }
@@ -355,6 +378,10 @@
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');
+  wireSeg('seg-animation', 'animation');
+  /* [MOTION-04] 生长只在实例首次挂载时播，故「重播」= 整卡重建（render 本就 destroy + 新建三张卡）。
+     动任意旋钮都会走同一条路径，所以它们也都会重播——这正是规范里「重建实例 = 重新入场」的表现。 */
+  document.getElementById('seg-replay').addEventListener('click', () => render());
 
   render();
 </script>

@@ -14,10 +14,12 @@
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
  *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left',
- *           zoom, dataLabel='auto', axisTitle }
+ *           zoom, dataLabel='auto', axisTitle, animation=true }
  *         type 默认 bar / axis 默认 primary
  *         dataLabel（语义配置，非样式）：'auto' 按图表类型定默认 / true 全开 / false 全关（LABEL-05）
  *         axisTitle（语义配置，文案即内容）：{ y, y2, x } 三个可选字符串，默认不显示（AXISTITLE-01）
+ *         animation（语义配置，"要不要有入场行为"，时长/缓动仍走 token 与规范值常量）：
+ *           true 入场生长 / false 直接终态；系统「减弱动态效果」下恒直接终态（MOTION-07）
  */
 import { select } from 'd3';
 import { createFrame, observeResize } from '../../core/frame.js';
@@ -34,13 +36,14 @@ import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { renderDataLabels } from '../../core/label.js';
 import { axisTitleBand, axisTitleAnchor, renderAxisTitles } from '../../core/axis-title.js';
+import { runGrowth, reducedMotion } from '../../core/motion.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -121,11 +124,17 @@ export function CartesianChart(host, cfg) {
     return g;
   };
   let stopHover = () => {};
+  /* [MOTION-04] 入场生长只在实例首次挂载时播一次——build() 同时被 resize / 图例显隐 / 缩放轴拖动
+     复用，不加这个标记的话拖一次滑块就会每帧重启动画。stopGrow 收口同 stopHover 的模式。 */
+  let firstBuild = true;
+  let stopGrow = () => {};
 
-  /* 主流程：值域(domain) → 画布/轴/网格 → 柱布局(layout)+柱 mark → 线 mark → 交互态 */
+  /* 主流程：值域(domain) → 画布/轴/网格 → 柱布局(layout)+柱 mark → 线 mark → 交互态 → 入场生长 */
   function build() {
     stopHover();
     stopHover = () => {};
+    stopGrow();
+    stopGrow = () => {};
     drawLegend(); /* 图例先占位，绘图区再按剩余高度算（LEGEND-04） */
     if (usesContainerHeight && plotHost.clientHeight < 40) return requestAnimationFrame(build);
     plotHost.innerHTML = '';
@@ -229,6 +238,12 @@ export function CartesianChart(host, cfg) {
     const linePointH = (tokenNum(plotHost, '--size-line-point') || 6) * (pointShape === 'diamond' ? Math.SQRT1_2 : 0.5);
     const labelText = (v) => (v == null ? null : (stack === 'percent' ? pctFormat : format)(v));
     const labelBatches = [];
+    let labelLayer = null;
+
+    /* [MOTION-01/02] 入场生长：收集各图元的逐帧重绘闭包（mark 层返回的 draw(t)）。
+       时长全图统一（MOTION-02），故这里只收闭包、不需要按图元折算任何东西——
+       柱竖向、线横向同时起跑同时到达，节奏天然一致。 */
+    const grow = [];
 
     /* ── 柱（所有柱共享 band；布局见 layout.js。各柱用 yOf(axis) 选比例尺）── */
     const barMax = tokenNum(plotHost, '--size-bar-max') || 16;
@@ -247,7 +262,7 @@ export function CartesianChart(host, cfg) {
       const col = singleBar(band, barMax, barContainerMax, barGapRatio);
       segs.forEach((seg, i) => {
         const r = visBars[i];
-        renderBars(seriesG('dv-bar-series', r.name), frame,
+        grow.push(renderBars(seriesG('dv-bar-series', r.name), frame,
           {
             categories: viewCats, values: seg.values, base: seg.base, offset: col.offset, width: col.width,
             colorVar: seg.colorVar,
@@ -255,7 +270,7 @@ export function CartesianChart(host, cfg) {
             capped: stack === 'normal' ? seg.caps : null,
             zeroBar: false,
           },
-          x, yOf(r));
+          x, yOf(r)));
         /* [LABEL-01] 堆叠段：段内垂直居中、压在填充上 → 走档②（按段色明暗反色，LABEL-04）。
            [LABEL-06③] 放不下就不放：段高不足一行标签高（含 0 值无高度段）在此判；
            横向放不下（文本宽 > 柱宽）由 L1 用 maxWidth 判——档② 的字一旦横向溢出色块，
@@ -293,8 +308,8 @@ export function CartesianChart(host, cfg) {
         ? [singleBar(band, barMax, barContainerMax, barGapRatio)]
         : groupedBars(visBars.length, band, barMax, gap, groupMax, gapRatio);
       visBars.forEach((r, i) => {
-        renderBars(seriesG('dv-bar-series', r.name), frame,
-          { categories: viewCats, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r)); /* [BAR-01] */
+        grow.push(renderBars(seriesG('dv-bar-series', r.name), frame,
+          { categories: viewCats, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r))); /* [BAR-01] */
         /* [LABEL-01] 基础 / 分组柱：柱顶外侧——正值在柱顶上方（文字底对齐锚点）、
            负值在柱底下方（顶对齐），水平居中于该柱；落在图形外空白区 → 档①（跟随系列色，LABEL-03）。 */
         if (showBarLabel && withinLabelDensity(r.data)) {
@@ -342,9 +357,9 @@ export function CartesianChart(host, cfg) {
       const values = st ? st.values : r.data;
       const showPoints = values.filter((v) => v != null).length <= 13;
       const multi = lineMulti && r.seriesIndex !== lines[0].seriesIndex; /* 非主线才切细（主线按声明定、隐藏不改变） */
-      renderLine(seriesG('dv-line-series', r.name), frame,
+      grow.push(renderLine(seriesG('dv-line-series', r.name), frame,
         { categories: viewCats, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
-        { showPoints, multi, area: r.area && !stacked, stackFill: !!st, pointShape });
+        { showPoints, multi, area: r.area && !stacked, stackFill: !!st, pointShape }));
       /* [LABEL-01] 折线：数据点正上方（类目中心），落在图形外 → 档①。
          [LABEL-06①] 非 null 点数 > 5 → 整条线不出标签（与柱同一阈值、全端统一）。
          堆叠折线：位置取累计后的点（values），文本取该系列**自身**的段值（= 累计值 − 基线）。 */
@@ -372,7 +387,7 @@ export function CartesianChart(host, cfg) {
        dataset.key 让图例 hover 弱化连同标签一起生效（applyDim）。
        每次调用传入的是「一个系列跨类目」= 同一行，故一律开碰撞过滤（LABEL-06②）。 */
     if (labelBatches.length) {
-      const labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
+      labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
       labelBatches.forEach((batch) => {
         const g = labelLayer.append('g')
           .attr('class', 'dv-data-label-series')
@@ -420,6 +435,23 @@ export function CartesianChart(host, cfg) {
     /* [WATERMARK-05] 水印置顶：build 末尾追加 = DOM 顺序最上、贴数据图形之上不被裁剪；
        低透明 + pointer-events:none（CSS）不干扰 hover/tooltip。锚 frame.grid 绘图区角、随 resize 重排。 */
     if (wm) renderWatermark(frame.svg.append('g').attr('class', 'dv-watermark-layer'), frame, { spec: wm, mode: modeOf(host) });
+
+    /* ── [MOTION-01/04/05/07] 入场生长（本函数最后一步，此前所有元素都已画到终态）──
+       只在首次挂载播；animation:false 或系统「减弱动态效果」下直接终态——不是跑一遍 0ms 空动画，
+       而是根本不进这个分支，保证与不带本能力时逐像素一致（MOTION-07 的零回归验收点）。
+       坐标系 / 图例 / 轴标题 / 缩放轴 / 水印不参与生长；数据标签整层先藏、结束后出现（MOTION-05）。
+       hover 已在上面接线，生长期间即可用（气泡取数据真值，与动画进度无关）。 */
+    const animate = animation && firstBuild && grow.length > 0 && !reducedMotion();
+    firstBuild = false;
+    if (!animate) return;
+
+    if (labelLayer) labelLayer.style('display', 'none');
+    grow.forEach((draw) => draw(0)); /* 先落零帧，避免首帧闪出终态再跳回起点 */
+    stopGrow = runGrowth(
+      tokenNum(plotHost, '--motion-duration-grow'), /* [MOTION-02] 全图统一时长，不按图表 / 数据分档 */
+      (t) => grow.forEach((draw) => draw(t)),
+      { onDone: () => { if (labelLayer) labelLayer.style('display', null); } },
+    );
   }
 
   build();
@@ -428,5 +460,5 @@ export function CartesianChart(host, cfg) {
     if (!usesContainerHeight && Math.abs(host.clientHeight - naturalHostHeight) > 1) usesContainerHeight = true;
     build();
   });
-  return { destroy: () => { stopHover(); stop(); host.innerHTML = ''; } };
+  return { destroy: () => { stopGrow(); stopHover(); stop(); host.innerHTML = ''; } };
 }

@@ -161,6 +161,7 @@
   --font-weight-axis-title: var(--font-weight-axis);
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
+  --motion-duration-grow: 480ms;
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -349,6 +350,7 @@
   --font-weight-axis-title: var(--font-weight-axis);
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
+  --motion-duration-grow: 480ms;
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -540,6 +542,7 @@
   --font-weight-axis-title: var(--font-weight-axis);
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
+  --motion-duration-grow: 480ms;
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

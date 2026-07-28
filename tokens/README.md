@@ -82,7 +82,8 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
 - 绘图区、网格线和引导线等跨图表值归入“图表公共”分类；
 - 滑块高度、把手和选区圆角归入“缩放轴 Axes Navigator”；
 - `Data Label`：数据标签（字号、两档前景色与净距）；
-- `Axis Title`：轴标题（色 / 字号 / 行高 / 字重均别名到轴标签同名项，仅带内间距自有）。
+- `Axis Title`：轴标题（色 / 字号 / 行高 / 字重均别名到轴标签同名项，仅带内间距自有）；
+- `Motion`：动效（入场生长时长 `motion-duration-grow`，全站统一、三主题同值；缓动曲线不在此——`cubic-bezier` 的四个系数无法经 `tokenNum` 解析，作为规范值常量留在 `charts/core/motion.js`，见 [specs/motion.md](../specs/motion.md) MOTION-02/03）。
 
 ## 修改要求
 

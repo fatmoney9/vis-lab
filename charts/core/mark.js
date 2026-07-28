@@ -37,6 +37,7 @@ function barRadius(width, rMax, rReduced, fullMinWidth, reducedMinWidth) {
  *   x —— bandX 比例尺（类目→band 左沿）；y —— linearY 比例尺
  * 规则：null 跳过 · 0 →（zeroBar&&base=0 时）--size-zero-bar-placeholder（1px）贴基线，否则不画 ·
  *       段 = 值区间 [base, base+v]，正向远离基线端圆角、负向另一端。默认参数下与 v1 完全一致。
+ * 返回 draw(t)：[MOTION-01] 生长动效的逐帧重绘闭包（t=0..1），调用方不用则忽略——本函数自身已画到终态。
  */
 export function renderBars(g, frame, series, x, y) {
   const { categories, values, base = null, offset, width, colorVar, rounded = true, capped = null, zeroBar = true } = series;
@@ -53,17 +54,28 @@ export function renderBars(g, frame, series, x, y) {
     .map((c, i) => ({ key: c, v: values[i], b: base ? base[i] : 0, bx: x(c) + offset, r: (capped ? capped[i] : rounded) ? radius : 0 }))
     .filter((d) => d.v != null);
 
-  g.selectAll('path.dv-bar')
+  const sel = g.selectAll('path.dv-bar')
     .data(bars, (d) => d.key)
     .join('path')
-    .attr('class', 'dv-bar')
-    .attr('d', (d) => {
-      if (d.v === 0) return zeroBar && d.b === 0 ? barPath(d.bx, y(0) - zeroH, width, zeroH, 0, 'top') : null;
-      const top = d.b + d.v;                              // 段的另一端（值空间）
-      const yHi = y(Math.max(d.b, top));                  // 像素上沿（值大 → y 小）
-      const h = Math.abs(y(top) - y(d.b));
-      return barPath(d.bx, yHi, width, h, d.r, d.v > 0 ? 'top' : 'bottom');
-    });
+    .attr('class', 'dv-bar');
+
+  /* [MOTION-01][MOTION-06] 逐帧重绘闭包：上面的 token 读取与 data join 只做一次，这里只重写 d
+     （tokenNum 走 getComputedStyle，放进逐帧回调会每帧触发样式重算）。
+     生长 = 值空间里**段的两端同乘进度 t**（base 与 base+v 一起收向 0）：单柱从零基线长起，
+     堆叠整根作为一个实心柱一起长、段比例全程正确且段间无缝。圆角半径已被 barPath 里的
+     min(r, w/2, h) 夹住，h 从 0 长起时圆角自然从 0 长到满值——这也正是不能用 transform: scaleY()
+     生长的原因（那会把 radius-bar-top 压扁）。t 缺省 1 = 终态，与无动效时逐像素一致。 */
+  const draw = (t = 1) => sel.attr('d', (d) => {
+    if (d.v === 0) return zeroBar && d.b === 0 ? barPath(d.bx, y(0) - zeroH * t, width, zeroH * t, 0, 'top') : null;
+    const lo = d.b * t;                                   // 段的基线端（值空间）
+    const top = (d.b + d.v) * t;                          // 段的另一端
+    const yHi = y(Math.max(lo, top));                     // 像素上沿（值大 → y 小）
+    const h = Math.abs(y(top) - y(lo));
+    return barPath(d.bx, yHi, width, h, d.r, d.v > 0 ? 'top' : 'bottom');
+  });
+
+  draw();
+  return draw;
 }
 
 /*
@@ -84,6 +96,7 @@ export function renderBars(g, frame, series, x, y) {
  *   底=grid 底，故 objectBoundingBox 垂直渐变即为「最大值→grid 底部」；null 断口面积同断；画在线下方。
  * opts.stackFill（堆叠折线）：折线与其累计基线（series.base）之间填**与线同色**的填充带，
  *   不透明度 --opacity-line-stack-fill（0.2，样式在 styles.css）；null 断口同断；画在线下方。
+ * 返回 draw(t)：[MOTION-01] 生长动效的逐帧重绘闭包（t=0..1），调用方不用则忽略——本函数自身已画到终态。
  */
 export function renderLine(g, frame, series, x, y, opts = {}) {
   const { showPoints = true, multi = false, area: withArea = false, stackFill = false, pointShape = 'circle' } = opts;
@@ -96,20 +109,27 @@ export function renderLine(g, frame, series, x, y, opts = {}) {
     .classed('points-muted', !showPoints)
     .classed('lines-multi', multi);
 
-  const pts = categories.map((c, i) => ({ key: c, i, v: values[i], cx: x(c) + x.bandwidth() / 2 }));
+  /* b = 该点的累计基线（堆叠填充带的下沿）。挂在点上而非查 base[i]，是为了生长时
+     末端插值点能连基线一起插——否则前沿那一列的填充带下沿会跳到下一个类目的基线（MOTION-01）。 */
+  const pts = categories.map((c, i) => ({ key: c, i, v: values[i], b: base ? base[i] ?? 0 : 0, cx: x(c) + x.bandwidth() / 2 }));
   const gen = line().defined((d) => d.v != null).x((d) => d.cx).y((d) => y(d.v));
 
+  let bandSel = null;
+  let bandGen = null;
   if (stackFill && base) { /* 堆叠填充带在前、线在后（线压带上） */
-    const bandGen = area().defined((d) => d.v != null)
-      .x((d) => d.cx).y1((d) => y(d.v)).y0((d) => y(base[d.i] ?? 0));
-    g.selectAll('path.dv-line-stack-fill').data([pts]).join('path')
-      .attr('class', 'dv-line-stack-fill').attr('d', bandGen);
+    bandGen = area().defined((d) => d.v != null)
+      .x((d) => d.cx).y1((d) => y(d.v)).y0((d) => y(d.b));
+    bandSel = g.selectAll('path.dv-line-stack-fill').data([pts]).join('path')
+      .attr('class', 'dv-line-stack-fill');
   }
 
+  let areaSel = null;
+  let areaGen = null;
   if (withArea) { /* 面积在前、线在后（SVG 文档序 = 绘制序，线压面积上） */
     const id = `dv-area-grad-${++areaGradSeq}`;
     const from = tokenNum(frame.host, '--opacity-line-area-from');
     const to = tokenNum(frame.host, '--opacity-line-area-to');
+    /* 渐变 def 只在这里建一次——逐帧重跑本段会每帧泄漏一个 <linearGradient>（MOTION-01 Don't） */
     const grad = g.append('defs').append('linearGradient')
       .attr('id', id).attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
     grad.selectAll('stop')
@@ -118,18 +138,19 @@ export function renderLine(g, frame, series, x, y, opts = {}) {
       .attr('class', 'dv-line-area-stop')
       .attr('offset', (d) => d.off)
       .attr('stop-opacity', (d) => d.op);
-    const areaGen = area().defined((d) => d.v != null)
+    areaGen = area().defined((d) => d.v != null)
       .x((d) => d.cx).y1((d) => y(d.v)).y0(frame.grid.bottom);
-    g.selectAll('path.dv-line-area').data([pts]).join('path')
-      .attr('class', 'dv-line-area').attr('fill', `url(#${id})`).attr('d', areaGen);
+    areaSel = g.selectAll('path.dv-line-area').data([pts]).join('path')
+      .attr('class', 'dv-line-area').attr('fill', `url(#${id})`);
   }
 
-  g.selectAll('path.dv-line').data([pts]).join('path').attr('class', 'dv-line').attr('d', gen);
+  const lineSel = g.selectAll('path.dv-line').data([pts]).join('path').attr('class', 'dv-line');
   const ptData = pts.filter((d) => d.v != null);
+  let ptSel;
   if (pointShape === 'diamond') {
     /* 菱形 = 正方形绕中心旋 45°；边长含描边 = size-line-point（与圆的直径口径一致） */
     const s = Math.max(1, point - stroke);
-    g.selectAll('rect.dv-line-point')
+    ptSel = g.selectAll('rect.dv-line-point')
       .data(ptData, (d) => d.key)
       .join('rect')
       .attr('class', 'dv-line-point')
@@ -140,7 +161,7 @@ export function renderLine(g, frame, series, x, y, opts = {}) {
       .attr('height', s)
       .attr('transform', (d) => `rotate(45 ${d.cx} ${y(d.v)})`);
   } else {
-    g.selectAll('circle.dv-line-point')
+    ptSel = g.selectAll('circle.dv-line-point')
       .data(ptData, (d) => d.key)
       .join('circle')
       .attr('class', 'dv-line-point')
@@ -149,4 +170,41 @@ export function renderLine(g, frame, series, x, y, opts = {}) {
       .attr('cy', (d) => y(d.v))
       .attr('r', r);
   }
+
+  /*
+   * [MOTION-01] 逐帧重绘闭包：横向生长，前沿自左向右扫过**折线自身的跨度**（首末非 null 点之间），
+   * 于是线从第一帧就开始推进、并恰好在 t=1 抵达末点。截断用「可见点 + 末端线性插值出的半格点」
+   * 重喂 d3 生成器，而不是 stroke-dasharray + getTotalLength()：后者在 .defined() 造成的多 subpath
+   * （null 断口）上 dashoffset 连续累计，跨断口时会视觉跳变。
+   * 面积 / 堆叠填充带吃同一份可见点数组，数据点按前沿扫过与否显隐；t≥1 一律还原成终态属性。
+   */
+  const [first, last] = ptData.length ? [ptData[0].cx, ptData[ptData.length - 1].cx] : [0, 0];
+  const upto = (front) => {
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.cx <= front) { out.push(p); continue; }
+      const prev = pts[i - 1];
+      if (prev && prev.cx <= front && prev.v != null && p.v != null) { /* 末端半格点：线连续推进而非逐点跳格 */
+        const k = (front - prev.cx) / (p.cx - prev.cx);
+        const lerp = (a, z) => a + (z - a) * k;
+        out.push({ key: `${p.key}~grow`, i: p.i, v: lerp(prev.v, p.v), b: lerp(prev.b, p.b), cx: front });
+      }
+      break;
+    }
+    return out;
+  };
+
+  const draw = (t = 1) => {
+    const done = t >= 1;
+    const front = first + (last - first) * t;
+    const vis = done ? pts : upto(front);
+    if (bandSel) bandSel.attr('d', bandGen(vis));
+    if (areaSel) areaSel.attr('d', areaGen(vis));
+    lineSel.attr('d', gen(vis));
+    ptSel.attr('display', done ? null : (d) => (d.cx <= front ? null : 'none'));
+  };
+
+  draw();
+  return draw;
 }
