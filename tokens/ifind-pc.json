@@ -216,5 +216,8 @@
   "line-height-axis-title": "{line-height-axis}",
   "font-weight-axis-title": "{font-weight-axis}",
   "color-text-axis-title": "{color-text-axis}",
-  "spacing-axis-title-gap": "{spacing-4}"
+  "spacing-axis-title-gap": "{spacing-4}",
+
+  "$section-23": "动效 Motion",
+  "motion-duration-grow": "480ms"
 }

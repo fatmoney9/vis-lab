@@ -76,9 +76,10 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  *   area      主线渐变面积（仅非堆叠且含折线的 cartesian 配置，见 supportsArea）
  *   dataLabel 数据标签三态（LABEL-05）
  *   axisTitle 轴标题开关（AXISTITLE-01，默认不显示；开时注入 { y, y2, x } 文案）
+ *   animation 入场生长开关（MOTION-01/07，**默认开**——与其他旋钮相反，关掉才落进 cfg）
  */
 export const CHART_CAPABILITIES = {
-  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true },
+  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true },
 };
 
 /* [AXISTITLE-01] 轴标题旋钮打开时注入的通用文案；示例可用自己的 axisTitle 字段覆盖（给更贴切的文案）。
@@ -213,17 +214,23 @@ export const supportsArea = (example) => {
 /* 该示例实际可用的旋钮（图表类型能力 ∩ 本示例配置形态） */
 export const capabilitiesOf = (example) => {
   const caps = CHART_CAPABILITIES[example.chart] ?? {};
-  return { zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle, area: supportsArea(example) };
+  return {
+    zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
+    animation: !!caps.animation, area: supportsArea(example),
+  };
 };
 
 /*
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
- *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle } —— 各项皆可缺省
+ *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle, animation } —— 各项皆可缺省
  * 主题与明暗不进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 + behavior 解析。
  */
 export function buildConfig(example, state = {}) {
-  const { density = 'few', platform = 'pc', zoom = false, area = false, dataLabel = 'auto', axisTitle = false } = state;
+  const {
+    density = 'few', platform = 'pc', zoom = false, area = false,
+    dataLabel = 'auto', axisTitle = false, animation = true,
+  } = state;
   const caps = capabilitiesOf(example);
   const cfg = { ...example.cfg(DENSITY[density] ?? DENSITY.few), platform };
 
@@ -243,5 +250,8 @@ export function buildConfig(example, state = {}) {
     if (mainLine) mainLine.area = true;
   }
   if (caps.dataLabel && dataLabel !== 'auto') cfg.dataLabel = dataLabel === true || dataLabel === 'on';
+  /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
+     与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
+  if (caps.animation && animation === false) cfg.animation = false;
   return cfg;
 }

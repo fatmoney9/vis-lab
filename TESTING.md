@@ -48,7 +48,8 @@ node hooks/lint-spec-ids.mjs
 - `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计；
 - `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
-- `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2` 等，`buildConfig`）。
+- `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
+- `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg 等，`buildConfig`）。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。

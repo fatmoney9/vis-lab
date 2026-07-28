@@ -36,7 +36,7 @@ node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.m
 | 目录 | 层 | 内容 |
 |---|---|---|
 | `tokens/` | L0 | 三主题值 token、行为矩阵、系列色板；`tokens.css` 是生成物，不要手改 |
-| `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、比例尺、格式化 |
+| `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、动效、比例尺、格式化 |
 | `charts/charts/` | L2 | 图表编排（当前 `cartesian`：柱 / 堆叠 / 折线 / 折柱组合 / 双 Y） |
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 两个预览面共享的示例数据源与图表类型注册表 |
@@ -63,7 +63,7 @@ node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.m
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 分支、提交、PR 与质量门禁 |
 | [TESTING.md](TESTING.md) | 测试分层、覆盖矩阵、视觉基线规则 |
 | [AGENTS.md](AGENTS.md) | 给 AI 会话的项目约定 |
-| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) |
+| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [动效](specs/motion.md) |
 
 当前进度与后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)；
 各规范页末尾的「待办」是未完成能力的权威清单——未验证的能力不标为完成。
