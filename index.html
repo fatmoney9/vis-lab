@@ -26,6 +26,7 @@
       --shell-hover: rgba(15, 23, 42, .045);
       --shell-click: rgba(15, 23, 42, .1);
       --shell-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+      --shell-chart-shadow: 0 8px 24px rgba(15, 23, 42, .08);
       --topbar-h: 64px;
       --sidebar-w: 224px;
       --settings-w: 304px;
@@ -215,15 +216,46 @@
     .detail-title-row h1 { margin: 0 0 8px; font-size: 20px; line-height: 24px; }
     .detail-title-row p { max-width: 720px; margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
     .spec-chip { flex: none; padding: 4px 8px; border-radius: 4px; background: var(--shell-brand-weak); color: var(--shell-brand); font-size: 11px; }
-    .stage { overflow: hidden; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
+    .stage { overflow: hidden; border: 1px solid var(--shell-divider-strong); border-radius: 8px; background: var(--shell-panel); box-shadow: var(--shell-shadow); }
     .stage__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--shell-divider); }
     .stage__theme { font-size: 13px; font-weight: 500; }
     .stage__meta { color: var(--shell-text-3); font-size: 11px; }
     .stage__canvas { min-height: 360px; padding: 40px 24px; overflow: auto; }
-    .stage__surface { min-width: 320px; margin: 0 auto; padding: 16px; background: var(--shell-panel); transition: width .16s; }
-    .stage__surface[data-platform="pc"] { width: min(100%, 736px); }
-    .stage__surface[data-platform="mobile"] { width: min(100%, 390px); }
-    .stage__surface[data-mode="dark"] { background: var(--shell-dark); }
+    .stage__surface {
+      position: relative;
+      min-width: 320px;
+      min-height: 260px;
+      max-width: 100%;
+      width: min(100%, 736px);
+      height: 420px;
+      margin: 0 auto;
+      padding: 16px;
+      overflow: auto;
+      resize: both;
+      border: 1px solid var(--shell-divider-strong);
+      border-radius: 8px;
+      background: var(--shell-panel);
+      box-shadow: var(--shell-chart-shadow);
+      transition: background .16s, border-color .16s, box-shadow .16s;
+    }
+    .stage__surface::after {
+      content: "";
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 12px;
+      height: 12px;
+      border-right: 1px solid var(--shell-text-4);
+      border-bottom: 1px solid var(--shell-text-4);
+      pointer-events: none;
+    }
+    .stage__surface[data-platform="mobile"] { width: min(100%, 390px); height: 360px; }
+    .stage__surface[data-platform="mobile"][data-resolution="iphone-se"] { width: min(100%, 375px); height: 667px; }
+    .stage__surface[data-platform="mobile"][data-resolution="iphone-12"] { width: min(100%, 390px); height: 844px; }
+    .stage__surface[data-platform="mobile"][data-resolution="iphone-plus"] { width: min(100%, 414px); height: 896px; }
+    .stage__surface[data-platform="mobile"][data-resolution="iphone-pro-max"] { width: min(100%, 430px); height: 932px; }
+    .stage__surface[data-mode="dark"] { background: var(--shell-dark); border-color: rgba(255, 255, 255, .16); box-shadow: 0 10px 28px rgba(0, 0, 0, .22); }
+    .stage__surface .chart-host { height: 100%; }
     .logic-card { margin-top: 20px; padding: 16px; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
     .logic-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
     .logic-card p { margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
@@ -275,7 +307,7 @@
       .page-head { align-items: flex-start; flex-direction: column; margin-bottom: 24px; }
       .detail__main { padding: 16px; }
       .stage__canvas { padding: 16px 0; }
-      .stage__surface { min-width: 0; }
+      .stage__surface { min-width: 0; width: 100%; height: 360px; resize: vertical; }
     }
   </style>
 </head>
@@ -326,6 +358,12 @@
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
     const EXAMPLES = examplesFor('index');
     const GROUPS = ['全部示例', ...groupsFor('index')];
+    const MOBILE_RESOLUTIONS = [
+      ['iphone-12', '390 × 844'],
+      ['iphone-se', '375 × 667'],
+      ['iphone-plus', '414 × 896'],
+      ['iphone-pro-max', '430 × 932'],
+    ];
 
     const state = {
       group: '全部示例',
@@ -333,6 +371,7 @@
       detail: null,
       theme: 'ths',
       platform: 'pc',
+      mobileResolution: 'iphone-12',
       mode: 'light',
       density: 'few',
       area: false,
@@ -421,6 +460,7 @@
       return {
         theme: state.theme,
         platform: state.platform,
+        ...(state.platform === 'mobile' ? { viewport: MOBILE_RESOLUTIONS.find(([id]) => id === state.mobileResolution)?.[1] } : {}),
         mode: state.mode,
         categories: `Array(${cfg.categories.length})`,
         series: cfg.series.map((series) => ({
@@ -441,6 +481,7 @@
     function renderDetail() {
       const example = state.detail;
       const theme = THEMES.find((item) => item.id === state.theme);
+      const mobileResolution = MOBILE_RESOLUTIONS.find(([id]) => id === state.mobileResolution)?.[1];
       /* 旋钮按图表类型能力显隐——接入饼 / 环等无类目轴的图表时，缩放轴等开关自动不出现 */
       const caps = capabilitiesOf(example);
       const areaAvailable = caps.area;
@@ -461,10 +502,10 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${state.platform === 'pc' ? 'PC' : '移动端'} · ${state.mode === 'light' ? '浅色' : '深色'} · ${DENSITY[state.density]} 类目</span>
+              <span class="stage__meta">${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${DENSITY[state.density]} 类目</span>
             </div>
             <div class="stage__canvas">
-              <div class="stage__surface" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}">
+              <div class="stage__surface" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-resolution="${state.mobileResolution}">
                 <div class="chart-host"></div>
               </div>
             </div>
@@ -482,6 +523,7 @@
           <div class="settings__panel" id="settings-panel">
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="theme-select">主题</label><span class="field__hint">data-theme</span></div><select class="select" id="theme-select">${THEMES.map((item) => `<option value="${item.id}"${state.theme === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
+            ${state.platform === 'mobile' ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="mobile-resolution-select">移动端分辨率</label><span class="field__hint">仅影响演示视口尺寸</span></div><select class="select" id="mobile-resolution-select">${MOBILE_RESOLUTIONS.map(([id, label]) => `<option value="${id}"${state.mobileResolution === id ? ' selected' : ''}>${label}</option>`).join('')}</select></div></div>` : ''}
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
             ${caps.zoom ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
@@ -515,6 +557,10 @@
         state.density = event.target.value;
         rerenderDetail();
       });
+      document.getElementById('mobile-resolution-select')?.addEventListener('change', (event) => {
+        state.mobileResolution = event.target.value;
+        rerenderDetail();
+      });
       document.getElementById('zoom-switch')?.addEventListener('change', (event) => {
         state.zoom = event.target.checked;
         rerenderDetail();
@@ -533,7 +579,7 @@
       });
       document.getElementById('reset-button').addEventListener('click', () => {
         Object.assign(state, {
-          theme: 'ths', platform: 'pc', mode: 'light', density: 'few', area: false, zoom: false, axisTitle: false, animation: true,
+          theme: 'ths', platform: 'pc', mobileResolution: 'iphone-12', mode: 'light', density: 'few', area: false, zoom: false, axisTitle: false, animation: true,
         });
         rerenderDetail();
       });
