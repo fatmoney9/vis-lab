@@ -60,7 +60,7 @@
 
 ## 活 demo
 
-`playground/cartesian-preview.html` 与 `index.html` 的 **轴标题** 旋钮（`axisTitle` 开 / 关）：
+`playground/preview.html` 与 `index.html` 的 **轴标题** 旋钮（`axisTitle` 开 / 关）：
 
 - **关**（默认）：三主题与不带标题时逐像素一致——零回归的验收点。
 - **开**：`基础柱状图` 一次看全三种对齐口径——THS `inside`（标题右沿贴最长 Y 标签末端）、

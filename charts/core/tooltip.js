@@ -37,7 +37,11 @@ export function createTooltip(plotHost) {
    */
   function show({ title: titleText, rows }, marker) {
     root.classed('is-visible', true);
-    title.text(titleText);
+    /* [TOOLTIP-02] 标题行**可省**：无标题维度的图（饼 / 环等无坐标系图，见 specs/pie.md PIE-05）
+       不传 title 时整行不渲染——渲染成空行并不等于没有，它仍占 spacing-tooltip-row 的下间距
+       与 iFinD 特例的标题行下分割线，会在气泡顶部露出一条孤立横线。 */
+    const hasTitle = titleText != null && titleText !== '';
+    title.style('display', hasTitle ? null : 'none').text(hasTitle ? titleText : '');
     const row = rowsHost.selectAll('div.dv-tooltip__row').data(rows, (d) => d.key)
       .join((enter) => {
         const r = enter.append('div').attr('class', 'dv-tooltip__row');

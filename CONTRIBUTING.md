@@ -17,7 +17,7 @@ git config core.hooksPath hooks
 python3 -m http.server 8123
 ```
 
-对外站点访问 `http://localhost:8123/`，开发验收面访问 `http://localhost:8123/playground/cartesian-preview.html`（两面的分工见 [README](README.md)）。
+对外站点访问 `http://localhost:8123/`，开发验收面访问 `http://localhost:8123/playground/preview.html`（两面的分工见 [README](README.md)）。
 
 ## 领取任务与建分支
 

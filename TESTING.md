@@ -49,7 +49,8 @@ node hooks/lint-spec-ids.mjs
 - `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
 - `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
-- `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg 等，`buildConfig`）。
+- `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩）、标签锚点与可用宽（`sliceAngles` / `donutRadii` / `labelAnchor`）。
+- `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。
@@ -83,7 +84,7 @@ Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单
 
 ### 浏览器夹具
 
-浏览器测试应调用公开的 `CartesianChart`，只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
+浏览器测试应调用公开的 L2 组件（`CartesianChart` / `PieChart`），只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
 L2 临场拼装 L1，也不得加入只为截图好看的样式参数。
 
 建议为每个稳定场景提供固定 ID：

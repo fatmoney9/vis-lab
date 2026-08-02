@@ -99,7 +99,7 @@ export function CartesianChart(host, cfg) {
 
   /* DOM 骨架（一次性）：图例在上、绘图区在下（LEGEND-04） */
   host.classList.add('dv-chart');
-  const legendHost = select(host).append('div').node();
+  const legendHost = select(host).append('div').attr('class', 'dv-chart__legend').node();
   const plotHost = select(host).append('div').attr('class', 'dv-chart__plot').node();
 
   /* [LEGEND-05] hover 弱化：柱 / 线系列 <g> 的 opacity，图例本身不动。

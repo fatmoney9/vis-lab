@@ -345,7 +345,7 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, groupsFor, THEMES, DENSITY, INITIAL_ZOOM, AXIS_TITLES, capabilitiesOf } from './demos/examples.js';
+    import { examplesFor, groupsFor, THEMES, DENSITY, capabilitiesOf, describeConfig } from './demos/examples.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -452,26 +452,17 @@
       return MOBILE_RESOLUTIONS.find((item) => item.id === id) || MOBILE_RESOLUTIONS[0];
     }
 
+    /* 摘要器在 demos/examples.js：它内部调的就是同一个 buildConfig，故这里展示的
+       与真正传进组件的是同一份 cfg（铁律3：面不自己拼配置，也不自己猜配置的形状）。
+       只有**不进 cfg** 的三项单列在前：主题 / 明暗写在容器的 data-* 上走 CSS 级联，
+       机型视口只决定外壳尺寸、不传给组件。platform 由 describeConfig 从 cfg 带出。
+       cfg 里没有的字段（如未开的 zoom、默认开的 animation）照实不显示 = 走组件默认。 */
     function currentConfig(example) {
-      const cfg = example.cfg(DENSITY[state.density]);
       return {
         theme: state.theme,
-        platform: state.platform,
         ...(state.platform === 'mobile' ? { viewport: mobileResolutionOf(state.mobileResolution).label } : {}),
         mode: state.mode,
-        categories: `Array(${cfg.categories.length})`,
-        series: cfg.series.map((series) => ({
-          name: series.name,
-          type: series.type || 'bar',
-          axis: series.axis || 'primary',
-        })),
-        stack: cfg.stack || 'none',
-        zoom: state.zoom ? INITIAL_ZOOM : false,
-        ...(capabilitiesOf(example).area ? { area: state.area } : {}),
-        /* [AXISTITLE-01] 默认不显示；开关打开才有文案（示例自带的优先，如双 Y 的 y2） */
-        axisTitle: state.axisTitle ? { ...(example.axisTitle ?? AXIS_TITLES) } : false,
-        /* [MOTION-01/04] 入场生长，仅实例首次挂载时播——面板里动任意旋钮都会重建实例，故都会重播 */
-        animation: state.animation,
+        ...describeConfig(example, state),
       };
     }
 

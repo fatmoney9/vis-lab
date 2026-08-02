@@ -78,12 +78,19 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
 - `Grouped Bar`：分组柱状图；
 - `Line`：折线图；
 - `HBar`：横向柱状图；
-- `Donut`：环形图；
+- `Donut`：环形图（`PieChart` 的两种形态共用这组：饼图复用 `size-donut-radius` 作外半径、内半径取 0，
+  `size-donut-ring-width` 不参与；饼图是否需要独立尺寸见 [specs/pie.md](../specs/pie.md) 待办）。
+  **尺寸按主题分化**：THS / iFinD-PC `70 / 28`、Ainvest `80 / 32`（环宽:半径比都是 0.4）。
+  `size-donut-hover-expand` 是强调态外扩量（仅 Ainvest `10px`，另两主题 `0px` —— 0 即天然无形态，
+  组件无需按主题分支，同 `radius-bar-top` 的先例）；
 - 绘图区、网格线和引导线等跨图表值归入“图表公共”分类；
 - 滑块高度、把手和选区圆角归入“缩放轴 Axes Navigator”；
 - `Data Label`：数据标签（字号、两档前景色与净距）；
 - `Axis Title`：轴标题（色 / 字号 / 行高 / 字重均别名到轴标签同名项，仅带内间距自有）；
-- `Motion`：动效（入场生长时长 `motion-duration-grow`，全站统一、三主题同值；缓动曲线不在此——`cubic-bezier` 的四个系数无法经 `tokenNum` 解析，作为规范值常量留在 `charts/core/motion.js`，见 [specs/motion.md](../specs/motion.md) MOTION-02/03）。
+- `Motion`：动效。入场生长时长 `motion-duration-grow`（全站统一、三主题同值，MOTION-02）与
+  交互强调时长 `motion-duration-emphasis`（三主题 200ms，用于饼环扇区外扩等**即时应答**类动效——
+  刻意远短于入场，见 [specs/pie.md](../specs/pie.md) PIE-11）。缓动曲线不在此——`cubic-bezier` 的四个系数
+  无法经 `tokenNum` 解析，作为规范值常量留在 `charts/core/motion.js`（见 [specs/motion.md](../specs/motion.md) MOTION-03）。
 
 ## 修改要求
 

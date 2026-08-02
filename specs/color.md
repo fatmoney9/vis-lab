@@ -2,7 +2,8 @@
 
 > 权威源：各主题设计稿的「色板」章节（THS / iFinD-PC / Ainvest 各一套）。
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
-> 适用范围：所有图表的**数据系列色**（柱 / 折线 / 饼扇区 / 散点 …）。
+> 适用范围：所有图表的**数据系列色**（柱 / 折线 / 饼扇区 / 散点 …）。饼环的扇区取色见 COLOR-08
+> ——取色单位是扇区而非系列，但走的仍是这里的同一套色板与同一个取色器。
 > **元素色**（网格线、文字、tooltip、涨跌语义色等）不在此篇——它们是值 token，见 [tokens 的 README](../tokens/README.md)。
 
 ## 系列色为什么独立于 token
@@ -21,6 +22,7 @@
 | COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest `#265FFC`。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
 | COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色使用**完整的声明系列列表**，不是当前可见系列——隐藏一个系列不会重新调用取色或改变其余系列的固定槽位 | `CartesianChart` 传入归一化后的 `series`，并按 `seriesIndex` 固定 `--dv-series-i` | ✅ |
 | COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
+| COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → `bar-multi` 按序号取、超出循环（COLOR-02）。<br>**走通用 `bar-multi` 而非另立色板**：`type: 'pie'` 既非 `bar` 也非 `line`，`resolveSeriesColors` 的「柱线混合」判定天然为假，自然落到通用盘——这与 COLOR-05 补充里「纯折线走通用 `bar-multi`」是同一条口径（`line-multi` 只保留给折柱组合）。<br>**取色器一行不改**：现有算法已经覆盖本规则，本条只是把「扇区 → 槽位」这个映射写成权威表述。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `core/palette.js` → `resolveSeriesColors()`（无改动）；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
 
 ## 样式 token / 数据边界
 
@@ -33,3 +35,4 @@
 - [ ] **THS「按系列数量整取第 N 行」基础表**（当前多系列用末行固定第 N 色，覆盖分组柱；基础表用于基础柱等场景，届时给 palette.json 加 `by-count` 结构 + resolver 加模式）。
 - [ ] **Ainvest 动态条形图 16 色**（序列 8 + 浅色变体 8，按序号循环）。
 - [x] **标准多折线图**（非组合）的折线色板：**决定不设独立色板**——纯折线走通用 `bar-multi`（COLOR-05 补充），`line-multi` 仅保留为折柱组合子序列（原设想的 `line-standard` 独立序列不再需要）。
+- [x] **饼 / 环扇区取色** → COLOR-08：扇区即取色单位，走通用 `bar-multi` 按序号取，取色器无需改动。

@@ -100,9 +100,11 @@
   --size-legend-marker: 12px;
   --spacing-legend-marker-label: var(--spacing-2);
   --spacing-legend-item-h: var(--spacing-12);
+  --spacing-legend-item-v: var(--spacing-12);
   --spacing-legend-row-v: var(--spacing-4);
   --spacing-legend-container-v-top: var(--spacing-4);
   --spacing-legend-container-v-bottom: var(--spacing-12);
+  --spacing-legend-chart-gap: var(--spacing-24);
   --spacing-legend-container-h: var(--spacing-0);
   --opacity-visualization-dim: 0.2;
   --color-datazoom-filler: rgba(51, 102, 255, 0.08);
@@ -149,6 +151,7 @@
   --size-donut-container: 160px;
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
+  --size-donut-hover-expand: 0px;
   --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -162,6 +165,7 @@
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
   --motion-duration-grow: 480ms;
+  --motion-duration-emphasis: 200ms;
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -289,9 +293,11 @@
   --size-legend-marker: 12px;
   --spacing-legend-marker-label: var(--spacing-6);
   --spacing-legend-item-h: var(--spacing-20);
+  --spacing-legend-item-v: var(--spacing-12);
   --spacing-legend-row-v: var(--spacing-4);
   --spacing-legend-container-v-top: var(--spacing-4);
   --spacing-legend-container-v-bottom: var(--spacing-4);
+  --spacing-legend-chart-gap: var(--spacing-24);
   --spacing-legend-container-h: var(--spacing-0);
   --opacity-visualization-dim: 0.1;
   --color-datazoom-filler: rgba(95, 146, 228, 0.2);
@@ -338,6 +344,7 @@
   --size-donut-container: 160px;
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
+  --size-donut-hover-expand: 0px;
   --color-text-data-label-on-light: #292933;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-extra-small);
@@ -351,6 +358,7 @@
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
   --motion-duration-grow: 480ms;
+  --motion-duration-emphasis: 200ms;
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -481,9 +489,11 @@
   --size-legend-marker: 12px;
   --spacing-legend-marker-label: var(--spacing-6);
   --spacing-legend-item-h: var(--spacing-16);
+  --spacing-legend-item-v: var(--spacing-12);
   --spacing-legend-row-v: var(--spacing-4);
   --spacing-legend-container-v-top: var(--spacing-12);
   --spacing-legend-container-v-bottom: var(--spacing-12);
+  --spacing-legend-chart-gap: var(--spacing-24);
   --spacing-legend-container-h: var(--spacing-0);
   --opacity-visualization-dim: 0.2;
   --color-datazoom-filler: rgba(0, 0, 0, 0.6);
@@ -528,8 +538,9 @@
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
   --size-donut-container: 160px;
-  --size-donut-radius: 70px;
-  --size-donut-ring-width: 28px;
+  --size-donut-radius: 80px;
+  --size-donut-ring-width: 32px;
+  --size-donut-hover-expand: 10px;
   --color-text-data-label-on-light: #000000;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -543,6 +554,7 @@
   --color-text-axis-title: var(--color-text-axis);
   --spacing-axis-title-gap: var(--spacing-4);
   --motion-duration-grow: 480ms;
+  --motion-duration-emphasis: 200ms;
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

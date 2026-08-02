@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>L2 开发预览 · 直角坐标图（CartesianChart · 三主题 × 端 × 明暗）</title>
+<title>L2 开发预览 · 全图型（三主题 × 端 × 明暗）</title>
 <style>
   /* 值 token 由 tokens/tokens.css 提供（按 data-theme / data-platform / data-mode 作用域）；
-     系列色由 palette.js 取、CartesianChart 写成 --dv-series-i，预览无需任何色值替身。
+     系列色由 palette.js 取、各 L2 组件写成 --dv-series-i，预览无需任何色值替身。
      —— 本文件只做「预览外壳」的样式，图表内部一切颜色/字号仍走 token。 */
   :root {
     --shell-bg: #f4f5f7;
@@ -97,7 +97,11 @@
   .theme-card__meta { font-size: 11px; color: var(--shell-text-3); margin-left: auto; font-variant-numeric: tabular-nums; }
   .theme-card[data-mode="dark"] .theme-card__meta { color: rgba(255, 255, 255, 0.4); }
 
-  .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; }
+  /* 图表区比图本身高时（画布尺寸被 token 封顶、长不大的图，如饼环的 2R），
+     host 是 height:auto 会贴在顶部——默认就该竖直居中，而不是等用户点了 resize 手柄
+     切成 height:100% 后才由组件内部居中「归位」。
+     对画布会撑满的图（柱/线）host 恰好等于内容框高，居中与否无差别。 */
+  .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; display: flex; flex-direction: column; justify-content: center; }
   .chart-host { height: auto; }
   .theme-card.is-resized .chart-host { height: 100%; }
 
@@ -139,8 +143,8 @@
   <!-- 左：图表分类 -->
   <aside class="pane pane-left">
     <div class="brand">
-      <h1>CartesianChart</h1>
-      <p>直角坐标图 L2 预览 · 只传数据 + 语义配置</p>
+      <h1>L2 图表预览</h1>
+      <p>CartesianChart · PieChart —— 只传数据 + 语义配置</p>
     </div>
     <nav class="nav" id="nav"></nav>
   </aside>
@@ -190,6 +194,15 @@
           <button data-value="auto" class="is-active">默认</button>
           <button data-value="on">全开</button>
           <button data-value="off">全关</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>图例</b><span>legend</span></div>
+        <div class="seg" id="seg-legend">
+          <button data-value="auto" class="is-active">示例默认</button>
+          <button data-value="right">左右</button>
+          <button data-value="bottom">上下</button>
         </div>
       </div>
 
@@ -269,7 +282,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', legend: 'auto', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -327,6 +340,7 @@
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
+    document.getElementById('seg-legend').closest('.field').hidden = !caps.legend;
     document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
@@ -354,6 +368,7 @@
         zoom: state.zoom === 'on',
         area: state.area === 'on',
         dataLabel: state.label,
+        legend: state.legend, /* [PIE-09] 'auto' = 用示例自己声明的布局，见 buildConfig */
         axisTitle: state.axisTitle === 'on',
         animation: state.animation === 'on',
       }).instance;
@@ -375,6 +390,7 @@
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-label', 'label');
+  wireSeg('seg-legend', 'legend');
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');

@@ -54,6 +54,27 @@
 .dv-legend--center { justify-content: center; }
 .dv-legend--right { justify-content: flex-end; }
 
+/* [LEGEND-10] 纵向单列排布（左右结构用）：一项一行、不换行。
+   主轴换成纵向后，「左/中/右对齐」自然由 align-items 承载——语义与横排一致，
+   故下面两条要压过上面的 justify-content 版本（同特异性，靠声明序胜出）。
+   ⚠️ 纵向下没有换行兜底，项一多会把容器撑高——图例溢出（LEGEND-07）待办同样覆盖本排布。 */
+.dv-legend--column {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  /* 纵向下 justify-content 管的是**竖直**分布：整列居中，与左侧绘图区的视觉中线对齐 */
+  justify-content: center;
+  /* [LEGEND-01] 项距走纵向专属 token，**不复用换行行距**（--spacing-legend-row-v，4px）：
+     主轴转成竖直后 row-gap 会接管项与项的间距，若不显式覆盖就会静默套用为"换行兜底"定的那个值。
+     两者是不同意图——换行行距是横排放不下时的补偿，项距是纵列的主排布节奏。 */
+  row-gap: var(--spacing-legend-item-v);
+  /* [LEGEND-11] 纵列溢出 = 容器内纵向滑动（不分页、不截断、不换列）。
+     生效前提是父级 .dv-chart__legend 允许被压缩（min-height:0），见下方。 */
+  overflow-y: auto;
+}
+.dv-legend--column.dv-legend--center { align-items: center; }
+.dv-legend--column.dv-legend--right { align-items: flex-end; justify-content: center; }
+
 /* [LEGEND-02] 图例项 = marker + label；整项为点击 / hover 热区 */
 .dv-legend-item {
   display: inline-flex;
@@ -129,6 +150,11 @@
   pointer-events: none;
 }
 
+/* [PIE-01] 扇区：填充跟随所在分组 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）。
+   与柱同一口径——hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 不渲染，不在此表达。
+   不设描边：扇区间无间隙（PIE-01），描边会在相邻扇区之间挤出一条比设计稿更宽的缝。 */
+.dv-pie-sector { fill: currentColor; }
+
 /* [LABEL-02][LABEL-03][LABEL-08] 数据标签：字号是唯一主题分化项（--font-size-data-label）；
    默认 fill=currentColor = 所在 <g> 的系列色（档①，图形外空白区）；
    pointer-events:none 永不抢 hover 命中（标签层在 mark 之上）。 */
@@ -147,12 +173,58 @@
 .dv-data-label--on-light { fill: var(--color-text-data-label-on-light); }
 .dv-data-label--on-dark { fill: var(--color-text-data-label-on-dark); }
 
-/* [LEGEND-04] 图表容器：图例在上、绘图区在下各占其高（图例占位优先、给绘图区让位）。
+/* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
    主题无关的结构样式（无颜色）。 */
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余）。
    position:relative = tooltip 浮层的定位锚点（TOOLTIP-01，浮层像素与 svg 同坐标系） */
 .dv-chart { display: flex; flex-direction: column; }
-.dv-chart__plot { flex: 1; min-height: 0; position: relative; }
+.dv-chart__plot { flex: 1; min-height: 0; min-width: 0; position: relative; }
+
+/* [LEGEND-10] 图例方位：DOM 顺序恒为「绘图区 → 图例」（阅读序），方位只由 flex 方向决定，
+   不用 row-reverse 之类的视觉倒序——那会让 DOM 序与视觉序脱节，Tab 焦点和读屏顺序都跟着错。
+   · 缺省（无修饰类）——直角坐标图：容器 column + DOM 里图例在前 = 图例在上（LEGEND-04）
+   · --legend-right ——左右结构：图左图例右
+   · --legend-bottom——上下结构：图上图例下（容器本就是 column，此类只为语义显式化） */
+/* [PIE-09] 左右结构：图与图例**相邻成组、整组居中**（不是图撑满、图例被推到最右）。
+   故绘图区 flex:none 贴着环的方形尺寸成块（边长由 L2 显式传给 createFrame），
+   容器 justify-content 居中整组；两块间距走 --spacing-legend-chart-gap，
+   图例朝向图的那侧内边距清零，避免与 gap 叠加成双份。
+   ⚠️ 容器**不能**用 align-items:center 让两块各自居中：那样 .dv-chart__plot 的高度会塌成内容高，
+   而组件正是读 plotHost.clientHeight 决定画布边长（PIE-02）——首帧读到 0 就陷入
+   requestAnimationFrame 空转。故保持默认 stretch（绘图区撑满高度），
+   改由绘图区内部 flex 居中 SVG，视觉相同而无循环依赖。 */
+.dv-chart--legend-right {
+  flex-direction: row;
+  justify-content: center;
+  gap: var(--spacing-legend-chart-gap);
+}
+.dv-chart--legend-right > .dv-chart__plot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dv-chart--legend-right .dv-legend { padding-left: 0; }
+/* [PIE-09] 上下结构：图上图例下，同一份间距 token；图例的上内边距清零同理。
+   绘图区保持 flex:1 铺满宽度，环在其中水平居中 = 整体居中。 */
+.dv-chart--legend-bottom {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--spacing-legend-chart-gap);
+}
+/* 同左右结构：绘图区贴着画布成块（flex:none），不铺满剩余高度——
+   铺满的话环与下方图例之间会多出一段随容器浮动的空白，间距就不恒定了。 */
+.dv-chart--legend-bottom > .dv-chart__plot { flex: none; }
+.dv-chart--legend-bottom .dv-legend { padding-top: 0; }
+
+/* [LEGEND-11] 图例块的外壳：默认贴合内容；在左右结构下要能被压缩到容器高度以内
+   （flex 子项默认 min-height:auto = 不小于内容，不给 0 的话内部的 overflow-y 永远不触发，
+   图例会把整个卡片顶高而不是自己滚）。自身也做 flex，好让内部 .dv-legend 撑满可用高度。 */
+.dv-chart--legend-right > .dv-chart__legend {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+}
 /* 绘图 SVG：
    · display:block —— 消除 inline 替换元素的基线降部空隙（否则 plot 容器比 svg 高约半行的降部、下方多一条空白）。
    · [DATAZOOM-01] overflow:visible —— 贴边的缩放轴手柄其居中描边外半 + 投影会溢出 grid 边（= 无标签侧的视口边），
