@@ -164,6 +164,15 @@
     .nav-item:hover { background: var(--shell-hover); color: var(--shell-text); }
     .nav-item--active { background: var(--shell-brand-weak); color: var(--shell-brand); font-weight: 500; }
     .nav-item__count { color: var(--shell-text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+    /* 族标题：只作分节说明、不可点——可点的最小单位仍是「分类」，
+       族本身要看全部时走顶部的「全部示例」。样式刻意比 nav-item 轻一档，免得像个失效按钮。 */
+    .nav-family {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 10px 4px;
+    }
+    .nav-family__title { font-size: 11px; letter-spacing: .04em; color: var(--shell-text-3); }
+    .nav-family__count { font-size: 11px; color: var(--shell-text-3); font-variant-numeric: tabular-nums; }
+    .nav-family + .nav-item { margin-top: 0; }
     .sidebar__foot {
       display: flex;
       align-items: center;
@@ -220,15 +229,22 @@
     .stage__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--shell-divider); }
     .stage__theme { font-size: 13px; font-weight: 500; }
     .stage__meta { color: var(--shell-text-3); font-size: 11px; }
-    .stage__canvas { min-height: 360px; padding: 40px 24px; overflow: auto; }
+    /* 演示区把外壳**两个方向都居中**。以前外壳写死 420px 高、正好撑满这块，
+       看不出没做垂直居中；改成「高度由图表撑开」后矮图（如饼环只有 2R）就会贴顶。
+       用 flex + 子元素 margin:auto 而不是 align-items:center —— 这块 overflow:auto，
+       后者在内容比容器高时会把顶部溢出到滚不到的地方，auto 边距不会。 */
+    .stage__canvas { min-height: 360px; padding: 40px 24px; overflow: auto; display: flex; }
+    /* 演示外壳：**只给初始宽度，不给固定宽高**——高度由图表自然撑开、宽度可自由拖，
+       两个方向都随容器自适应（resize:both + ResizeObserver）。默认宽按端分：
+       PC 736 / 移动端取分辨率选择器给的那一档，与 playground 的卡片同一口径。 */
     .stage__surface {
       position: relative;
+      display: flex;              /* 单个 host 子项，配 margin:auto 做竖直居中 */
       min-width: 320px;
-      min-height: 260px;
+      min-height: 160px;          /* resize 的下限，两个方向都恒定生效（同 playground 卡片） */
       max-width: 100%;
       width: min(100%, 736px);
-      height: 420px;
-      margin: 0 auto;
+      margin: auto;   /* 左右 + 上下都居中（见 .stage__canvas 的说明） */
       padding: 16px;
       overflow: auto;
       resize: both;
@@ -239,16 +255,19 @@
       transition: background .16s, border-color .16s, box-shadow .16s;
     }
     .stage__surface[data-platform="mobile"] {
-      box-sizing: content-box;
-      min-height: 160px;
-      max-width: calc(100% - 34px);
-      width: min(calc(100% - 34px), var(--mobile-chart-width));
-      height: auto;
-      aspect-ratio: var(--mobile-chart-ratio);
-      resize: both;
+      max-width: 100%;
+      width: min(100%, var(--mobile-chart-width));
     }
     .stage__surface[data-mode="dark"] { background: var(--shell-dark); border-color: rgba(255, 255, 255, .16); box-shadow: 0 10px 28px rgba(0, 0, 0, .22); }
-    .stage__surface .chart-host { height: 100%; }
+    /* 高度**不定死**：host 高度 auto，由组件按 --size-chart-region-height 自然撑开——
+       那个 token 本身按主题分化（THS 160 / iFinD-PC 200 / Ainvest 200），所以「不同主题
+       默认多高」由 token 说了算，外壳一个数都不写死（与 playground 的卡片同一套做法）。
+       margin:auto 让它在被 min-height（或用户拖出的高度）撑高时仍竖直居中，不贴顶。 */
+    .stage__surface .chart-host { width: 100%; height: auto; margin: auto 0; }
+    /* 拖动之后高度交给容器：本类**只切 host 的高度口径，不设 surface 的 height**。
+       ⚠️ 这里写死一个 height 会让卡片在 pointerdown 的瞬间就从「内容高」跳到那个数——
+       手还没动，尺寸先变了。resize 手柄本就会从当前渲染尺寸开始写 inline 宽高，无需代劳。 */
+    .stage__surface.is-resized .chart-host { height: 100%; }
     .logic-card { margin-top: 20px; padding: 16px; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
     .logic-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
     .logic-card p { margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
@@ -272,6 +291,9 @@
     .segment { display: flex; margin-top: 8px; padding: 4px; border-radius: 4px; background: var(--shell-weak); }
     .segment__item { flex: 1; border: 0; border-radius: 2px; padding: 8px; background: transparent; color: var(--shell-text-2); cursor: pointer; font-size: 13px; }
     .segment__item--active { background: var(--shell-panel); color: var(--shell-text); font-weight: 500; box-shadow: var(--shell-shadow); }
+    /* 当前不生效的分段：置灰但**保留在原位**，让「哪一档才有它」看得见 */
+    .segment--disabled { opacity: .45; }
+    .segment--disabled .segment__item { cursor: not-allowed; }
     .switch { position: relative; display: inline-block; width: 39px; height: 24px; flex: none; }
     .switch input { position: absolute; width: 0; height: 0; opacity: 0; }
     .switch__track { position: absolute; inset: 0; border-radius: 12px; background: var(--shell-divider-strong); cursor: pointer; transition: background .16s; }
@@ -300,7 +322,7 @@
       .page-head { align-items: flex-start; flex-direction: column; margin-bottom: 24px; }
       .detail__main { padding: 16px; }
       .stage__canvas { padding: 16px 0; }
-      .stage__surface { min-width: 0; width: 100%; height: 360px; resize: vertical; }
+      .stage__surface { min-width: 0; width: 100%; resize: vertical; }
     }
   </style>
 </head>
@@ -321,9 +343,11 @@
 
   <div class="workspace" id="workspace">
     <aside class="sidebar">
+      <!-- 侧栏抬头不再写死某一个组件名（曾是「CartesianChart / 直角坐标图」）：
+           库里已有两族、后面还会更多，族名一律由 CHART_FAMILIES 派生并渲染进导航分节。 -->
       <div class="sidebar__head">
-        <span class="sidebar__eyebrow">CartesianChart</span>
-        <strong>直角坐标图</strong>
+        <span class="sidebar__eyebrow" id="sidebar-eyebrow"></span>
+        <strong>图表库</strong>
       </div>
       <div class="search">
         <div class="search__wrap">
@@ -334,7 +358,8 @@
       <nav class="category-nav" id="category-nav" aria-label="图表分类"></nav>
       <div class="sidebar__foot">
         <span class="status-dot" aria-hidden="true"></span>
-        <span>已接入 10 个活示例</span>
+        <!-- 计数改为渲染时填：写死的数字上次就已经过期（写 10、实际 12） -->
+        <span id="sidebar-count"></span>
       </div>
     </aside>
     <main class="main" id="main-content"></main>
@@ -345,21 +370,27 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, groupsFor, THEMES, DENSITY, INITIAL_ZOOM, AXIS_TITLES, capabilitiesOf } from './demos/examples.js';
+    import { examplesFor, familiesFor, suggestedLegend, THEMES, DENSITY, capabilitiesOf, describeConfig } from './demos/examples.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
     const EXAMPLES = examplesFor('index');
-    const GROUPS = ['全部示例', ...groupsFor('index')];
+    /* 分类导航按**图表族**分节（一个 L2 组件 = 一族），族内再列分类。
+       族与族名都从 demos/examples.js 派生，接新组件时本页一行不改。 */
+    const FAMILIES = familiesFor('index');
+    const ALL = '全部示例';
+    /* 移动端机型预设**只给初始宽度**：高度一概不预设，交给图表按
+       --size-chart-region-height 自然撑开（该 token 按主题分化，故「不同主题多高」
+       不该由外壳猜）。chartWidth = 机型宽减去两侧页边距。 */
     const MOBILE_RESOLUTIONS = [
-      { id: 'mobile-375', label: '375px', chartWidth: 343, chartHeight: 214 },
-      { id: 'mobile-390', label: '390px', chartWidth: 358, chartHeight: 223 },
-      { id: 'mobile-414', label: '414px', chartWidth: 382, chartHeight: 238 },
-      { id: 'mobile-430', label: '430px', chartWidth: 398, chartHeight: 248 },
+      { id: 'mobile-375', label: '375px', chartWidth: 343 },
+      { id: 'mobile-390', label: '390px', chartWidth: 358 },
+      { id: 'mobile-414', label: '414px', chartWidth: 382 },
+      { id: 'mobile-430', label: '430px', chartWidth: 398 },
     ];
 
     const state = {
-      group: '全部示例',
+      group: ALL,
       query: '',
       detail: null,
       theme: 'ths',
@@ -367,6 +398,10 @@
       mobileResolution: 'mobile-375',
       mode: 'light',
       density: 'few',
+      dataLabel: 'auto',      /* [LABEL-05] 开关的「开」= 按图表类型默认，不落进 cfg */
+      labelLayout: 'off',     /* [PIE-12] 饼环显隐 + 形态合一：关 / 引线 / 扇区内，默认关 */
+      labelAlign: 'anchor',   /* [PIE-13] 默认就近；仅引线档生效 */
+      legend: 'right',        /* [PIE-09] 默认左右；切到引线时由 suggestedLegend 拨到上下 */
       area: false,
       zoom: false,
       axisTitle: false,
@@ -376,6 +411,8 @@
     const main = document.getElementById('main-content');
     const workspace = document.getElementById('workspace');
     const categoryNav = document.getElementById('category-nav');
+    document.getElementById('sidebar-eyebrow').textContent = `${FAMILIES.length} 族图表`;
+    document.getElementById('sidebar-count').textContent = `已接入 ${EXAMPLES.length} 个活示例`;
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
     let charts = [];
@@ -388,16 +425,22 @@
     function filteredExamples() {
       const query = state.query.trim().toLowerCase();
       return EXAMPLES.filter((example) =>
-        (state.group === '全部示例' || example.group === state.group)
+        (state.group === ALL || example.group === state.group)
         && (!query || `${example.title}${example.description}${example.spec}`.toLowerCase().includes(query)));
     }
 
     function renderNavigation() {
-      categoryNav.innerHTML = GROUPS.map((group) => {
-        const count = group === '全部示例' ? EXAMPLES.length : EXAMPLES.filter((example) => example.group === group).length;
-        return `<button class="nav-item${state.group === group ? ' nav-item--active' : ''}" type="button" data-group="${group}">
+      const item = (group, count) =>
+        `<button class="nav-item${state.group === group ? ' nav-item--active' : ''}" type="button" data-group="${group}">
           <span>${group}</span><span class="nav-item__count">${count}</span>
         </button>`;
+      /* 「全部示例」独立在最上，不归任何一族——它是跨族的入口 */
+      categoryNav.innerHTML = item(ALL, EXAMPLES.length) + FAMILIES.map((family) => {
+        const total = EXAMPLES.filter((e) => e.chart === family.chart).length;
+        const groups = family.groups
+          .map((g) => item(g, EXAMPLES.filter((e) => e.group === g).length)).join('');
+        return `<div class="nav-family"><span class="nav-family__title">${family.label}</span>
+          <span class="nav-family__count">${total}</span></div>${groups}`;
       }).join('');
     }
 
@@ -411,12 +454,12 @@
 
     function renderGallery() {
       const items = filteredExamples();
-      const sections = state.group === '全部示例' && !state.query
+      const sections = state.group === ALL && !state.query
         ? [...new Set(items.map((item) => item.group))].map((group) => ({
           group,
           items: items.filter((item) => item.group === group),
         }))
-        : [{ group: state.group === '全部示例' ? '搜索结果' : state.group, items }];
+        : [{ group: state.group === ALL ? '搜索结果' : state.group, items }];
 
       main.innerHTML = `<div class="gallery">
         <header class="page-head">
@@ -443,35 +486,28 @@
       });
     }
 
-    function segment(name, options, value) {
-      return `<div class="segment" data-segment="${name}">${options.map(([id, label]) =>
-        `<button class="segment__item${value === id ? ' segment__item--active' : ''}" type="button" data-value="${id}">${label}</button>`).join('')}</div>`;
+    /* disabled = 该旋钮当前不生效（如「标签对齐」在非引线档下）——置灰而不是隐藏：
+       藏起来会让「这一档才有对齐可言」这件事变得不可见，用户只会以为功能没做。 */
+    function segment(name, options, value, disabled = false) {
+      return `<div class="segment${disabled ? ' segment--disabled' : ''}" data-segment="${name}"${disabled ? ' aria-disabled="true"' : ''}>${options.map(([id, label]) =>
+        `<button class="segment__item${value === id ? ' segment__item--active' : ''}" type="button" data-value="${id}"${disabled ? ' disabled' : ''}>${label}</button>`).join('')}</div>`;
     }
 
     function mobileResolutionOf(id) {
       return MOBILE_RESOLUTIONS.find((item) => item.id === id) || MOBILE_RESOLUTIONS[0];
     }
 
+    /* 摘要器在 demos/examples.js：它内部调的就是同一个 buildConfig，故这里展示的
+       与真正传进组件的是同一份 cfg（铁律3：面不自己拼配置，也不自己猜配置的形状）。
+       只有**不进 cfg** 的三项单列在前：主题 / 明暗写在容器的 data-* 上走 CSS 级联，
+       机型视口只决定外壳尺寸、不传给组件。platform 由 describeConfig 从 cfg 带出。
+       cfg 里没有的字段（如未开的 zoom、默认开的 animation）照实不显示 = 走组件默认。 */
     function currentConfig(example) {
-      const cfg = example.cfg(DENSITY[state.density]);
       return {
         theme: state.theme,
-        platform: state.platform,
         ...(state.platform === 'mobile' ? { viewport: mobileResolutionOf(state.mobileResolution).label } : {}),
         mode: state.mode,
-        categories: `Array(${cfg.categories.length})`,
-        series: cfg.series.map((series) => ({
-          name: series.name,
-          type: series.type || 'bar',
-          axis: series.axis || 'primary',
-        })),
-        stack: cfg.stack || 'none',
-        zoom: state.zoom ? INITIAL_ZOOM : false,
-        ...(capabilitiesOf(example).area ? { area: state.area } : {}),
-        /* [AXISTITLE-01] 默认不显示；开关打开才有文案（示例自带的优先，如双 Y 的 y2） */
-        axisTitle: state.axisTitle ? { ...(example.axisTitle ?? AXIS_TITLES) } : false,
-        /* [MOTION-01/04] 入场生长，仅实例首次挂载时播——面板里动任意旋钮都会重建实例，故都会重播 */
-        animation: state.animation,
+        ...describeConfig(example, state),
       };
     }
 
@@ -479,8 +515,9 @@
       const example = state.detail;
       const theme = THEMES.find((item) => item.id === state.theme);
       const mobileResolution = mobileResolutionOf(state.mobileResolution);
+      /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
       const mobileSurfaceStyle = state.platform === 'mobile'
-        ? ` style="--mobile-chart-width:${mobileResolution.chartWidth}px;--mobile-chart-ratio:${mobileResolution.chartWidth} / ${mobileResolution.chartHeight}"`
+        ? ` style="--mobile-chart-width:${mobileResolution.chartWidth}px"`
         : '';
       /* 旋钮按图表类型能力显隐——接入饼 / 环等无类目轴的图表时，缩放轴等开关自动不出现 */
       const caps = capabilitiesOf(example);
@@ -523,9 +560,13 @@
           <div class="settings__panel" id="settings-panel">
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="theme-select">主题</label><span class="field__hint">data-theme</span></div><select class="select" id="theme-select">${THEMES.map((item) => `<option value="${item.id}"${state.theme === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
-            ${state.platform === 'mobile' ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="mobile-resolution-select">移动端分辨率</label><span class="field__hint">规范宽 343px · 绘图区高 160px</span></div><select class="select" id="mobile-resolution-select">${MOBILE_RESOLUTIONS.map((item) => `<option value="${item.id}"${state.mobileResolution === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>` : ''}
+            ${state.platform === 'mobile' ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="mobile-resolution-select">移动端分辨率</label><span class="field__hint">仅决定初始宽度</span></div><select class="select" id="mobile-resolution-select">${MOBILE_RESOLUTIONS.map((item) => `<option value="${item.id}"${state.mobileResolution === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>` : ''}
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
             <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
+            ${caps.dataLabel ? `<div class="field"><span class="field__label">数据标签</span><span class="field__hint">LABEL-05 · 默认 = 各图表自己的规则；强开 = 分组柱 / 堆叠也画</span>${segment('dataLabel', [['auto', '默认'], ['on', '强开']], state.dataLabel)}</div>` : ''}
+            ${caps.labelLayout ? `<div class="field"><span class="field__label">标签形态</span><span class="field__hint">PIE-12 · 引线与标签强绑定，故显隐与形态是同一个选择</span>${segment('labelLayout', [['off', '关'], ['outside', '引线'], ['inside', '扇区内']], state.labelLayout)}</div>` : ''}
+            ${caps.labelAlign ? `<div class="field"><span class="field__label">标签对齐</span><span class="field__hint">PIE-13 · 仅引线档生效</span>${segment('labelAlign', [['anchor', '就近'], ['column', '成列'], ['edge', '贴边']], state.labelAlign, state.labelLayout !== 'outside')}</div>` : ''}
+            ${caps.legend ? `<div class="field"><span class="field__label">图例布局</span><span class="field__hint">PIE-09 · 切到引线时默认拨到上下，可改回</span>${segment('legend', [['right', '左右'], ['bottom', '上下']], state.legend)}</div>` : ''}
             ${caps.zoom ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.axisTitle ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标题</span><span class="field__hint">AXISTITLE-01..06 · 默认不显示</span></div><label class="switch" aria-label="轴标题"><input id="axis-title-switch" type="checkbox"${state.axisTitle ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.animation ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">入场动效</span><span class="field__hint">MOTION-01..07 · 默认开 · 仅首次挂载</span></div><label class="switch" aria-label="入场动效"><input id="animation-switch" type="checkbox"${state.animation ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
@@ -540,6 +581,14 @@
       </div>`;
 
       mountChart(main.querySelector('.stage .chart-host'), example);
+      /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
+         host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。
+         判定用右下 18px 热区：resize 手柄本身不派发独立事件，只能靠这个位置推断。 */
+      const surface = main.querySelector('.stage__surface');
+      surface.addEventListener('pointerdown', (event) => {
+        const rect = surface.getBoundingClientRect();
+        if (rect.right - event.clientX <= 18 && rect.bottom - event.clientY <= 18) surface.classList.add('is-resized');
+      });
       wireDetail();
     }
 
@@ -579,15 +628,21 @@
       });
       document.getElementById('reset-button').addEventListener('click', () => {
         Object.assign(state, {
-          theme: 'ths', platform: 'pc', mobileResolution: 'mobile-375', mode: 'light', density: 'few', area: false, zoom: false, axisTitle: false, animation: true,
+          theme: 'ths', platform: 'pc', mobileResolution: 'mobile-375', mode: 'light', density: 'few',
+          dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
+          area: false, zoom: false, axisTitle: false, animation: true,
         });
         rerenderDetail();
       });
       main.querySelectorAll('[data-segment]').forEach((control) => {
         control.addEventListener('click', (event) => {
           const button = event.target.closest('button');
-          if (!button) return;
-          state[control.dataset.segment] = button.dataset.value;
+          if (!button || button.disabled) return;
+          const key = control.dataset.segment;
+          state[key] = button.dataset.value;
+          /* [PIE-09][PIE-12] 切标签形态时把图例方位拨到该形态的建议默认值——
+             只改**默认**，用户随后仍可手动改回（映射在 demos/examples.js，两个面共用）。 */
+          if (key === 'labelLayout') state.legend = suggestedLegend(state.labelLayout);
           rerenderDetail();
         });
       });

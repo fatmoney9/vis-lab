@@ -39,7 +39,7 @@
 
 ## 活 demo
 
-`playground/cartesian-preview.html` 右栏「缩放轴 开/关」：开启给图表挂 `zoom:{start:0.35,end:1}`（初始窗口后 65% 类目）。
+`playground/preview.html` 右栏「缩放轴 开/关」：开启给图表挂 `zoom:{start:0.35,end:1}`（初始窗口后 65% 类目）。
 三主题横向对比：THS/iFinD 轨道内双色迷你阴影、Ainvest 纯轨道；数据量「中 16 / 多 36」下窗口 + Y 轴联动最明显。
 
 ## Do / Don't

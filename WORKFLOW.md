@@ -47,7 +47,7 @@
 | 面 | 位置 | 职责 |
 |---|---|---|
 | **对外站点** | `index.html` | 画廊 + 详情页、单主题切换；GitHub Pages 发布的就是它 |
-| **开发验收** | `playground/cartesian-preview.html` | 三主题横向并排、旋钮更全、可拖拽 resize，用于规范验收 |
+| **开发验收** | `playground/preview.html` | 三主题横向并排、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
 
 **示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 主题/密度档位 + 配置装配），
 `demos/registry.js` 登记「图表类型 → L2 组件」。两面 import 同一份、各自决定怎么展示，
@@ -93,7 +93,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 - 每条规则一个稳定 ID，格式 `{类别}-{序号}`：
   `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `AXISTITLE-` 轴标题 ·
   `DATAZOOM-` 缩放轴 · `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
-  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印
+  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印 ·
+  图型专属：`BAR-` 柱系 · `LINE-` 折线 · `PIE-` 饼环
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
 ---
@@ -165,10 +166,34 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-07-28，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
-`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+截至 2026-08-04，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+**两个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）
+与 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..14）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
-以及 token 合同、首批纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
+以及 token 合同、纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
+
+**接一个新图型要动多少 L1——`PieChart` 给出了实测答案**：除自身的 L2 目录与规范页外，L1 动了**四个文件、六处**，
+且全部是「把既有构件参数化 / 把说不清的约定收回 L1」而非新造抽象：
+
+| 文件 | 改了什么 | 被什么逼出来的 |
+|---|---|---|
+| `core/frame.js` | 两个为轴图设的下限（最小画布宽 240、最小网格高 48）改成可显式关闭 | 无轴图的画布由图元反推，被下限抬高就多出死空间 |
+| `core/legend.js` | 加排布方向参数（纵向单列） | 左右结构的图例 |
+| `core/tooltip.js` | ① 气泡标题行可省 ② **删掉 `place()` 的容器尺寸参数**，三个位置档的 clamp 边界改由本模块按档自取 | ① 无类目维度的图没有标题 ② 见下 |
+| `core/label.js` | ① 前景色从「压不压色块」的布尔升为 `tone` 三态（档③ 中性色 LABEL-09）② `dropCollisions` 从 `{left,width}` 泛化成 `{start,size}`，两轴共用 | ① 引线标签既不跟随系列色也不反色 ② 外侧标签判的是**纵向**重叠 |
+
+**`behavior.json` 与 `palette.js` 仍一行未动。**
+
+**最值钱的一条教训**（tooltip 那处）：`place()` 原本收 `width/height` 让调用方给 clamp 边界，
+而**轴图下「画布 == 绘图区 == 图表根」三者恰好同宽**，传哪个都对——于是这成了一条
+看不见、传错也不报错、只在特定布局才现形的隐性契约。饼环（画布 = 图元外接框、绘图区紧裹画布、
+图表根还含图例）一来就踩中：气泡过了半截高度就钉住不动。
+**修法不是把参数传对，是把参数删掉**——L1 自己按档取边界，新图型接入时根本不必知道有这回事。
+`core/label.js` 的 `dropCollisions` 同理：字段从 `left/width` 改成 `start/size` 之后，
+「换个轴要不要再抄一份」这个问题就不存在了。
+
+下一个图型（HBar / K 线）可据此估算：真正的成本在 L2 与规范页；**L1 的成本几乎全部来自
+「为轴图设的隐含假设被无轴图暴露」**——不是缺功能，是缺一个说清楚的边界。
 
 后续按以下顺序推进：
 
@@ -177,7 +202,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
 3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
    也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
-4. **接入更多图型**：饼 / 环 / 横向条形等——L2 组件 + `demos/registry.js` 登记，两个预览面无需改动。
+4. **接入更多图型**：饼 / 环已落（[specs/pie.md](specs/pie.md)）；横向条形 HBar、K 线等同法——
+   L2 组件 + `demos/registry.js` 登记 + `CHART_CAPABILITIES` 声明能力，两个预览面无需改动。
 5. **进阶工具**：token 对照表自动生成。
 
 ---

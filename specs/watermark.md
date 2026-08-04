@@ -30,7 +30,7 @@
 
 ## 活 demo
 
-`playground/cartesian-preview.html` 三主题横向卡片天然各显其水印：THS / iFinD-PC 右下角淡 logo（右缘距 grid 右沿约 36px）、Ainvest 左上角 logo；右栏切 dark 三主题转白色变体。水印恒开、无开关（见 API）。
+`playground/preview.html` 三主题横向卡片天然各显其水印：THS / iFinD-PC 右下角淡 logo（右缘距 grid 右沿约 36px）、Ainvest 左上角 logo；右栏切 dark 三主题转白色变体。水印恒开、无开关（见 API）。
 
 ## Do / Don't
 
@@ -43,6 +43,8 @@
 
 ## 待办
 
-- [ ] 副图 / 饼环等非 cartesian 骨架接入时，各自 L2 在末尾追加同一 `renderWatermark`（主图贴、副图不贴）。
+- [x] **饼环骨架接入**：`PieChart` 在 `build()` 末尾追加同一 `renderWatermark`，锚 `frame.grid`
+      （无轴带占位时 grid 即整块画布），三主题锚角与偏移仍只由 `behavior.json` 一处决定（[pie.md](pie.md) PIE-07）。
+- [ ] 副图（多图联动）接入时同样在末尾追加 `renderWatermark`——**主图贴、副图不贴**。
 - [ ] `offset.right = 36` 等偏移为原体系定值常量，暂随 `behavior.json` 携带（datazoom nav 留白同属"待 token 化"一类）。
 - [ ] 极小容器下 Ainvest 96×20 于左上角可能压近数据——如需按 grid 宽比例缩放 / 隐藏，待原体系明确后补 ID。

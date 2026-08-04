@@ -4,7 +4,11 @@
 > 本仓库统一 480ms，理由见下方偏差 1。另记四处补充）。
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
 > 适用范围：**通用动效**——入场生长动效与播放时机，跨图表共享。图表专属动效（如数值滚动、
-> 展开折叠、下钻切换）由各图表规范页自行定义并覆盖本页默认，本页不预写。
+> 展开折叠、下钻切换）由各图表规范页自行定义并覆盖本页默认，本页不预写
+> （已有一例：饼环强调态外扩的补间，见 [pie.md](pie.md) PIE-11——它复用本页的 `runGrowth` 与
+> `cubicOut`，但时长另走 `motion-duration-emphasis`，因为交互应答与一次性入场的节奏诉求不同）。
+> **生长的「方向」是图表专属的**（MOTION-01 列了柱与线；饼环的角度扫掠见 [pie.md](pie.md) PIE-06），
+> 但时长、缓动、播放时机、参与范围、降级这五项对所有图表一视同仁。
 > 分层：缓动与逐帧循环是 **L1 构件**（`core/motion.js`，零 DOM 纯逻辑），
 > **逐帧重绘由图元渲染器提供**（`core/mark.js` 的 `renderBars` / `renderLine` 返回 `draw(t)` 闭包），
 > **播放时机由 L2 判定**（`charts/cartesian/index.js`）。
@@ -30,14 +34,14 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| MOTION-02 | **时长统一 480ms**（`motion-duration-grow`，三主题同值），**不按图表类型 / 数据 / 生长占比分档**。<br>**一张图只有一个时长，全站也只有一个时长**：同一页并排的任意两张图同时起跑、同时到达，节奏完全一致；折柱组合里柱竖向长高与线横向拉线也在同一时刻收束。<br>**新图表接入无需登记任何东西**——横向条形 / 饼环 / K 线只要把自己的 `draw(t)` 交给同一个 `runGrowth`，时长自动一致。<br>**偏离源规范的「按生长占比两档（0–50% → 320ms / 51–100% → 480ms）」**，理由与实测依据见下方偏差 1 | `charts/cartesian/index.js`（读 `--motion-duration-grow` 传给 `runGrowth`）；`tokens/*.json §23` | ✅ |
+| MOTION-02 | **时长统一 480ms**（`motion-duration-grow`，三主题同值），**不按图表类型 / 数据 / 生长占比分档**。<br>**一张图只有一个时长，全站也只有一个时长**：同一页并排的任意两张图同时起跑、同时到达，节奏完全一致；折柱组合里柱竖向长高与线横向拉线也在同一时刻收束。<br>**新图表接入无需登记任何东西**——横向条形 / 饼环 / K 线只要把自己的 `draw(t)` 交给同一个 `runGrowth`，时长自动一致（**已由 `PieChart` 验证**：饼环的角度扫掠只提供了一个 `draw(t)`，本页与 `core/motion.js` 一行未改，见 [pie.md](pie.md) PIE-06）。<br>**偏离源规范的「按生长占比两档（0–50% → 320ms / 51–100% → 480ms）」**，理由与实测依据见下方偏差 1 | `charts/cartesian/index.js`（读 `--motion-duration-grow` 传给 `runGrowth`）；`tokens/*.json §23` | ✅ |
 | MOTION-03 | **缓动统一 `cubicOut`** = easeOutCubic = `cubic-bezier(0.33, 1, 0.68, 1)`（先快后慢、自然减速），全部生长动效同一条曲线，不按图表 / 主题分化。<br>跨端实现**以贝塞尔函数为准**：本仓库自研逐帧补间，用等价闭式 `1 - (1 - t)³`；若将来某处改用 CSS / ECharts 驱动，分别写 `cubic-bezier(0.33, 1, 0.68, 1)` 与 `animationEasing: 'cubicOut'`，三者视觉一致。<br>曲线系数是**规范值常量**（三主题同值、不参与主题分化，同 `Y_SPLIT_LINES` 与 line.md「点数 > 13」的先例），故写在 `core/motion.js` 而非 token——`cubic-bezier(…)` 无法被 `tokenNum` 解析成逐帧补间需要的数值系数 | `core/motion.js` → `EASE_GROW` / `easeOutCubic()` | ✅ |
 
 ## 播放时机
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| MOTION-04 | **只在图表实例首次挂载时播一次**。此后同一实例内的任何重绘一律**瞬时出图、不重放**：<br>· **容器 resize**（`observeResize` → `build()`）——拖拽改尺寸时重放会持续抖动<br>· **图例显隐**（LEGEND-06）——点一次图例让没变化的系列也重长一遍，是噪音不是反馈<br>· **缩放轴拖动**（DATAZOOM-07）——拖手柄期间 `build()` 逐帧触发，重放等于每帧重启动画<br><br>**「重新出现」靠重建实例**：销毁后重新 `CartesianChart(host, cfg)` 即新实例、重新播放。切主题 / 切示例 / 改配置本就走 destroy + 新建（WORKFLOW §六：切主题必须触发 L2 重绘），故这些场景天然重播，无需额外 API。<br>**动画期间被打断**（如动画未完就拖缩放轴）：立即取消并直接落终态，不做半途回退 | `charts/cartesian/index.js`（闭包内 `firstBuild` 标记 + `stopGrow` 收口） | ✅ |
+| MOTION-04 | **只在图表实例首次挂载时播一次**（`CartesianChart` 与 `PieChart` 各自的 `firstBuild` 标记）。此后同一实例内的任何重绘一律**瞬时出图、不重放**：<br>· **容器 resize**（`observeResize` → `build()`）——拖拽改尺寸时重放会持续抖动<br>· **图例显隐**（LEGEND-06）——点一次图例让没变化的系列也重长一遍，是噪音不是反馈<br>· **缩放轴拖动**（DATAZOOM-07）——拖手柄期间 `build()` 逐帧触发，重放等于每帧重启动画<br><br>**「重新出现」靠重建实例**：销毁后重新 `CartesianChart(host, cfg)` 即新实例、重新播放。切主题 / 切示例 / 改配置本就走 destroy + 新建（WORKFLOW §六：切主题必须触发 L2 重绘），故这些场景天然重播，无需额外 API。<br>**动画期间被打断**（如动画未完就拖缩放轴）：立即取消并直接落终态，不做半途回退 | `charts/cartesian/index.js`（闭包内 `firstBuild` 标记 + `stopGrow` 收口） | ✅ |
 
 ## 参与范围
 
@@ -84,7 +88,7 @@
 
 ## 活 demo
 
-`playground/cartesian-preview.html` 与 `index.html` 的 **动效** 旋钮（`animation` 开 / 关）：
+`playground/preview.html` 与 `index.html` 的 **动效** 旋钮（`animation` 开 / 关）：
 
 - **关**：三主题与不带动效时逐像素一致——零回归的验收点（MOTION-07）。
 - **开**（默认）：卡片首次渲染即播。playground 的 **重播** 按钮销毁并重建当前卡片，可反复观察
@@ -108,7 +112,8 @@
 - ❌ **Don't**：把 token 读取（`tokenNum` → `getComputedStyle`）或 `<defs>` 创建放进逐帧回调
   （前者每帧触发样式重算、后者每帧泄漏一个渐变节点）；用 `transform: scaleY()` 生长柱子
   （会把 `radius-bar-top` 圆角压扁，THS 可见）；给 API 加时长 / 缓动 / 延迟参数（样式走 token 与规范值常量）；
-  给 tooltip / 指示线 / 图例弱化加过渡动画（TOOLTIP-10 明令无过渡）；让坐标系或轴标题参与生长；
+  给 tooltip / 指示线 / 图例弱化加过渡动画（TOOLTIP-10 明令无过渡——**这条限浮层链路**，
+  图元自身几何的交互动效属图表专属，见 PIE-11）；让坐标系或轴标题参与生长；
   按图表类型 / 数据规模给某类图单独调时长（统一是 MOTION-02 的核心，要改就整体改 token）。
 
 ## API

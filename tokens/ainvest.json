@@ -142,9 +142,11 @@
   "size-legend-marker": "12px",
   "spacing-legend-marker-label": "{spacing-6}",
   "spacing-legend-item-h": "{spacing-16}",
+  "spacing-legend-item-v": "{spacing-12}",
   "spacing-legend-row-v": "{spacing-4}",
   "spacing-legend-container-v-top": { "mobile": "{spacing-16}", "pc": "{spacing-12}" },
   "spacing-legend-container-v-bottom": { "mobile": "{spacing-16}", "pc": "{spacing-12}" },
+  "spacing-legend-chart-gap": "{spacing-24}",
   "spacing-legend-container-h": "{spacing-0}",
   "opacity-visualization-dim": 0.2,
 
@@ -205,8 +207,12 @@
 
   "$section-20": "环形图 Donut",
   "size-donut-container": "160px",
-  "size-donut-radius": "70px",
-  "size-donut-ring-width": "28px",
+  "size-donut-radius": "80px",
+  "size-donut-ring-width": "32px",
+  "size-donut-hover-expand": "10px",
+  "size-donut-label-line-radial": "16px",
+  "size-donut-label-line-lateral": "16px",
+  "spacing-donut-label-gap": "{spacing-8}",
 
   "$section-21": "数据标签 Data Label",
   "color-text-data-label-on-light": "#000000",
@@ -225,5 +231,6 @@
   "spacing-axis-title-gap": "{spacing-4}",
 
   "$section-23": "动效 Motion",
-  "motion-duration-grow": "480ms"
+  "motion-duration-grow": "480ms",
+  "motion-duration-emphasis": "200ms"
 }

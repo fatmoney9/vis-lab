@@ -65,13 +65,18 @@ export function renderMarker(sel, spec, container) {
  *   host   容器元素（图例在其内建/复用一个 .dv-legend 根）
  *   items  [{ key, label, type, colorVar }]
  *          type = 系列类型（选 marker 形状）；colorVar = 系列色的 CSS 变量名（marker currentColor 取之）
- *   opts   { marker, align='left', state:{hidden:Set}, onToggle(key), onHover(key|null) }
+ *   opts   { marker, align='left', layout='row', state:{hidden:Set}, onToggle(key), onHover(key|null) }
  *          marker = resolveBehavior 的 legend-marker；align 无 token（默认左）；
+ *          layout = [LEGEND-01] 排布主轴：'row' 横排换行（默认）/ 'column' 纵向单列一项一行。
+ *                   align 的语义与方向无关（「左对齐」两种方向下都指靠左），只是实现从
+ *                   justify-content 换成 align-items——CSS 里表达，本模块只挂类。
+ *                   **方位（图例摆在图的哪一侧）不归本模块**：那是容器 flex 方向，
+ *                   由 L2 给图表根元素挂 .dv-chart--legend-* 决定（LEGEND-10）。
  *          state.hidden 由调用方持有（配合 applyToggle）；关闭态 → .dv-legend-item--off
  *          onHover：进入项 emit key、离开 emit null——L2 据此对其他系列施加 opacity-visualization-dim
  */
 export function renderLegend(host, items, opts = {}) {
-  const { marker, align = 'left', state = {}, onToggle, onHover } = opts;
+  const { marker, align = 'left', layout = 'row', state = {}, onToggle, onHover } = opts;
   const hidden = state.hidden ?? new Set();
   const container = tokenNum(host, '--size-legend-marker') || 12;
 
@@ -80,6 +85,7 @@ export function renderLegend(host, items, opts = {}) {
     .data([0])
     .join('div')
     .attr('class', 'dv-legend')
+    .classed('dv-legend--column', layout === 'column') /* [LEGEND-10] */
     .classed('dv-legend--center', align === 'center')
     .classed('dv-legend--right', align === 'right');
 

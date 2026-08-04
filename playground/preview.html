@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>L2 开发预览 · 直角坐标图（CartesianChart · 三主题 × 端 × 明暗）</title>
+<title>L2 开发预览 · 全图型（三主题 × 端 × 明暗）</title>
 <style>
   /* 值 token 由 tokens/tokens.css 提供（按 data-theme / data-platform / data-mode 作用域）；
-     系列色由 palette.js 取、CartesianChart 写成 --dv-series-i，预览无需任何色值替身。
+     系列色由 palette.js 取、各 L2 组件写成 --dv-series-i，预览无需任何色值替身。
      —— 本文件只做「预览外壳」的样式，图表内部一切颜色/字号仍走 token。 */
   :root {
     --shell-bg: #f4f5f7;
@@ -97,7 +97,11 @@
   .theme-card__meta { font-size: 11px; color: var(--shell-text-3); margin-left: auto; font-variant-numeric: tabular-nums; }
   .theme-card[data-mode="dark"] .theme-card__meta { color: rgba(255, 255, 255, 0.4); }
 
-  .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; }
+  /* 图表区比图本身高时（画布尺寸被 token 封顶、长不大的图，如饼环的 2R），
+     host 是 height:auto 会贴在顶部——默认就该竖直居中，而不是等用户点了 resize 手柄
+     切成 height:100% 后才由组件内部居中「归位」。
+     对画布会撑满的图（柱/线）host 恰好等于内容框高，居中与否无差别。 */
+  .chart-mount { flex: 1; min-height: 0; padding: 8px 14px 14px; display: flex; flex-direction: column; justify-content: center; }
   .chart-host { height: auto; }
   .theme-card.is-resized .chart-host { height: 100%; }
 
@@ -117,6 +121,10 @@
     transition: background .12s, color .12s, box-shadow .12s;
   }
   .seg button:hover:not(.is-active) { color: var(--shell-text); }
+  /* 当前不生效的分段（如非引线档下的「标签对齐」）：置灰但保留在原位，
+     藏起来会让「哪一档才有它」变得不可见，用户只会以为功能没做 */
+  .seg button:disabled { opacity: .4; cursor: not-allowed; }
+  .seg button:disabled:hover { color: var(--shell-text-2); }
   .seg button.is-active {
     background: var(--shell-panel); color: var(--shell-accent); font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -139,8 +147,8 @@
   <!-- 左：图表分类 -->
   <aside class="pane pane-left">
     <div class="brand">
-      <h1>CartesianChart</h1>
-      <p>直角坐标图 L2 预览 · 只传数据 + 语义配置</p>
+      <h1>L2 图表预览</h1>
+      <p>CartesianChart · PieChart —— 只传数据 + 语义配置</p>
     </div>
     <nav class="nav" id="nav"></nav>
   </aside>
@@ -184,12 +192,40 @@
         </div>
       </div>
 
+      <!-- [LABEL-05] 直角坐标系专属：开 = 按图表类型默认（单柱 / 单折线出、分组柱 / 堆叠不出） -->
       <div class="field">
         <div class="field-label"><b>数据标签</b><span>dataLabel</span></div>
         <div class="seg" id="seg-label">
           <button data-value="auto" class="is-active">默认</button>
-          <button data-value="on">全开</button>
-          <button data-value="off">全关</button>
+          <button data-value="on">强开</button>
+        </div>
+      </div>
+
+      <!-- [PIE-12] 饼环的显隐与形态是同一件事（引线与标签强绑定），故合成一个三档旋钮 -->
+      <div class="field">
+        <div class="field-label"><b>标签形态</b><span>labelLayout</span></div>
+        <div class="seg" id="seg-label-layout">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="outside">引线</button>
+          <button data-value="inside">扇区内</button>
+        </div>
+      </div>
+
+      <!-- [PIE-13] 仅引线档生效；非引线档置灰而不隐藏，好让「哪一档才有对齐」看得见 -->
+      <div class="field">
+        <div class="field-label"><b>标签对齐</b><span>labelAlign</span></div>
+        <div class="seg" id="seg-label-align">
+          <button data-value="anchor" class="is-active">就近</button>
+          <button data-value="column">成列</button>
+          <button data-value="edge">贴边</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>图例</b><span>legend</span></div>
+        <div class="seg" id="seg-legend">
+          <button data-value="right" class="is-active">左右</button>
+          <button data-value="bottom">上下</button>
         </div>
       </div>
 
@@ -264,12 +300,12 @@
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, THEMES, capabilitiesOf } from '../demos/examples.js';
+  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf } from '../demos/examples.js';
 
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -327,6 +363,12 @@
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
+    document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
+    document.getElementById('seg-label-align').closest('.field').hidden = !caps.labelAlign;
+    document.getElementById('seg-legend').closest('.field').hidden = !caps.legend;
+    /* [PIE-13] 对齐档只在引线形态下有意义：置灰而不隐藏（见 CSS 说明） */
+    document.getElementById('seg-label-align').querySelectorAll('button')
+      .forEach((b) => { b.disabled = state.labelLayout !== 'outside'; });
     document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
@@ -354,6 +396,10 @@
         zoom: state.zoom === 'on',
         area: state.area === 'on',
         dataLabel: state.label,
+        legend: state.legend, /* [PIE-09] 'auto' = 用示例自己声明的布局，见 buildConfig */
+        /* [PIE-12][PIE-13] 'auto' = 走组件默认（外侧引线 + 就近），同 legend 的口径 */
+        labelLayout: state.labelLayout,
+        labelAlign: state.labelAlign,
         axisTitle: state.axisTitle === 'on',
         animation: state.animation === 'on',
       }).instance;
@@ -365,16 +411,29 @@
     const seg = document.getElementById(id);
     seg.addEventListener('click', (e) => {
       const btn = e.target.closest('button');
-      if (!btn) return;
+      if (!btn || btn.disabled) return;
       state[key] = btn.dataset.value;
       seg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === btn));
+      /* [PIE-09][PIE-12] 切标签形态时把图例方位拨到该形态的建议默认值——只改**默认**，
+         用户随后仍可手动改回。映射在 demos/examples.js，与首页共用一份。 */
+      if (key === 'labelLayout') syncSeg('seg-legend', 'legend', suggestedLegend(state.labelLayout));
       render();
     });
+  }
+
+  /* 以代码改某个分段的选中值（联动用）：state 与高亮一起更新，避免两者说不同的话 */
+  function syncSeg(id, key, value) {
+    state[key] = value;
+    document.getElementById(id).querySelectorAll('button')
+      .forEach((b) => b.classList.toggle('is-active', b.dataset.value === value));
   }
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-label', 'label');
+  wireSeg('seg-label-layout', 'labelLayout');
+  wireSeg('seg-label-align', 'labelAlign');
+  wireSeg('seg-legend', 'legend');
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');

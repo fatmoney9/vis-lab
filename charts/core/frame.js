@@ -41,8 +41,17 @@ export function createFrame(host, opts = {}) {
     titleTopH = 0,
     titleBottomH = 0,
     titleGap = 0,
+    /* 绘制区高度下限。默认 48 是**轴图的可用性兜底**：容器太矮时网格被压塌（甚至算成负数），
+       刻度与标签会叠成一团，宁可溢出容器也要保住最小可读高度。
+       无轴图（饼环）应传 0 —— 它的画布边长是调用方按图元算好的（PIE-02 的 2R），
+       被这个下限抬高只会在图元四周多出死空间，而那正是 PIE-09 要求恒定的那段间距的来源。 */
+    minGridHeight = 48,
   } = opts;
-  const W = Math.max(240, width ?? host.clientWidth ?? 640);
+  /* 240 是**自动取宽**时的下限：轴图靠容器宽度决定画布，容器还没布局好时会量到 0，
+     兜一个最小可用宽度免得刻度/标签挤成一团。
+     **显式传 width 时不设限**——那是调用方算好的画布尺寸（如饼环按 donut 容器给的方形画布，
+     PIE-02/PIE-09），再往上抬会把方形撑成横条。 */
+  const W = width != null ? Math.max(1, width) : Math.max(240, host.clientWidth ?? 640);
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
@@ -69,8 +78,8 @@ export function createFrame(host, opts = {}) {
   /* [DATAZOOM-01] 缩放轴带占容器高度：显式高度时从绘图区扣除 navH（SVG 总高仍 = 容器高）；
      缺省高度时缩放轴带加在图表包络之下（绘图区维持 region 高度不变） */
   const gridH = height != null
-    ? Math.max(48, height - topPad - bottomPad - navH)
-    : Math.max(48, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
+    ? Math.max(minGridHeight, height - topPad - bottomPad - navH)
+    : Math.max(minGridHeight, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
   const H = topPad + gridH + bottomPad + navH;
 
   const svg = select(host).append('svg').attr('width', W).attr('height', H).attr('role', 'img');

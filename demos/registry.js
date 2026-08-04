@@ -12,10 +12,12 @@
  *   3. examples.js 的 CHART_CAPABILITIES 声明它支持哪些语义旋钮 + 加示例
  */
 import { CartesianChart } from '../charts/charts/cartesian/index.js';
+import { PieChart } from '../charts/charts/pie/index.js';
 import { buildConfig } from './examples.js';
 
 export const CHARTS = {
   cartesian: CartesianChart,
+  pie: PieChart, /* 饼 + 环（variant 旋钮分形态，见 specs/pie.md） */
 };
 
 /*
