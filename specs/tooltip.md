@@ -23,11 +23,23 @@
 
 | ID | 档位 | 规则 | 实现 | 状态 |
 |---|---|---|---|---|
-| TOOLTIP-04 | **follow · 跟随式** | 默认显示在触发点**右下方**、连续跟随（**无半区反选规则**）；仅当右侧与容器碰撞放不下时自动翻到触发点左侧躲避；垂直不超出绘制区顶部 / 底部（clamp） | `core/tooltip.js` → `createTooltip()` 的 `place('follow')` | ✅ |
-| TOOLTIP-05 | **top-anchor · 顶部锚定式** | 下三角 + 水平跟随触发点居中 + 垂直贴 grid 上沿外侧：① 三角尖端 x = 触发坐标 x（气泡贴不贴边都成立）；② 气泡底边 y = grid 上沿 − 三角高（与坐标 y 无关）；③ 水平边缘 clamp——气泡不越出容器，贴边时气泡停、三角继续随坐标偏移；④ 无过渡动画（瞬移跟随）；⑤ 气泡是临时遮罩物，不为它预留 grid 顶间距。三角高 6px 为兜底常量（本档专属形态） | `core/tooltip.js` → `createTooltip()` 的 `place('top-anchor')` + `ARROW_H` | ✅ |
-| TOOLTIP-06 | **side-fixed · 两侧固定式** | 固定绘制区上方左 / 右两侧、离散两档：以**图表中点**为基准触发点反选——左半区触发 → 显示在右上角、右半区 → 左上角（永远在触发点对侧，不遮挡在看的数据）；垂直顶对齐绘制区上沿、不随鼠标纵移、不跟随插值 | `core/tooltip.js` → `createTooltip()` 的 `place('side-fixed')` | ✅ |
+| TOOLTIP-04 | **follow · 跟随式** | 默认显示在触发点**右下方**、连续跟随（**无半区反选规则**）；仅当右侧碰撞放不下时自动翻到触发点左侧躲避；水平与垂直都 clamp 在边界内。<br>**边界 = 图表根**（`.dv-chart`，即绘图区 + 间距 + 图例这一整块组件地盘），**不是绘图区**：气泡恒在光标 ±12px、而光标必然在图内，拿绘图区去夹防不住任何东西，只会在**绘图区紧裹图元**时把它平白挤扁——饼环左右结构下绘图区仅 291px 而图表根有 706px（[pie.md](pie.md) PIE-02：画布 = 图元外接框、绘图区贴着画布）。再往外的卡片是 L3 外壳、组件不该知道，差的就是外壳那圈内边距（实测每侧约 15px）。<br>边界由 `core/tooltip.js` **自己按档取**（`plotHost.closest('.dv-chart')`——组件自己挂的类，不依赖使用方 DOM），**不由调用方传**，见本页「位置档的边界」小节 | `core/tooltip.js` → `place('follow')` + `bounds()` | ✅ |
+| TOOLTIP-05 | **top-anchor · 顶部锚定式** | 下三角 + 水平跟随触发点居中 + 垂直贴 grid 上沿外侧：① 三角尖端 x = 触发坐标 x（气泡贴不贴边都成立）；② 气泡底边 y = grid 上沿 − 三角高（与坐标 y 无关）；③ **水平 clamp 到视口**（浏览器窗口可见区），贴边时气泡停、三角继续随坐标偏移——气泡钉在类目上、宽度可观，夹在图表里会让靠边的类目频繁被截；它本就是 fixed 浮层（TOOLTIP-12 允许越出任何祖先），只需保证不跑出屏幕；④ **垂直不 clamp**——② 明写「底边 y 与坐标 y 无关」，一夹这条就碎（三角会脱离气泡底边）。图表贴页顶且气泡很高时可能向上溢出屏幕，属 ⑤ 的自然结果；⑤ 无过渡动画（瞬移跟随）；⑥ 气泡是临时遮罩物，不为它预留 grid 顶间距。三角高 6px 为兜底常量（本档专属形态） | `core/tooltip.js` → `createTooltip()` 的 `place('top-anchor')` + `ARROW_H` | ✅ |
+| TOOLTIP-06 | **side-fixed · 两侧固定式** | 固定绘制区上方左 / 右两侧、离散两档：以**图表中点**为基准触发点反选——左半区触发 → 显示在右上角、右半区 → 左上角（永远在触发点对侧，不遮挡在看的数据）；垂直顶对齐绘制区上沿、不随鼠标纵移、不跟随插值。**边界 = 绘制区**：本档不做 clamp，它直接贴 `grid` 的左 / 右上角，位置天然落在绘制区内 | `core/tooltip.js` → `createTooltip()` 的 `place('side-fixed')` | ✅ |
 | TOOLTIP-07 | 主题 → 档位映射走 `tokens/behavior.json` `tooltip-position`：THS `side-fixed` · iFinD-PC `follow` · Ainvest `top-anchor`。<br>**特例：无坐标系图（饼 / 环等）恒 `follow`**，压过主题映射——三档里只有 `follow` 不依赖坐标系（`top-anchor` 要贴 grid 上沿、`side-fixed` 要按绘图区中点反选半区，两者对一个居中的环都失去意义）。<br>**该特例不进 `behavior.json`**：它是**图表形态**规则、三主题一致，不是主题分叉；加键会逼三主题同步一个恒等的值，且 `theme.js` 的合同校验只校验键集合、拦不住语义错配。故在无坐标系图的 L2 里定死并回引本条——先例见 [axis-title.md](axis-title.md) / [data-label.md](data-label.md) 的「形态无主题分化，故 behavior.json 没有也不应有本族形态键」 | behavior.json + `charts/charts/cartesian/index.js`；`charts/charts/pie/index.js`（写死 `follow`，见 [pie.md](pie.md) PIE-05） | ✅ |
-| TOOLTIP-12 | **浮层不被容器裁剪**：气泡是临时遮罩物，可**超出图表 frame 及任意祖先容器**显示——数据行多、气泡高过 grid 上方空间时向上溢出照常可见（top-anchor 尤其，TOOLTIP-05 ⑤ 不预留顶间距的自然结果），祖先 `overflow: hidden/auto`（如可缩放卡片容器）不得裁剪。实现：DOM 仍挂 plotHost（保 `data-theme` token 作用域与销毁清理），定位用 **`position: fixed` 视口坐标**——三档几何（TOOLTIP-04..06）仍在 plotHost 局部坐标计算、输出时叠加 plotHost 视口矩形；水平 clamp 语义不变（仍以图表容器为界） | `.dv-tooltip`（styles.css `position: fixed`）· `core/tooltip.js` → `place()` 末尾视口换算 | ✅ |
+| TOOLTIP-12 | **浮层不被容器裁剪**：气泡是临时遮罩物，可**超出图表 frame 及任意祖先容器**显示——数据行多、气泡高过 grid 上方空间时向上溢出照常可见（top-anchor 尤其，TOOLTIP-05 ⑤ 不预留顶间距的自然结果），祖先 `overflow: hidden/auto`（如可缩放卡片容器）不得裁剪。实现：DOM 仍挂 plotHost（保 `data-theme` token 作用域与销毁清理），定位用 **`position: fixed` 视口坐标**——三档几何（TOOLTIP-04..06）仍在 plotHost 局部坐标计算、输出时叠加 plotHost 视口矩形。**各档的 clamp 边界互不相同**，见下节 | `.dv-tooltip`（styles.css `position: fixed`）· `core/tooltip.js` → `place()` 末尾视口换算 | ✅ |
+
+## 位置档的边界
+
+三个档的气泡**锚在不同的东西上**，故 clamp 的边界也不同——按「锚在哪」定，而不是给三档硬套一个盒子：
+
+| 档 | 气泡锚在 | clamp 边界 | 为什么 |
+|---|---|---|---|
+| `follow` | **光标** | **图表根**（`.dv-chart`） | 气泡恒在光标 ±12px、光标必在图内，边界只需框住组件自己那块地；用绘图区会在它紧裹图元时（饼环）把气泡挤扁 |
+| `top-anchor` | **图表的类目** | **视口**（仅水平） | 气泡宽、又钉死在类目上，夹在图表里会让靠边类目频繁被截；垂直不夹以保住 TOOLTIP-05 ② |
+| `side-fixed` | **grid 的左 / 右上角** | 绘制区（不需 clamp） | 只有两个离散位置，天然在内 |
+
+⚠️ **边界一律由 `core/tooltip.js` 自取，`place()` 不收容器尺寸参数**。这是有意收回来的：调用方手边最顺手的是 `frame` 的画布宽高，而**轴图下画布 == 绘图区 == 图表根**（同宽），三者恰好相等 → 传错也看不出来；饼环却三者都不等，于是「该传哪个」成了看不见、传错不报错、只在特定布局才现形的隐性契约（实测踩过：follow 的垂直上界被误设成画布高，指针过了半截高度气泡就钉住不动）。**参数删掉，这类错就不可能再发生**，新图表接入也不必知道有这回事。
 
 ## 指示线与轴标签高亮
 

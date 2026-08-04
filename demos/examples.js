@@ -92,7 +92,7 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  * 预览面据此决定显示哪几个开关——新图表在这里声明，两面自动适配。
  *   zoom      缩放轴（DATAZOOM-01..07，需要类目轴）
  *   area      主线渐变面积（仅非堆叠且含折线的 cartesian 配置，见 supportsArea）
- *   dataLabel 数据标签三态（LABEL-05）
+ *   dataLabel 数据标签开关（LABEL-05）——**只有直角坐标系声明**，开 = 按图表类型默认
  *   axisTitle 轴标题开关（AXISTITLE-01，默认不显示；开时注入 { y, y2, x } 文案）
  *   animation 入场生长开关（MOTION-01/07，**默认开**——与其他旋钮相反，关掉才落进 cfg）
  */
@@ -100,9 +100,19 @@ export const CHART_CAPABILITIES = {
   cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true },
   /* 饼 / 环无类目轴、无 Y 轴、无折线：zoom / area / axisTitle 一概不声明，
      两个预览面的对应旋钮据此自动不出现（见 specs/pie.md 活 demo 的验收点）。
-     legend 是本族专属旋钮（PIE-09 的左右 / 上下两种结构），cartesian 不声明。 */
-  pie: { dataLabel: true, animation: true, legend: true },
+     **不声明 dataLabel**：饼环的显隐与形态是同一件事（PIE-12「引线与标签强绑定」——
+     「显示但没形态」不是合法状态），故合并进 labelLayout 一个三档旋钮，见 buildConfig。
+     legend / labelLayout / labelAlign 是本族专属，cartesian 不声明。 */
+  pie: { animation: true, legend: true, labelLayout: true, labelAlign: true },
 };
+
+/*
+ * [PIE-09][PIE-12] 外侧引线档下**图例方位的建议默认值**。
+ * 左右结构里右侧的标签带会把图例推得很远、整组重心偏掉，故切到引线时把图例默认拨到上下。
+ * 只是预览面的**默认值联动**，用户仍可手动改回左右；组件的默认方位仍是 'right'（PIE-09 未变）。
+ * 放这里而不是各写一遍：两个预览面共用，省得将来改了一处漏一处。
+ */
+export const suggestedLegend = (labelLayout) => (labelLayout === 'outside' ? 'bottom' : 'right');
 
 /* [AXISTITLE-01] 轴标题旋钮打开时注入的通用文案；示例可用自己的 axisTitle 字段覆盖（给更贴切的文案）。
    文案是内容不是样式——两面共用这一份，避免各写各的。
@@ -156,7 +166,7 @@ export const EXAMPLES = [
     id: 'percent', group: '堆叠图', chart: 'cartesian',
     title: '归一化堆叠柱', spec: 'BAR-06', surfaces: BOTH,
     description: '每个类目归一到 100%，隐藏系列后占比重新计算。',
-    notes: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。数据标签默认不出（LABEL-05），开「全开」可看百分比标签。',
+    notes: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。数据标签「默认」档不出（LABEL-05）；切「强开」出百分比标签。',
     cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'percent' }),
   },
   {
@@ -219,26 +229,54 @@ export const EXAMPLES = [
     id: 'donut', group: '饼图与环形图', chart: 'pie',
     title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
     description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
-    notes: '**图例布局走组件默认「左右结构」**（PIE-09）：图左、图例右纵向单列，图与图例间距 24px（spacing-legend-chart-gap），**两块相邻成组、整组居中**；切旋钮可看「上下结构」。起始 12 点、顺时针；0 值与 null **不占角也不进分母**（PIE-01）——故「少 4」只见 3 个扇区、「中 16」见 14 个。点图例：剩余扇区重算闭合 360°、**颜色一个都不变**（COLOR-04/08 验收点）。hover 扇区：三主题气泡**都走 follow**（对照柱线示例的 THS side-fixed / Ainvest top-anchor，TOOLTIP-07 特例）、无指示线无轴贴片。图例 marker 三主题都是圆点（LEGEND-03）。Ainvest 的环比另两个主题大一圈（半径 80 vs 70，PIE-02）。**数据标签默认不出**（PIE-04 / LABEL-05 的例外——占比看扇形、名称看图例）；切右栏「全开」才画在扇区内，那时数据量↑可看它们按环宽/弧长几何逐个隐去。数据量↑还可看色板循环（THS 7 色到第 8 个扇区回首色）。36 扇区时纵向图例超出高度即**在图例区内滑动**（LEGEND-11），绘图区不受挤压；切到「上下」布局则回到横排换行，那条的溢出（分页器等）仍是 LEGEND-07 待办。拖卡片改尺寸看半径收缩、环宽等比跟随（PIE-02）。',
+    notes: '**图例布局走组件默认「左右结构」**（PIE-09）：图左、图例右纵向单列，图与图例间距 24px（spacing-legend-chart-gap），**两块相邻成组、整组居中**；切旋钮可看「上下结构」。起始 12 点、顺时针；0 值与 null **不占角也不进分母**（PIE-01）——故「少 4」只见 3 个扇区、「中 16」见 14 个。点图例：剩余扇区重算闭合 360°、**颜色一个都不变**（COLOR-04/08 验收点）。hover 扇区：三主题气泡**都走 follow**（对照柱线示例的 THS side-fixed / Ainvest top-anchor，TOOLTIP-07 特例）、无指示线无轴贴片。图例 marker 三主题都是圆点（LEGEND-03）。Ainvest 的环比另两个主题大一圈（半径 80 vs 70，PIE-02）。**数据标签默认不出**（LABEL-05 的例外——占比看扇形、名称看图例）。饼环**没有独立的「数据标签」旋钮**：引线与标签强绑定（PIE-12），显隐与形态合并成 **标签形态** 三档（关 / 引线 / 扇区内，默认关）。切「引线」出外侧档：文字「名称 + 原值」走中性正文色、引线跟随扇区色（LABEL-09 档③ 与档① 的对照点，明暗切换时**只有档③ 跟着翻转**）。此时**画布连标签带一起变宽**（PIE-02），而图与图例之间仍恒是 24px——量的是标签带外沿而非环外沿（PIE-09）。切「引线」时 **图例布局** 会自动拨到上下（左右结构下右侧标签带会把图例推得很远），只是默认值、可手动改回。切到「扇区内」回到档②（只出原值、按扇区色反色，PIE-04），两档互斥、绝不同屏，且 **标签对齐** 随之置灰。切 **标签对齐** 看三档（PIE-13）：「就近」各贴各的线、「成列」同侧末端共线、「贴边」文字外沿齐——`column` 的标签带最宽，切它时环会被挤小一点，这是「画布由图元反推」的直观验收点。数据量↑ 时外侧标签**自上而下逐个消失**且左右两栏各判各的（PIE-14 / LABEL-06②，重叠即隐藏、不做位移），与柱线那条「超阈值整体消失」形成对照。数据量↑ 还可看色板循环（THS 7 色到第 8 个扇区回首色）。36 扇区时纵向图例超出高度即**在图例区内滑动**（LEGEND-11），绘图区不受挤压；切到「上下」布局则回到横排换行，那条的溢出（分页器等）仍是 LEGEND-07 待办。拖卡片改尺寸看半径收缩、环宽等比跟随（PIE-02）。',
     cfg: (n) => ({ name: '营收构成', variant: 'donut', items: sliceItems(n) }),
   },
   {
     id: 'pie', group: '饼图与环形图', chart: 'pie',
     title: '饼图', spec: 'PIE-02 / COLOR-08', surfaces: BOTH,
     description: '实心饼图，与环形图同一组件、同一份数据，只差 variant 一个旋钮。',
-    notes: '**图例布局与环形图一样走默认「左右结构」**（PIE-09——饼与环的默认相同，不因形态分化）；想看「上下结构」切右栏旋钮，两个示例都能切。数据完全相同，只把 variant 切成 pie（内半径 0）——变体不按名字分体，是取值组合（同 bar.md 先例）。数据标签同样默认不出；切「全开」后可见实心饼的径向厚度 = R，扇区内标签的可用宽比环形宽松（PIE-04 的 maxWidth 取「弧长 vs 径向厚度」较小者），同样数据下饼比环能多留住几个标签。入场同样是自 12 点顺时针扫掠（PIE-06），与同页柱线卡片同时起跑同时到达。',
+    notes: '**图例布局与环形图一样走默认「左右结构」**（PIE-09——饼与环的默认相同，不因形态分化）；想看「上下结构」切右栏旋钮，两个示例都能切。数据完全相同，只把 variant 切成 pie（内半径 0）——变体不按名字分体，是取值组合（同 bar.md 先例）。数据标签同样默认不出，开出来同样是外侧引线档（PIE-12）——**引线的法线段自饼的边缘起算**，故饼与环的引线起点不同、肘点位置也不同，但两者的标签带算法一模一样。切「标签形态 · 扇区内」才见两者的真差别：实心饼的径向厚度 = R，扇区内标签的可用宽比环形宽松（PIE-04 的 maxWidth 取「弧长 vs 径向厚度」较小者），同样数据下饼比环能多留住几个标签。入场同样是自 12 点顺时针扫掠（PIE-06），与同页柱线卡片同时起跑同时到达。',
     cfg: (n) => ({ name: '营收构成', variant: 'pie', items: sliceItems(n) }),
   },
 ];
 
 /* ── 查询与配置装配（两面共用，避免各写一份而漂移）──────────── */
 
+/*
+ * 图表族：**一个 L2 组件 = 一族**（`chart` 字段就是族的身份，与 registry 的键同源）。
+ * 首页的分类导航按族分节、族内再按 `group` 分类——接一个新组件（HBar / 散点 / 雷达 …）
+ * 只需在这里补一行族名，导航的分节自动跟着走，不必再动首页。
+ * 族名取各自规范页的用词：cartesian → 直角坐标图（[axes.md]）、
+ * pie → 占比图（[pie.md] 开篇「无坐标系的**占比图**」）——不叫「饼图与环形图」，
+ * 那是族**内**的分类名，将来还会有别的占比形态（玫瑰图 / 旭日 …）落进同一族。
+ */
+export const CHART_FAMILIES = {
+  cartesian: '直角坐标图',
+  pie: '占比图',
+};
+
 /* 某个面要展示的示例（surfaces 缺省 = 两面都进） */
 export const examplesFor = (surface) =>
   EXAMPLES.filter((e) => (e.surfaces ?? BOTH).includes(surface));
 
-/* 该面示例的分组名（按 EXAMPLES 声明序，自动去重） */
-export const groupsFor = (surface) => [...new Set(examplesFor(surface).map((e) => e.group))];
+/*
+ * 该面的「族 → 族内分类」清单，顺序 = EXAMPLES 的声明序。
+ * **不另提供「扁平分类名」的版本**：那种清单分不出哪几个分类属同一族，导航一旦按族分节就不够用，
+ *   两个近义 API 并存只会让下一个人挑错那个。要扁平列表就 `familiesFor(s).flatMap(f => f.groups)`。
+ * 首页导航据此分节；族名未登记时回落到 chart 键本身（宁可露出一个陌生的键，
+ * 也不要静默把新组件的示例混进别人的分节里）。
+ */
+export function familiesFor(surface) {
+  const out = [];
+  for (const e of examplesFor(surface)) {
+    const label = CHART_FAMILIES[e.chart] ?? e.chart;
+    let fam = out.find((f) => f.label === label);
+    if (!fam) out.push((fam = { chart: e.chart, label, groups: [] }));
+    if (!fam.groups.includes(e.group)) fam.groups.push(e.group);
+  }
+  return out;
+}
 
 /* 渐变面积只对「非堆叠且含折线」的配置有意义——按 cfg 实际形态判，不是按图表类型 */
 export const supportsArea = (example) => {
@@ -253,19 +291,23 @@ export const capabilitiesOf = (example) => {
   return {
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
+    labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
   };
 };
 
 /*
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
- *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle, animation } —— 各项皆可缺省
+ *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle, animation,
+ *             legend, labelLayout, labelAlign } —— 各项皆可缺省
+ *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
  * 主题与明暗不进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 + behavior 解析。
  */
 export function buildConfig(example, state = {}) {
   const {
     density = 'few', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
+    labelLayout = 'off', labelAlign = 'anchor',
   } = state;
   const caps = capabilitiesOf(example);
   const cfg = { ...example.cfg(DENSITY[density] ?? DENSITY.few), platform };
@@ -285,7 +327,17 @@ export function buildConfig(example, state = {}) {
     const mainLine = cfg.series.find((s) => s.type === 'line');
     if (mainLine) mainLine.area = true;
   }
+  /* [LABEL-05] 直角坐标系：开关的「开」= 'auto' = **按图表类型默认**（单柱 / 单折线出、
+     分组柱 / 堆叠不出），故开着时什么都不落进 cfg；只有关掉才显式写 false。 */
   if (caps.dataLabel && dataLabel !== 'auto') cfg.dataLabel = dataLabel === true || dataLabel === 'on';
+  /* [PIE-12] 饼环：显隐与形态合成一个三档旋钮（关 / 引线 / 扇区内）——
+     「关」= 组件默认（LABEL-05 饼环默认就不出），故不落进 cfg；另两档才同时给出显隐与形态。
+     [PIE-13] 对齐档只在外侧引线下有意义，扇区内时不装进 cfg（免得给组件一个它用不上的字段）。 */
+  if (caps.labelLayout && labelLayout !== 'off') {
+    cfg.dataLabel = true;
+    cfg.labelLayout = labelLayout;
+    if (caps.labelAlign && labelLayout === 'outside') cfg.labelAlign = labelAlign;
+  }
   /* [PIE-09] 图例布局：'auto' = 用示例自己声明的（两个示例各展一种，不动旋钮就能同屏对比）；
      旋钮给了具体值才覆盖。示例没声明也不写进 cfg —— 让组件默认（'right'）说话。 */
   if (caps.legend && legend !== 'auto') cfg.legend = legend;

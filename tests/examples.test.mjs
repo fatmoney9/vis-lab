@@ -100,6 +100,68 @@ test('PIE-09：旋钮给了具体值才落进 cfg，且只对声明了该能力�
   assert.equal(buildConfig(bar, { legend: 'bottom' }).legend, undefined, 'cartesian 未声明 legend 能力，不该装进 cfg');
 });
 
+/*
+ * [PIE-12] 饼环的**显隐与形态合成一个旋钮**（关 / 引线 / 扇区内）——因为引线与标签强绑定，
+ * 「显示但没形态」不是合法状态。这组守卫盯的是这个合成没被拆错：
+ * 「关」必须什么都不落进 cfg（= 组件默认，LABEL-05 饼环本就不出），另两档必须**同时**给出
+ * dataLabel 与 labelLayout。少给 dataLabel 会让组件按默认不画、旋钮点了没反应，且不报错。
+ */
+test('PIE-12：「关」= 走组件默认，dataLabel 与 labelLayout 一个都不落进 cfg', () => {
+  const pies = EXAMPLES.filter((e) => e.chart === 'pie');
+  assert.ok(pies.length > 0, 'EXAMPLES 里应至少有一个饼环示例，否则本守卫形同虚设');
+  for (const e of pies) {
+    assert.equal(e.cfg(4).labelLayout, undefined, `示例「${e.id}」不该自带 labelLayout`);
+    for (const state of [{}, { labelLayout: 'off' }]) {
+      const cfg = buildConfig(e, state);
+      assert.equal(cfg.labelLayout, undefined, `示例「${e.id}」关档不该装 labelLayout`);
+      assert.equal(cfg.dataLabel, undefined, `示例「${e.id}」关档不该装 dataLabel`);
+      assert.equal(cfg.labelAlign, undefined, `示例「${e.id}」关档不该装 labelAlign`);
+    }
+  }
+});
+
+test('PIE-12：引线 / 扇区内两档都必须同时给出 dataLabel 与 labelLayout', () => {
+  const donut = EXAMPLES.find((e) => e.id === 'donut');
+  for (const layout of ['outside', 'inside']) {
+    const cfg = buildConfig(donut, { labelLayout: layout });
+    assert.equal(cfg.dataLabel, true, `${layout} 档缺 dataLabel，组件会按默认不画`);
+    assert.equal(cfg.labelLayout, layout);
+  }
+});
+
+/* [PIE-13] 对齐档只在引线形态下有意义——扇区内时装进 cfg 会给组件一个它用不上的字段，
+   且会让「对齐只属于引线档」这条规则在配置里读不出来。 */
+test('PIE-13：对齐档只在引线形态下落进 cfg', () => {
+  const donut = EXAMPLES.find((e) => e.id === 'donut');
+  assert.equal(buildConfig(donut, { labelLayout: 'outside', labelAlign: 'column' }).labelAlign, 'column');
+  assert.equal(buildConfig(donut, { labelLayout: 'outside', labelAlign: 'edge' }).labelAlign, 'edge');
+  assert.equal(buildConfig(donut, { labelLayout: 'inside', labelAlign: 'edge' }).labelAlign, undefined,
+    '扇区内档不该带 labelAlign');
+});
+
+test('PIE-12/PIE-13：cartesian 未声明这两个能力，旋钮误给也混不进它的 cfg', () => {
+  const bar = EXAMPLES.find((e) => e.id === 'basic');
+  const cfg = buildConfig(bar, { labelLayout: 'outside', labelAlign: 'edge' });
+  assert.equal(cfg.labelLayout, undefined);
+  assert.equal(cfg.labelAlign, undefined);
+  /* 且不该被饼环那条分支顺手写上 dataLabel:true——那会把分组柱/堆叠的标签强开出来 */
+  assert.equal(cfg.dataLabel, undefined);
+});
+
+/* [LABEL-05] 直角坐标系的数据标签旋钮 = 默认 / 强开两档：
+   「默认」= 'auto' = 按图表类型默认（单柱出、分组柱与堆叠不出），故**什么都不落进 cfg**；
+   「强开」= true = 分组柱与堆叠也画。写反了不会报错，只会让默认渲染悄悄变。
+   'off'（全关）仍是组件 API 的合法取值、只是当前旋钮没有这一档，故一并守着不让它退化。 */
+test('LABEL-05：数据标签 默认 / 强开 —— 默认不落 cfg、强开落 true', () => {
+  const bar = EXAMPLES.find((e) => e.id === 'basic');
+  assert.equal(buildConfig(bar, { dataLabel: 'auto' }).dataLabel, undefined, '默认 = 按类型默认，不落 cfg');
+  assert.equal(buildConfig(bar, { dataLabel: 'on' }).dataLabel, true, '强开必须落 true');
+  assert.equal(buildConfig(bar, { dataLabel: 'off' }).dataLabel, false, '全关仍落 false（API 保留档）');
+  /* 饼环不声明 dataLabel 能力：它的显隐归 labelLayout 管，直角系的旋钮值混不进来 */
+  const donut = EXAMPLES.find((e) => e.id === 'donut');
+  assert.equal(buildConfig(donut, { dataLabel: 'on' }).dataLabel, undefined);
+});
+
 /* [PIE-01] 扇区数据的形状守卫：组件按 items[].value 算角度，名字进图例。
    写成 cartesian 的 {name,data} 不会报错，只会让整张图空白。 */
 test('PIE-01：饼环示例的 cfg 是 { items:[{name,value}] } 形状', () => {

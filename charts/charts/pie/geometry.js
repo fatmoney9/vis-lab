@@ -8,10 +8,12 @@
  * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——labelAnchor 用的就是这个式子，
  * 与 d3.arc().centroid() 同源，标签因此天然落在扇区里。
  *
- * 三个函数：
+ * 五个函数：
  *   sliceAngles  值 → 每个可绘扇区的 {i, a0, a1}（PIE-01）
  *   donutRadii   可用宽高 + 两个 token → {R, innerR, ring}（PIE-02）
- *   labelAnchor  单个扇区 → 标签锚点 {x, y, maxWidth}（PIE-04）
+ *   labelAnchor  单个扇区 → **扇区内**标签锚点 {x, y, maxWidth}（PIE-04）
+ *   leaderElbow  单个扇区 → **外侧**引线的前两点 + 所在侧（PIE-12）
+ *   alignOutside 一批外侧标签 + 对齐档 → 横段末端 / 文字锚点 / 标签带宽（PIE-13）
  */
 
 const TAU = Math.PI * 2;
@@ -79,4 +81,100 @@ export function labelAnchor(a0, a1, R, innerR) {
     y: -Math.cos(mid) * rm,
     maxWidth: Math.min(rm * (a1 - a0), ring),
   };
+}
+
+/*
+ * [PIE-12] 外侧引线的前两个点（相对圆心）+ 该扇区归哪一侧。
+ *   a  弧上起点：扇区中线与外半径的交点
+ *   e  肘点：自 a 沿**同一条法线**再外延 radial（= --size-donut-label-line-radial）
+ * 第三点（横段末端）由 alignOutside 按对齐档给，**其 y 恒等于 ey**——
+ * 标签锚在扇区的自然角度上、不做纵向位移（LABEL-01 原样适用，PIE-14），
+ * 故第二段是严格水平线。这条也是「未位移」最好验证的证据：量末两点的 y 差应恒为 0。
+ *
+ * 分侧：中线角 mid < π 归右、否则归左（12 点归右、6 点归左）。
+ * 边界取「右」是因为 mid=0 的扇区其 ex=0 落在中轴上，归哪侧都不违反几何，
+ * 取右让判定成为一条不含浮点比较的闭区间规则。
+ * radial 取负值无意义，按 0 兜底（退化为肘点贴在弧上）。
+ */
+export function leaderElbow(a0, a1, R, radial) {
+  const mid = (a0 + a1) / 2;
+  const sin = Math.sin(mid);
+  const cos = Math.cos(mid);
+  const er = R + Math.max(0, radial);
+  return {
+    side: mid < Math.PI ? 'right' : 'left',
+    ax: sin * R, ay: -cos * R,
+    ex: sin * er, ey: -cos * er,
+  };
+}
+
+/*
+ * [PIE-13] 三档对齐：给一批外侧标签算出「横段末端 x、文字锚点 x、文字可用宽」，
+ * 以及两侧各自的**标签带宽**（band = 相对 R 向外多占的距离，喂给 PIE-02 定画布宽）。
+ *
+ *   entries = [{ side:'left'|'right', ex, textWidth }]  —— ex 来自 leaderElbow（带符号）
+ *   mode    = 'anchor' | 'column' | 'edge'
+ *   lateral = --size-donut-label-line-lateral（横段基准长）
+ *   gap     = --spacing-donut-label-gap（引线末端 → 文字净距）
+ *   bandCap = 容器给每侧的带宽上限（缺省不限）
+ *   R       = 外半径
+ * → { band: { left, right }, items: [{ lineEndX, textX, anchor, maxWidth }] }（与 entries 同序）
+ *
+ * 记 e = |ex|、w = 文本宽，「够用的带宽」按档不同：
+ *   anchor / edge  max(e + lateral + gap + w) − R   —— 能容下全部文字的**最紧**带宽
+ *   column         max(e) + lateral + gap + max(w) − R —— 末端共线把线推到最远那条，故更宽
+ * 带宽被 bandCap 截断时不改变任何标签的位置，只让 maxWidth 变小，
+ * 交给 L1 的 dropOversized 逐个丢弃（LABEL-06③）——本模块**不做丢弃判定**。
+ *
+ * 三档的差别只在「横段末端落在哪」与「文字往哪边对齐」：
+ *   anchor  末端 = e + lateral（各自定长）      文字内沿贴末端，外沿参差
+ *   column  末端 = max(e) + lateral（同侧共线） 文字内沿贴同一条线，外沿参差
+ *   edge    文字外沿贴画布边（band 外沿）        末端反推，长短不一
+ */
+export function alignOutside(entries, mode, { lateral = 0, gap = 0, bandCap = Infinity, R = 0 } = {}) {
+  const band = { left: 0, right: 0 };
+  const perSide = {};
+
+  for (const side of ['left', 'right']) {
+    const own = entries.filter((d) => d.side === side);
+    if (!own.length) { perSide[side] = { outerX: R, lineAt: 0 }; continue; }
+    const maxE = Math.max(...own.map((d) => Math.abs(d.ex)));
+    const lineAt = maxE + lateral;                                   /* column 档的公共竖线 */
+    const need = mode === 'column'
+      ? lineAt + gap + Math.max(...own.map((d) => d.textWidth)) - R
+      : Math.max(...own.map((d) => Math.abs(d.ex) + lateral + gap + d.textWidth)) - R;
+    /* ⚠️ **向上取整不是为了好看，是为了不把刚好装得下的标签判成装不下**：
+       带宽正是由文本宽反推的，于是 maxWidth = R + band − inner 在实数意义上恰好等于该文本宽；
+       L1 的 dropOversized 会**重新测量**同一段文字再比大小，两次浮点运算差 1e-14 就能让
+       「恰好装得下」翻成 false，而引线已经画出去了 —— 结果是一条指向空处的线（实测过）。
+       取整给出 <1px 的余量，稳稳盖住这点误差，顺带让画布尺寸落在整像素上。 */
+    band[side] = Math.max(0, Math.min(Math.ceil(need), bandCap));
+    perSide[side] = { outerX: R + band[side], lineAt };
+  }
+
+  const items = entries.map((d) => {
+    const dir = d.side === 'right' ? 1 : -1;
+    const { outerX, lineAt } = perSide[d.side];
+    const e = Math.abs(d.ex);
+    const inner = e + lateral + gap;          /* 文字最内侧能起排的位置，三档共用 */
+    if (mode === 'edge') {
+      /* 文字外沿贴边 → 末端 = 外沿 − 文字宽 − 净距；最窄不短于自己的定长横段 */
+      const end = Math.max(e + lateral, outerX - d.textWidth - gap);
+      return {
+        lineEndX: dir * end,
+        textX: dir * outerX,
+        anchor: d.side === 'right' ? 'end' : 'start',
+        maxWidth: Math.max(0, outerX - inner),
+      };
+    }
+    const end = mode === 'column' ? lineAt : e + lateral;
+    return {
+      lineEndX: dir * end,
+      textX: dir * (end + gap),
+      anchor: d.side === 'right' ? 'start' : 'end',
+      maxWidth: Math.max(0, outerX - (end + gap)),
+    };
+  });
+
+  return { band, items };
 }

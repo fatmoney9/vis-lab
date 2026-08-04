@@ -210,6 +210,9 @@
   "size-donut-radius": "80px",
   "size-donut-ring-width": "32px",
   "size-donut-hover-expand": "10px",
+  "size-donut-label-line-radial": "16px",
+  "size-donut-label-line-lateral": "16px",
+  "spacing-donut-label-gap": "{spacing-8}",
 
   "$section-21": "数据标签 Data Label",
   "color-text-data-label-on-light": "#000000",

@@ -63,19 +63,22 @@ export function dropOversized(boxes) {
 }
 
 /*
- * [LABEL-06②] 同一行内的水平碰撞过滤（纯函数）。
- *   boxes  —— [{ left, width, … }]，可乱序（内部按 left 升序处理）
+ * [LABEL-06②] 一条线上的碰撞过滤（纯函数）。**与轴无关**——
+ *   boxes  —— [{ start, size, … }]，可乱序（内部按 start 升序处理）
  *   minGap —— 相邻标签最小净距（px）
- * 贪心：按 left 升序保留首个，其后每个与「上一个保留者」净距 ≥ minGap 才留。
- * 首个恒留 ⇒ 结果稳定、与容器宽变化单调（变窄只会更少，不会跳变）。
+ * 柱线喂**水平**值（一个系列跨类目：start=文本左沿、size=文本宽）；
+ * 饼环外侧标签喂**垂直**值（同一侧自上而下：start=y−行高/2、size=行高，见 specs/pie.md PIE-14）。
+ * 字段刻意不叫 left/width：同一条贪心两个方向共用，L2 不得为另一个方向复制第二份。
+ * 贪心：按 start 升序保留首个，其后每个与「上一个保留者」净距 ≥ minGap 才留。
+ * 首个恒留 ⇒ 结果稳定、与容器变化单调（变挤只会更少，不会跳变）。
  * 返回保留下来的原对象（升序），不改入参。
  */
 export function dropCollisions(boxes, minGap = 0) {
-  const sorted = [...boxes].sort((a, b) => a.left - b.left);
+  const sorted = [...boxes].sort((a, b) => a.start - b.start);
   const kept = [];
   for (const box of sorted) {
     const prev = kept[kept.length - 1];
-    if (!prev || box.left - (prev.left + prev.width) >= minGap) kept.push(box);
+    if (!prev || box.start - (prev.start + prev.size) >= minGap) kept.push(box);
   }
   return kept;
 }
@@ -85,17 +88,20 @@ const leftOf = (x, width, anchor) =>
   anchor === 'start' ? x : anchor === 'end' ? x - width : x - width / 2;
 
 /*
- * [LABEL-01..08] 把一批数据标签渲染进已存在的 <g>。
- *   items = [{ x, y, text, anchor='middle', baseline='auto', inside=false, bgHex, maxWidth }]
+ * [LABEL-01..09] 把一批数据标签渲染进已存在的 <g>。
+ *   items = [{ x, y, text, anchor='middle', baseline='auto', tone='series', bgHex, maxWidth }]
  *     x / y   —— L2 算好的锚点像素（柱顶净距、段内居中等偏移已含在内，LABEL-01）
  *     baseline—— SVG dominant-baseline：'auto' 文字在锚点上方 / 'hanging' 下方 / 'middle' 居中
- *     inside  —— 标签是否压在色块上：false 走档①（currentColor 跟随系列色，LABEL-03）；
- *                true 走档②（按 bgHex 明暗切 token 色，LABEL-04）
- *     bgHex   —— inside 时的背景色（= 该系列色 hex，由 L2 从 palette 结果透传）
- *     maxWidth—— 可用宽度（档② 传所在色块宽）；超出即不画（LABEL-06③），缺省不限
- *   opts  = { collide = true } —— 碰撞过滤开关（LABEL-06②）。约定**一次调用 = 同一行**
+ *     tone    —— 前景色三档（判据在 L2，本模块只按 tone 挂类，不靠位置反推）：
+ *                'series'  档① 跟随系列色（currentColor，LABEL-03）—— 缺省
+ *                'auto'    档② 压在色块上，按 bgHex 明暗切 token 色（LABEL-04）
+ *                'neutral' 档③ 有引线关联，走中性正文色（LABEL-09；当前只有饼环外侧标签用）
+ *     bgHex   —— tone:'auto' 时的背景色（= 该系列色 hex，由 L2 从 palette 结果透传）
+ *     maxWidth—— 可用宽度（档② 传所在色块宽、档③ 传标签带留给它的宽）；超出即不画（LABEL-06③），缺省不限
+ *   opts  = { collide = true } —— 水平碰撞过滤开关（LABEL-06②）。约定**一次调用 = 同一行**
  *           （一个系列跨类目，柱顶行 / 折线行 / 堆叠中该系列的那一段行皆然）；
- *           将来若有本就不同行的批次（如饼图四周环绕），传 false 关掉
+ *           本就不同行的批次（如饼环四周环绕）传 false 关掉——它们改在**纵向**判，
+ *           由 L2 分好左右两栏后各调一次 dropCollisions（同一个函数，喂 y 值，PIE-14）
  * 空文本 / 无 items 直接返回（LABEL-07 的 null 已由 L2 过滤，此处只做兜底）。
  * 一次测量供两道过滤共用（宽度超限 → 碰撞），不重复量。
  */
@@ -106,8 +112,10 @@ export function renderDataLabels(g, frame, items, opts = {}) {
 
   const widths = measureTexts(frame.host, list.map((d) => d.text), LABEL_CLASS);
   let boxes = list.map((d, i) => ({
-    left: leftOf(d.x, widths[i], d.anchor ?? 'middle'),
-    width: widths[i],
+    /* 水平向的 {start,size}：dropCollisions 收的是轴无关字段（LABEL-06②） */
+    start: leftOf(d.x, widths[i], d.anchor ?? 'middle'),
+    size: widths[i],
+    width: widths[i],          /* dropOversized 判的是「文本宽 vs 可用宽」，恒为水平量 */
     maxWidth: d.maxWidth,
     item: d,
   }));
@@ -121,8 +129,13 @@ export function renderDataLabels(g, frame, items, opts = {}) {
   g.selectAll(`text.${LABEL_CLASS}`)
     .data(visible)
     .join('text')
-    /* 档② 的修饰类承载 token 色——本模块不出现任何色值字面量（铁律1） */
-    .attr('class', (d) => (d.inside ? `${LABEL_CLASS} ${LABEL_CLASS}--${labelTone(d.bgHex)}` : LABEL_CLASS))
+    /* 档②③ 的修饰类承载 token 色——本模块不出现任何色值字面量（铁律1）；
+       档①（'series' / 缺省）不挂修饰类，靠 .dv-data-label 的 fill:currentColor 跟随系列色 */
+    .attr('class', (d) => {
+      if (d.tone === 'auto') return `${LABEL_CLASS} ${LABEL_CLASS}--${labelTone(d.bgHex)}`;
+      if (d.tone === 'neutral') return `${LABEL_CLASS} ${LABEL_CLASS}--neutral`;
+      return LABEL_CLASS;
+    })
     .attr('x', (d) => d.x)
     .attr('y', (d) => d.y)
     .attr('text-anchor', (d) => d.anchor ?? 'middle')

@@ -70,10 +70,9 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     if (!rows.length) return hideHover();
 
     tooltip.show({ title: categories[i], rows }, marker);
-    tooltip.place(position, {
-      grid: frame.grid, width: frame.width, height: frame.height,
-      cx: centers[i], pointer: { x: px, y: py },
-    });
+    /* clamp 边界由 tooltip.js 按位置档自取（follow = 图表根 / top-anchor = 视口 / side-fixed = grid），
+       本层只给几何：grid 与触发点。 */
+    tooltip.place(position, { grid: frame.grid, cx: centers[i], pointer: { x: px, y: py } });
     hoverG.style('display', null);
     const tagTop = renderAxisTag(tagLayer, frame, { x: centers[i], label: categories[i] }); /* [TOOLTIP-09] */
     if (indicator === 'block') {

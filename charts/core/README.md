@@ -16,9 +16,9 @@
 | `measure.js` | 渲染级文本测量，全库唯一测量源（零依赖，可被 node 加载） | axes.md（AXIS-08） |
 | `mark.js` | 柱 / 线 / 数据点的图元渲染（返回逐帧重绘闭包供生长动效驱动） | bar.md、line.md、motion.md |
 | `motion.js` | 缓动曲线与逐帧生长循环（零 DOM，rAF / 时钟可注入） | motion.md（MOTION-01..07） |
-| `label.js` | 数据标签渲染、明暗反色与碰撞过滤 | data-label.md（LABEL-01..08） |
+| `label.js` | 数据标签渲染、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤（`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列） | data-label.md（LABEL-01..09） |
 | `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列） | legend.md（LEGEND-01/10/11） |
-| `tooltip.js` · `crosshair.js` | 浮层气泡、指示线与轴贴片（气泡标题行可省，供无坐标系图用） | tooltip.md |
+| `tooltip.js` · `crosshair.js` | 浮层气泡、指示线与轴贴片（气泡标题行可省，供无坐标系图用；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸——见 tooltip.md「位置档的边界」） | tooltip.md |
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |
 | `palette.js` | 系列取色器 | color.md |

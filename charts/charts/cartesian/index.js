@@ -290,7 +290,7 @@ export function CartesianChart(host, cfg) {
                 x: x(c) + col.offset + col.width / 2,
                 y: (yTop + yBot) / 2,
                 baseline: 'middle',
-                inside: true,
+                tone: 'auto',            /* [LABEL-04] 档②：压在段的填充上，按底色明暗切前景 */
                 bgHex: r.colorHex,
                 maxWidth: col.width,
                 text: labelText(v),

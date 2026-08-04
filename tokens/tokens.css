@@ -152,6 +152,9 @@
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
   --size-donut-hover-expand: 0px;
+  --size-donut-label-line-radial: 8px;
+  --size-donut-label-line-lateral: 8px;
+  --spacing-donut-label-gap: var(--spacing-8);
   --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -345,6 +348,9 @@
   --size-donut-radius: 70px;
   --size-donut-ring-width: 28px;
   --size-donut-hover-expand: 0px;
+  --size-donut-label-line-radial: 8px;
+  --size-donut-label-line-lateral: 8px;
+  --spacing-donut-label-gap: var(--spacing-8);
   --color-text-data-label-on-light: #292933;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-extra-small);
@@ -541,6 +547,9 @@
   --size-donut-radius: 80px;
   --size-donut-ring-width: 32px;
   --size-donut-hover-expand: 10px;
+  --size-donut-label-line-radial: 16px;
+  --size-donut-label-line-lateral: 16px;
+  --spacing-donut-label-gap: var(--spacing-8);
   --color-text-data-label-on-light: #000000;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);

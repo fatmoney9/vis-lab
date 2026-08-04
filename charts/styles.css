@@ -155,6 +155,17 @@
    不设描边：扇区间无间隙（PIE-01），描边会在相邻扇区之间挤出一条比设计稿更宽的缝。 */
 .dv-pie-sector { fill: currentColor; }
 
+/* [PIE-12] 外侧标签的引线：跟随所在扇区 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）——
+   色彩关联由线承担，文字才得以走中性色（LABEL-09 档③）。
+   线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / tooltip 指示线同源），不设自有 token。
+   pointer-events:none —— 引线在扇区之后追加、画在其上，不放行会在圆外抢走本该落到扇区的 hover。 */
+.dv-pie-label-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-grid-line);
+  pointer-events: none;
+}
+
 /* [LABEL-02][LABEL-03][LABEL-08] 数据标签：字号是唯一主题分化项（--font-size-data-label）；
    默认 fill=currentColor = 所在 <g> 的系列色（档①，图形外空白区）；
    pointer-events:none 永不抢 hover 命中（标签层在 mark 之上）。 */
@@ -172,6 +183,11 @@
    用会翻转的 --color-text-primary 会让暗色模式下浅色系列拿到白字（白底白字）。 */
 .dv-data-label--on-light { fill: var(--color-text-data-label-on-light); }
 .dv-data-label--on-dark { fill: var(--color-text-data-label-on-dark); }
+/* [LABEL-09] 档③：有引线关联时走中性正文色——色彩关联已由引线承担，文字不必重复；
+   且色板里的浅色（THS #52BBFF、iFinD #F2D755）当 1px 线够用、当正文色对比度不足。
+   这里**用会随明暗翻转的 --color-text-primary 是对的**（与档② 的两个恒定 token 相反）：
+   档③ 的底是页面底色而非系列色，跟着模式翻转才不会白底白字。 */
+.dv-data-label--neutral { fill: var(--color-text-primary); }
 
 /* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
    主题无关的结构样式（无颜色）。 */
@@ -224,6 +240,10 @@
   display: flex;
   min-height: 0;
   min-width: 0;
+  /* [PIE-09][LEGEND-11] 高度上限由 L2 按图元高度算好写进这个变量（当前 = 图元高 × 2）。
+     没有它时图例会把整张卡片无限撑高——36 扇区能撑到上千像素，而环仍只有 2R。
+     缺省 none = 不设限，好让别的消费方（若有）沿用原行为。 */
+  max-height: var(--dv-pie-legend-max-h, none);
 }
 /* 绘图 SVG：
    · display:block —— 消除 inline 替换元素的基线降部空隙（否则 plot 容器比 svg 高约半行的降部、下方多一条空白）。
