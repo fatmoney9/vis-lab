@@ -117,6 +117,13 @@ export function renderLegend(host, items, opts = {}) {
  * [LEGEND-06] 点击显隐两模式（纯逻辑，L1 唯一实现，L2 在 onToggle 里调用后重渲）。
  *   multi ——独立开关：命中项在 hidden 中增删。
  *   single——单选聚焦：点非唯一可见项 → 只留该项（其余全 hidden）；点当前唯一可见项 → 恢复全显。
+ *
+ * [LEGEND-12] **最后一个可见项不可关**：点它原样返回（外观与图形都不变，等同没点）。
+ * 单选模式本就恒留一项，本条让多选与之一致，「全隐」这个状态两模式下都不存在——
+ * 它对任何图表都不是有用的读数（饼环直接空白一片，轴图只剩空网格），
+ * 而恢复的唯一入口又正是刚被点灰的那个图例项，容易读成「图挂了」。
+ * 收在这里而不是给 L2 加开关：加参数就等于每个新图表都要记得传，而这条对谁都成立。
+ *
  * 返回新的 hidden Set（不改入参）。selectMode 由 behavior 的 legend-select 决定。
  */
 export function applyToggle(hidden, key, allKeys, selectMode = 'multi') {
@@ -126,6 +133,12 @@ export function applyToggle(hidden, key, allKeys, selectMode = 'multi') {
     return soleVisible ? new Set() : new Set(allKeys.filter((k) => k !== key));
   }
   const next = new Set(hidden);
-  next.has(key) ? next.delete(key) : next.add(key);
+  if (next.has(key)) {
+    next.delete(key);          /* 打开恒可行 */
+    return next;
+  }
+  /* [LEGEND-12] 要关的正是最后一个亮着的 → 不动 */
+  if (allKeys.filter((k) => !next.has(k)).length <= 1) return next;
+  next.add(key);
   return next;
 }

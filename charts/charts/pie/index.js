@@ -55,6 +55,9 @@ export function PieChart(host, cfg) {
   } = cfg;
   /* [PIE-02] 调用方明确给容器高度时随容器适配；未给时用环形容器 token 作高度包络（口径同 GRID-03）。 */
   let usesContainerHeight = host.clientHeight >= 40;
+  /* 本组件上一次 build 结束时图表根的高度。它是 observeResize 判断「这次变高是不是我自己弄的」
+     的基线——每次 build 末尾刷新，故只有**外部**造成的高度变化才对不上（见下方 observeResize）。 */
+  let selfHeight = host.clientHeight;
 
   /* [COLOR-08] 扇区即取色单位：N 个扇区当 N 个取色单位喂给同一个取色器——
      type 既非 bar 也非 line，故「柱线混合」判定为假、自然落到通用 bar-multi 盘。
@@ -464,6 +467,10 @@ export function PieChart(host, cfg) {
        （无轴带占位），故三主题的锚角与偏移仍只由 behavior.json 的 watermark 一处决定。 */
     if (wm) renderWatermark(frame.svg.append('g').attr('class', 'dv-watermark-layer'), frame, { spec: wm, mode: modeOf(host) });
 
+    /* 记下「这一版是我自己画成多高的」：读 clientHeight 会强制回流，故此刻拿到的就是新布局的高度。
+       observeResize 拿它当基线区分自变与外部改高（见文件末尾）。 */
+    selfHeight = host.clientHeight;
+
     /* ── [MOTION-01/04/05/07][PIE-06] 入场扫掠（本函数最后一步，此前所有元素都已画到终态）──
        只在首次挂载播；animation:false 或系统「减弱动态效果」下根本不进这个分支，
        保证与不带本能力时逐像素一致（MOTION-07 的零回归验收点）。
@@ -489,9 +496,15 @@ export function PieChart(host, cfg) {
   }
 
   build();
-  const naturalHostHeight = host.clientHeight;
-  const stop = observeResize(host, () => { /* [PIE-02] 默认尺寸建立后，外部改高才切容器适配（同 GRID-03） */
-    if (!usesContainerHeight && Math.abs(host.clientHeight - naturalHostHeight) > 1) usesContainerHeight = true;
+  const stop = observeResize(host, () => {
+    /* [PIE-02] 默认尺寸建立后，**外部**改高才切容器适配（同 GRID-03）。
+       ⚠️ 基线必须是「本组件自己上一次产出的高度」（selfHeight，每次 build 末尾更新），
+       不能是首次挂载时的那一个定值：容器 height:auto 时图表根的高度**就是图表撑出来的**，
+       图元自己长高（如只剩一个扇区、外侧标签落在 6 点方向把画布顶高）也会让它变，
+       用定值基线就会把这种自变误判成「容器给了新高度」→ 随后 avail 从含绘图区的图表根去减
+       → 画布依赖画布 → 逐帧坍缩（实测 140 → 28 → 0）。
+       与 selfHeight 比则只有**外部**改高（拖卡片、容器给了显式高度）才对得上，自变天然被排除。 */
+    if (!usesContainerHeight && Math.abs(host.clientHeight - selfHeight) > 1) usesContainerHeight = true;
     build();
   });
   /* destroy 把 host 恢复原样：**方位修饰类必须一并摘掉**——同一个 host 换 legend 重新挂载时，

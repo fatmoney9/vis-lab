@@ -27,6 +27,7 @@
 |---|---|---|---|
 | LEGEND-05 | **hover 弱化（Web · 多系列）**：hover 某图例项 → 该系列图形保持原色，**其他系列图形不透明度降低**（THS 20% / iFinD 10% / Ainvest 20%）；**图例本身（文字 / marker）不变**；离开即恢复。适用多系列图（分组 / 堆叠 / 归一堆叠 / 多折线 / 线柱组合等）；单系列基础图、K 线**无此效**。**移动端通常无 hover**，交互只靠点击。<br>值 `--opacity-visualization-dim`（THS/Ainvest 0.2、iFinD 0.1）由 **L2 图形渲染消费**；L1 图例仅 `emit onHover(key\|null)` | `--opacity-visualization-dim`（值 token，三主题）；`renderLegend()` 的 `onHover` 回调 | ✅ |
 | LEGEND-06 | **点击显隐 · 两模式**（L1 参数化 `selectMode`，主题经 `legend-select` 选定）：<br>**多选（分组）**：点击某项 → 该项文字 + marker 变 `color-text-quaternary`，对应系列**隐藏**；每项独立开关。<br>**单选**：点击某项 → 弱化并隐藏**其他**项对应系列（聚焦当前）；点其他项切换选择，点已选中项恢复原始。<br>弱化 = 文字 / marker 用 `color-text-quaternary`；隐藏 = 对应系列图形不渲染（L2 执行）。L1 仅渲染关闭态外观 + `emit onToggle(key)` | `tokens/behavior.json` → `legend-select`；`renderLegend()` 的 `onToggle` 回调、`.dv-legend-item--off` | ✅ |
+| LEGEND-12 | **最后一个可见项不可关**（两模式共通，**全部图表**）：点击当前唯一亮着的图例项 → **原样返回**，该项保持彩色、图形保持渲染，等同没点。<br>**为什么不是「允许全隐」**：全隐对任何图表都不是有用的读数——饼环直接空白一片、轴图只剩一副空网格；而恢复的唯一入口恰恰是刚被点灰的那个图例项，用户很容易读成「图挂了」。单选模式（LEGEND-06）本就恒留一项，本条只是让多选与之一致，于是「全隐」这个状态在两个模式下都不存在。<br>**收在 L1 的 `applyToggle` 里、不给 L2 加开关**：加参数就等于每个新接入的图表都要记得传，而这条规则对谁都成立——同 [tooltip.md](tooltip.md)「位置档的边界」删掉容器尺寸参数的取舍 | `core/legend.js` → `applyToggle()` | ✅ |
 
 ## 图例溢出
 

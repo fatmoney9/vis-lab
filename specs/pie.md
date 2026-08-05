@@ -22,7 +22,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| PIE-03 | **每个扇区一个图例项**（不是「每个系列一项」——饼环的一个扇区就是一个实体）。marker 类型传 `'dot'`，三主题天然命中 [legend.md](legend.md) LEGEND-03 已写明的「饼/环/气泡/雷达 6×6 圆点」：THS / iFinD-PC 走各自 `legend-marker.shapes.dot`、Ainvest 走 `unified` 恒圆点——**`behavior.json` 无需新增任何键**。<br>点击显隐复用 `applyToggle`（LEGEND-06 两模式）；**隐藏后剩余扇区按可见项重算角度、重新闭合 360°**（同 BAR-05「隐藏系列按可见重算」）；图例 hover 弱化其余扇区走 LEGEND-05 的 `opacity-visualization-dim`。<br>**颜色不随显隐重排**（COLOR-04 / COLOR-08）——隐藏一个扇区只改角度，不改任何扇区的颜色 | `charts/charts/pie/index.js`（复用 `core/legend.js` 的 `renderLegend` / `applyToggle`） | ✅ |
+| PIE-03 | **每个扇区一个图例项**（不是「每个系列一项」——饼环的一个扇区就是一个实体）。marker 类型传 `'dot'`，三主题天然命中 [legend.md](legend.md) LEGEND-03 已写明的「饼/环/气泡/雷达 6×6 圆点」：THS / iFinD-PC 走各自 `legend-marker.shapes.dot`、Ainvest 走 `unified` 恒圆点——**`behavior.json` 无需新增任何键**。<br>点击显隐复用 `applyToggle`（LEGEND-06 两模式 + LEGEND-12「最后一个可见项不可关」——**故环恒有图元、不会空白一片**）；**隐藏后剩余扇区按可见项重算角度、重新闭合 360°**（同 BAR-05「隐藏系列按可见重算」）；图例 hover 弱化其余扇区走 LEGEND-05 的 `opacity-visualization-dim`。<br>**颜色不随显隐重排**（COLOR-04 / COLOR-08）——隐藏一个扇区只改角度，不改任何扇区的颜色 | `charts/charts/pie/index.js`（复用 `core/legend.js` 的 `renderLegend` / `applyToggle`） | ✅ |
 
 ## 图例布局
 
