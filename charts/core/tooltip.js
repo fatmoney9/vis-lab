@@ -102,10 +102,11 @@ export function createTooltip(plotHost) {
     if (mode === 'top-anchor') {
       /* [TOOLTIP-05] 顶部锚定式：三角尖端 x 恒 = 触发坐标；气泡底边 y = grid 上沿 − 三角高
          （与坐标 y 无关）；气泡是临时遮罩物，向上盖过 legend / 标题层属正常。
-         **水平 clamp 到视口**：气泡钉在类目上、宽度可观，夹在图表里会让贴边的类目频繁被截；
-         它本就是 fixed 浮层（TOOLTIP-12 允许越出任何祖先），只需保证不跑出屏幕。
+         **水平 clamp 到绘图区**：③「贴边后气泡停、三角继续随坐标偏移」是本档的设计behaviour，
+         而这条只有在边界贴着图表时才够得着——放宽到视口后，桌面宽度下气泡从不碰边（实测 1600px
+         视口 / 706px 图表全程无接触），那条规则就成了永不触发的死代码。
          **垂直不 clamp**：② 明写「底边 y 与坐标 y 无关」，一夹这条就碎（三角会脱离气泡底边）。 */
-      left = clamp(cx - w / 2, -box.left, window.innerWidth - box.left - w);
+      left = clamp(cx - w / 2, 0, Math.max(0, box.width - w));
       top = grid.top - ARROW_H - h;
       arrow.style('display', 'block')
         .style('left', `${clamp(cx - left - ARROW_W / 2, 2, w - ARROW_W - 2)}px`);
