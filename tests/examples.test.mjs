@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EXAMPLES, buildConfig, capabilitiesOf, describeConfig } from '../demos/examples.js';
+import {
+  EXAMPLES,
+  buildConfig,
+  capabilitiesOf,
+  describeConfig,
+  financialSankeyPeriods,
+} from '../demos/examples.js';
+import { hasSameSankeyTopology } from '../charts/charts/sankey/playback.js';
+import { assertSankeyConfig } from '../charts/charts/sankey/layout.js';
 
 /*
  * demos/examples.js 是纯数据 + 配置装配（不 import d3、不碰 DOM），故可被 node 直接加载。
@@ -40,16 +48,65 @@ test('AXISTITLE-03：非双量纲示例不带 y2（误写也会被剔掉）', ()
 /* 动效与其他旋钮方向相反：组件默认就播，故「cfg 里没有 animation」= 开，只有关才落进 cfg。
    写反了不会报错、只会让预览面永远不播（或永远播），是典型的静默错误。 */
 test('MOTION-07：默认开——不传旋钮时 cfg 里没有 animation（= 走组件默认）', () => {
-  for (const e of EXAMPLES) {
+  for (const e of EXAMPLES.filter((example) => capabilitiesOf(example).animation)) {
     assert.equal(buildConfig(e, {}).animation, undefined, `示例「${e.id}」默认不该显式带 animation`);
     assert.equal(buildConfig(e, { animation: true }).animation, undefined, `示例「${e.id}」开着时也不必写进 cfg`);
   }
 });
 
 test('MOTION-07：关掉时必须显式落进 cfg，否则组件仍会播', () => {
-  for (const e of EXAMPLES) {
+  for (const e of EXAMPLES.filter((example) => capabilitiesOf(example).animation)) {
     assert.equal(buildConfig(e, { animation: false }).animation, false, `示例「${e.id}」关动效没落进 cfg`);
   }
+});
+
+test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴或饼环旋钮', () => {
+  const sankey = EXAMPLES.find((example) => example.chart === 'sankey');
+  assert.ok(sankey, 'EXAMPLES 中应注册桑基图示例');
+  assert.deepEqual(capabilitiesOf(sankey), {
+    density: false,
+    zoom: false,
+    dataLabel: false,
+    axisTitle: false,
+    animation: false,
+    area: false,
+    legend: false,
+    labelLayout: false,
+    labelAlign: false,
+  });
+  const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
+  assert.equal(cfg.platform, 'mobile');
+  assert.equal(cfg.animation, undefined);
+  assert.equal(cfg.nodes.length, 15);
+  assert.equal(cfg.links.length, 14);
+});
+
+test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一个亏损季度', () => {
+  const sankey = EXAMPLES.find((example) => example.id === 'sankey-financial');
+  const periods = financialSankeyPeriods();
+
+  assert.equal(periods.length, 8);
+  assert.equal(sankey.playback.periods.length, periods.length);
+  assert.equal(new Set(periods.map((period) => period.shortPeriod)).size, periods.length);
+  assert.equal(periods.filter((period) => period.statusLabel === '亏损').length, 1);
+  assert.ok(periods.find((period) => period.statusLabel === '亏损').links.some((link) => link.value < 0));
+  periods.forEach((period) => {
+    assert.equal(period.nodes.length, 15);
+    assert.equal(period.links.length, 14);
+    assert.equal(hasSameSankeyTopology(periods[0], period), true);
+    assert.doesNotThrow(() => assertSankeyConfig(period));
+  });
+
+  const lossPeriod = periods.find((period) => period.statusLabel === '亏损');
+  const lossGraph = assertSankeyConfig(lossPeriod);
+  const revenue = lossGraph.nodes.find((node) => node.id === 'revenue');
+  const businessIncome = lossPeriod.links
+    .filter((link) => link.target === 'revenue')
+    .reduce((sum, link) => sum + link.value, 0);
+  assert.equal(businessIncome, 8.92e8);
+  assert.equal(revenue.value, businessIncome);
+  assert.ok(revenue.magnitude / Math.abs(revenue.value) < 1.02,
+    '亏损期毛利绝对值不应让营业收入节点明显大于前方业务收入');
 });
 
 test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）', () => {

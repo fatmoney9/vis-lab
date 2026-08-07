@@ -141,6 +141,7 @@
 </style>
 <link rel="stylesheet" href="../tokens/tokens.css" />
 <link rel="stylesheet" href="../charts/styles.css" />
+<link rel="stylesheet" href="../charts/charts/sankey/styles.css?v=main-integration1" />
 </head>
 <body>
 <div class="app">
@@ -148,7 +149,7 @@
   <aside class="pane pane-left">
     <div class="brand">
       <h1>L2 图表预览</h1>
-      <p>CartesianChart · PieChart —— 只传数据 + 语义配置</p>
+      <p>CartesianChart · PieChart · SankeyChart —— 只传数据 + 语义配置</p>
     </div>
     <nav class="nav" id="nav"></nav>
   </aside>
@@ -362,6 +363,7 @@
     /* 旋钮按当前示例的能力显隐（demos/examples.js 的 CHART_CAPABILITIES ∩ 本示例配置形态）：
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
+    document.getElementById('seg-density').closest('.field').hidden = !caps.density;
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
     document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
     document.getElementById('seg-label-align').closest('.field').hidden = !caps.labelAlign;

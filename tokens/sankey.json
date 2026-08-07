@@ -1,0 +1,93 @@
+{
+  "$meta": {
+    "description": "SankeyChart 专属几何与主题语义色。独立文件，不参与现有 token 构建或其他图表。",
+    "authority": "specs/sankey.md（SANKEY-01..24）",
+    "notes": [
+      "边色由终节点语义色派生，禁止渐变。",
+      "收入、支出、利润是固定业务语义槽位，不按系列色板循环。",
+      "业务角色决定颜色，value 的正负决定数值符号，二者互不替代。",
+      "节点与非零边统一使用 1px 最小可见粗细；该视觉下限不改变原始值或会计守恒。",
+      "主节点后的首层分叉保持自然展开，后续各列统一向画板垂直中轴回拉，不再由中间业务节点重定义中轴。",
+      "同列节点以端侧主节点高度的 10% 为最小间距；双节点列占主节点高度的 70%，三节点列占 100%，更多节点按最小间距逐项扩展。",
+      "PC 使用 240px 主节点；移动端实例覆盖为 120px，并将含 40px 图例的可视画板总高限制为 243px。",
+      "节点标签字号随当前图内的分支显示高度变化，标题与数值分别使用中文和金融数字字体。",
+      "桑基数值使用独立字体回退链，不修改其他图表的全局数字字体 token。",
+      "THS 与 Ainvest 使用各自业务语义映射；iFinD-PC 继承 base 三色。"
+    ]
+  },
+  "geometry": {
+    "primary-node-width": 24,
+    "node-width": 12,
+    "primary-node-height": {
+      "pc": 240,
+      "mobile": 120
+    },
+    "node-gap": {
+      "pc": 24,
+      "mobile": 12
+    },
+    "multi-node-span-base-ratio": 0.7,
+    "third-node-span-ratio": 0.3,
+    "zero-flow-size": 1,
+    "node-min-height": 1,
+    "edge-min-thickness": 1,
+    "canvas-min-height": {
+      "pc": 288,
+      "mobile": 168
+    },
+    "canvas-recommended-height": {
+      "pc": 384,
+      "mobile": 203
+    },
+    "canvas-max-height": {
+      "pc": null,
+      "mobile": 203
+    },
+    "canvas-padding-x": {
+      "pc": 120,
+      "mobile": 84
+    },
+    "canvas-padding-y": 24,
+    "label-gap": 8,
+    "label-title-width": 96,
+    "label-title-font-size-min": 10,
+    "label-title-font-size-max": 12,
+    "label-value-font-size-min": 11,
+    "label-value-font-size-max": 14,
+    "column-gap": 24,
+    "legend-reserved-height": 40,
+    "edge-opacity": 0.2,
+    "edge-highlight-opacity": 0.64,
+    "centerline-attraction": 0.8,
+    "curve-tension": 0.5,
+    "dense-edge-label-threshold": 8
+  },
+  "typography": {
+    "number-font-family": "'THS Money font',THSJinRongTi,'DIN Alternate',ui-monospace,monospace"
+  },
+  "motion": {
+    "playback-label-lead-duration": 120,
+    "playback-duration": 720,
+    "playback-easing": "cubic-out"
+  },
+  "base": {
+    "income": "#3366FF",
+    "expense": "#07AB4B",
+    "profit": "#FF2436"
+  },
+  "ths": {
+    "income": "#FF9500",
+    "expense": "#3366FF",
+    "profit": "#FF2436"
+  },
+  "ifind-pc": {
+    "income": "#3366FF",
+    "expense": "#07AB4B",
+    "profit": "#FF2436"
+  },
+  "ainvest": {
+    "income": "#265FFC",
+    "expense": "#FF381A",
+    "profit": "#00B53C"
+  }
+}
