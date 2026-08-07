@@ -25,12 +25,14 @@ export function sankeyNodeDashboard(node, format) {
 export function sankeyRelatedNeighborhood(node) {
   const nodes = new Set([node]);
   const links = new Set();
+  const incoming = node.visualIncoming ?? node.incoming;
+  const outgoing = node.visualOutgoing ?? node.outgoing;
 
-  node.incoming.forEach((link) => {
+  incoming.forEach((link) => {
     links.add(link);
-    nodes.add(link.source);
+    nodes.add(link.visualSource ?? link.source);
   });
-  node.outgoing.forEach((link) => {
+  outgoing.forEach((link) => {
     links.add(link);
     nodes.add(link.target);
   });

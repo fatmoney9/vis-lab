@@ -166,7 +166,12 @@ const makeFinancialSankeyQuarter = ({
       { source: 'other-business', target: 'revenue', value: otherBusiness },
       { source: 'international', target: 'revenue', value: international },
       { source: 'revenue', target: 'cost', value: costValue },
-      { source: 'revenue', target: 'gross', value: gross },
+      {
+        source: 'revenue',
+        target: 'gross',
+        value: gross,
+        negativeSource: 'cost',
+      },
       { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
       { source: 'gross', target: 'operating-profit', value: grossToOperating },
       { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },

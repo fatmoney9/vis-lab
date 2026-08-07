@@ -309,7 +309,8 @@ export function SankeyChart(host, initialConfig) {
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
       .attr('aria-label', (link) => (
-        `${link.source.name}流向${link.target.name}，数值${format(link.displayValue)}`
+        `${(link.visualSource ?? link.source).name}流向${link.target.name}，`
+        + `数值${format(link.displayValue)}`
       ))
       .style('--dv-sankey-color', (link) => link.color);
 
@@ -409,13 +410,14 @@ export function SankeyChart(host, initialConfig) {
       nodeLabels.classed('is-dimmed', (item) => !related.nodes.has(item));
     };
     const highlightEdge = (_, link) => {
+      const source = link.visualSource ?? link.source;
       edgeGroups
         .classed('is-active', (item) => item === link)
         .classed('is-dimmed', (item) => item !== link);
       nodeGroups
-        .classed('is-active', (item) => item === link.source || item === link.target)
-        .classed('is-dimmed', (item) => item !== link.source && item !== link.target);
-      nodeLabels.classed('is-dimmed', (item) => item !== link.source && item !== link.target);
+        .classed('is-active', (item) => item === source || item === link.target)
+        .classed('is-dimmed', (item) => item !== source && item !== link.target);
+      nodeLabels.classed('is-dimmed', (item) => item !== source && item !== link.target);
     };
 
     const placeTooltip = (point) => {

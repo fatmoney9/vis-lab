@@ -163,8 +163,14 @@ export function assertSankeyConfig(cfg) {
   const links = cfg.links.map((source, index) => {
     const from = resolveReference(source?.source, nodeById, nodeByName);
     const to = resolveReference(source?.target, nodeById, nodeByName);
+    const negativeSource = source?.negativeSource == null
+      ? null
+      : resolveReference(source.negativeSource, nodeById, nodeByName);
     const value = Number(source?.value);
     if (!from || !to) fail(`第 ${index + 1} 条链接引用了未声明节点`);
+    if (source?.negativeSource != null && !negativeSource) {
+      fail(`第 ${index + 1} 条链接的 negativeSource 引用了未声明节点`);
+    }
     if (from === to) fail(`第 ${index + 1} 条链接不允许自环`);
     if (!Number.isFinite(value)) {
       fail(`第 ${index + 1} 条链接 value 必须是有限数`);
@@ -172,6 +178,7 @@ export function assertSankeyConfig(cfg) {
     const link = {
       source: from,
       target: to,
+      negativeSource,
       value,
       magnitude: Math.abs(value),
       index,
@@ -207,6 +214,17 @@ export function assertSankeyConfig(cfg) {
   links.forEach((link) => {
     if (link.target.stage <= link.source.stage) {
       fail(`链接「${link.source.name} → ${link.target.name}」的目标 stage 必须大于源 stage`);
+    }
+    if (link.negativeSource) {
+      const isSiblingTarget = link.source.outgoing.some(
+        (candidate) => candidate !== link && candidate.target === link.negativeSource,
+      );
+      if (!isSiblingTarget || link.negativeSource.stage !== link.target.stage) {
+        fail(
+          `链接「${link.source.name} → ${link.target.name}」的 negativeSource `
+          + '必须是同一来源、同一目标阶段的兄弟节点',
+        );
+      }
     }
   });
 
@@ -454,6 +472,30 @@ function ribbonPath(link, tension, columns, gap) {
   return commands.join(' ');
 }
 
+/* [SANKEY-25] 亏损差额从兄弟成本节点的超额段回弯到同列结果节点。 */
+function differenceRibbonPath(link, gap) {
+  const source = link.visualSource;
+  const target = link.target;
+  const sourceX = source.x;
+  const targetX = target.x;
+  const controlX = Math.min(sourceX, targetX) - gap;
+  const sourceY = Math.max(source.y, source.y + source.height - link.thickness);
+  const targetY = link.targetY;
+  const thickness = link.thickness;
+
+  link.sourceY = sourceY;
+  link.route = 'difference';
+  link.routeX = controlX;
+  return [
+    `M${sourceX},${sourceY}`,
+    `C${controlX},${sourceY} ${controlX},${targetY} ${targetX},${targetY}`,
+    `L${targetX},${targetY + thickness}`,
+    `C${controlX},${targetY + thickness} `
+      + `${controlX},${sourceY + thickness} ${sourceX},${sourceY + thickness}`,
+    'Z',
+  ].join(' ');
+}
+
 /*
  * [SANKEY-04..08][SANKEY-11][SANKEY-13][SANKEY-15..18]
  * 最大绝对流量节点作为尺度锚点；有符号值只影响文案与守恒，不反转流向。
@@ -585,10 +627,24 @@ export function layoutSankey(cfg, bounds, style) {
   });
 
   graph.nodes.forEach((node) => {
-    const incoming = [...node.incoming].sort(
-      (a, b) => (a.source.y + a.source.height / 2) - (b.source.y + b.source.height / 2),
+    node.visualIncoming = [];
+    node.visualOutgoing = [];
+  });
+  graph.links.forEach((link) => {
+    link.visualSource = link.value < 0 && link.negativeSource
+      ? link.negativeSource
+      : link.source;
+    link.visualTarget = link.target;
+    link.visualSource.visualOutgoing.push(link);
+    link.visualTarget.visualIncoming.push(link);
+  });
+
+  graph.nodes.forEach((node) => {
+    const incoming = [...node.visualIncoming].sort(
+      (a, b) => (a.visualSource.y + a.visualSource.height / 2)
+        - (b.visualSource.y + b.visualSource.height / 2),
     );
-    const outgoing = [...node.outgoing].sort(
+    const outgoing = [...node.visualOutgoing].sort(
       (a, b) => (a.target.y + a.target.height / 2) - (b.target.y + b.target.height / 2),
     );
     const incomingHeight = incoming.reduce((sum, link) => sum + link.thickness, 0);
@@ -607,11 +663,18 @@ export function layoutSankey(cfg, bounds, style) {
 
   graph.links.forEach((link) => {
     link.color = link.target.color;
-    link.path = ribbonPath(link, geometry['curve-tension'], columns, nodeGap);
-    link.labelX = (link.source.x + link.source.width + link.target.x) / 2;
-    link.labelY = link.route
-      ? link.routeY + link.thickness / 2
-      : (link.sourceY + link.targetY + link.thickness) / 2;
+    const isNegativeDifference = link.value < 0 && link.negativeSource;
+    link.path = isNegativeDifference
+      ? differenceRibbonPath(link, nodeGap)
+      : ribbonPath(link, geometry['curve-tension'], columns, nodeGap);
+    link.labelX = isNegativeDifference
+      ? link.routeX
+      : (link.source.x + link.source.width + link.target.x) / 2;
+    link.labelY = isNegativeDifference
+      ? (link.sourceY + link.targetY + link.thickness) / 2
+      : (link.route
+        ? link.routeY + link.thickness / 2
+        : (link.sourceY + link.targetY + link.thickness) / 2);
   });
 
   return {

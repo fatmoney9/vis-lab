@@ -91,8 +91,10 @@ test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一�
   assert.equal(periods.filter((period) => period.statusLabel === '亏损').length, 1);
   assert.ok(periods.find((period) => period.statusLabel === '亏损').links.some((link) => link.value < 0));
   periods.forEach((period) => {
+    const grossLink = period.links.find((link) => link.target === 'gross');
     assert.equal(period.nodes.length, 15);
     assert.equal(period.links.length, 14);
+    assert.equal(grossLink.negativeSource, 'cost');
     assert.equal(hasSameSankeyTopology(periods[0], period), true);
     assert.doesNotThrow(() => assertSankeyConfig(period));
   });

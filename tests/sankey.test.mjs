@@ -144,7 +144,12 @@ const LOSS_CONFIG = {
   ],
   links: [
     { source: 'revenue', target: 'cost', value: 896013600 },
-    { source: 'revenue', target: 'gross', value: -4013600 },
+    {
+      source: 'revenue',
+      target: 'gross',
+      value: -4013600,
+      negativeSource: 'cost',
+    },
     { source: 'gross', target: 'expense', value: 26127300 },
     { source: 'gross', target: 'operating', value: -30140900 },
     { source: 'other', target: 'operating', value: -5630900 },
@@ -557,10 +562,11 @@ test('SANKEY-13：中间节点流入与流出不守恒时立即报错', () => {
   );
 });
 
-test('SANKEY-13/16：亏损保留负号，几何使用绝对值且流向不反转', () => {
+test('SANKEY-13/16/25：毛利亏损从营业成本超额段引出，逻辑值仍保持守恒', () => {
   const graph = layoutSankey(LOSS_CONFIG, { width: 960, height: 480 }, STYLE);
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const lossLink = graph.links.find((link) => link.target.id === 'gross');
+  const related = sankeyRelatedNeighborhood(byId.get('gross'));
 
   assert.equal(byId.get('revenue').value, 892000000);
   assert.equal(byId.get('gross').value, -4013600);
@@ -569,7 +575,53 @@ test('SANKEY-13/16：亏损保留负号，几何使用绝对值且流向不反�
   assert.equal(lossLink.value, -4013600);
   assert.equal(lossLink.magnitude, 4013600);
   assert.ok(lossLink.thickness > 0);
-  assert.ok(lossLink.source.x < lossLink.target.x);
+  assert.equal(lossLink.source.id, 'revenue');
+  assert.equal(lossLink.visualSource.id, 'cost');
+  assert.equal(lossLink.visualSource.columnIndex, lossLink.target.columnIndex);
+  assert.equal(lossLink.route, 'difference');
+  assert.match(lossLink.path, new RegExp(`^M${byId.get('cost').x},`));
+  assert.ok(related.nodes.has(byId.get('cost')));
+  assert.ok(!related.nodes.has(byId.get('revenue')));
+});
+
+test('SANKEY-25：盈利时差额仍从营业收入分出，跨过零值才切换视觉来源', () => {
+  const profitConfig = structuredClone(LOSS_CONFIG);
+  profitConfig.links.find((link) => link.target === 'cost').value = 887986400;
+  profitConfig.links.find((link) => link.target === 'gross').value = 4013600;
+  profitConfig.links.find((link) => link.source === 'gross' && link.target === 'expense').value = 0;
+  profitConfig.links.find((link) => link.source === 'gross' && link.target === 'operating').value = 4013600;
+  profitConfig.links.find((link) => link.source === 'other').value = 0;
+  profitConfig.links.find((link) => link.source === 'operating').value = 4013600;
+
+  const graph = layoutSankey(profitConfig, { width: 960, height: 480 }, STYLE);
+  const profitLink = graph.links.find((link) => link.target.id === 'gross');
+  const beforeZero = layoutSankey(
+    interpolateSankeyConfig(profitConfig, LOSS_CONFIG, 0.49),
+    { width: 960, height: 480 },
+    STYLE,
+  ).links.find((link) => link.target.id === 'gross');
+  const afterZero = layoutSankey(
+    interpolateSankeyConfig(profitConfig, LOSS_CONFIG, 0.51),
+    { width: 960, height: 480 },
+    STYLE,
+  ).links.find((link) => link.target.id === 'gross');
+
+  assert.equal(profitLink.value, 4013600);
+  assert.equal(profitLink.visualSource.id, 'revenue');
+  assert.notEqual(profitLink.route, 'difference');
+  assert.ok(profitLink.visualSource.x < profitLink.target.x);
+  assert.equal(beforeZero.visualSource.id, 'revenue');
+  assert.equal(afterZero.visualSource.id, 'cost');
+  assert.equal(afterZero.negativeSource.id, 'cost');
+});
+
+test('SANKEY-25：差额来源必须是同一来源、同一阶段的兄弟节点', () => {
+  const invalid = structuredClone(LOSS_CONFIG);
+  invalid.links.find((link) => link.target === 'gross').negativeSource = 'expense';
+  assert.throws(
+    () => assertSankeyConfig(invalid),
+    /negativeSource.*兄弟节点/,
+  );
 });
 
 test('SANKEY-13/16：正负贡献按有符号值守恒，节点高度容纳绝对流量', () => {
