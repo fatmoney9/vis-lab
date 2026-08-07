@@ -87,6 +87,30 @@ test('PIE-02：空间不足时 R 收缩到短边一半，环宽等比跟随', ()
   closeTo(ring / R, 28 / 70, '环宽:半径比全程不变');
 });
 
+test('PIE-02：收缩触底 —— R 不小于默认半径的 50%，环宽同比触底', () => {
+  /* 短边只有 40（半径够 20）时，若无下限 R 会缩到 20；下限把它托回 35 = 70 × 0.5 */
+  const { R, innerR, ring } = donutRadii(400, 40, 70, 28, 'donut');
+
+  assert.equal(R, 35);
+  closeTo(ring, 14);                         /* 28 × 35/70 —— 触底时环宽也触底 */
+  closeTo(innerR, 21);
+  closeTo(ring / R, 28 / 70, '触底后环宽:半径比仍不变');
+});
+
+test('PIE-02：触底后容器继续变小，R 不再跟着缩（环改为溢出画布）', () => {
+  const tiny = donutRadii(400, 4, 70, 28, 'donut');
+  const zero = donutRadii(0, 0, 70, 28, 'donut');
+  const negative = donutRadii(-100, -100, 70, 28, 'donut');   /* 上下结构扣掉图例后可能为负 */
+
+  assert.equal(tiny.R, 35);
+  assert.equal(zero.R, 35);
+  assert.equal(negative.R, 35, '负的可用空间也只触底、不出负半径');
+});
+
+test('PIE-02：下限是「默认半径的一半」，故 token 缺失时下限也是 0（不凭空造环）', () => {
+  assert.equal(donutRadii(0, 0, 0, 28, 'donut').R, 0);
+});
+
 test('PIE-02：variant=pie 内半径为 0，径向厚度记作 R', () => {
   const { R, innerR, ring } = donutRadii(400, 200, 70, 28, 'pie');
 
@@ -226,15 +250,31 @@ test('PIE-13：column 的标签带比 anchor / edge 宽 —— 末端共线把�
   assert.ok(column > anchor, 'column 恒不窄于另两档，本例严格更宽');
 });
 
-test('PIE-13：左右两侧各算各的带宽，互不牵连', () => {
+test('PIE-13：两侧带宽恒等 —— 取较宽一侧所需，窄侧照样预留同宽', () => {
   const { band } = alignOutside([
     { side: 'right', ex: 10, textWidth: 20 },
     { side: 'left', ex: -60, textWidth: 120 },
   ], 'anchor', OPT);
 
-  closeTo(band.right, 10 + 8 + 8 + 20 - R < 0 ? 0 : 10 + 8 + 8 + 20 - R);
+  /* 左侧需 60+8+8+120−R，右侧只需 10+8+8+20−R；对称后两侧都取前者 */
   closeTo(band.left, 60 + 8 + 8 + 120 - R);
-  assert.ok(band.left > band.right, '一侧的长文本不该把另一侧撑宽');
+  assert.equal(band.right, band.left, '窄侧不能自己算自己的，否则圆心偏离画布中心');
+});
+
+test('PIE-13：单侧有标签时另一侧也留同宽的带（圆心不偏移的直接证据）', () => {
+  const { band } = alignOutside([{ side: 'left', ex: -60, textWidth: 120 }], 'anchor', OPT);
+
+  closeTo(band.left, 60 + 8 + 8 + 120 - R);
+  assert.equal(band.right, band.left, '右侧一条引线都没有，仍要留出等宽的带');
+});
+
+test('PIE-13：bandCap 对称生效 —— 截断后两侧仍恒等', () => {
+  const { band } = alignOutside([
+    { side: 'left', ex: -60, textWidth: 400 },
+    { side: 'right', ex: 10, textWidth: 20 },
+  ], 'anchor', { ...OPT, bandCap: 120 });
+
+  assert.deepEqual(band, { left: 120, right: 120 });
 });
 
 test('PIE-13：左侧的横段与文字一律朝左（x 为负、anchor 反向）', () => {

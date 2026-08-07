@@ -212,6 +212,7 @@
   "size-donut-hover-expand": "10px",
   "size-donut-label-line-radial": "16px",
   "size-donut-label-line-lateral": "16px",
+  "size-donut-label-band-max": "120px",
   "spacing-donut-label-gap": "{spacing-8}",
 
   "$section-21": "数据标签 Data Label",

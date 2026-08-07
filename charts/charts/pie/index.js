@@ -60,7 +60,7 @@ export function PieChart(host, cfg) {
   let selfHeight = host.clientHeight;
 
   /* [COLOR-08] 扇区即取色单位：N 个扇区当 N 个取色单位喂给同一个取色器——
-     type 既非 bar 也非 line，故「柱线混合」判定为假、自然落到通用 bar-multi 盘。
+     type:'pie' 走扇区专用盘 pie-multi（THS 11 色），主题未声明该盘时回落通用 bar-multi。
      hex 顺手留在 resolved 上——数据标签走档②，要按扇区色明暗反色（LABEL-04）需要色值本身而非变量名。 */
   const resolved = items.map((it, i) => ({
     name: it.name,
@@ -205,10 +205,16 @@ export function PieChart(host, cfg) {
       }
       const live = rows.filter((d) => kept.has(d));
 
-      /* 容器留给每侧标签带的上限。超了**不挪位置**，只让 maxWidth 变小，
-         再由 LABEL-06③ 判掉放不下的——判定用的是 L1 导出的同一个 dropOversized，L2 不另写。 */
+      /* 每侧标签带的上限，两个约束取紧者。超了**不挪位置**，只让 maxWidth 变小，
+         再由 LABEL-06③ 判掉放不下的——判定用的是 L1 导出的同一个 dropOversized，L2 不另写。
+         ① **容器余量**：宽容器里也别让一条长标签把画布拉成一条横带；
+         ② **`--size-donut-label-band-max`（三主题 120px）**：带宽的绝对上限。带宽是「预留」不是
+            「外接」（PIE-13 两侧恒等），无上限时一条超长文本会让**两侧**一起变宽、环被挤成小圆点。 */
       const legendW = legend === 'bottom' ? 0 : legendHost.getBoundingClientRect().width + gapPx;
-      const bandCap = Math.max(0, (host.clientWidth - legendW - 2 * R) / 2);
+      const bandCap = Math.min(
+        Math.max(0, (host.clientWidth - legendW - 2 * R) / 2),
+        tokenNum(plotHost, '--size-donut-label-band-max') || Infinity,
+      );
       const opts = {
         lateral: tokenNum(plotHost, '--size-donut-label-line-lateral') || 0,
         gap: tokenNum(plotHost, '--spacing-donut-label-gap') || 0,
@@ -260,12 +266,10 @@ export function PieChart(host, cfg) {
        容器另有显式高度时两条约束同时生效，取更紧的那个（CSS max-height 天然如此）。 */
     host.style.setProperty('--dv-pie-legend-max-h', `${2 * halfH * LEGEND_MAX_PLOT_RATIO}px`);
 
-    /* 圆心：两侧标签带不等宽时**不再是画布中心**（PIE-02）——
-       左右结构下画布正好裹着图元，圆心自左带宽起算；上下结构下画布铺满，
-       让**图元**（而非圆）在其中居中，圆心相应偏移半个带宽差。 */
-    const cx = legend === 'bottom'
-      ? (frame.grid.left + frame.grid.right) / 2 + (bandL - bandR) / 2
-      : frame.grid.left + bandL + R;
+    /* 圆心 = 画布中心，两种图例结构同一个式子（PIE-02）——
+       两侧标签带恒等宽（PIE-13），左右结构下 `grid.left + bandL + R` 本就等于画布中心，
+       上下结构下画布铺满、图元在其中居中，两者遂收敛成一句。 */
+    const cx = (frame.grid.left + frame.grid.right) / 2;
     const cy = (frame.grid.top + frame.grid.bottom) / 2;
 
     /* ── [PIE-05] hover 链路：只有气泡（无指示线 / 无轴贴片——无轴可指、无标签可贴）──

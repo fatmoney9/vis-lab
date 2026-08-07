@@ -182,7 +182,11 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 | `core/tooltip.js` | ① 气泡标题行可省 ② **删掉 `place()` 的容器尺寸参数**，三个位置档的 clamp 边界改由本模块按档自取 | ① 无类目维度的图没有标题 ② 见下 |
 | `core/label.js` | ① 前景色从「压不压色块」的布尔升为 `tone` 三态（档③ 中性色 LABEL-09）② `dropCollisions` 从 `{left,width}` 泛化成 `{start,size}`，两轴共用 | ① 引线标签既不跟随系列色也不反色 ② 外侧标签判的是**纵向**重叠 |
 
-**`behavior.json` 与 `palette.js` 仍一行未动。**
+**接入当时 `behavior.json` 与 `palette.js` 一行未动**（`behavior.json` 至今仍未动）。
+`palette.js` 是 2026-08-06 才因**设计源给出 THS 独立的饼扇区色板**加了一条分支：色板文件多一个可选键
+`pie-multi`、取色器多一条 `type:'pie'` 走该盘的规则，未声明该盘的主题回落通用 `bar-multi`（COLOR-08）。
+这是**数据侧新增了一套色板**逼出来的，不是「接新图型逼出 L1 改动」——接入 `PieChart` 当时扇区确实是
+按序号取通用盘、取色器一行未改，上表那条结论仍然成立。
 
 **最值钱的一条教训**（tooltip 那处）：`place()` 原本收 `width/height` 让调用方给 clamp 边界，
 而**轴图下「画布 == 绘图区 == 图表根」三者恰好同宽**，传哪个都对——于是这成了一条
