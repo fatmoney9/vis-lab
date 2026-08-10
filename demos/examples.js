@@ -201,29 +201,36 @@ const FINANCIAL_SANKEY_PERIOD_INPUTS = [
   ['2026 年报', '26 Q4', [236, 92, 22], 298, 31, 1.2, 1.1, 2.3, 3],
 ];
 
-export const financialSankeyPeriods = () => FINANCIAL_SANKEY_PERIOD_INPUTS.map(([
-  period,
-  shortPeriod,
-  sources,
-  cost,
-  operatingExpense,
-  otherOperating,
-  nonOperating,
-  incomeTax,
-  minorityInterest,
-  statusLabel,
-]) => makeFinancialSankeyQuarter({
-  period,
-  shortPeriod,
-  sources,
-  cost,
-  operatingExpense,
-  otherOperating,
-  nonOperating,
-  incomeTax,
-  minorityInterest,
-  statusLabel,
-}));
+export const financialSankeyPeriods = () => {
+  const periods = FINANCIAL_SANKEY_PERIOD_INPUTS.map(([
+    period,
+    shortPeriod,
+    sources,
+    cost,
+    operatingExpense,
+    otherOperating,
+    nonOperating,
+    incomeTax,
+    minorityInterest,
+    statusLabel,
+  ]) => makeFinancialSankeyQuarter({
+    period,
+    shortPeriod,
+    sources,
+    cost,
+    operatingExpense,
+    otherOperating,
+    nonOperating,
+    incomeTax,
+    minorityInterest,
+    statusLabel,
+  }));
+  const scaleMax = Math.max(...periods.map((period) => period.links
+    .filter((link) => link.target === 'revenue')
+    .reduce((sum, link) => sum + link.value, 0)));
+
+  return periods.map((period) => ({ ...period, scaleMax }));
+};
 
 export const financialSankey = () => financialSankeyPeriods()[0];
 
@@ -371,7 +378,7 @@ export const EXAMPLES = [
   },
   {
     id: 'sankey-financial', group: '桑基图', chart: 'sankey',
-    title: '财报收支拆解', spec: 'SANKEY-01 / SANKEY-24', surfaces: BOTH,
+    title: '财报收支拆解', spec: 'SANKEY-01 / SANKEY-24 / SANKEY-26', surfaces: BOTH,
     description: '收入、成本与利润按真实业务阶段展开，负值保留方向并参与有符号守恒。',
     summary: '15 节点 · 14 条流向 · 8 期',
     preferredWidth: 812,

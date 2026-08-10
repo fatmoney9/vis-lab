@@ -191,6 +191,31 @@ test('SANKEY-04/05：PC 主节点 24×240，移动端主节点高 120', () => {
     .forEach((node) => assert.equal(node.width, 12));
 });
 
+test('SANKEY-26：时间序列共享最大值比例尺，主轴缩放后仍以画板中线居中', () => {
+  const sharedScaleConfig = { ...structuredClone(CONFIG), scaleMax: 200 };
+  const graph = layoutSankey(
+    sharedScaleConfig,
+    { width: 960, height: 480 },
+    STYLE,
+  );
+
+  assert.equal(graph.scaleMax, 200);
+  assert.equal(graph.scale, STYLE.geometry['primary-node-height'] / 200);
+  assert.equal(graph.primary.magnitude, 100);
+  assert.equal(graph.primary.height, STYLE.geometry['primary-node-height'] / 2);
+  assert.equal(graph.primary.y + graph.primary.height / 2, graph.centerlineY);
+  assert.equal(graph.centerlineY, graph.height / 2);
+
+  assert.throws(
+    () => layoutSankey(
+      { ...structuredClone(CONFIG), scaleMax: 99 },
+      { width: 960, height: 480 },
+      STYLE,
+    ),
+    /scaleMax 不得小于当前主节点流量/,
+  );
+});
+
 test('SANKEY-15：全图最宽数值统一标签槽，且不小于 96px', () => {
   assert.equal(resolveSankeyLabelSlot([36, 72, 88], 96), 96);
   assert.equal(resolveSankeyLabelSlot([36, 128, 88], 96), 128);

@@ -114,6 +114,10 @@ export function resolveSankeyCanvasHeight(hostHeight, geometry) {
 export function assertSankeyConfig(cfg) {
   if (!cfg || typeof cfg !== 'object') fail('配置必须是对象');
   if (own(cfg, 'stack')) fail('不支持 stack 或任何堆叠配置');
+  const scaleMax = cfg.scaleMax == null ? null : Number(cfg.scaleMax);
+  if (scaleMax !== null && (!Number.isFinite(scaleMax) || scaleMax <= 0)) {
+    fail('scaleMax 必须是大于 0 的有限数');
+  }
   if (!Array.isArray(cfg.nodes) || !Array.isArray(cfg.links)) {
     fail('必须同时提供 nodes 与 links 数组');
   }
@@ -289,11 +293,15 @@ export function assertSankeyConfig(cfg) {
       || a.index - b.index,
   )[0];
   if (!(primary.magnitude > 0)) fail('最大流量节点必须承载非零流量');
+  if (scaleMax !== null && scaleMax < primary.magnitude) {
+    fail('scaleMax 不得小于当前主节点流量');
+  }
 
   return {
     nodes,
     links,
     primary,
+    scaleMax,
     stageValues,
     maxStage: stageValues.at(-1),
   };
@@ -527,13 +535,14 @@ function differenceRibbonPath(link, gap) {
 }
 
 /*
- * [SANKEY-04..08][SANKEY-11][SANKEY-13][SANKEY-15..18][SANKEY-25]
- * 最大分配枢纽作为尺度锚点；财务负差额按来源、成本和差额各自数值定高。
+ * [SANKEY-04..08][SANKEY-11][SANKEY-13][SANKEY-15..18][SANKEY-25/26]
+ * 最大分配枢纽作为尺度锚点；时间序列可共享最大值比例尺并保持中轴居中。
  */
 export function layoutSankey(cfg, bounds, style) {
   const geometry = style.geometry;
   const graph = assertSankeyConfig(cfg);
-  const scale = geometry['primary-node-height'] / graph.primary.magnitude;
+  const scaleMagnitude = graph.scaleMax ?? graph.primary.magnitude;
+  const scale = geometry['primary-node-height'] / scaleMagnitude;
   const nodeGap = geometry['node-gap'];
   const paddingX = geometry['canvas-padding-x'];
   const paddingY = geometry['canvas-padding-y'];
@@ -566,9 +575,7 @@ export function layoutSankey(cfg, bounds, style) {
     node.width = node === graph.primary
       ? geometry['primary-node-width']
       : geometry['node-width'];
-    node.proportionalHeight = node === graph.primary
-      ? geometry['primary-node-height']
-      : Math.max(nodeMinHeight, node.magnitude * scale);
+    node.proportionalHeight = Math.max(nodeMinHeight, node.magnitude * scale);
     const incomingDisplayHeight = node.incoming.reduce(
       (sum, link) => sum + link.thickness,
       0,
@@ -738,6 +745,7 @@ export function layoutSankey(cfg, bounds, style) {
     labelSlotWidth,
     columnPitch,
     centerlineY: anchorY,
+    scaleMax: scaleMagnitude,
     scale,
   };
 }

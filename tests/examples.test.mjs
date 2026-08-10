@@ -90,6 +90,10 @@ test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一�
   assert.equal(new Set(periods.map((period) => period.shortPeriod)).size, periods.length);
   assert.equal(periods.filter((period) => period.statusLabel === '亏损').length, 1);
   assert.ok(periods.find((period) => period.statusLabel === '亏损').links.some((link) => link.value < 0));
+  const primaryMagnitudes = periods.map((period) => assertSankeyConfig(period).primary.magnitude);
+  const sharedScaleMax = Math.max(...primaryMagnitudes);
+  assert.equal(new Set(periods.map((period) => period.scaleMax)).size, 1);
+  assert.equal(periods[0].scaleMax, sharedScaleMax);
   periods.forEach((period) => {
     const grossLink = period.links.find((link) => link.target === 'gross');
     assert.equal(period.nodes.length, 15);
