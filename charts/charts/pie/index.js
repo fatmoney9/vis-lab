@@ -53,6 +53,14 @@ const VALUE_CLASS = 'dv-data-label--donut-value';
    换主题、换半径都自洽。 */
 const LEGEND_MAX_PLOT_RATIO = 2;
 
+/* [PIE-17] 引线的**命中带宽**：引线自身只有 1px（复用 --size-grid-line），照它命中等于要求
+   像素级瞄准，「hover 引线也算 hover 这个扇区」就成了纸面能力。故在同一个 <g> 里再叠一条
+   **透明加粗**的同形折线专供命中，视觉一像素不变。
+   取 10px 是可点性阈值（约等于指针的容错半径），不是设计尺寸，故为模块常量、不进 token
+   （同 LEGEND_MAX_PLOT_RATIO 的 ×2、PIE-16 的保底 1 字）。
+   ⚠️ 值再往上加要先验一遍密集档：它是以引线为中线向两侧摊开的，太宽会盖住邻扇区外扩后的那一圈。 */
+const LINE_HIT_WIDTH = 10;
+
 export function PieChart(host, cfg) {
   const {
     name, items, variant = 'donut', legend = 'right', platform = 'pc',
@@ -207,10 +215,14 @@ export function PieChart(host, cfg) {
          measure.js 一行不用改，也不需要 tspan。 */
       const nameW = measureTexts(plotHost, rows.map((d) => d.name), `dv-data-label ${NAME_CLASS}`);
       const valueW = measureTexts(plotHost, rows.map((d) => d.value), `dv-data-label ${VALUE_CLASS}`);
-      /* inline 档名称与数值之间那个空格算**名称段**的一部分——测量与渲染必须同一口径，
-         差几像素就会让截断点算错、文字溢出画布（PIE-16）。 */
-      const sepW = stacked ? 0 : measureTexts(plotHost, [`${rows[0]?.name ?? ''} `], `dv-data-label ${NAME_CLASS}`)[0]
-        - measureTexts(plotHost, [rows[0]?.name ?? ''], `dv-data-label ${NAME_CLASS}`)[0];
+      /* inline 档两段之间那个空格的宽度：块宽含它、渲染时它就是两个 <text> 的横向间距
+         （PIE-12 拆段之后空格不再是串里的字符），故必须量准，差几像素就看得出来。
+         ⚠️ **只能用「整串 − 两段」的差量**：SVG 的 xml:space 默认裁掉首尾空白，
+         拿「名称 + 尾随空格」减「名称」量出来恒为 0（实测三主题皆然），空格只有夹在
+         两段之间才有宽度。inline 档两段字号相同（pie-label-form 的前提），故整串按名称类量。 */
+      const sepW = stacked || !rows.length ? 0
+        : measureTexts(plotHost, [`${rows[0].name} ${rows[0].value}`], `dv-data-label ${NAME_CLASS}`)[0]
+          - nameW[0] - valueW[0];
       rows.forEach((d, i) => {
         d.nameW = nameW[i];
         d.valueW = valueW[i];
@@ -279,7 +291,7 @@ export function PieChart(host, cfg) {
 
       const placed = alignOutside(fits, labelAlign, opts);
       fits.forEach((d, i) => Object.assign(d, placed[i]));
-      if (fits.length) outside = { rows: fits, band };
+      if (fits.length) outside = { rows: fits, band, sepW };
     }
 
     /* [PIE-08][PIE-09][PIE-02] 无轴画布：xBand:false → 四周留白全 0、grid 即整块画布。
@@ -350,6 +362,9 @@ export function PieChart(host, cfg) {
        外侧档的锚点已在上面预演里算完，这里只是把两档统一收进同一批交给 renderDataLabels。 */
     const outsideByKey = new Map((outside ? outside.rows : []).map((d) => [d.key, d]));
     const labelBatches = [];
+    /* [PIE-17] key → 该扇区的命中绑定函数。标签层在扇区之后才建（PIE-07），
+       那时扇区的闭包已经出作用域，故在这里留一手，供标签 `<g>` 复用**同一套**处理器。 */
+    const hitBinders = new Map();
 
     /* [MOTION-01][PIE-06] 入场扫掠：收集逐帧重绘闭包。起止角同乘 t → 整环自 12 点顺时针扫开，
        各扇区被前沿扫过时依次显形、**全程占比正确**（同 MOTION-06 堆叠「值空间同乘 t」的思路）。 */
@@ -407,8 +422,12 @@ export function PieChart(host, cfg) {
       const path = g.append('path').attr('class', 'dv-pie-sector');
 
       /* [PIE-12] 引线画在**扇区自己的 `<g>` 内**：图例 hover 弱化（applyDim 选的就是这个 g）
-         与强调态抬层（g.raise）因此自动覆盖它，不必再接第二套。 */
+         与强调态抬层（g.raise）因此自动覆盖它，不必再接第二套。
+         [PIE-17] 命中带在**可见引线之前**追加 = 画在其下：它是透明的，谁在上无所谓，
+         但压在扇区之下这一点很要紧——两者重叠处让扇区先接住，命中带只在圆外起作用。 */
       const lead = outsideByKey.get(r.name);
+      const hitLine = lead ? g.append('polyline').attr('class', 'dv-pie-label-line-hit')
+        .attr('stroke-width', LINE_HIT_WIDTH) : null;
       const line = lead ? g.append('polyline').attr('class', 'dv-pie-label-line') : null;
       /* 弧上起点的单位方向（= 扇区中线），用于让引线起点跟着外扩走 */
       const ux = lead && R > 0 ? lead.ax / R : 0;
@@ -428,7 +447,9 @@ export function PieChart(host, cfg) {
            后两点恒定：**末两点 y 相同 → 第二段是严格水平线**，这正是「标签未做纵向位移」的证据。 */
         if (line) {
           const startR = Math.min(outerR, R + radialPx);
-          line.attr('points', `${ux * startR},${uy * startR} ${lead.ex},${lead.ey} ${lead.lineEndX},${lead.ey}`);
+          const points = `${ux * startR},${uy * startR} ${lead.ex},${lead.ey} ${lead.lineEndX},${lead.ey}`;
+          line.attr('points', points);
+          hitLine.attr('points', points); /* [PIE-17] 命中带与可见线**同一串点**，逐帧一起走 */
         }
       };
       draw();
@@ -437,8 +458,13 @@ export function PieChart(host, cfg) {
       /* [PIE-10] 外扩的扇区会压住相邻扇区，故强调时把它抬到同层最上（DOM 序 = 绘制序）。 */
       const raiseAbove = () => g.raise();
 
-      /* [PIE-05] 按扇区命中（无坐标轴 → 没有「最近类目」可言，不做 X 切片） */
-      path.on('mouseenter', () => {
+      /* [PIE-05][PIE-17] 按扇区命中（无坐标轴 → 没有「最近类目」可言，不做 X 切片）。
+         **一个扇区的所有可命中件共用同一套处理**：扇区面、引线（含命中带）、外侧标签。
+         接在 `<g>` 上而不是 `path` 上，前两者就自动包含了——`<g>` 的 mouseenter/leave 判的是
+         「进入/离开它的任一后代」，正是这里要的语义；标签在另一层（PIE-07 要求它压在扇区之上），
+         够不着这个 `<g>`，故把同一个绑定函数留给下面的标签层复用，而不是复制一份处理器。 */
+      const bindHit = (sel) => sel.on('mouseenter', () => {
+        clearTimeout(hideTimer); /* 从扇区挪到自己的标签上时，别让上一段留下的延时把气泡关掉 */
         if (!expand) return;
         emphHover = r.name;
         raiseAbove();
@@ -458,29 +484,48 @@ export function PieChart(host, cfg) {
           raiseAbove();
           animateEmphasis();
         });
+      bindHit(g);
+      if (lead) hitBinders.set(r.name, bindHit);
 
       /* [PIE-04][PIE-12] 两档互斥，一个 if / else 分岔，绝不同屏 */
       if (lead) {
-        /* [LABEL-09] 档③：色彩关联已由引线承担，文字走中性正文色、不跟随系列色。
+        /* [LABEL-09] 档③：色彩关联已由引线承担，文字不跟随系列色 —— **名称段走二级文字色、
+           数值段走正文色**（tone 两级，色值落在 CSS 的 token 上）。
            [PIE-12] **标签块的垂直中心**恒等于肘点 y —— 锚在扇区的自然位置、不做纵向位移
-           （LABEL-01 / PIE-14）。inline 档块只有一行，「块心」即「文字心」，与改版前一致；
-           stacked 档名称行在上、数值行在下，各自的中心自块心对称偏移。
+           （LABEL-01 / PIE-14）。stacked 档名称行在上、数值行在下，各自的中心自块心对称偏移；
+           inline 档两段同在一行，「块心」即「文字心」。
+           [PIE-15] **两种形态都出两个 <text>**（一个 item 一个 <text>，L1 不做富文本拼装）：
+           stacked 靠 dy 上下叠、inline 靠 dx 左右排。inline 自**块左沿**起排——名称在左，
+           数值紧跟其后 nameW + sepW，故两段无论落在哪一侧、走哪个对齐档都恒用 anchor:'start'，
+           块的另一沿仍精确落回 textX（块宽就是这三段之和，PIE-13 的 edge 档据此贴边）。
            **不传 maxWidth**：宽度已由 PIE-16 的截断保证装得下，再让 L1 按同一个数复判一次，
            两次测量的浮点差就足以丢掉两行中的一行 —— 半个标签比没有标签更糟。 */
+        const blockDX = lead.anchor === 'start' ? 0 : -lead.textWidth;
         const lines = stacked
           ? [
-            { dy: -(blockH - nameLineH) / 2, text: lead.name, sizeClass: NAME_CLASS },
-            { dy: (blockH - valueLineH) / 2, text: lead.value, sizeClass: VALUE_CLASS },
+            { dy: -(blockH - nameLineH) / 2, text: lead.name, sizeClass: NAME_CLASS, tone: 'neutral-secondary' },
+            { dy: (blockH - valueLineH) / 2, text: lead.value, sizeClass: VALUE_CLASS, tone: 'neutral' },
           ]
-          : [{ dy: 0, text: `${lead.name} ${lead.value}`, sizeClass: NAME_CLASS }];
+          : [
+            { dx: blockDX, text: lead.name, sizeClass: NAME_CLASS, tone: 'neutral-secondary', anchor: 'start' },
+            {
+              dx: blockDX + lead.nameW + outside.sepW,
+              text: lead.value,
+              sizeClass: VALUE_CLASS,
+              tone: 'neutral',
+              anchor: 'start',
+            },
+          ];
         labelBatches.push({
           key: r.name,
+          hit: true,                  /* [PIE-17] 外侧档放行命中，与扇区、引线同一套状态 */
           items: lines.map((ln) => ({
-            x: cx + lead.textX,
-            y: cy + lead.ey + ln.dy,
+            x: cx + lead.textX + (ln.dx ?? 0),
+            y: cy + lead.ey + (ln.dy ?? 0),
+            /* [PIE-13] 三档对齐决定块往哪边排；stacked 两行共用块锚点，inline 两段改从块左沿起排 */
+            anchor: ln.anchor ?? lead.anchor,
             baseline: 'middle',
-            anchor: lead.anchor,      /* [PIE-13] 三档对齐决定往哪边排；两行共用同一锚点与对齐 */
-            tone: 'neutral',
+            tone: ln.tone,
             sizeClass: ln.sizeClass,  /* [PIE-15] 决定字号，且测量走同一个类 */
             text: ln.text,
           })),
@@ -513,12 +558,16 @@ export function PieChart(host, cfg) {
     let labelLayer = null;
     if (labelBatches.length) {
       labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
-      labelBatches.forEach(({ key, items: lines }) => {
+      labelBatches.forEach(({ key, items: lines, hit }) => {
         const g = labelLayer.append('g').attr('class', 'dv-data-label-series');
         g.node().dataset.key = key;
         /* [PIE-15] 一个逻辑标签可能是两行（stacked 档）——同一个 <g> 里两个 <text>，
            随所属扇区一起被 applyDim 弱化、一起随引线出现（MOTION-05），天然同生共死。 */
         renderDataLabels(g, frame, lines, { collide: false });
+        /* [PIE-17] **只有外侧档**放行命中：它落在环外、不压任何图元，接管的是本来谁也接不到的
+           那片空白；扇区内档正压在自己的扇区上，放行等于把扇区的命中抢走一块（LABEL-08 的原意）。
+           修饰类负责 pointer-events（`.dv-data-label` 默认 none），绑定复用扇区那一份。 */
+        if (hit && hitBinders.has(key)) hitBinders.get(key)(g.classed('dv-data-label-series--hit', true));
       });
     }
 
@@ -542,7 +591,9 @@ export function PieChart(host, cfg) {
     firstBuild = false;
     if (!animate) return;
 
-    const leaderLines = sectorLayer.selectAll('polyline.dv-pie-label-line');
+    /* [PIE-12][PIE-17] 命中带也要跟着藏：它是透明的，藏不藏看不出来，但 display:none 才会
+       把它一并撤出命中测试——否则扫掠这 480ms 里，圆外那条什么都没画的地方仍能 hover 出气泡。 */
+    const leaderLines = sectorLayer.selectAll('polyline.dv-pie-label-line, polyline.dv-pie-label-line-hit');
     const showAnnotations = (on) => {
       if (labelLayer) labelLayer.style('display', on ? null : 'none');
       leaderLines.style('display', on ? null : 'none');

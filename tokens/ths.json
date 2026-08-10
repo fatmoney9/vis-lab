@@ -211,6 +211,7 @@
   "spacing-donut-label-gap": "{spacing-8}",
   "font-size-donut-label-name": "{font-size-extra-small}",
   "line-height-donut-label-name": "{line-height-small}",
+  "font-weight-donut-label-name": "{font-weight-regular}",
   "font-size-donut-label-value": "{font-size-extra-small}",
   "line-height-donut-label-value": "{line-height-small}",
 

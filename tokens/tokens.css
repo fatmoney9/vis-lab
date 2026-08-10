@@ -159,6 +159,7 @@
   --spacing-donut-label-gap: var(--spacing-8);
   --font-size-donut-label-name: var(--font-size-extra-small);
   --line-height-donut-label-name: var(--line-height-small);
+  --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-extra-small);
   --line-height-donut-label-value: var(--line-height-small);
   --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
@@ -361,6 +362,7 @@
   --spacing-donut-label-gap: var(--spacing-8);
   --font-size-donut-label-name: var(--font-size-data-label);
   --line-height-donut-label-name: var(--line-height-data-label);
+  --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-data-label);
   --line-height-donut-label-value: var(--line-height-data-label);
   --color-text-data-label-on-light: #292933;
@@ -566,6 +568,7 @@
   --spacing-donut-label-gap: var(--spacing-8);
   --font-size-donut-label-name: var(--font-size-extra-small);
   --line-height-donut-label-name: var(--line-height-small);
+  --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-medium);
   --line-height-donut-label-value: var(--line-height-medium);
   --color-text-data-label-on-light: #000000;

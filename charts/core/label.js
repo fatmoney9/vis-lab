@@ -151,6 +151,8 @@ const leftOf = (x, width, anchor) =>
  *                'series'  档① 跟随系列色（currentColor，LABEL-03）—— 缺省
  *                'auto'    档② 压在色块上，按 bgHex 明暗切 token 色（LABEL-04）
  *                'neutral' 档③ 有引线关联，走中性正文色（LABEL-09；当前只有饼环外侧标签用）
+ *                'neutral-secondary' 档③ 的次级：同一条标签里比 'neutral' 降一级
+ *                          （饼环外侧的**名称段**；数值段仍走 'neutral'，PIE-12 / PIE-15）
  *     bgHex   —— tone:'auto' 时的背景色（= 该系列色 hex，由 L2 从 palette 结果透传）
  *     maxWidth—— 可用宽度（档② 传所在色块宽、档③ 传标签带留给它的宽）；超出即不画（LABEL-06③），缺省不限
  *   opts  = { collide = true } —— 水平碰撞过滤开关（LABEL-06②）。约定**一次调用 = 同一行**
@@ -198,7 +200,10 @@ function classOf(d) {
   /* 档②③ 的修饰类承载 token 色——本模块不出现任何色值字面量（铁律1）；
      档①（'series' / 缺省）不挂修饰类，靠 .dv-data-label 的 fill:currentColor 跟随系列色 */
   if (d.tone === 'auto') return `${LABEL_CLASS} ${LABEL_CLASS}--${labelTone(d.bgHex)}${size}`;
-  if (d.tone === 'neutral') return `${LABEL_CLASS} ${LABEL_CLASS}--neutral${size}`;
+  /* 档③ 两级同构：tone 名即修饰类名，色值一律落在 CSS 的 token 上（铁律1） */
+  if (d.tone === 'neutral' || d.tone === 'neutral-secondary') {
+    return `${LABEL_CLASS} ${LABEL_CLASS}--${d.tone}${size}`;
+  }
   return `${LABEL_CLASS}${size}`;
 }
 

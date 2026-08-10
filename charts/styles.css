@@ -175,12 +175,20 @@
 /* [PIE-12] 外侧标签的引线：跟随所在扇区 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）——
    色彩关联由线承担，文字才得以走中性色（LABEL-09 档③）。
    线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / tooltip 指示线同源），不设自有 token。
-   pointer-events:none —— 引线在扇区之后追加、画在其上，不放行会在圆外抢走本该落到扇区的 hover。 */
+   [PIE-17] 引线**参与命中**（早先是 pointer-events:none）：它与扇区在同一个 <g> 里、绑的是
+   同一套处理器，抢不抢得到都指向同一个扇区，那条「会抢走本该落到扇区的 hover」的顾虑不成立。 */
 .dv-pie-label-line {
   fill: none;
   stroke: currentColor;
   stroke-width: var(--size-grid-line);
-  pointer-events: none;
+}
+/* [PIE-17] 引线的命中带：与可见引线同形同点、透明加粗，只为让 1px 的线能被指针够着。
+   pointer-events:stroke —— 显式只认描边，不受 transparent 是否算「已绘制」的实现差异影响；
+   stroke-width 由 L2 按模块常量写在元素上（是可点性阈值，不是设计尺寸，故不进 token）。 */
+.dv-pie-label-line-hit {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
 }
 
 /* [LABEL-02][LABEL-03][LABEL-08] 数据标签：字号是唯一主题分化项（--font-size-data-label）；
@@ -205,14 +213,33 @@
    这里**用会随明暗翻转的 --color-text-primary 是对的**（与档② 的两个恒定 token 相反）：
    档③ 的底是页面底色而非系列色，跟着模式翻转才不会白底白字。 */
 .dv-data-label--neutral { fill: var(--color-text-primary); }
+/* [LABEL-09][PIE-12][PIE-15] 档③ 的次级：饼环外侧标签的**名称段**降到二级文字色，
+   数值段仍留在 --color-text-primary。名称是「这是谁」的索引、数值才是读数，
+   同一条标签里拉开一级层级，读数先跳出来；两段的分工与「引线担色彩关联、文字担中性」同向。
+   与 --neutral 同理，这里用会随明暗翻转的通用文字色是对的（档③ 的底是页面底色，不是系列色）；
+   三主题 × 明暗的 --color-text-secondary 早已齐备，**不新增 token**。 */
+.dv-data-label--neutral-secondary { fill: var(--color-text-secondary); }
 
 /* [PIE-15] 饼环外侧标签两段各自的字号（名称段 / 数值段）。THS 两段同值、Ainvest 数值段更大
    （12/16 vs 14/18），iFinD-PC 别名回通用标签 token = 行为不变。
    ⚠️ 这两个类**同时用于渲染与测量**（core/label.js 的 classOf 是唯一来源）——
    只在渲染时挂、拿别的类去量，截断点就会算错、文字溢出画布。
-   行高不写进 CSS：SVG <text> 不吃 line-height，行高 token 是给 JS 读去算块高与碰撞区间的。 */
-.dv-data-label--donut-name { font-size: var(--font-size-donut-label-name); }
+   行高不写进 CSS：SVG <text> 不吃 line-height，行高 token 是给 JS 读去算块高与碰撞区间的。
+   ⚠️ 名称段还要**自己的字重**：`.dv-data-label` 的 `--font-weight-data-label` 是 medium（三主题皆然），
+   那是为**数值**定的——读数要立得住。名称是正文，跟着 medium 会明显偏重：同色同字号同字体
+   （中文都落 PingFang SC）下 500 比 400 多约 30% 墨量，与紧挨着的图例项（同为二级文字色、400）
+   同屏一比就看出来「颜色更深」，而实测填充色其实分毫不差。数值段不动，继续走全库共用的那个键。 */
+.dv-data-label--donut-name {
+  font-size: var(--font-size-donut-label-name);
+  font-weight: var(--font-weight-donut-label-name);
+}
 .dv-data-label--donut-value { font-size: var(--font-size-donut-label-value); }
+
+/* [PIE-17][LABEL-08] 饼环**外侧**标签放行命中：hover 名称 / 数值与 hover 扇区、引线是同一件事。
+   LABEL-08 的 pointer-events:none 是为「标签压在图元之上、不许抢走图元的命中」定的——
+   外侧标签落在环外的空白里，不压任何图元，那条前提在此不成立，故是它的例外而非推翻。
+   ⚠️ 只命中带 --hit 的那层：扇区内档正压在自己的扇区上，放行就真会抢走扇区的命中。 */
+.dv-data-label-series--hit .dv-data-label { pointer-events: auto; }
 
 /* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
    主题无关的结构样式（无颜色）。 */

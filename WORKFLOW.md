@@ -166,9 +166,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-08-04，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+截至 2026-08-10，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
 **两个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）
-与 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..14）、
+与 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
 以及 token 合同、纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
 
@@ -180,7 +180,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 | `core/frame.js` | 两个为轴图设的下限（最小画布宽 240、最小网格高 48）改成可显式关闭 | 无轴图的画布由图元反推，被下限抬高就多出死空间 |
 | `core/legend.js` | 加排布方向参数（纵向单列） | 左右结构的图例 |
 | `core/tooltip.js` | ① 气泡标题行可省 ② **删掉 `place()` 的容器尺寸参数**，三个位置档的 clamp 边界改由本模块按档自取 | ① 无类目维度的图没有标题 ② 见下 |
-| `core/label.js` | ① 前景色从「压不压色块」的布尔升为 `tone` 三态（档③ 中性色 LABEL-09）② `dropCollisions` 从 `{left,width}` 泛化成 `{start,size}`，两轴共用 | ① 引线标签既不跟随系列色也不反色 ② 外侧标签判的是**纵向**重叠 |
+| `core/label.js` | ① 前景色从「压不压色块」的布尔升为 `tone` 枚举（档③ 中性色 LABEL-09，后来又多一个 `neutral-secondary` 给名称段降级）② `dropCollisions` 从 `{left,width}` 泛化成 `{start,size}`，两轴共用 | ① 引线标签既不跟随系列色也不反色，且一条标签里两段要分层级 ② 外侧标签判的是**纵向**重叠 |
 
 **接入当时 `behavior.json` 与 `palette.js` 一行未动**（`behavior.json` 至今仍未动）。
 `palette.js` 是 2026-08-06 才因**设计源给出 THS 独立的饼扇区色板**加了一条分支：色板文件多一个可选键
