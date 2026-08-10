@@ -62,8 +62,13 @@
   flex-direction: column;
   flex-wrap: nowrap;
   align-items: flex-start;
-  /* 纵向下 justify-content 管的是**竖直**分布：整列居中，与左侧绘图区的视觉中线对齐 */
-  justify-content: center;
+  /* 纵向下 justify-content 管的是**竖直**分布：整列居中，与左侧绘图区的视觉中线对齐。
+     ⚠️ **必须是 `safe center` 而不是 `center`**（[LEGEND-11]）：本元素同时是滚动容器（下方
+     overflow-y:auto），而居中的溢出是**往两头对半溢**的——上半截跑到滚动原点之上，
+     scrollTop 又不能为负，那部分就**永远滚不到**（36 项时实测首项在容器顶之上 362px，
+     前八九项等于凭空消失）。`safe` 的语义正是「一旦对齐会导致溢出，就退回 start 对齐」：
+     不溢出时照常居中，溢出时自动从顶部起排、整列可滚完。 */
+  justify-content: safe center;
   /* [LEGEND-01] 项距走纵向专属 token，**不复用换行行距**（--spacing-legend-row-v，4px）：
      主轴转成竖直后 row-gap 会接管项与项的间距，若不显式覆盖就会静默套用为"换行兜底"定的那个值。
      两者是不同意图——换行行距是横排放不下时的补偿，项距是纵列的主排布节奏。 */
@@ -73,7 +78,7 @@
   overflow-y: auto;
 }
 .dv-legend--column.dv-legend--center { align-items: center; }
-.dv-legend--column.dv-legend--right { align-items: flex-end; justify-content: center; }
+.dv-legend--column.dv-legend--right { align-items: flex-end; justify-content: safe center; }
 
 /* [LEGEND-02] 图例项 = marker + label；整项为点击 / hover 热区 */
 .dv-legend-item {
@@ -98,6 +103,18 @@
   line-height: var(--line-height-legend);
   color: var(--color-text-legend);
   font-family: var(--font-family-cn);
+}
+
+/* [LEGEND-13] 纵向单列图例的标签超宽即省略号截断。**只管纵列**：横排放不下会自动换行
+   （LEGEND-01），长名称撑不爆宽度；纵列一项一行、不换行，长名称会一路把图例撑宽，
+   而图例宽参与「图 + 间距 + 图例」整组居中的布局计算（PIE-09），撑宽即整组偏移。
+   图例标签是 HTML <span> 不是 SVG <text>，故截断是纯 CSS —— 不必测量、不必二分；
+   完整名称由原生 title 兜底（图例本就有 pointer events，要点击显隐，见 legend.js）。 */
+.dv-legend--column .dv-legend-label {
+  max-width: var(--size-legend-label-max);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* [LEGEND-06] 关闭态：文字 + marker 均切 color-text-quaternary（比常态类特异性更高，胜出） */
@@ -158,12 +175,20 @@
 /* [PIE-12] 外侧标签的引线：跟随所在扇区 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）——
    色彩关联由线承担，文字才得以走中性色（LABEL-09 档③）。
    线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / tooltip 指示线同源），不设自有 token。
-   pointer-events:none —— 引线在扇区之后追加、画在其上，不放行会在圆外抢走本该落到扇区的 hover。 */
+   [PIE-17] 引线**参与命中**（早先是 pointer-events:none）：它与扇区在同一个 <g> 里、绑的是
+   同一套处理器，抢不抢得到都指向同一个扇区，那条「会抢走本该落到扇区的 hover」的顾虑不成立。 */
 .dv-pie-label-line {
   fill: none;
   stroke: currentColor;
   stroke-width: var(--size-grid-line);
-  pointer-events: none;
+}
+/* [PIE-17] 引线的命中带：与可见引线同形同点、透明加粗，只为让 1px 的线能被指针够着。
+   pointer-events:stroke —— 显式只认描边，不受 transparent 是否算「已绘制」的实现差异影响；
+   stroke-width 由 L2 按模块常量写在元素上（是可点性阈值，不是设计尺寸，故不进 token）。 */
+.dv-pie-label-line-hit {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
 }
 
 /* [LABEL-02][LABEL-03][LABEL-08] 数据标签：字号是唯一主题分化项（--font-size-data-label）；
@@ -188,6 +213,33 @@
    这里**用会随明暗翻转的 --color-text-primary 是对的**（与档② 的两个恒定 token 相反）：
    档③ 的底是页面底色而非系列色，跟着模式翻转才不会白底白字。 */
 .dv-data-label--neutral { fill: var(--color-text-primary); }
+/* [LABEL-09][PIE-12][PIE-15] 档③ 的次级：饼环外侧标签的**名称段**降到二级文字色，
+   数值段仍留在 --color-text-primary。名称是「这是谁」的索引、数值才是读数，
+   同一条标签里拉开一级层级，读数先跳出来；两段的分工与「引线担色彩关联、文字担中性」同向。
+   与 --neutral 同理，这里用会随明暗翻转的通用文字色是对的（档③ 的底是页面底色，不是系列色）；
+   三主题 × 明暗的 --color-text-secondary 早已齐备，**不新增 token**。 */
+.dv-data-label--neutral-secondary { fill: var(--color-text-secondary); }
+
+/* [PIE-15] 饼环外侧标签两段各自的字号（名称段 / 数值段）。THS 两段同值、Ainvest 数值段更大
+   （12/16 vs 14/18），iFinD-PC 别名回通用标签 token = 行为不变。
+   ⚠️ 这两个类**同时用于渲染与测量**（core/label.js 的 classOf 是唯一来源）——
+   只在渲染时挂、拿别的类去量，截断点就会算错、文字溢出画布。
+   行高不写进 CSS：SVG <text> 不吃 line-height，行高 token 是给 JS 读去算块高与碰撞区间的。
+   ⚠️ 名称段还要**自己的字重**：`.dv-data-label` 的 `--font-weight-data-label` 是 medium（三主题皆然），
+   那是为**数值**定的——读数要立得住。名称是正文，跟着 medium 会明显偏重：同色同字号同字体
+   （中文都落 PingFang SC）下 500 比 400 多约 30% 墨量，与紧挨着的图例项（同为二级文字色、400）
+   同屏一比就看出来「颜色更深」，而实测填充色其实分毫不差。数值段不动，继续走全库共用的那个键。 */
+.dv-data-label--donut-name {
+  font-size: var(--font-size-donut-label-name);
+  font-weight: var(--font-weight-donut-label-name);
+}
+.dv-data-label--donut-value { font-size: var(--font-size-donut-label-value); }
+
+/* [PIE-17][LABEL-08] 饼环**外侧**标签放行命中：hover 名称 / 数值与 hover 扇区、引线是同一件事。
+   LABEL-08 的 pointer-events:none 是为「标签压在图元之上、不许抢走图元的命中」定的——
+   外侧标签落在环外的空白里，不压任何图元，那条前提在此不成立，故是它的例外而非推翻。
+   ⚠️ 只命中带 --hit 的那层：扇区内档正压在自己的扇区上，放行就真会抢走扇区的命中。 */
+.dv-data-label-series--hit .dv-data-label { pointer-events: auto; }
 
 /* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
    主题无关的结构样式（无颜色）。 */
@@ -233,6 +285,35 @@
 .dv-chart--legend-bottom > .dv-chart__plot { flex: none; }
 .dv-chart--legend-bottom .dv-legend { padding-top: 0; }
 
+/* [PIE-09][LEGEND-11] 上下结构的图例块同样封顶 + 溢出滑动（与左右结构同一条纪律，只是取值不同）。
+   **上限 = 默认图元高度 `--size-donut-radius × 2`**（THS / iFinD-PC 140、Ainvest 160），
+   与左右结构那条「图元高 × 2」的关键差别有二：
+   ① **取默认半径而不是当前 R**——本结构下 `avail = 容器高 − 图例高 − gap`，图例高反过来决定
+      半径，若上限再由半径算出，就成了「图例高 → 半径 → 图例上限 → 图例高」的循环；
+      锚在 token 上（一个与当前布局无关的常量）一刀切断，L2 首帧量到的就已是封顶后的高度，
+      不需要二次重排。**故本条纯 CSS 表达、L2 一行不参与**（左右结构那条仍走
+      `--dv-pie-legend-max-h`，两者互不覆盖：各自的选择器只命中自己的结构）。
+   ② 倍数取 ×1 而非 ×2——横排换行的图例是「铺开」的，占到与环等高就已经和环平分了卡片；
+      再放宽会让图例喧宾夺主（纵列窄，故给到 ×2）。
+   `100%` 同样是必需的钳制：卡片比 140 还矮时不许探出。 */
+.dv-chart--legend-bottom > .dv-chart__legend {
+  display: flex;
+  /* ⚠️ **必须是 column**：本壳子只负责「封高」，横向必须原样让位给内部的 .dv-legend。
+     row（flex 默认）会把 .dv-legend 变成主轴上收缩到内容宽的项 —— 项少时它只有内容那么宽、
+     还贴在壳子左边，于是 LEGEND-01 的 justify-content:center 没有富余宽度可居中，
+     整条图例塌到左对齐（实测 4 项时图例块只有 284/706 宽、偏离中线 211px；
+     16 / 36 项因内容本就撑满整宽而看不出来——**别拿项多的截图验收这条**）。
+     换成 column 后横向变成交叉轴，默认 align-items:stretch 让 .dv-legend 恢复满宽，
+     居中重新由它自己的 justify-content 说了算。 */
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(calc(var(--size-donut-radius) * 2), 100%);
+}
+/* [LEGEND-11] 横排换行排布的溢出同样是「容器内纵向滑动」。这里**不需要** `safe center`：
+   多行的竖直分布由 align-content 管，其默认值 normal(≈stretch) 本就从顶部起排，
+   不存在纵列那种「居中把上半截推到滚动原点之上」的陷阱（见 .dv-legend--column）。 */
+.dv-chart--legend-bottom .dv-legend { overflow-y: auto; min-height: 0; }
+
 /* [LEGEND-11] 图例块的外壳：默认贴合内容；在左右结构下要能被压缩到容器高度以内
    （flex 子项默认 min-height:auto = 不小于内容，不给 0 的话内部的 overflow-y 永远不触发，
    图例会把整个卡片顶高而不是自己滚）。自身也做 flex，好让内部 .dv-legend 撑满可用高度。 */
@@ -240,10 +321,20 @@
   display: flex;
   min-height: 0;
   min-width: 0;
-  /* [PIE-09][LEGEND-11] 高度上限由 L2 按图元高度算好写进这个变量（当前 = 图元高 × 2）。
-     没有它时图例会把整张卡片无限撑高——36 扇区能撑到上千像素，而环仍只有 2R。
-     缺省 none = 不设限，好让别的消费方（若有）沿用原行为。 */
-  max-height: var(--dv-pie-legend-max-h, none);
+  /* [PIE-09] 图例块**自己**在交叉轴上居中，与左侧环的视觉中线对齐。
+     ⚠️ 不能靠默认的 stretch：**一旦 max-height 生效，拉伸就被截断、flex 回退成 flex-start**，
+     于是卡片拉高时环在正中、图例却贴着顶（实测卡片 1000px 时环心 y=468、图例块中心 y=140）。
+     `align-self:center` 让这个块按自身高度（内容高，封顶于下面的 max-height）居中，
+     两块因此在任意容器高度下共享同一条中线。 */
+  align-self: center;
+  /* [PIE-09][LEGEND-11] 两重上限取紧者：
+     ① `--dv-pie-legend-max-h` —— L2 按图元高度算好写进来（当前 = 图元高 × 2）。
+        没有它时图例会把整张卡片无限撑高——36 扇区能撑到上千像素，而环仍只有 2R。
+     ② `100%` —— 容器比 ① 还矮时不许探出卡片。**改 align-self 后这条是必需的**：
+        stretch 时代是「被容器压扁」自然不会溢出，居中之后高度由内容说了算，
+        少了这道钳制，矮卡片里的图例会上下双向溢出到卡片外。
+     缺省值取 100% 而非 none —— min() 里放 none 会让整条声明失效。 */
+  max-height: min(var(--dv-pie-legend-max-h, 100%), 100%);
 }
 /* 绘图 SVG：
    · display:block —— 消除 inline 替换元素的基线降部空隙（否则 plot 容器比 svg 高约半行的降部、下方多一条空白）。

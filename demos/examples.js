@@ -11,7 +11,10 @@
  *
  * ── 加一个新示例 ────────────────────────────────────────────────
  * 往 EXAMPLES 里加一项即可。必填 id / group / chart / title / spec / description / cfg；
- * surfaces 决定它出现在哪个面（缺省两面都进）；notes 是开发验收要点（只有 playground 显示）。
+ * surfaces 决定它出现在哪个面（缺省两面都进）。
+ * **不要再加「验收要点」这类长说明**：验收口径的家是 specs/*.md 的「活 demo」小节（WORKFLOW §一
+ * 「规范只有一个家」）。这里曾有过一个 notes 字段，最终长成了 specs/pie.md 的副本——
+ * 复述必然漂移，故整个字段已移除，description 保持一句话。
  *
  * ── 加一种新图表（饼 / 环 / 横向条形 / K 线…）──────────────────
  *   1. 在 registry.js 的 CHARTS 里登记「类型键 → L2 组件」（一行）
@@ -74,6 +77,34 @@ export const sliceItems = (n) => {
   }));
 };
 
+/* ── 边界与极端情况的数据（playground 专用）────────────────────
+   这些不是「好看的示例」，是**把规则推到边界上**的夹具：长名称压截断、极端占比压窄扇区、
+   单项压单系列取色、全空压不抛错。放 demos 而不是各写各的一次性页面，理由同 WORKFLOW §三——
+   两个预览面共享同一份数据源，验收用例也就只有一份。 */
+
+/* 真实业务里会出现的超长财务科目名（不是「aaaa…」这种假串——假串量出来的宽度不真实） */
+const LONG_NAMES = [
+  '归属于母公司所有者的净利润扣除非经常性损益后',
+  '经营活动产生的现金流量净额',
+  '可供出售金融资产公允价值变动损益',
+  '以摊余成本计量的金融资产终止确认收益',
+  '对联营企业和合营企业的投资收益',
+  '递延所得税资产',
+  '短名',
+];
+
+/* 超长名称 + 大数值：压 PIE-16 名称截断、LEGEND-13 图例截断，以及「数值段恒完整」 */
+export const longNameItems = (n) => Array.from({ length: n }, (_, i) => ({
+  name: `${LONG_NAMES[i % LONG_NAMES.length]}${i >= LONG_NAMES.length ? Math.floor(i / LONG_NAMES.length) + 1 : ''}`,
+  value: Math.round(987654321 / (i + 1.3)),
+}));
+
+/* 极端占比：首项独占约 98%，其余是几乎看不见的窄扇区 */
+export const skewItems = (n) => Array.from({ length: n }, (_, i) => ({
+  name: i === 0 ? '主营业务' : `${SLICE_NAMES[i % SLICE_NAMES.length]}${i}`,
+  value: i === 0 ? 98000 : Math.max(1, Math.round(60 / i)),
+}));
+
 /* ── 两面共用的展示维度 ──────────────────────────────────────── */
 
 export const THEMES = [
@@ -128,35 +159,30 @@ export const EXAMPLES = [
     id: 'basic', group: '柱状图', chart: 'cartesian',
     title: '基础柱状图', spec: 'BAR-01 / BAR-03', surfaces: BOTH,
     description: '单系列柱状图，覆盖正负值、0 值占位与 null 断口。',
-    notes: '单系列默认色（THS #3366FF）；含负值向下、0 值 1px 占位、null 断口。数据量↑看单柱容器收缩：step 跌破上限后柱按 2:1 等比收缩保侧白（BAR-03）、X 标签碰撞（AXIS-06）。',
     cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: signedWave(n) }] }),
   },
   {
     id: 'grouped3', group: '柱状图', chart: 'cartesian',
     title: '三系列分组柱', spec: 'BAR-02', surfaces: BOTH,
     description: '三系列分组排布，系列颜色固定槽位，隐藏后重新居中。',
-    notes: '一进多「整套换」：首色应变浅蓝 #52BBFF（≠ 单系列 #3366FF）；各主题按序号取色板。数据量↑看分组容器收缩（BAR-02）。',
     cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']) }),
   },
   {
     id: 'grouped6', group: '柱状图', chart: 'cartesian',
     title: '多系列分组柱', spec: 'BAR-02 / COLOR-04', surfaces: BOTH,
     description: '六系列场景，用于检查色板循环、图例换行与显隐逻辑。',
-    notes: '色板循环：点掉几个系列看剩余柱整组重新居中、颜色不重排（各系列色固定不跟随）。',
     cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
   },
   {
     id: 'stack', group: '堆叠图', chart: 'cartesian',
     title: '普通堆叠柱', spec: 'BAR-05', surfaces: BOTH,
     description: '正值逐段累计，段间直角，仅整根堆叠外端保留主题圆角。',
-    notes: '段间直角、只最外端圆角（THS，正向最上/负向最下）；点掉一个系列看堆叠闭合、轴 refit。',
     cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'normal' }),
   },
   {
     id: 'stackNeg', group: '堆叠图', chart: 'cartesian',
     title: '正负堆叠柱', spec: 'BAR-05', surfaces: BOTH,
     description: '正值向上累计、负值向下累计，分别闭合。',
-    notes: '正值向上累计、负值向下累计（分开）。',
     cfg: (n) => ({
       categories: seq(n), stack: 'normal',
       series: [...posSeries(n, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(n) }],
@@ -166,21 +192,18 @@ export const EXAMPLES = [
     id: 'percent', group: '堆叠图', chart: 'cartesian',
     title: '归一化堆叠柱', spec: 'BAR-06', surfaces: BOTH,
     description: '每个类目归一到 100%，隐藏系列后占比重新计算。',
-    notes: '每类目顶到 100%、Y 轴 0–100%；点掉系列看占比重算。数据标签「默认」档不出（LABEL-05）；切「强开」出百分比标签。',
     cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'percent' }),
   },
   {
     id: 'line', group: '折线图', chart: 'cartesian',
     title: '基础折线图', spec: 'LINE-01', surfaces: BOTH,
     description: '折线直连，null 处断开；数据点显隐随密度分档。',
-    notes: '数据点显隐分档（移动/PC 一致）：≤13 点常显（少）、>13 全隐（中/多），线仍连续；null 断口不强连。点留 DOM（data-i），hover 十字准星唤出最近点归 tooltip 切片。数据标签 >5 个类目整体不出（LABEL-06①）。',
     cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
   },
   {
     id: 'line-multi', group: '折线图', chart: 'cartesian',
     title: '多折线图', spec: 'LINE-01 / COLOR-05', surfaces: BOTH,
     description: '主线保持标准线宽，其余线使用多折线细线 token。',
-    notes: '声明 ≥2 条线：主线（首条声明线）保持 size-line-stroke（THS 1.5），其余线切 size-line-stroke-multi（THS 1）；纯折线走通用 bar-multi 色板（THS 首色浅蓝 #52BBFF，与分组柱同序）——line-multi 仅折柱组合用（COLOR-05）。点显隐分档同样生效。',
     cfg: (n) => ({
       categories: seq(n),
       series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
@@ -190,7 +213,6 @@ export const EXAMPLES = [
     id: 'line-stack', group: '折线图', chart: 'cartesian',
     title: '堆叠折线图', spec: 'LINE-01', surfaces: BOTH,
     description: '折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
-    notes: '线沿可见线累计基线绘制（线堆线，复用 stackBars 同一份累计）；每系列在线与其基线间填同色 0.2 填充带（opacity-line-stack-fill）；值域 = 累计总高；点掉系列看堆叠闭合、轴 refit。',
     cfg: (n) => ({
       categories: seq(n), stack: 'normal',
       series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
@@ -200,7 +222,6 @@ export const EXAMPLES = [
     id: 'combo', group: '组合图', chart: 'cartesian',
     title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04', surfaces: BOTH,
     description: '柱走主轴、线走副轴，两轴共享网格并保持 0 轴对齐。',
-    notes: '柱走主轴、线走副轴；两轴 0 对齐、刻度落同网格行。图例按真实 type 显方块/折线 marker。数据量中/多时副轴折线点也进入 >13 全隐档。两根柱=分组，故柱也不出数据标签。开轴标题：这是**真·双量纲**（声明了副轴），故三主题反侧都出 y2「增速（%）」（AXISTITLE-03）。对照基础柱状图在 iFinD-PC 上：反侧只是主轴镜像标签、没有第二根轴，那里就不出标题。',
     axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
     cfg: (n) => ({
       categories: seq(n),
@@ -215,7 +236,6 @@ export const EXAMPLES = [
     id: 'combo-single', group: '组合图', chart: 'cartesian',
     title: '折柱组合 · 单柱 + 线', spec: 'BAR-07 / LABEL-05', surfaces: BOTH,
     description: '一柱一线的组合，数据标签只跟柱走。',
-    notes: '一柱一线的组合：数据标签只跟柱走——柱是「一个类目一个值」故默认出标签，折线在有柱在场时不出（LABEL-05）。对比上一项（两柱=分组，柱也不出标签）。轴标题同样是真·双量纲，反侧出 y2「增速（%）」。',
     axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
     cfg: (n) => ({
       categories: seq(n),
@@ -229,15 +249,57 @@ export const EXAMPLES = [
     id: 'donut', group: '饼图与环形图', chart: 'pie',
     title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
     description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
-    notes: '**图例布局走组件默认「左右结构」**（PIE-09）：图左、图例右纵向单列，图与图例间距 24px（spacing-legend-chart-gap），**两块相邻成组、整组居中**；切旋钮可看「上下结构」。起始 12 点、顺时针；0 值与 null **不占角也不进分母**（PIE-01）——故「少 4」只见 3 个扇区、「中 16」见 14 个。点图例：剩余扇区重算闭合 360°、**颜色一个都不变**（COLOR-04/08 验收点）。hover 扇区：三主题气泡**都走 follow**（对照柱线示例的 THS side-fixed / Ainvest top-anchor，TOOLTIP-07 特例）、无指示线无轴贴片。图例 marker 三主题都是圆点（LEGEND-03）。Ainvest 的环比另两个主题大一圈（半径 80 vs 70，PIE-02）。**数据标签默认不出**（LABEL-05 的例外——占比看扇形、名称看图例）。饼环**没有独立的「数据标签」旋钮**：引线与标签强绑定（PIE-12），显隐与形态合并成 **标签形态** 三档（关 / 引线 / 扇区内，默认关）。切「引线」出外侧档：文字「名称 + 原值」走中性正文色、引线跟随扇区色（LABEL-09 档③ 与档① 的对照点，明暗切换时**只有档③ 跟着翻转**）。此时**画布连标签带一起变宽**（PIE-02），而图与图例之间仍恒是 24px——量的是标签带外沿而非环外沿（PIE-09）。切「引线」时 **图例布局** 会自动拨到上下（左右结构下右侧标签带会把图例推得很远），只是默认值、可手动改回。切到「扇区内」回到档②（只出原值、按扇区色反色，PIE-04），两档互斥、绝不同屏，且 **标签对齐** 随之置灰。切 **标签对齐** 看三档（PIE-13）：「就近」各贴各的线、「成列」同侧末端共线、「贴边」文字外沿齐——`column` 的标签带最宽，切它时环会被挤小一点，这是「画布由图元反推」的直观验收点。数据量↑ 时外侧标签**自上而下逐个消失**且左右两栏各判各的（PIE-14 / LABEL-06②，重叠即隐藏、不做位移），与柱线那条「超阈值整体消失」形成对照。数据量↑ 还可看色板循环（THS 7 色到第 8 个扇区回首色）。36 扇区时纵向图例超出高度即**在图例区内滑动**（LEGEND-11），绘图区不受挤压；切到「上下」布局则回到横排换行，那条的溢出（分页器等）仍是 LEGEND-07 待办。拖卡片改尺寸看半径收缩、环宽等比跟随（PIE-02）。',
     cfg: (n) => ({ name: '营收构成', variant: 'donut', items: sliceItems(n) }),
   },
   {
     id: 'pie', group: '饼图与环形图', chart: 'pie',
     title: '饼图', spec: 'PIE-02 / COLOR-08', surfaces: BOTH,
     description: '实心饼图，与环形图同一组件、同一份数据，只差 variant 一个旋钮。',
-    notes: '**图例布局与环形图一样走默认「左右结构」**（PIE-09——饼与环的默认相同，不因形态分化）；想看「上下结构」切右栏旋钮，两个示例都能切。数据完全相同，只把 variant 切成 pie（内半径 0）——变体不按名字分体，是取值组合（同 bar.md 先例）。数据标签同样默认不出，开出来同样是外侧引线档（PIE-12）——**引线的法线段自饼的边缘起算**，故饼与环的引线起点不同、肘点位置也不同，但两者的标签带算法一模一样。切「标签形态 · 扇区内」才见两者的真差别：实心饼的径向厚度 = R，扇区内标签的可用宽比环形宽松（PIE-04 的 maxWidth 取「弧长 vs 径向厚度」较小者），同样数据下饼比环能多留住几个标签。入场同样是自 12 点顺时针扫掠（PIE-06），与同页柱线卡片同时起跑同时到达。',
     cfg: (n) => ({ name: '营收构成', variant: 'pie', items: sliceItems(n) }),
+  },
+
+  /* ── 边界与极端情况（**只进 playground**）────────────────────────
+     对外站点是画廊，不该摆这些；但它们是改标签 / 图例 / 取色时最先该看的几张图。
+     每个示例只推**一个**边界，出问题时能一眼定位是哪条规则塌了。 */
+  {
+    id: 'edge-long-name', group: '边界与极端情况', chart: 'pie',
+    title: '超长名称与数值', spec: 'PIE-16 / LEGEND-13', surfaces: ['playground'],
+    description: '扇区名长到必然溢出：外侧标签截名称、图例截标签，数值段两处都恒完整。',
+    cfg: (n) => ({ name: '利润表科目', variant: 'donut', items: longNameItems(n) }),
+  },
+  {
+    id: 'edge-skew', group: '边界与极端情况', chart: 'pie',
+    title: '极端占比', spec: 'PIE-01 / PIE-14', surfaces: ['playground'],
+    description: '首项独占约 98%，其余是几乎无角度的窄扇区——压窄扇区的标签、hover 命中与重叠丢弃。',
+    cfg: (n) => ({ name: '收入构成', variant: 'donut', items: skewItems(n) }),
+  },
+  {
+    id: 'edge-single', group: '边界与极端情况', chart: 'pie',
+    title: '单扇区', spec: 'COLOR-03 / PIE-01', surfaces: ['playground'],
+    description: '只有一个扇区（整环 360°），取色应走单系列默认色而非扇区盘首色——数据量旋钮对它无效。',
+    cfg: () => ({ name: '营收构成', variant: 'donut', items: [{ name: '主营业务', value: 1000 }] }),
+  },
+  {
+    id: 'edge-empty', group: '边界与极端情况', chart: 'pie',
+    title: '全 0 与全 null', spec: 'PIE-01', surfaces: ['playground'],
+    description: '所有值都是 0 或 null：总和为 0 → 什么都不画（不抛错、不留半个环），图例仍在。',
+    cfg: (n) => ({
+      name: '营收构成',
+      variant: 'donut',
+      items: Array.from({ length: n }, (_, i) => ({
+        name: SLICE_NAMES[i % SLICE_NAMES.length] + (i >= SLICE_NAMES.length ? Math.floor(i / SLICE_NAMES.length) + 1 : ''),
+        value: i % 2 ? null : 0,
+      })),
+    }),
+  },
+  {
+    id: 'edge-long-legend', group: '边界与极端情况', chart: 'cartesian',
+    title: '超长图例名（横排）', spec: 'LEGEND-01 / LEGEND-13', surfaces: ['playground'],
+    description: '与饼环那张对照：横排图例放不下是**换行**、不截断（LEGEND-13 只管纵列），故长名会把图例撑高而非省略。',
+    cfg: (n) => ({
+      categories: seq(n),
+      series: LONG_NAMES.slice(0, 4).map((name, k) => ({ name, data: wave(n, k * 0.9) })),
+    }),
   },
 ];
 

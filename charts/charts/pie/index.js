@@ -30,16 +30,21 @@ import { makeFormatter } from '../../core/format.js';
 import { measureTexts } from '../../core/measure.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
-import { renderDataLabels, dropCollisions, dropOversized } from '../../core/label.js';
+import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '../../core/label.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
-import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside } from './geometry.js';
+import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBand } from './geometry.js';
 
 /* [PIE-03] 图例 marker 类型键：三主题都按这个键取「饼/环 6×6 圆点」——
    THS / iFinD-PC 命中各自 legend-marker.shapes.dot，Ainvest 是 unified 恒圆点（LEGEND-03）。
    故 behavior.json 无需为本族新增任何键。 */
 const MARKER_TYPE = 'dot';
+
+/* [PIE-15] 外侧标签两段各自的字号修饰类。名称段与数值段的字号/行高是**两对独立 token**
+   （THS 两段同值、Ainvest 数值段更大），类名同时用于渲染与测量——L1 的 classOf 保证两者一致。 */
+const NAME_CLASS = 'dv-data-label--donut-name';
+const VALUE_CLASS = 'dv-data-label--donut-value';
 
 /* [PIE-09][LEGEND-11] 左右结构下图例纵列的高度上限 = **图元高度的这个倍数**，超出即在图例区内滑动。
    没有上限时图例会把整张卡片无限撑高（36 扇区能撑到上千像素），而环仍是 2R——
@@ -47,6 +52,14 @@ const MARKER_TYPE = 'dot';
    取 2 是个比例而不是像素，故不进 token（同 BAR-03 柱与间距的 2:1）：它跟着图元大小走，
    换主题、换半径都自洽。 */
 const LEGEND_MAX_PLOT_RATIO = 2;
+
+/* [PIE-17] 引线的**命中带宽**：引线自身只有 1px（复用 --size-grid-line），照它命中等于要求
+   像素级瞄准，「hover 引线也算 hover 这个扇区」就成了纸面能力。故在同一个 <g> 里再叠一条
+   **透明加粗**的同形折线专供命中，视觉一像素不变。
+   取 10px 是可点性阈值（约等于指针的容错半径），不是设计尺寸，故为模块常量、不进 token
+   （同 LEGEND_MAX_PLOT_RATIO 的 ×2、PIE-16 的保底 1 字）。
+   ⚠️ 值再往上加要先验一遍密集档：它是以引线为中线向两侧摊开的，太宽会盖住邻扇区外扩后的那一圈。 */
+const LINE_HIT_WIDTH = 10;
 
 export function PieChart(host, cfg) {
   const {
@@ -60,7 +73,7 @@ export function PieChart(host, cfg) {
   let selfHeight = host.clientHeight;
 
   /* [COLOR-08] 扇区即取色单位：N 个扇区当 N 个取色单位喂给同一个取色器——
-     type 既非 bar 也非 line，故「柱线混合」判定为假、自然落到通用 bar-multi 盘。
+     type:'pie' 走扇区专用盘 pie-multi（THS 11 色），主题未声明该盘时回落通用 bar-multi。
      hex 顺手留在 resolved 上——数据标签走档②，要按扇区色明暗反色（LABEL-04）需要色值本身而非变量名。 */
   const resolved = items.map((it, i) => ({
     name: it.name,
@@ -167,9 +180,16 @@ export function PieChart(host, cfg) {
 
     /* [PIE-04][PIE-12] 数据标签的两种形态**互斥、二选一**：dataLabel 只管显不显（LABEL-05），
        labelLayout 才定摆哪；默认外侧引线档（扇区内档在带名称的文本下几乎必然被 LABEL-06③ 判掉）。 */
-    const labelLineH = tokenNum(plotHost, '--line-height-data-label') || 14;
+    /* [PIE-15] 名称段 / 数值段各有自己的行高；[PIE-14][PIE-02] 消费的是**标签块高**：
+       stacked 档两行上下叠 → 块高 = 两行之和；inline 档同一行 → 取大者（两段本就同字号）。
+       块高直接决定纵向碰撞的判定区间与画布半高，所以两处必须用同一个值。 */
+    const stacked = b['pie-label-form'] === 'stacked';
+    const nameLineH = tokenNum(plotHost, '--line-height-donut-label-name') || 14;
+    const valueLineH = tokenNum(plotHost, '--line-height-donut-label-value') || 14;
+    const blockH = stacked ? nameLineH + valueLineH : Math.max(nameLineH, valueLineH);
     const showLabel = dataLabel === true;
-    const insideMode = showLabel && labelLayout === 'inside' && ring >= labelLineH;
+    /* 档② 只出原值（PIE-04），故可行性只看数值段行高，与 stacked 无关 */
+    const insideMode = showLabel && labelLayout === 'inside' && ring >= valueLineH;
     const radialPx = tokenNum(plotHost, '--size-donut-label-line-radial') || 0;
 
     /* ── [PIE-12][PIE-13][PIE-14] 外侧标签预演 ────────────────────────────────
@@ -182,14 +202,33 @@ export function PieChart(host, cfg) {
         const r = visible[s.i];
         return {
           key: r.name,
-          /* [LABEL-07][PIE-12] 文本 = 名称 + 原值；null 不出标签，连带不出引线（强绑定） */
-          text: r.value == null ? null : `${r.name} ${format(r.value)}`,
+          /* [LABEL-07][PIE-12] 名称 + 原值两段；value 为 null 不出标签，连带不出引线（强绑定） */
+          name: r.name,
+          value: r.value == null ? null : format(r.value),
           ...leaderElbow(s.a0, s.a1, R, radialPx),
         };
-      }).filter((d) => d.text != null);
+      }).filter((d) => d.value != null);
 
-      const widths = measureTexts(plotHost, rows.map((d) => d.text), 'dv-data-label');
-      rows.forEach((d, i) => { d.textWidth = widths[i]; });
+      /* [PIE-15] 两段各用**自己的字号类**量。stacked 档两段各占一行，故一行内恒只有一种字号；
+         inline 档要求两段字号相同（behavior.json 的 pie-label-form 约束），拼串按名称类量即可。
+         任何一行内部都不会混排 —— 这正是「异字号必须 stacked」这条约束换来的：
+         measure.js 一行不用改，也不需要 tspan。 */
+      const nameW = measureTexts(plotHost, rows.map((d) => d.name), `dv-data-label ${NAME_CLASS}`);
+      const valueW = measureTexts(plotHost, rows.map((d) => d.value), `dv-data-label ${VALUE_CLASS}`);
+      /* inline 档两段之间那个空格的宽度：块宽含它、渲染时它就是两个 <text> 的横向间距
+         （PIE-12 拆段之后空格不再是串里的字符），故必须量准，差几像素就看得出来。
+         ⚠️ **只能用「整串 − 两段」的差量**：SVG 的 xml:space 默认裁掉首尾空白，
+         拿「名称 + 尾随空格」减「名称」量出来恒为 0（实测三主题皆然），空格只有夹在
+         两段之间才有宽度。inline 档两段字号相同（pie-label-form 的前提），故整串按名称类量。 */
+      const sepW = stacked || !rows.length ? 0
+        : measureTexts(plotHost, [`${rows[0].name} ${rows[0].value}`], `dv-data-label ${NAME_CLASS}`)[0]
+          - nameW[0] - valueW[0];
+      rows.forEach((d, i) => {
+        d.nameW = nameW[i];
+        d.valueW = valueW[i];
+        /* stacked：两行上下叠，块宽取大者；inline：同一行，块宽是两段之和加分隔 */
+        d.textWidth = stacked ? Math.max(nameW[i], valueW[i]) : nameW[i] + sepW + valueW[i];
+      });
 
       /* [PIE-14][LABEL-06②] 左右两栏各判各的 —— 调 L1 的**同一个** dropCollisions，只是喂 y 值
          （start = 自然 y − 半行高、size = 行高）。异侧标签横向隔着整个环，合并判会让一侧的
@@ -199,39 +238,60 @@ export function PieChart(host, cfg) {
       for (const side of ['left', 'right']) {
         dropCollisions(
           rows.filter((d) => d.side === side)
-            .map((d) => ({ start: d.ey - labelLineH / 2, size: labelLineH, row: d })),
+            .map((d) => ({ start: d.ey - blockH / 2, size: blockH, row: d })),
           minGap,
         ).forEach((b) => kept.add(b.row));
       }
       const live = rows.filter((d) => kept.has(d));
 
-      /* 容器留给每侧标签带的上限。超了**不挪位置**，只让 maxWidth 变小，
-         再由 LABEL-06③ 判掉放不下的——判定用的是 L1 导出的同一个 dropOversized，L2 不另写。 */
+      /* [PIE-13][PIE-02] 标签带**只看容器、不看文本**，两侧同值。
+         这是整条流水线得以单向推进的前提：带宽若由文本宽反推、文本又要按带宽截断（PIE-16），
+         两者互为因果 —— 截断是离散的，截完必然比可用宽窄一点，回头重算带宽就会收缩，
+         收缩后又要多截一个字，`column` 档尤其会来回震荡。锚在容器上一刀切断。 */
       const legendW = legend === 'bottom' ? 0 : legendHost.getBoundingClientRect().width + gapPx;
-      const bandCap = Math.max(0, (host.clientWidth - legendW - 2 * R) / 2);
+      const band = labelBand(
+        host.clientWidth - legendW,
+        R,
+        tokenNum(plotHost, '--size-donut-label-band-max') || Infinity,
+      );
       const opts = {
         lateral: tokenNum(plotHost, '--size-donut-label-line-lateral') || 0,
         gap: tokenNum(plotHost, '--spacing-donut-label-gap') || 0,
-        bandCap,
+        band,
         R,
       };
 
-      /* ⚠️ [PIE-12] 强绑定要求「有线必有字」，故**放不下的必须在画线之前就出局**——
-         不能等 renderDataLabels 里的 dropOversized 去丢：那时引线已经画出去了，
-         结果就是一条指向空处的线（曾实测到 Ainvest 3 条线只出 2 个字）。
-         两趟：先按容器上限判谁装得下，再拿幸存者重算一次带宽。
-         **第二趟不会再丢人**：幸存者满足 w_i ≤ R + band − inner_i，而重算后
-         band' = max(inner_j + w_j) − R ≥ inner_i + w_i − R，代回即得 w_i ≤ R + band' − inner_i。
-         故一次重算即收敛，不必循环。重算的意义是把带宽收紧到幸存者真正需要的宽度，
-         否则画布会比图元宽出一截（PIE-02 要求画布恰好是图元外接框）。 */
-      const fits = dropOversized(
-        alignOutside(live, labelAlign, opts).items
-          .map((p, i) => ({ width: live[i].textWidth, maxWidth: p.maxWidth, row: live[i] })),
-      ).map((b) => b.row);
+      /* ⚠️ [PIE-12] 强绑定要求「有线必有字」，故一切丢弃都必须在画线之前判完 ——
+         不能等 renderDataLabels 里去丢：那时引线已经画出去了，结果是一条指向空处的线
+         （曾实测到 Ainvest 3 条线只出 2 个字）。
+         [PIE-16] 而超宽的处置已从「整条丢」改成「截名称」，故这里只剩一种丢法：
+         连「1 字 + … 」都放不下（或数值段自己就超宽）→ 才整条出局。
+         **两次 alignOutside 不是循环**：band 是入参、两次相同；第一次只取 maxWidth，
+         第二次只把 edge 档的横段末端对齐到截断后的文字（见 geometry.js 的说明）。 */
+      const placed0 = alignOutside(live, labelAlign, opts);
+      /* 数值段恒不截 —— 截断的数字是错的数字。名称段能用的宽 = 可用宽 − 数值段占位。
+         stacked 档名称独占一行，不必扣数值；inline 档要扣掉数值与分隔。 */
+      const cut = truncateBatch(
+        live.map((d, i) => ({
+          text: d.name,
+          maxWidth: placed0[i].maxWidth - (stacked ? 0 : d.valueW + sepW),
+        })),
+        (texts) => measureTexts(plotHost, texts, `dv-data-label ${NAME_CLASS}`),
+      );
+      const fits = [];
+      live.forEach((d, i) => {
+        /* 数值段单独就超宽 → 名称截到 0 也没用，整条丢（连引线，PIE-12） */
+        if (cut[i].text == null || d.valueW > placed0[i].maxWidth) return;
+        d.name = cut[i].text;
+        d.nameW = cut[i].width;
+        d.truncated = cut[i].truncated;
+        d.textWidth = stacked ? Math.max(d.nameW, d.valueW) : d.nameW + sepW + d.valueW;
+        fits.push(d);
+      });
 
-      const { band, items: placed } = alignOutside(fits, labelAlign, opts);
+      const placed = alignOutside(fits, labelAlign, opts);
       fits.forEach((d, i) => Object.assign(d, placed[i]));
-      if (fits.length) outside = { rows: fits, band };
+      if (fits.length) outside = { rows: fits, band, sepW };
     }
 
     /* [PIE-08][PIE-09][PIE-02] 无轴画布：xBand:false → 四周留白全 0、grid 即整块画布。
@@ -241,15 +301,15 @@ export function PieChart(host, cfg) {
        死空间，而 PIE-09 要求这段间距恒定。
        上下结构只定高不定宽：宽度铺满容器、图元在其中水平居中即为整体居中，
        横向富余不夹在图元与图例之间（图例在下方），不影响间距。 */
-    const bandL = outside ? outside.band.left : 0;
-    const bandR = outside ? outside.band.right : 0;
+    /* [PIE-13] 两侧同值，故只有一个数；无外侧标签时退化为 0（画布 = 环的外接方框 2R） */
+    const bandW = outside ? outside.band : 0;
     /* 12 / 6 点方向的标签会探出环外，故半高取「环」与「最外标签」的较大者 */
     const halfH = outside
-      ? Math.max(R, Math.max(...outside.rows.map((d) => Math.abs(d.ey))) + labelLineH / 2)
+      ? Math.max(R, Math.max(...outside.rows.map((d) => Math.abs(d.ey))) + blockH / 2)
       : R;
     const frame = createFrame(plotHost, {
       height: 2 * halfH,
-      ...(legend === 'bottom' ? {} : { width: bandL + 2 * R + bandR }),
+      ...(legend === 'bottom' ? {} : { width: 2 * bandW + 2 * R }),
       xBand: false,
       minGridHeight: 0, /* 画布已按图元算好，不要被轴图的最小网格高抬高（那会重新造出死空间） */
     });
@@ -260,12 +320,10 @@ export function PieChart(host, cfg) {
        容器另有显式高度时两条约束同时生效，取更紧的那个（CSS max-height 天然如此）。 */
     host.style.setProperty('--dv-pie-legend-max-h', `${2 * halfH * LEGEND_MAX_PLOT_RATIO}px`);
 
-    /* 圆心：两侧标签带不等宽时**不再是画布中心**（PIE-02）——
-       左右结构下画布正好裹着图元，圆心自左带宽起算；上下结构下画布铺满，
-       让**图元**（而非圆）在其中居中，圆心相应偏移半个带宽差。 */
-    const cx = legend === 'bottom'
-      ? (frame.grid.left + frame.grid.right) / 2 + (bandL - bandR) / 2
-      : frame.grid.left + bandL + R;
+    /* 圆心 = 画布中心，两种图例结构同一个式子（PIE-02）——
+       两侧标签带恒等宽（PIE-13），左右结构下 `grid.left + bandW + R` 本就等于画布中心，
+       上下结构下画布铺满、图元在其中居中，两者遂收敛成一句。 */
+    const cx = (frame.grid.left + frame.grid.right) / 2;
     const cy = (frame.grid.top + frame.grid.bottom) / 2;
 
     /* ── [PIE-05] hover 链路：只有气泡（无指示线 / 无轴贴片——无轴可指、无标签可贴）──
@@ -304,6 +362,9 @@ export function PieChart(host, cfg) {
        外侧档的锚点已在上面预演里算完，这里只是把两档统一收进同一批交给 renderDataLabels。 */
     const outsideByKey = new Map((outside ? outside.rows : []).map((d) => [d.key, d]));
     const labelBatches = [];
+    /* [PIE-17] key → 该扇区的命中绑定函数。标签层在扇区之后才建（PIE-07），
+       那时扇区的闭包已经出作用域，故在这里留一手，供标签 `<g>` 复用**同一套**处理器。 */
+    const hitBinders = new Map();
 
     /* [MOTION-01][PIE-06] 入场扫掠：收集逐帧重绘闭包。起止角同乘 t → 整环自 12 点顺时针扫开，
        各扇区被前沿扫过时依次显形、**全程占比正确**（同 MOTION-06 堆叠「值空间同乘 t」的思路）。 */
@@ -361,8 +422,12 @@ export function PieChart(host, cfg) {
       const path = g.append('path').attr('class', 'dv-pie-sector');
 
       /* [PIE-12] 引线画在**扇区自己的 `<g>` 内**：图例 hover 弱化（applyDim 选的就是这个 g）
-         与强调态抬层（g.raise）因此自动覆盖它，不必再接第二套。 */
+         与强调态抬层（g.raise）因此自动覆盖它，不必再接第二套。
+         [PIE-17] 命中带在**可见引线之前**追加 = 画在其下：它是透明的，谁在上无所谓，
+         但压在扇区之下这一点很要紧——两者重叠处让扇区先接住，命中带只在圆外起作用。 */
       const lead = outsideByKey.get(r.name);
+      const hitLine = lead ? g.append('polyline').attr('class', 'dv-pie-label-line-hit')
+        .attr('stroke-width', LINE_HIT_WIDTH) : null;
       const line = lead ? g.append('polyline').attr('class', 'dv-pie-label-line') : null;
       /* 弧上起点的单位方向（= 扇区中线），用于让引线起点跟着外扩走 */
       const ux = lead && R > 0 ? lead.ax / R : 0;
@@ -382,7 +447,9 @@ export function PieChart(host, cfg) {
            后两点恒定：**末两点 y 相同 → 第二段是严格水平线**，这正是「标签未做纵向位移」的证据。 */
         if (line) {
           const startR = Math.min(outerR, R + radialPx);
-          line.attr('points', `${ux * startR},${uy * startR} ${lead.ex},${lead.ey} ${lead.lineEndX},${lead.ey}`);
+          const points = `${ux * startR},${uy * startR} ${lead.ex},${lead.ey} ${lead.lineEndX},${lead.ey}`;
+          line.attr('points', points);
+          hitLine.attr('points', points); /* [PIE-17] 命中带与可见线**同一串点**，逐帧一起走 */
         }
       };
       draw();
@@ -391,8 +458,13 @@ export function PieChart(host, cfg) {
       /* [PIE-10] 外扩的扇区会压住相邻扇区，故强调时把它抬到同层最上（DOM 序 = 绘制序）。 */
       const raiseAbove = () => g.raise();
 
-      /* [PIE-05] 按扇区命中（无坐标轴 → 没有「最近类目」可言，不做 X 切片） */
-      path.on('mouseenter', () => {
+      /* [PIE-05][PIE-17] 按扇区命中（无坐标轴 → 没有「最近类目」可言，不做 X 切片）。
+         **一个扇区的所有可命中件共用同一套处理**：扇区面、引线（含命中带）、外侧标签。
+         接在 `<g>` 上而不是 `path` 上，前两者就自动包含了——`<g>` 的 mouseenter/leave 判的是
+         「进入/离开它的任一后代」，正是这里要的语义；标签在另一层（PIE-07 要求它压在扇区之上），
+         够不着这个 `<g>`，故把同一个绑定函数留给下面的标签层复用，而不是复制一份处理器。 */
+      const bindHit = (sel) => sel.on('mouseenter', () => {
+        clearTimeout(hideTimer); /* 从扇区挪到自己的标签上时，别让上一段留下的延时把气泡关掉 */
         if (!expand) return;
         emphHover = r.name;
         raiseAbove();
@@ -412,37 +484,69 @@ export function PieChart(host, cfg) {
           raiseAbove();
           animateEmphasis();
         });
+      bindHit(g);
+      if (lead) hitBinders.set(r.name, bindHit);
 
       /* [PIE-04][PIE-12] 两档互斥，一个 if / else 分岔，绝不同屏 */
       if (lead) {
+        /* [LABEL-09] 档③：色彩关联已由引线承担，文字不跟随系列色 —— **名称段走二级文字色、
+           数值段走正文色**（tone 两级，色值落在 CSS 的 token 上）。
+           [PIE-12] **标签块的垂直中心**恒等于肘点 y —— 锚在扇区的自然位置、不做纵向位移
+           （LABEL-01 / PIE-14）。stacked 档名称行在上、数值行在下，各自的中心自块心对称偏移；
+           inline 档两段同在一行，「块心」即「文字心」。
+           [PIE-15] **两种形态都出两个 <text>**（一个 item 一个 <text>，L1 不做富文本拼装）：
+           stacked 靠 dy 上下叠、inline 靠 dx 左右排。inline 自**块左沿**起排——名称在左，
+           数值紧跟其后 nameW + sepW，故两段无论落在哪一侧、走哪个对齐档都恒用 anchor:'start'，
+           块的另一沿仍精确落回 textX（块宽就是这三段之和，PIE-13 的 edge 档据此贴边）。
+           **不传 maxWidth**：宽度已由 PIE-16 的截断保证装得下，再让 L1 按同一个数复判一次，
+           两次测量的浮点差就足以丢掉两行中的一行 —— 半个标签比没有标签更糟。 */
+        const blockDX = lead.anchor === 'start' ? 0 : -lead.textWidth;
+        const lines = stacked
+          ? [
+            { dy: -(blockH - nameLineH) / 2, text: lead.name, sizeClass: NAME_CLASS, tone: 'neutral-secondary' },
+            { dy: (blockH - valueLineH) / 2, text: lead.value, sizeClass: VALUE_CLASS, tone: 'neutral' },
+          ]
+          : [
+            { dx: blockDX, text: lead.name, sizeClass: NAME_CLASS, tone: 'neutral-secondary', anchor: 'start' },
+            {
+              dx: blockDX + lead.nameW + outside.sepW,
+              text: lead.value,
+              sizeClass: VALUE_CLASS,
+              tone: 'neutral',
+              anchor: 'start',
+            },
+          ];
         labelBatches.push({
           key: r.name,
-          /* [LABEL-09] 档③：色彩关联已由引线承担，文字走中性正文色、不跟随系列色。
-             y 恒等于肘点 y —— 锚在扇区的自然位置，不做纵向位移（PIE-14 / LABEL-01）。 */
-          item: {
-            x: cx + lead.textX,
-            y: cy + lead.ey,
+          hit: true,                  /* [PIE-17] 外侧档放行命中，与扇区、引线同一套状态 */
+          items: lines.map((ln) => ({
+            x: cx + lead.textX + (ln.dx ?? 0),
+            y: cy + lead.ey + (ln.dy ?? 0),
+            /* [PIE-13] 三档对齐决定块往哪边排；stacked 两行共用块锚点，inline 两段改从块左沿起排 */
+            anchor: ln.anchor ?? lead.anchor,
             baseline: 'middle',
-            anchor: lead.anchor,      /* [PIE-13] 三档对齐决定往哪边排 */
-            tone: 'neutral',
-            maxWidth: lead.maxWidth,  /* [LABEL-06③] 标签带被容器截断时由 L1 逐个丢 */
-            text: lead.text,
-          },
+            tone: ln.tone,
+            sizeClass: ln.sizeClass,  /* [PIE-15] 决定字号，且测量走同一个类 */
+            text: ln.text,
+          })),
         });
       } else if (insideMode) {
         const a = labelAnchor(s.a0, s.a1, R, innerR);
         labelBatches.push({
           key: r.name,
-          /* [LABEL-04] 档②：标签压在扇区填充上 → 按该扇区色的明暗切前景；只出原值（PIE-04） */
-          item: {
+          /* [LABEL-04] 档②：标签压在扇区填充上 → 按该扇区色的明暗切前景；只出原值（PIE-04）。
+             **本档不截断**（PIE-16 只管外侧档）：这里溢出的字会落到画布底色上直接看不见，
+             而且可截的只有数值本身 —— 截断的数字是错的数字。仍走 LABEL-06③「放不下就不放」。 */
+          items: [{
             x: cx + a.x,
             y: cy + a.y,
             baseline: 'middle',
             tone: 'auto',
             bgHex: r.colorHex,
+            sizeClass: VALUE_CLASS,   /* [PIE-15] 只有数值 → 走数值段字号 */
             maxWidth: a.maxWidth,     /* [LABEL-06③] 放不下就不放（几何判定见 geometry.js） */
             text: r.value == null ? null : format(r.value),
-          },
+          }],
         });
       }
     });
@@ -454,10 +558,16 @@ export function PieChart(host, cfg) {
     let labelLayer = null;
     if (labelBatches.length) {
       labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
-      labelBatches.forEach(({ key, item }) => {
+      labelBatches.forEach(({ key, items: lines, hit }) => {
         const g = labelLayer.append('g').attr('class', 'dv-data-label-series');
         g.node().dataset.key = key;
-        renderDataLabels(g, frame, [item], { collide: false });
+        /* [PIE-15] 一个逻辑标签可能是两行（stacked 档）——同一个 <g> 里两个 <text>，
+           随所属扇区一起被 applyDim 弱化、一起随引线出现（MOTION-05），天然同生共死。 */
+        renderDataLabels(g, frame, lines, { collide: false });
+        /* [PIE-17] **只有外侧档**放行命中：它落在环外、不压任何图元，接管的是本来谁也接不到的
+           那片空白；扇区内档正压在自己的扇区上，放行等于把扇区的命中抢走一块（LABEL-08 的原意）。
+           修饰类负责 pointer-events（`.dv-data-label` 默认 none），绑定复用扇区那一份。 */
+        if (hit && hitBinders.has(key)) hitBinders.get(key)(g.classed('dv-data-label-series--hit', true));
       });
     }
 
@@ -481,7 +591,9 @@ export function PieChart(host, cfg) {
     firstBuild = false;
     if (!animate) return;
 
-    const leaderLines = sectorLayer.selectAll('polyline.dv-pie-label-line');
+    /* [PIE-12][PIE-17] 命中带也要跟着藏：它是透明的，藏不藏看不出来，但 display:none 才会
+       把它一并撤出命中测试——否则扫掠这 480ms 里，圆外那条什么都没画的地方仍能 hover 出气泡。 */
+    const leaderLines = sectorLayer.selectAll('polyline.dv-pie-label-line, polyline.dv-pie-label-line-hit');
     const showAnnotations = (on) => {
       if (labelLayer) labelLayer.style('display', on ? null : 'none');
       leaderLines.style('display', on ? null : 'none');

@@ -107,7 +107,10 @@ export function renderLegend(host, items, opts = {}) {
     .on('mouseenter', (_e, d) => onHover && onHover(d.key))
     .on('mouseleave', () => onHover && onHover(null));
 
-  item.select('.dv-legend-label').text((d) => d.label);
+  /* [LEGEND-13] 纵列超宽由 CSS 省略号截断（纯 CSS，不测量）；title 是被截断时的兜底——
+     原生 HTML 提示，无需接线，且图例本就接受鼠标（点击显隐），够得着。恒挂不判断是否真截了：
+     判断要测量，而"没截时多一个与可见文字相同的 title"没有任何代价。 */
+  item.select('.dv-legend-label').text((d) => d.label).attr('title', (d) => d.label);
   item.each(function (d) {
     renderMarker(select(this).select('svg.dv-legend-marker'), markerSpecFor(marker, d.type), container);
   });

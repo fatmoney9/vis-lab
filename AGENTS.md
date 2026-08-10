@@ -34,11 +34,18 @@
 当前有**两个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
-- **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..14）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
-  - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）
-  - 两种图例布局：`legend: 'right'`（默认，左右结构）/ `'bottom'`（上下结构），间距 24px、整组居中；左右结构下图例纵列高度上限 = 图元高 × 2，超出在图例区内滑动（PIE-09 / LEGEND-10/11）
+- **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
+  - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
+  - 半径 = `clamp(默认半径 × 0.5, 短边/2, 默认半径)`——token 是上限，**收缩有底**（THS/iFinD 35、Ainvest 40）；触底后环溢出画布而非继续变小（PIE-02）
+  - 两种图例布局：`legend: 'right'`（默认，左右结构）/ `'bottom'`（上下结构），间距 24px、整组居中，**图例块与环共享同一条中线**；两种结构都封顶 + 溢出滑动，上限左右 = 图元高 × 2（L2 算好写进 `--dv-pie-legend-max-h`）、上下 = 默认图元高 `size-donut-radius × 2`（纯 CSS，锚 token 是为断开「图例高 → 半径 → 图例上限」的循环）（PIE-09 / LEGEND-10/11）
+  - 扇区取色走**扇区专用盘 `pie-multi`**（THS 11 色；未声明该盘的主题回落通用 `bar-multi`），单扇区仍取 `single-default`（COLOR-08）
   - 气泡恒走 `follow` 档（TOOLTIP-07 的无坐标系图特例，在 L2 定死、不进 behavior.json）
-  - **数据标签默认不显示**（LABEL-05「一个类目一个值就出标签」原则的明确例外）。开启后有两种**互斥**形态：`labelLayout: 'outside'`（默认，外侧标签 + 引线，PIE-12/13/14）/ `'inside'`（扇区内，PIE-04）——引线与标签强绑定，三道丢弃都必须在画线前判完
+  - **数据标签默认不显示**（LABEL-05「一个类目一个值就出标签」原则的明确例外）。开启后有两种**互斥**形态：`labelLayout: 'outside'`（默认，外侧标签 + 引线，PIE-12/13/14）/ `'inside'`（扇区内，PIE-04）——引线与标签强绑定，所有丢弃都必须在画线前判完
+  - 外侧标签 = **名称段 + 数值段**，两段各有自己的字号 / 行高 token，名称段另有自己的**字重**（regular）与**颜色**（`color-text-secondary`，数值段 primary）；渲染恒为**两个 `<text>`**（一个 `<text>` 只能一个 fill）。排布形态走 `behavior.json` 的 `pie-label-form`：THS / iFinD-PC `inline` 同行、Ainvest `stacked` 上下两行；`inline` 要求两段字号相同（异字号必须 stacked，否则单一 class 的测量会系统性偏窄）（PIE-15）
+  - ⚠️ **`.dv-data-label` 通用 token 的隐含前提是「标签内容是数字」**（medium 字重、`font-family-number`、`tabular-nums`）。名称段是全库第一个非数字消费者——再往这套类上挂非数字文本，先逐项复核
+  - **可命中面 = 扇区面 + 引线 + 外侧标签**，三者共用同一套绑定（接在扇区 `<g>` 上，标签层复用同一个函数），引线另叠透明命中带。**外侧标签放行 `pointer-events` 是 LABEL-08 的例外**（落在环外、不压图元）；**扇区内档必须保持 `none`**，否则在扇区中间挖出死区（PIE-17）
+  - **超宽截名称、不丢整条**（PIE-16）：数值段恒完整（截断的数字是错的数字），保底 1 字 + `…`；连最短形态都放不下才回落丢弃。图例侧另有纯 CSS 截断 + `title` 兜底（LEGEND-13）
+  - **标签带宽只看容器不看文本**（PIE-13）：`min((容器宽 − 图例带)/2 − R, size-donut-label-band-max)`，两侧同值。这是为切断「带宽由文本反推 ↔ 文本按带宽截断」的环——改动它前先读 PIE-13 的说明
   - 强调态外扩：hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

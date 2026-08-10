@@ -8,6 +8,7 @@
       "取色：单系列 → single-default；多系列 → bar-multi 按序号取、超出循环。count = 声明系列数（图例隐藏不重排色，见 COLOR-04）",
       "THS 多系列柱=末行「固定第 N 色」前 N；单系列另用 single-default（#3366FF，非 bar-multi[0] 的 #52BBFF）——「整套换」非「序号叠加」",
       "line-multi = 折柱组合的折线子序列（柱线分色板、禁交叉，COLOR-05）；iFinD 用浅盘避撞柱色。仅组合使用：纯折线（无柱声明）走通用 bar-multi",
+      "pie-multi = 饼环扇区盘（COLOR-08），可选键：主题不声明即回落 bar-multi。THS 有设计稿独立的 11 色扇区盘，iFinD / Ainvest 暂无、仍走通用盘",
       "动态条形 16 色等后续切片再补键（dynamic-bar）"
     ]
   },
@@ -15,7 +16,11 @@
   "ths": {
     "single-default": "#3366FF",
     "bar-multi": ["#52BBFF", "#3366FF", "#FFB70F", "#CC41D9", "#14CCBD", "#83D537", "#858585"],
-    "line-multi": ["#FF9500", "#858585"]
+    "line-multi": ["#FF9500", "#858585"],
+    "pie-multi": [
+      "#52BBFF", "#3366FF", "#13CC8E", "#1A9FFF", "#FF9500", "#FF5638",
+      "#FF74C5", "#C853F2", "#7BCE42", "#FED57A", "#858585"
+    ]
   },
   "ifind-pc": {
     "single-default": "#4D5999",

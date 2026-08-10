@@ -22,7 +22,7 @@
 | COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest `#265FFC`。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
 | COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色使用**完整的声明系列列表**，不是当前可见系列——隐藏一个系列不会重新调用取色或改变其余系列的固定槽位 | `CartesianChart` 传入归一化后的 `series`，并按 `seriesIndex` 固定 `--dv-series-i` | ✅ |
 | COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
-| COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → `bar-multi` 按序号取、超出循环（COLOR-02）。<br>**走通用 `bar-multi` 而非另立色板**：`type: 'pie'` 既非 `bar` 也非 `line`，`resolveSeriesColors` 的「柱线混合」判定天然为假，自然落到通用盘——这与 COLOR-05 补充里「纯折线走通用 `bar-multi`」是同一条口径（`line-multi` 只保留给折柱组合）。<br>**取色器一行不改**：现有算法已经覆盖本规则，本条只是把「扇区 → 槽位」这个映射写成权威表述。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `core/palette.js` → `resolveSeriesColors()`（无改动）；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
+| COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → **`pie-multi`** 按序号取、超出循环（COLOR-02）。<br>**扇区自成一盘（`pie-multi`）而非借用 `bar-multi`**：饼环把全部槽位同时摆在一个圆里，相邻扇区直接接边、没有柱间距与轴带隔开，需要的色数也远多于分组柱（36 扇区是 demo 常态）——THS 因此在设计稿里给了**独立的 11 色扇区盘**（`#52BBFF` 起，较 `bar-multi` 的 7 色更长、色相分布更匀）。<br>**该键可选、缺省回落 `bar-multi`**：iFinD-PC（24 色）/ Ainvest（8 色）设计稿未另出扇区盘，不声明 `pie-multi` 即沿用通用盘，行为与本条落地前完全一致——「整套换」的边界是主题，不是图型。<br>**取色器只加一条分支**：`type: 'pie'` 走 `pie-multi ?? bar-multi` 的独立序号，与柱 / 线两个计数器互不干扰。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `palette.json` 各主题可选 `pie-multi`；`core/palette.js` → `resolveSeriesColors()` 的 pie 分支；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
 
 ## 样式 token / 数据边界
 
@@ -35,4 +35,5 @@
 - [ ] **THS「按系列数量整取第 N 行」基础表**（当前多系列用末行固定第 N 色，覆盖分组柱；基础表用于基础柱等场景，届时给 palette.json 加 `by-count` 结构 + resolver 加模式）。
 - [ ] **Ainvest 动态条形图 16 色**（序列 8 + 浅色变体 8，按序号循环）。
 - [x] **标准多折线图**（非组合）的折线色板：**决定不设独立色板**——纯折线走通用 `bar-multi`（COLOR-05 补充），`line-multi` 仅保留为折柱组合子序列（原设想的 `line-standard` 独立序列不再需要）。
-- [x] **饼 / 环扇区取色** → COLOR-08：扇区即取色单位，走通用 `bar-multi` 按序号取，取色器无需改动。
+- [x] **饼 / 环扇区取色** → COLOR-08：扇区即取色单位，按序号取自扇区盘 `pie-multi`（THS 11 色；未声明该盘的主题回落 `bar-multi`）。
+- [ ] **iFinD-PC / Ainvest 的扇区盘**：等设计稿出独立 `pie-multi` 再补键，取色器与 spec 均无需再改（COLOR-08 的回落分支已就位）。

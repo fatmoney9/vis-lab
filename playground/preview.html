@@ -354,8 +354,8 @@
     const cat = CATEGORIES.find((c) => c.id === state.category);
 
     document.getElementById('cat-title').textContent = cat.title;
-    /* 开发验收要点（notes）优先；没写 notes 的示例回落到对外说明 */
-    document.getElementById('cat-desc').textContent = cat.notes ?? cat.description;
+    /* 一句话说明；验收口径不在这里，见 specs/*.md 各页的「活 demo」小节 */
+    document.getElementById('cat-desc').textContent = cat.description;
     navEl.querySelectorAll('.nav-item').forEach((b) =>
       b.classList.toggle('is-active', b.dataset.id === state.category));
 
