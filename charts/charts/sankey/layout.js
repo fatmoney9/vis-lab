@@ -264,9 +264,25 @@ export function assertSankeyConfig(cfg) {
     );
   });
 
+  links.forEach((link) => {
+    link.isNegativeDifference = link.value < 0 && Boolean(link.negativeSource);
+    if (!link.isNegativeDifference) return;
+    link.baseLink = link.source.outgoing.find(
+      (candidate) => candidate !== link && candidate.target === link.negativeSource,
+    );
+    link.source.hasNegativeDifference = true;
+    link.target.isNegativeDifferenceResult = true;
+  });
+  nodes.forEach((node) => {
+    if (node.hasNegativeDifference || node.isNegativeDifferenceResult) {
+      node.magnitude = Math.abs(node.value);
+    }
+  });
+
   const intermediates = nodes.filter((node) => node.kind === 'intermediate');
   if (intermediates.length === 0) fail('至少需要一个中间节点');
-  const primary = [...nodes].sort(
+  const distributors = nodes.filter((node) => node.outgoing.length > 0);
+  const primary = [...distributors].sort(
     (a, b) => b.magnitude - a.magnitude
       || Number(b.kind === 'intermediate') - Number(a.kind === 'intermediate')
       || a.stage - b.stage
@@ -428,7 +444,9 @@ function routedPoints(link, columns, gap) {
   if (obstacles.length === 0) return points;
   const firstLeft = Math.min(...obstacles.map((node) => node.x));
   const lastRight = Math.max(...obstacles.map((node) => node.x + node.width));
-  const topRoute = Math.min(...obstacles.map((node) => node.y)) - gap - link.thickness;
+  const topRoute = Math.min(...obstacles.map((node) => node.y))
+    - gap
+    - Math.max(link.sourceThickness, link.targetThickness);
   const bottomRoute = Math.max(...obstacles.map((node) => node.y + node.height)) + gap;
   const sourceCenter = link.source.y + link.source.height / 2;
   const targetCenter = link.target.y + link.target.height / 2;
@@ -446,7 +464,18 @@ function routedPoints(link, columns, gap) {
 }
 
 function ribbonPath(link, tension, columns, gap) {
-  const points = routedPoints(link, columns, gap);
+  const routed = routedPoints(link, columns, gap);
+  const sourceX = routed[0].x;
+  const targetX = routed.at(-1).x;
+  const span = Math.max(1, targetX - sourceX);
+  const points = routed.map((point) => {
+    const ratio = Math.max(0, Math.min(1, (point.x - sourceX) / span));
+    return {
+      ...point,
+      thickness: link.sourceThickness
+        + (link.targetThickness - link.sourceThickness) * ratio,
+    };
+  });
   const commands = [`M${points[0].x},${points[0].y}`];
   for (let index = 1; index < points.length; index += 1) {
     const from = points[index - 1];
@@ -457,15 +486,15 @@ function ribbonPath(link, tension, columns, gap) {
     );
   }
   const last = points.at(-1);
-  commands.push(`L${last.x},${last.y + link.thickness}`);
+  commands.push(`L${last.x},${last.y + last.thickness}`);
   for (let index = points.length - 1; index > 0; index -= 1) {
     const from = points[index];
     const to = points[index - 1];
     const deltaX = (to.x - from.x) * tension;
     commands.push(
-      `C${from.x + deltaX},${from.y + link.thickness} `
-      + `${to.x - deltaX},${to.y + link.thickness} `
-      + `${to.x},${to.y + link.thickness}`,
+      `C${from.x + deltaX},${from.y + from.thickness} `
+      + `${to.x - deltaX},${to.y + to.thickness} `
+      + `${to.x},${to.y + to.thickness}`,
     );
   }
   commands.push('Z');
@@ -479,9 +508,10 @@ function differenceRibbonPath(link, gap) {
   const sourceX = source.x;
   const targetX = target.x;
   const controlX = Math.min(sourceX, targetX) - gap;
-  const sourceY = Math.max(source.y, source.y + source.height - link.thickness);
+  const sourceY = Math.max(source.y, source.y + source.height - link.sourceThickness);
   const targetY = link.targetY;
-  const thickness = link.thickness;
+  const sourceThickness = link.sourceThickness;
+  const targetThickness = link.targetThickness;
 
   link.sourceY = sourceY;
   link.route = 'difference';
@@ -489,16 +519,16 @@ function differenceRibbonPath(link, gap) {
   return [
     `M${sourceX},${sourceY}`,
     `C${controlX},${sourceY} ${controlX},${targetY} ${targetX},${targetY}`,
-    `L${targetX},${targetY + thickness}`,
-    `C${controlX},${targetY + thickness} `
-      + `${controlX},${sourceY + thickness} ${sourceX},${sourceY + thickness}`,
+    `L${targetX},${targetY + targetThickness}`,
+    `C${controlX},${targetY + targetThickness} `
+      + `${controlX},${sourceY + sourceThickness} ${sourceX},${sourceY + sourceThickness}`,
     'Z',
   ].join(' ');
 }
 
 /*
- * [SANKEY-04..08][SANKEY-11][SANKEY-13][SANKEY-15..18]
- * 最大绝对流量节点作为尺度锚点；有符号值只影响文案与守恒，不反转流向。
+ * [SANKEY-04..08][SANKEY-11][SANKEY-13][SANKEY-15..18][SANKEY-25]
+ * 最大分配枢纽作为尺度锚点；财务负差额按来源、成本和差额各自数值定高。
  */
 export function layoutSankey(cfg, bounds, style) {
   const geometry = style.geometry;
@@ -529,6 +559,8 @@ export function layoutSankey(cfg, bounds, style) {
     link.thickness = link.magnitude === 0
       ? zeroFlowSize
       : Math.max(edgeMinThickness, link.proportionalThickness);
+    link.sourceThickness = link.thickness;
+    link.targetThickness = link.thickness;
   });
   graph.nodes.forEach((node) => {
     node.width = node === graph.primary
@@ -545,13 +577,22 @@ export function layoutSankey(cfg, bounds, style) {
       (sum, link) => sum + link.thickness,
       0,
     );
-    node.height = Math.max(
-      nodeMinHeight,
-      node.proportionalHeight,
-      incomingDisplayHeight,
-      outgoingDisplayHeight,
-    );
+    node.height = node.hasNegativeDifference || node.isNegativeDifferenceResult
+      ? Math.max(nodeMinHeight, node.proportionalHeight)
+      : Math.max(
+        nodeMinHeight,
+        node.proportionalHeight,
+        incomingDisplayHeight,
+        outgoingDisplayHeight,
+      );
     node.color = semanticColor(node, style.colors);
+  });
+  graph.links.forEach((link) => {
+    if (!link.isNegativeDifference) return;
+    link.baseLink.sourceThickness = Math.min(
+      link.baseLink.sourceThickness,
+      link.source.height,
+    );
   });
 
   const columns = graph.stageValues.map(() => []);
@@ -647,23 +688,29 @@ export function layoutSankey(cfg, bounds, style) {
     const outgoing = [...node.visualOutgoing].sort(
       (a, b) => (a.target.y + a.target.height / 2) - (b.target.y + b.target.height / 2),
     );
-    const incomingHeight = incoming.reduce((sum, link) => sum + link.thickness, 0);
-    const outgoingHeight = outgoing.reduce((sum, link) => sum + link.thickness, 0);
+    const incomingHeight = incoming.reduce(
+      (sum, link) => sum + link.targetThickness,
+      0,
+    );
+    const outgoingHeight = outgoing.reduce(
+      (sum, link) => sum + link.sourceThickness,
+      0,
+    );
     let incomingOffset = node.y + Math.max(0, (node.height - incomingHeight) / 2);
     let outgoingOffset = node.y + Math.max(0, (node.height - outgoingHeight) / 2);
     incoming.forEach((link) => {
       link.targetY = incomingOffset;
-      incomingOffset += link.thickness;
+      incomingOffset += link.targetThickness;
     });
     outgoing.forEach((link) => {
       link.sourceY = outgoingOffset;
-      outgoingOffset += link.thickness;
+      outgoingOffset += link.sourceThickness;
     });
   });
 
   graph.links.forEach((link) => {
     link.color = link.target.color;
-    const isNegativeDifference = link.value < 0 && link.negativeSource;
+    const isNegativeDifference = link.isNegativeDifference;
     link.path = isNegativeDifference
       ? differenceRibbonPath(link, nodeGap)
       : ribbonPath(link, geometry['curve-tension'], columns, nodeGap);
@@ -671,10 +718,12 @@ export function layoutSankey(cfg, bounds, style) {
       ? link.routeX
       : (link.source.x + link.source.width + link.target.x) / 2;
     link.labelY = isNegativeDifference
-      ? (link.sourceY + link.targetY + link.thickness) / 2
+      ? (link.sourceY + link.targetY) / 2
+        + (link.sourceThickness + link.targetThickness) / 4
       : (link.route
-        ? link.routeY + link.thickness / 2
-        : (link.sourceY + link.targetY + link.thickness) / 2);
+        ? link.routeY + (link.sourceThickness + link.targetThickness) / 4
+        : (link.sourceY + link.targetY) / 2
+          + (link.sourceThickness + link.targetThickness) / 4);
   });
 
   return {

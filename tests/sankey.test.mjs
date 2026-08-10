@@ -564,9 +564,18 @@ test('SANKEY-13：中间节点流入与流出不守恒时立即报错', () => {
 
 test('SANKEY-13/16/25：毛利亏损从营业成本超额段引出，逻辑值仍保持守恒', () => {
   const graph = layoutSankey(LOSS_CONFIG, { width: 960, height: 480 }, STYLE);
+  const mobileGraph = layoutSankey(
+    LOSS_CONFIG,
+    { width: 960, height: 320 },
+    MOBILE_STYLE,
+  );
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const lossLink = graph.links.find((link) => link.target.id === 'gross');
+  const costLink = graph.links.find((link) => link.target.id === 'cost');
   const related = sankeyRelatedNeighborhood(byId.get('gross'));
+  const revenue = byId.get('revenue');
+  const cost = byId.get('cost');
+  const gross = byId.get('gross');
 
   assert.equal(byId.get('revenue').value, 892000000);
   assert.equal(byId.get('gross').value, -4013600);
@@ -580,8 +589,25 @@ test('SANKEY-13/16/25：毛利亏损从营业成本超额段引出，逻辑值�
   assert.equal(lossLink.visualSource.columnIndex, lossLink.target.columnIndex);
   assert.equal(lossLink.route, 'difference');
   assert.match(lossLink.path, new RegExp(`^M${byId.get('cost').x},`));
+  assert.equal(graph.primary, revenue);
+  assert.ok(Math.abs(cost.height / revenue.height - cost.value / revenue.value) < 1e-12);
+  assert.ok(Math.abs(cost.height - revenue.height - lossLink.thickness) < 1e-12);
+  assert.equal(costLink.sourceThickness, revenue.height);
+  assert.equal(costLink.targetThickness, cost.height);
+  assert.equal(gross.height, lossLink.targetThickness);
   assert.ok(related.nodes.has(byId.get('cost')));
   assert.ok(!related.nodes.has(byId.get('revenue')));
+
+  const mobileRevenue = mobileGraph.nodes.find((node) => node.id === 'revenue');
+  const mobileCost = mobileGraph.nodes.find((node) => node.id === 'cost');
+  const mobileLoss = mobileGraph.links.find((link) => link.target.id === 'gross');
+  assert.ok(
+    Math.abs(
+      mobileCost.height - mobileRevenue.height - mobileLoss.proportionalThickness,
+    ) < 1e-12,
+  );
+  assert.equal(mobileLoss.thickness, STYLE.geometry['edge-min-thickness']);
+  assert.ok(mobileLoss.thickness > mobileLoss.proportionalThickness);
 });
 
 test('SANKEY-25：盈利时差额仍从营业收入分出，跨过零值才切换视觉来源', () => {
@@ -624,16 +650,16 @@ test('SANKEY-25：差额来源必须是同一来源、同一阶段的兄弟节�
   );
 });
 
-test('SANKEY-13/16：正负贡献按有符号值守恒，节点高度容纳绝对流量', () => {
+test('SANKEY-13/16/25：差额结果节点按自身负值定高，其余节点仍容纳绝对流量', () => {
   const graph = layoutSankey(LOSS_CONFIG, { width: 960, height: 480 }, STYLE);
   const gross = graph.nodes.find((node) => node.id === 'gross');
   const operating = graph.nodes.find((node) => node.id === 'operating');
 
   assert.equal(gross.value, -4013600);
-  assert.equal(gross.magnitude, 26127300 + 30140900);
+  assert.equal(gross.magnitude, Math.abs(gross.value));
   assert.equal(operating.value, -35771800);
   assert.equal(operating.magnitude, 30140900 + 5630900);
-  assert.ok(gross.height > Math.abs(gross.value) * graph.scale);
+  assert.equal(gross.height, Math.abs(gross.value) * graph.scale);
 });
 
 test('SANKEY-06：显式 stage 必须保持流向单调向右', () => {
