@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside,
+  sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBand,
 } from '../charts/charts/pie/geometry.js';
+import { truncateBatch } from '../charts/core/label.js';
 
 const TAU = Math.PI * 2;
 
@@ -202,12 +203,13 @@ test('PIE-12：radial 取负按 0 兜底（肘点退化到弧上，不产生反�
   closeTo(e.ey, e.ay);
 });
 
-/* ── PIE-13 三档对齐 ─────────────────────────────────────────────── */
+/* ── PIE-13 三档对齐（带宽已改为入参，见 PIE-02/13）───────────────── */
 
 const R = 70;
-const OPT = { lateral: 8, gap: 8, R };
-/* 三个右侧扇区。**最远的肘点与最宽的文本刻意不在同一项**——否则 column 与 anchor 的
-   带宽会碰巧相等，「末端共线把线推到最远那条」这条差别就测不出来。 */
+/* band 现在是**入参**：由容器算好、两侧同值（labelBand），alignOutside 只在带内排布。
+   取 76 让下面几档都排得开，个别用例再单独收紧以验 maxWidth 的响应。 */
+const OPT = { lateral: 8, gap: 8, R, band: 76 };
+/* 三个右侧扇区。最远的肘点与最宽的文本刻意不在同一项——column 与 anchor 的末端才会分开。 */
 const RIGHT = [
   { side: 'right', ex: 10, textWidth: 120 },
   { side: 'right', ex: 60, textWidth: 30 },
@@ -215,7 +217,7 @@ const RIGHT = [
 ];
 
 test('PIE-13 anchor：横段定长，末端 = 肘点 + lateral，文字紧跟其后 gap', () => {
-  const { items } = alignOutside(RIGHT, 'anchor', OPT);
+  const items = alignOutside(RIGHT, 'anchor', OPT);
 
   assert.deepEqual(items.map((d) => d.lineEndX), [18, 68, 38]);
   assert.deepEqual(items.map((d) => d.textX), [26, 76, 46]);
@@ -223,15 +225,15 @@ test('PIE-13 anchor：横段定长，末端 = 肘点 + lateral，文字紧跟其
 });
 
 test('PIE-13 column：同侧末端共线（取最远肘点 + lateral），文字内沿贴同一条线', () => {
-  const { items } = alignOutside(RIGHT, 'column', OPT);
+  const items = alignOutside(RIGHT, 'column', OPT);
 
   assert.deepEqual(items.map((d) => d.lineEndX), [68, 68, 68], '同侧 lineEndX 必须全相等');
   assert.deepEqual(items.map((d) => d.textX), [76, 76, 76]);
 });
 
-test('PIE-13 edge：文字外沿共线（贴画布边），横段反过来长短不一', () => {
-  const { band, items } = alignOutside(RIGHT, 'edge', OPT);
-  const outer = R + band.right;
+test('PIE-13 edge：文字外沿共线（贴带宽外沿），横段反过来长短不一', () => {
+  const items = alignOutside(RIGHT, 'edge', OPT);
+  const outer = R + OPT.band;
 
   assert.ok(items.every((d) => d.anchor === 'end'), '右侧文字自外沿向左排');
   assert.deepEqual(items.map((d) => d.textX), [outer, outer, outer], '同侧文字外沿必须全相等');
@@ -239,75 +241,155 @@ test('PIE-13 edge：文字外沿共线（贴画布边），横段反过来长短
   assert.deepEqual(items.map((d) => d.lineEndX), [outer - 128, outer - 38, outer - 68]);
 });
 
-test('PIE-13：column 的标签带比 anchor / edge 宽 —— 末端共线把线推到最远那条', () => {
-  const anchor = alignOutside(RIGHT, 'anchor', OPT).band.right;
-  const edge = alignOutside(RIGHT, 'edge', OPT).band.right;
-  const column = alignOutside(RIGHT, 'column', OPT).band.right;
+test('PIE-13：三档不再改变带宽 —— 带宽是入参，只有排布随档变', () => {
+  const anchor = alignOutside(RIGHT, 'anchor', OPT);
+  const column = alignOutside(RIGHT, 'column', OPT);
+  const edge = alignOutside(RIGHT, 'edge', OPT);
+  const outer = R + OPT.band;
 
-  assert.equal(anchor, edge, 'anchor 与 edge 同为「能容下全部文字的最紧带宽」');
-  closeTo(anchor, (10 + 8 + 8 + 120) - R);          /* 最外那一项各自算：146 − 70 */
-  closeTo(column, (60 + 8) + 8 + 120 - R);          /* 共线于 68，再加最宽文本：196 − 70 */
-  assert.ok(column > anchor, 'column 恒不窄于另两档，本例严格更宽');
+  /* 三档的 maxWidth 都以同一条外沿为界：改的是文字起点，不是带的边 */
+  for (const items of [anchor, column, edge]) {
+    items.forEach((d) => assert.ok(d.maxWidth <= outer, '可用宽不得越过带宽外沿'));
+  }
+  /* column 的文字起点最靠外（共线于最远肘点）→ 可用宽最小，但带宽本身没变 */
+  assert.ok(column[0].maxWidth < anchor[0].maxWidth, 'column 把近端标签的可用宽压小');
 });
 
-test('PIE-13：两侧带宽恒等 —— 取较宽一侧所需，窄侧照样预留同宽', () => {
-  const { band } = alignOutside([
-    { side: 'right', ex: 10, textWidth: 20 },
-    { side: 'left', ex: -60, textWidth: 120 },
-  ], 'anchor', OPT);
+test('PIE-13：文本再长也不撑宽带 —— 撑宽的老行为已由 PIE-16 截断取代', () => {
+  const huge = alignOutside([{ side: 'right', ex: 10, textWidth: 4000 }], 'anchor', OPT);
 
-  /* 左侧需 60+8+8+120−R，右侧只需 10+8+8+20−R；对称后两侧都取前者 */
-  closeTo(band.left, 60 + 8 + 8 + 120 - R);
-  assert.equal(band.right, band.left, '窄侧不能自己算自己的，否则圆心偏离画布中心');
-});
-
-test('PIE-13：单侧有标签时另一侧也留同宽的带（圆心不偏移的直接证据）', () => {
-  const { band } = alignOutside([{ side: 'left', ex: -60, textWidth: 120 }], 'anchor', OPT);
-
-  closeTo(band.left, 60 + 8 + 8 + 120 - R);
-  assert.equal(band.right, band.left, '右侧一条引线都没有，仍要留出等宽的带');
-});
-
-test('PIE-13：bandCap 对称生效 —— 截断后两侧仍恒等', () => {
-  const { band } = alignOutside([
-    { side: 'left', ex: -60, textWidth: 400 },
-    { side: 'right', ex: 10, textWidth: 20 },
-  ], 'anchor', { ...OPT, bandCap: 120 });
-
-  assert.deepEqual(band, { left: 120, right: 120 });
+  closeTo(huge[0].maxWidth, R + OPT.band - (10 + 8 + 8));
+  assert.ok(huge[0].maxWidth < 4000, '超宽文本只会得到一个更小的可用宽，而不是更宽的带');
 });
 
 test('PIE-13：左侧的横段与文字一律朝左（x 为负、anchor 反向）', () => {
-  const { items } = alignOutside([{ side: 'left', ex: -30, textWidth: 50 }], 'anchor', OPT);
+  const items = alignOutside([{ side: 'left', ex: -30, textWidth: 50 }], 'anchor', OPT);
 
   assert.equal(items[0].lineEndX, -38);
   assert.equal(items[0].textX, -46);
   assert.equal(items[0].anchor, 'end', '左侧文字自锚点向左排');
 });
 
-test('PIE-13：bandCap 截断带宽 → 只压缩 maxWidth，位置一概不动（丢弃归 LABEL-06③）', () => {
+test('PIE-13：带宽收紧只压缩 maxWidth，位置一概不动', () => {
   const free = alignOutside(RIGHT, 'anchor', OPT);
-  const capped = alignOutside(RIGHT, 'anchor', { ...OPT, bandCap: 20 });
+  const tight = alignOutside(RIGHT, 'anchor', { ...OPT, band: 20 });
 
-  assert.deepEqual(capped.items.map((d) => d.lineEndX), free.items.map((d) => d.lineEndX));
-  assert.deepEqual(capped.items.map((d) => d.textX), free.items.map((d) => d.textX));
-  assert.equal(capped.band.right, 20);
-  capped.items.forEach((d, i) => assert.ok(d.maxWidth < free.items[i].maxWidth, '可用宽必须变小'));
+  assert.deepEqual(tight.map((d) => d.lineEndX), free.map((d) => d.lineEndX));
+  assert.deepEqual(tight.map((d) => d.textX), free.map((d) => d.textX));
+  tight.forEach((d, i) => assert.ok(d.maxWidth < free[i].maxWidth, '可用宽必须变小'));
 });
 
 test('PIE-13：maxWidth 恰好是「文字起点 → 带宽外沿」的距离，且不为负', () => {
-  const { band, items } = alignOutside(RIGHT, 'anchor', OPT);
-  const outer = R + band.right;
+  const items = alignOutside(RIGHT, 'anchor', OPT);
+  const outer = R + OPT.band;
 
   items.forEach((d) => closeTo(d.maxWidth, outer - d.textX));
-  /* 带宽被压到 0 时也不出负数（负的 maxWidth 会让 dropOversized 判得莫名其妙） */
-  alignOutside(RIGHT, 'anchor', { ...OPT, bandCap: 0 }).items
+  /* 带宽为 0 时也不出负数（负的 maxWidth 会让截断/丢弃判得莫名其妙） */
+  alignOutside(RIGHT, 'anchor', { ...OPT, band: 0 })
     .forEach((d) => assert.ok(d.maxWidth >= 0));
 });
 
-test('PIE-13：空入参不抛错，带宽为 0（全部扇区值为 null 时会走到这里）', () => {
-  const { band, items } = alignOutside([], 'anchor', OPT);
+test('PIE-13：空入参不抛错', () => {
+  assert.deepEqual(alignOutside([], 'anchor', OPT), []);
+});
 
-  assert.deepEqual(items, []);
-  assert.deepEqual(band, { left: 0, right: 0 });
+/* ── PIE-02/13 标签带宽：只看容器 ──────────────────────────────── */
+
+test('PIE-13：带宽 = (可用宽 − 2R) / 2，容器越宽带越宽', () => {
+  assert.equal(labelBand(400, 70, Infinity), 130);   /* (400−140)/2 */
+  assert.equal(labelBand(500, 70, Infinity), 180);
+  assert.ok(labelBand(500, 70, Infinity) > labelBand(400, 70, Infinity), '单调不减');
+});
+
+test('PIE-13：带宽封顶 size-donut-label-band-max，且不出负数', () => {
+  assert.equal(labelBand(400, 70, 120), 120, '(400−140)/2=130 → 被 120 封顶');
+  assert.equal(labelBand(200, 70, 120), 30, '容器紧时按容器，封顶不生效');
+  assert.equal(labelBand(100, 70, 120), 0, '容器比环还窄 → 带宽 0，不出负数');
+  assert.equal(labelBand(-50, 70, 120), 0);
+});
+
+test('PIE-13：带宽与文本完全解耦 —— 这是截断不会引起震荡的根据', () => {
+  /* 端到端地证：同一容器下，文本宽差 100 倍，每个标签拿到的可用宽也一模一样。
+     可用宽不随文本变 ⇒ 截断改变文本后不会反过来改可用宽 ⇒ 不存在「截了又要再截」的环。 */
+  const band = labelBand(400, R, 120);
+  const narrow = alignOutside([{ side: 'right', ex: 10, textWidth: 20 }], 'anchor', { ...OPT, band });
+  const wide = alignOutside([{ side: 'right', ex: 10, textWidth: 2000 }], 'anchor', { ...OPT, band });
+
+  assert.equal(narrow[0].maxWidth, wide[0].maxWidth);
+  assert.equal(narrow[0].textX, wide[0].textX, '文字起点同样不随文本宽变');
+});
+
+/* ── PIE-16 省略号截断 ──────────────────────────────────────────── */
+
+/* 假测量：每字符 10px、省略号 10px —— 纯逻辑测试不碰 DOM（同 motion.js 注入时钟的做法） */
+const fakeMeasure = (texts) => texts.map((t) => Array.from(String(t)).length * 10);
+
+test('PIE-16：装得下的原样返回，不打省略号', () => {
+  const out = truncateBatch([{ text: '营业收入', maxWidth: 100 }], fakeMeasure);
+
+  assert.equal(out[0].text, '营业收入');
+  assert.equal(out[0].truncated, false);
+  assert.equal(out[0].width, 40);
+});
+
+test('PIE-16：超宽时截到「装得下的最多字数 + …」', () => {
+  /* 可用 45 → 4 字+… = 50 放不下，3 字+… = 40 放得下 */
+  const out = truncateBatch([{ text: '营业外收入合计', maxWidth: 45 }], fakeMeasure);
+
+  assert.equal(out[0].text, '营业外…');
+  assert.equal(out[0].truncated, true);
+  assert.ok(out[0].width <= 45, '截断后必须真的装得下');
+});
+
+test('PIE-16：截断结果恰好是最长的可行前缀（不多截一个字）', () => {
+  const out = truncateBatch([{ text: '一二三四五六七八九十', maxWidth: 70 }], fakeMeasure);
+
+  assert.equal(out[0].text, '一二三四五六…', '6 字+…=70 恰好装下');
+  const plusOne = fakeMeasure(['一二三四五六七…'])[0];
+  assert.ok(plusOne > 70, '再多一个字就超了 —— 证明没有保守多截');
+});
+
+test('PIE-16：连「1 字 + …」都放不下 → text 为 null，调用方整条丢（含引线，PIE-12）', () => {
+  const out = truncateBatch([{ text: '营业收入', maxWidth: 15 }], fakeMeasure);
+
+  assert.equal(out[0].text, null, '1 字+… = 20 > 15');
+  assert.equal(out[0].truncated, true);
+});
+
+test('PIE-16：maxWidth 缺省 = 不限宽，原样返回', () => {
+  const out = truncateBatch([{ text: '很长很长很长的名称' }], fakeMeasure);
+
+  assert.equal(out[0].text, '很长很长很长的名称');
+  assert.equal(out[0].truncated, false);
+});
+
+test('PIE-16：一批混合 —— 装得下的、要截的、放不下的各归各位，顺序不乱', () => {
+  const out = truncateBatch([
+    { text: '短', maxWidth: 100 },
+    { text: '需要截断的长名称', maxWidth: 45 },
+    { text: '放不下', maxWidth: 5 },
+    { text: '也短', maxWidth: 100 },
+  ], fakeMeasure);
+
+  assert.deepEqual(out.map((d) => d.text), ['短', '需要截…', null, '也短']);
+  assert.deepEqual(out.map((d) => d.truncated), [false, true, true, false]);
+});
+
+test('PIE-16：按轮批量测量 —— 测量次数随轮数增长，不随标签数增长', () => {
+  let calls = 0;
+  const counting = (texts) => { calls += 1; return fakeMeasure(texts); };
+  const many = Array.from({ length: 36 }, (_, i) => ({ text: '名'.repeat(20 + i), maxWidth: 45 }));
+
+  truncateBatch(many, counting);
+
+  /* 36 个标签若逐条二分要 36×约5=180 次；按轮批量应在个位数 */
+  assert.ok(calls <= 8, `测量调用应为个位数（按轮批量），实际 ${calls}`);
+});
+
+test('PIE-16：按码点切，不劈开代理对（emoji 名称不会被截成半个字符）', () => {
+  const out = truncateBatch([{ text: '📈📉📊📈📉', maxWidth: 35 }], fakeMeasure);
+
+  assert.ok(out[0].text.endsWith('…'));
+  /* 截出来的每个码点都还原封不动 —— 用 Array.from 而非 slice 的意义 */
+  assert.ok(Array.from(out[0].text).every((c) => c === '…' || '📈📉📊'.includes(c)));
 });

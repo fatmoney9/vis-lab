@@ -90,10 +90,22 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
   是引线末端到文字的净距。另有 `size-donut-label-band-max`（**三主题同为 `120px`**）＝ 每侧标签带
   的绝对上限：带宽两侧恒等（PIE-13，为的是圆心不偏离画布中心），故一条超长文本会把两侧一起撑宽，
   必须封顶，否则环被挤成小圆点。**不按主题分化**——它约束的是版面纪律而非主题观感。
-  引线**线宽不设自有 token**，复用全库细线宽 `size-grid-line`；
+  引线**线宽不设自有 token**，复用全库细线宽 `size-grid-line`。
+  **外侧标签的两段排版**（[specs/pie.md](../specs/pie.md) PIE-15）另有四个键：
+  `font-size-donut-label-name` / `line-height-donut-label-name` 与
+  `font-size-donut-label-value` / `line-height-donut-label-value`——
+  **THS 两段同为 12/16**、**Ainvest 名称 12/16 数值 14/18**（数值是读数，给更大的字重心）、
+  **iFinD-PC 设计源未给值，四键别名回通用 `font-size-data-label` / `line-height-data-label` = 行为不变**。
+  独立于通用标签字号是必需的：那个键全库共用（柱/线/饼共一个），改它会连柱线一起改。
+  ⚠️ 行高两键**不进 CSS**——SVG `<text>` 不吃 `line-height`，它们是给 JS 读去算标签块高与碰撞区间的。
+  两段是同行还是上下两行属**形态**，走 `behavior.json` 的 `pie-label-form`，不在本文件；
 - 绘图区、网格线和引导线等跨图表值归入“图表公共”分类；
 - 滑块高度、把手和选区圆角归入“缩放轴 Axes Navigator”；
-- `Data Label`：数据标签（字号、档② 的两个前景色与净距）。**档③ 不在此**——
+- `size-legend-label-max`（三主题 `120px`）＝ 纵向单列图例的标签宽上限，超出省略号截断
+  （[specs/legend.md](../specs/legend.md) LEGEND-13）。取固定值而非容器派生：图例宽参与「图 + 间距 + 图例」
+  整组居中的布局计算，容器派生会让它随容器抖动；
+- `Data Label`：数据标签（字号、档② 的两个前景色与净距）。**饼环外侧标签不用这里的字号**，
+  它有自己的四个键（见上面 Donut 段与 PIE-15）；**档③ 不在此**——
   它直接用 `color-text-primary`，不另设 key（[specs/data-label.md](../specs/data-label.md) LABEL-09）；
   `spacing-data-label-min-gap` 同时服务水平与垂直两个方向（LABEL-06②）；
 - `Axis Title`：轴标题（色 / 字号 / 行高 / 字重均别名到轴标签同名项，仅带内间距自有）；

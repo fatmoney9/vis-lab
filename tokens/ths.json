@@ -134,6 +134,7 @@
   "line-height-legend": "16px",
   "color-text-legend": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
   "size-legend-marker": "12px",
+  "size-legend-label-max": "120px",
   "spacing-legend-marker-label": "{spacing-2}",
   "spacing-legend-item-h": "{spacing-12}",
   "spacing-legend-item-v": "{spacing-12}",
@@ -208,6 +209,10 @@
   "size-donut-label-line-lateral": "8px",
   "size-donut-label-band-max": "120px",
   "spacing-donut-label-gap": "{spacing-8}",
+  "font-size-donut-label-name": "{font-size-extra-small}",
+  "line-height-donut-label-name": "{line-height-small}",
+  "font-size-donut-label-value": "{font-size-extra-small}",
+  "line-height-donut-label-value": "{line-height-small}",
 
   "$section-21": "数据标签 Data Label",
   "color-text-data-label-on-light": "rgba(0, 0, 0, 0.84)",

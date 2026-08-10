@@ -30,16 +30,21 @@ import { makeFormatter } from '../../core/format.js';
 import { measureTexts } from '../../core/measure.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderLegend, applyToggle } from '../../core/legend.js';
-import { renderDataLabels, dropCollisions, dropOversized } from '../../core/label.js';
+import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '../../core/label.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
-import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside } from './geometry.js';
+import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBand } from './geometry.js';
 
 /* [PIE-03] 图例 marker 类型键：三主题都按这个键取「饼/环 6×6 圆点」——
    THS / iFinD-PC 命中各自 legend-marker.shapes.dot，Ainvest 是 unified 恒圆点（LEGEND-03）。
    故 behavior.json 无需为本族新增任何键。 */
 const MARKER_TYPE = 'dot';
+
+/* [PIE-15] 外侧标签两段各自的字号修饰类。名称段与数值段的字号/行高是**两对独立 token**
+   （THS 两段同值、Ainvest 数值段更大），类名同时用于渲染与测量——L1 的 classOf 保证两者一致。 */
+const NAME_CLASS = 'dv-data-label--donut-name';
+const VALUE_CLASS = 'dv-data-label--donut-value';
 
 /* [PIE-09][LEGEND-11] 左右结构下图例纵列的高度上限 = **图元高度的这个倍数**，超出即在图例区内滑动。
    没有上限时图例会把整张卡片无限撑高（36 扇区能撑到上千像素），而环仍是 2R——
@@ -167,9 +172,16 @@ export function PieChart(host, cfg) {
 
     /* [PIE-04][PIE-12] 数据标签的两种形态**互斥、二选一**：dataLabel 只管显不显（LABEL-05），
        labelLayout 才定摆哪；默认外侧引线档（扇区内档在带名称的文本下几乎必然被 LABEL-06③ 判掉）。 */
-    const labelLineH = tokenNum(plotHost, '--line-height-data-label') || 14;
+    /* [PIE-15] 名称段 / 数值段各有自己的行高；[PIE-14][PIE-02] 消费的是**标签块高**：
+       stacked 档两行上下叠 → 块高 = 两行之和；inline 档同一行 → 取大者（两段本就同字号）。
+       块高直接决定纵向碰撞的判定区间与画布半高，所以两处必须用同一个值。 */
+    const stacked = b['pie-label-form'] === 'stacked';
+    const nameLineH = tokenNum(plotHost, '--line-height-donut-label-name') || 14;
+    const valueLineH = tokenNum(plotHost, '--line-height-donut-label-value') || 14;
+    const blockH = stacked ? nameLineH + valueLineH : Math.max(nameLineH, valueLineH);
     const showLabel = dataLabel === true;
-    const insideMode = showLabel && labelLayout === 'inside' && ring >= labelLineH;
+    /* 档② 只出原值（PIE-04），故可行性只看数值段行高，与 stacked 无关 */
+    const insideMode = showLabel && labelLayout === 'inside' && ring >= valueLineH;
     const radialPx = tokenNum(plotHost, '--size-donut-label-line-radial') || 0;
 
     /* ── [PIE-12][PIE-13][PIE-14] 外侧标签预演 ────────────────────────────────
@@ -182,14 +194,29 @@ export function PieChart(host, cfg) {
         const r = visible[s.i];
         return {
           key: r.name,
-          /* [LABEL-07][PIE-12] 文本 = 名称 + 原值；null 不出标签，连带不出引线（强绑定） */
-          text: r.value == null ? null : `${r.name} ${format(r.value)}`,
+          /* [LABEL-07][PIE-12] 名称 + 原值两段；value 为 null 不出标签，连带不出引线（强绑定） */
+          name: r.name,
+          value: r.value == null ? null : format(r.value),
           ...leaderElbow(s.a0, s.a1, R, radialPx),
         };
-      }).filter((d) => d.text != null);
+      }).filter((d) => d.value != null);
 
-      const widths = measureTexts(plotHost, rows.map((d) => d.text), 'dv-data-label');
-      rows.forEach((d, i) => { d.textWidth = widths[i]; });
+      /* [PIE-15] 两段各用**自己的字号类**量。stacked 档两段各占一行，故一行内恒只有一种字号；
+         inline 档要求两段字号相同（behavior.json 的 pie-label-form 约束），拼串按名称类量即可。
+         任何一行内部都不会混排 —— 这正是「异字号必须 stacked」这条约束换来的：
+         measure.js 一行不用改，也不需要 tspan。 */
+      const nameW = measureTexts(plotHost, rows.map((d) => d.name), `dv-data-label ${NAME_CLASS}`);
+      const valueW = measureTexts(plotHost, rows.map((d) => d.value), `dv-data-label ${VALUE_CLASS}`);
+      /* inline 档名称与数值之间那个空格算**名称段**的一部分——测量与渲染必须同一口径，
+         差几像素就会让截断点算错、文字溢出画布（PIE-16）。 */
+      const sepW = stacked ? 0 : measureTexts(plotHost, [`${rows[0]?.name ?? ''} `], `dv-data-label ${NAME_CLASS}`)[0]
+        - measureTexts(plotHost, [rows[0]?.name ?? ''], `dv-data-label ${NAME_CLASS}`)[0];
+      rows.forEach((d, i) => {
+        d.nameW = nameW[i];
+        d.valueW = valueW[i];
+        /* stacked：两行上下叠，块宽取大者；inline：同一行，块宽是两段之和加分隔 */
+        d.textWidth = stacked ? Math.max(nameW[i], valueW[i]) : nameW[i] + sepW + valueW[i];
+      });
 
       /* [PIE-14][LABEL-06②] 左右两栏各判各的 —— 调 L1 的**同一个** dropCollisions，只是喂 y 值
          （start = 自然 y − 半行高、size = 行高）。异侧标签横向隔着整个环，合并判会让一侧的
@@ -199,43 +226,58 @@ export function PieChart(host, cfg) {
       for (const side of ['left', 'right']) {
         dropCollisions(
           rows.filter((d) => d.side === side)
-            .map((d) => ({ start: d.ey - labelLineH / 2, size: labelLineH, row: d })),
+            .map((d) => ({ start: d.ey - blockH / 2, size: blockH, row: d })),
           minGap,
         ).forEach((b) => kept.add(b.row));
       }
       const live = rows.filter((d) => kept.has(d));
 
-      /* 每侧标签带的上限，两个约束取紧者。超了**不挪位置**，只让 maxWidth 变小，
-         再由 LABEL-06③ 判掉放不下的——判定用的是 L1 导出的同一个 dropOversized，L2 不另写。
-         ① **容器余量**：宽容器里也别让一条长标签把画布拉成一条横带；
-         ② **`--size-donut-label-band-max`（三主题 120px）**：带宽的绝对上限。带宽是「预留」不是
-            「外接」（PIE-13 两侧恒等），无上限时一条超长文本会让**两侧**一起变宽、环被挤成小圆点。 */
+      /* [PIE-13][PIE-02] 标签带**只看容器、不看文本**，两侧同值。
+         这是整条流水线得以单向推进的前提：带宽若由文本宽反推、文本又要按带宽截断（PIE-16），
+         两者互为因果 —— 截断是离散的，截完必然比可用宽窄一点，回头重算带宽就会收缩，
+         收缩后又要多截一个字，`column` 档尤其会来回震荡。锚在容器上一刀切断。 */
       const legendW = legend === 'bottom' ? 0 : legendHost.getBoundingClientRect().width + gapPx;
-      const bandCap = Math.min(
-        Math.max(0, (host.clientWidth - legendW - 2 * R) / 2),
+      const band = labelBand(
+        host.clientWidth - legendW,
+        R,
         tokenNum(plotHost, '--size-donut-label-band-max') || Infinity,
       );
       const opts = {
         lateral: tokenNum(plotHost, '--size-donut-label-line-lateral') || 0,
         gap: tokenNum(plotHost, '--spacing-donut-label-gap') || 0,
-        bandCap,
+        band,
         R,
       };
 
-      /* ⚠️ [PIE-12] 强绑定要求「有线必有字」，故**放不下的必须在画线之前就出局**——
-         不能等 renderDataLabels 里的 dropOversized 去丢：那时引线已经画出去了，
-         结果就是一条指向空处的线（曾实测到 Ainvest 3 条线只出 2 个字）。
-         两趟：先按容器上限判谁装得下，再拿幸存者重算一次带宽。
-         **第二趟不会再丢人**：幸存者满足 w_i ≤ R + band − inner_i，而重算后
-         band' = max(inner_j + w_j) − R ≥ inner_i + w_i − R，代回即得 w_i ≤ R + band' − inner_i。
-         故一次重算即收敛，不必循环。重算的意义是把带宽收紧到幸存者真正需要的宽度，
-         否则画布会比图元宽出一截（PIE-02 要求画布恰好是图元外接框）。 */
-      const fits = dropOversized(
-        alignOutside(live, labelAlign, opts).items
-          .map((p, i) => ({ width: live[i].textWidth, maxWidth: p.maxWidth, row: live[i] })),
-      ).map((b) => b.row);
+      /* ⚠️ [PIE-12] 强绑定要求「有线必有字」，故一切丢弃都必须在画线之前判完 ——
+         不能等 renderDataLabels 里去丢：那时引线已经画出去了，结果是一条指向空处的线
+         （曾实测到 Ainvest 3 条线只出 2 个字）。
+         [PIE-16] 而超宽的处置已从「整条丢」改成「截名称」，故这里只剩一种丢法：
+         连「1 字 + … 」都放不下（或数值段自己就超宽）→ 才整条出局。
+         **两次 alignOutside 不是循环**：band 是入参、两次相同；第一次只取 maxWidth，
+         第二次只把 edge 档的横段末端对齐到截断后的文字（见 geometry.js 的说明）。 */
+      const placed0 = alignOutside(live, labelAlign, opts);
+      /* 数值段恒不截 —— 截断的数字是错的数字。名称段能用的宽 = 可用宽 − 数值段占位。
+         stacked 档名称独占一行，不必扣数值；inline 档要扣掉数值与分隔。 */
+      const cut = truncateBatch(
+        live.map((d, i) => ({
+          text: d.name,
+          maxWidth: placed0[i].maxWidth - (stacked ? 0 : d.valueW + sepW),
+        })),
+        (texts) => measureTexts(plotHost, texts, `dv-data-label ${NAME_CLASS}`),
+      );
+      const fits = [];
+      live.forEach((d, i) => {
+        /* 数值段单独就超宽 → 名称截到 0 也没用，整条丢（连引线，PIE-12） */
+        if (cut[i].text == null || d.valueW > placed0[i].maxWidth) return;
+        d.name = cut[i].text;
+        d.nameW = cut[i].width;
+        d.truncated = cut[i].truncated;
+        d.textWidth = stacked ? Math.max(d.nameW, d.valueW) : d.nameW + sepW + d.valueW;
+        fits.push(d);
+      });
 
-      const { band, items: placed } = alignOutside(fits, labelAlign, opts);
+      const placed = alignOutside(fits, labelAlign, opts);
       fits.forEach((d, i) => Object.assign(d, placed[i]));
       if (fits.length) outside = { rows: fits, band };
     }
@@ -247,15 +289,15 @@ export function PieChart(host, cfg) {
        死空间，而 PIE-09 要求这段间距恒定。
        上下结构只定高不定宽：宽度铺满容器、图元在其中水平居中即为整体居中，
        横向富余不夹在图元与图例之间（图例在下方），不影响间距。 */
-    const bandL = outside ? outside.band.left : 0;
-    const bandR = outside ? outside.band.right : 0;
+    /* [PIE-13] 两侧同值，故只有一个数；无外侧标签时退化为 0（画布 = 环的外接方框 2R） */
+    const bandW = outside ? outside.band : 0;
     /* 12 / 6 点方向的标签会探出环外，故半高取「环」与「最外标签」的较大者 */
     const halfH = outside
-      ? Math.max(R, Math.max(...outside.rows.map((d) => Math.abs(d.ey))) + labelLineH / 2)
+      ? Math.max(R, Math.max(...outside.rows.map((d) => Math.abs(d.ey))) + blockH / 2)
       : R;
     const frame = createFrame(plotHost, {
       height: 2 * halfH,
-      ...(legend === 'bottom' ? {} : { width: bandL + 2 * R + bandR }),
+      ...(legend === 'bottom' ? {} : { width: 2 * bandW + 2 * R }),
       xBand: false,
       minGridHeight: 0, /* 画布已按图元算好，不要被轴图的最小网格高抬高（那会重新造出死空间） */
     });
@@ -267,7 +309,7 @@ export function PieChart(host, cfg) {
     host.style.setProperty('--dv-pie-legend-max-h', `${2 * halfH * LEGEND_MAX_PLOT_RATIO}px`);
 
     /* 圆心 = 画布中心，两种图例结构同一个式子（PIE-02）——
-       两侧标签带恒等宽（PIE-13），左右结构下 `grid.left + bandL + R` 本就等于画布中心，
+       两侧标签带恒等宽（PIE-13），左右结构下 `grid.left + bandW + R` 本就等于画布中心，
        上下结构下画布铺满、图元在其中居中，两者遂收敛成一句。 */
     const cx = (frame.grid.left + frame.grid.right) / 2;
     const cy = (frame.grid.top + frame.grid.bottom) / 2;
@@ -419,34 +461,47 @@ export function PieChart(host, cfg) {
 
       /* [PIE-04][PIE-12] 两档互斥，一个 if / else 分岔，绝不同屏 */
       if (lead) {
+        /* [LABEL-09] 档③：色彩关联已由引线承担，文字走中性正文色、不跟随系列色。
+           [PIE-12] **标签块的垂直中心**恒等于肘点 y —— 锚在扇区的自然位置、不做纵向位移
+           （LABEL-01 / PIE-14）。inline 档块只有一行，「块心」即「文字心」，与改版前一致；
+           stacked 档名称行在上、数值行在下，各自的中心自块心对称偏移。
+           **不传 maxWidth**：宽度已由 PIE-16 的截断保证装得下，再让 L1 按同一个数复判一次，
+           两次测量的浮点差就足以丢掉两行中的一行 —— 半个标签比没有标签更糟。 */
+        const lines = stacked
+          ? [
+            { dy: -(blockH - nameLineH) / 2, text: lead.name, sizeClass: NAME_CLASS },
+            { dy: (blockH - valueLineH) / 2, text: lead.value, sizeClass: VALUE_CLASS },
+          ]
+          : [{ dy: 0, text: `${lead.name} ${lead.value}`, sizeClass: NAME_CLASS }];
         labelBatches.push({
           key: r.name,
-          /* [LABEL-09] 档③：色彩关联已由引线承担，文字走中性正文色、不跟随系列色。
-             y 恒等于肘点 y —— 锚在扇区的自然位置，不做纵向位移（PIE-14 / LABEL-01）。 */
-          item: {
+          items: lines.map((ln) => ({
             x: cx + lead.textX,
-            y: cy + lead.ey,
+            y: cy + lead.ey + ln.dy,
             baseline: 'middle',
-            anchor: lead.anchor,      /* [PIE-13] 三档对齐决定往哪边排 */
+            anchor: lead.anchor,      /* [PIE-13] 三档对齐决定往哪边排；两行共用同一锚点与对齐 */
             tone: 'neutral',
-            maxWidth: lead.maxWidth,  /* [LABEL-06③] 标签带被容器截断时由 L1 逐个丢 */
-            text: lead.text,
-          },
+            sizeClass: ln.sizeClass,  /* [PIE-15] 决定字号，且测量走同一个类 */
+            text: ln.text,
+          })),
         });
       } else if (insideMode) {
         const a = labelAnchor(s.a0, s.a1, R, innerR);
         labelBatches.push({
           key: r.name,
-          /* [LABEL-04] 档②：标签压在扇区填充上 → 按该扇区色的明暗切前景；只出原值（PIE-04） */
-          item: {
+          /* [LABEL-04] 档②：标签压在扇区填充上 → 按该扇区色的明暗切前景；只出原值（PIE-04）。
+             **本档不截断**（PIE-16 只管外侧档）：这里溢出的字会落到画布底色上直接看不见，
+             而且可截的只有数值本身 —— 截断的数字是错的数字。仍走 LABEL-06③「放不下就不放」。 */
+          items: [{
             x: cx + a.x,
             y: cy + a.y,
             baseline: 'middle',
             tone: 'auto',
             bgHex: r.colorHex,
+            sizeClass: VALUE_CLASS,   /* [PIE-15] 只有数值 → 走数值段字号 */
             maxWidth: a.maxWidth,     /* [LABEL-06③] 放不下就不放（几何判定见 geometry.js） */
             text: r.value == null ? null : format(r.value),
-          },
+          }],
         });
       }
     });
@@ -458,10 +513,12 @@ export function PieChart(host, cfg) {
     let labelLayer = null;
     if (labelBatches.length) {
       labelLayer = frame.svg.append('g').attr('class', 'dv-data-label-layer');
-      labelBatches.forEach(({ key, item }) => {
+      labelBatches.forEach(({ key, items: lines }) => {
         const g = labelLayer.append('g').attr('class', 'dv-data-label-series');
         g.node().dataset.key = key;
-        renderDataLabels(g, frame, [item], { collide: false });
+        /* [PIE-15] 一个逻辑标签可能是两行（stacked 档）——同一个 <g> 里两个 <text>，
+           随所属扇区一起被 applyDim 弱化、一起随引线出现（MOTION-05），天然同生共死。 */
+        renderDataLabels(g, frame, lines, { collide: false });
       });
     }
 

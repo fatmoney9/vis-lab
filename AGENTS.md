@@ -40,7 +40,10 @@
   - 两种图例布局：`legend: 'right'`（默认，左右结构）/ `'bottom'`（上下结构），间距 24px、整组居中，**图例块与环共享同一条中线**；两种结构都封顶 + 溢出滑动，上限左右 = 图元高 × 2（L2 算好写进 `--dv-pie-legend-max-h`）、上下 = 默认图元高 `size-donut-radius × 2`（纯 CSS，锚 token 是为断开「图例高 → 半径 → 图例上限」的循环）（PIE-09 / LEGEND-10/11）
   - 扇区取色走**扇区专用盘 `pie-multi`**（THS 11 色；未声明该盘的主题回落通用 `bar-multi`），单扇区仍取 `single-default`（COLOR-08）
   - 气泡恒走 `follow` 档（TOOLTIP-07 的无坐标系图特例，在 L2 定死、不进 behavior.json）
-  - **数据标签默认不显示**（LABEL-05「一个类目一个值就出标签」原则的明确例外）。开启后有两种**互斥**形态：`labelLayout: 'outside'`（默认，外侧标签 + 引线，PIE-12/13/14）/ `'inside'`（扇区内，PIE-04）——引线与标签强绑定，三道丢弃都必须在画线前判完
+  - **数据标签默认不显示**（LABEL-05「一个类目一个值就出标签」原则的明确例外）。开启后有两种**互斥**形态：`labelLayout: 'outside'`（默认，外侧标签 + 引线，PIE-12/13/14）/ `'inside'`（扇区内，PIE-04）——引线与标签强绑定，所有丢弃都必须在画线前判完
+  - 外侧标签 = **名称段 + 数值段**，两段各有自己的字号/行高 token（PIE-15）；**排布形态走 `behavior.json` 的 `pie-label-form`**：THS / iFinD-PC `inline` 同行、Ainvest `stacked` 名称在上数值在下。`inline` 档要求两段字号相同（异字号必须 stacked，否则同行混排会让单一 class 的测量系统性偏窄）
+  - **超宽截名称、不丢整条**（PIE-16）：数值段恒完整（截断的数字是错的数字），保底 1 字 + `…`；连最短形态都放不下才回落丢弃。图例侧另有纯 CSS 截断 + `title` 兜底（LEGEND-13）
+  - **标签带宽只看容器不看文本**（PIE-13）：`min((容器宽 − 图例带)/2 − R, size-donut-label-band-max)`，两侧同值。这是为切断「带宽由文本反推 ↔ 文本按带宽截断」的环——改动它前先读 PIE-13 的说明
   - 强调态外扩：hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

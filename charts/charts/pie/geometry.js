@@ -124,64 +124,53 @@ export function leaderElbow(a0, a1, R, radial) {
 }
 
 /*
- * [PIE-13] 三档对齐：给一批外侧标签算出「横段末端 x、文字锚点 x、文字可用宽」，
- * 以及两侧各自的**标签带宽**（band = 相对 R 向外多占的距离，喂给 PIE-02 定画布宽）。
+ * [PIE-13] 三档对齐：在一条**已经定死的标签带**里，给每个外侧标签算出
+ * 「横段末端 x、文字锚点 x、文字可用宽」。
  *
  *   entries = [{ side:'left'|'right', ex, textWidth }]  —— ex 来自 leaderElbow（带符号）
  *   mode    = 'anchor' | 'column' | 'edge'
  *   lateral = --size-donut-label-line-lateral（横段基准长）
  *   gap     = --spacing-donut-label-gap（引线末端 → 文字净距）
- *   bandCap = 每侧带宽上限（容器余量与 --size-donut-label-band-max 取紧者，缺省不限）
+ *   band    = 每侧带宽（相对 R 向外多占的距离）——**由调用方按容器算好传入**，两侧恒等
  *   R       = 外半径
- * → { band: { left, right }, items: [{ lineEndX, textX, anchor, maxWidth }] }（与 entries 同序）
+ * → [{ lineEndX, textX, anchor, maxWidth }]（与 entries 同序）
  *
- * 记 e = |ex|、w = 文本宽，各侧「够用的带宽」按档不同：
- *   anchor / edge  max(e + lateral + gap + w) − R   —— 能容下全部文字的**最紧**带宽
- *   column         max(e) + lateral + gap + max(w) − R —— 末端共线把线推到最远那条，故更宽
+ * ⚠️ **带宽是入参，不再由文本宽反推**——这是本模块最关键的一条，理由是它切断了一个环：
+ * 带宽若由文本宽反推、而文本又要按带宽截断（PIE-16），两者就互为因果。截断是**离散的**
+ * （停在字符边界），截完必然比可用宽窄一点，回头重算带宽就会收缩，收缩后又要多截一个字……
+ * `column` 档尤其明显（全体共享一条竖线，一条标签的截断会牵动所有标签的可用宽）。
+ * 改由容器定死之后：带宽 → 可用宽 → 截断，单向一趟，不存在收敛问题，也不必再证明收敛。
+ * 代价写在 PIE-02：文本短时带内会有留白，画布不再是图元的紧外接框。
  *
- * ⚠️ **两侧带宽恒等**（`band.left === band.right`，取两侧所需的较大者）：算出来的是各侧**所需**，
- * 落地的是**两侧统一**的预留。哪怕只有左侧挂着一条引线，右侧也照样留出同宽的带——
- * 否则画布只往一侧长，环的圆心就偏离画布中心，整张卡片看起来是歪的（PIE-13）。
+ * ⚠️ **两侧恒等**由调用方保证（同一个 band 喂两侧）：只有左侧挂着引线时右侧也留同宽的带，
+ * 否则画布只往一侧长、圆心偏离画布中心，整张卡片看起来是歪的（PIE-02）。
  *
- * 带宽被 bandCap 截断时不改变任何标签的位置，只让 maxWidth 变小，
- * 交给 L1 的 dropOversized 逐个丢弃（LABEL-06③）——本模块**不做丢弃判定**。
- *
- * 三档的差别只在「横段末端落在哪」与「文字往哪边对齐」：
+ * 三档的差别只在「横段末端落在哪」与「文字往哪边对齐」，都不改变带宽：
  *   anchor  末端 = e + lateral（各自定长）      文字内沿贴末端，外沿参差
  *   column  末端 = max(e) + lateral（同侧共线） 文字内沿贴同一条线，外沿参差
  *   edge    文字外沿贴画布边（band 外沿）        末端反推，长短不一
+ *
+ * `edge` 档的 lineEndX 用到 textWidth，但**没有任何东西反过来依赖 lineEndX**，
+ * 故调用方可以「先调一次拿 maxWidth → 截断 → 再调一次拿最终 lineEndX」：
+ * 两次的 band 相同，第二次只是把末端对齐到截断后的文字，仍不是循环。
  */
-export function alignOutside(entries, mode, { lateral = 0, gap = 0, bandCap = Infinity, R = 0 } = {}) {
+export function alignOutside(entries, mode, { lateral = 0, gap = 0, band = 0, R = 0 } = {}) {
+  const width = Math.max(0, band);
   const perSide = {};
-  let need = 0;                                    /* 两侧所需的较大者 —— 带宽对称，只留一个 */
-
   for (const side of ['left', 'right']) {
     const own = entries.filter((d) => d.side === side);
     const maxE = own.length ? Math.max(...own.map((d) => Math.abs(d.ex))) : 0;
-    perSide[side] = { lineAt: maxE + lateral };                      /* column 档的公共竖线 */
-    if (!own.length) continue;                     /* 空侧不提需求，但下面照样拿到同宽的带 */
-    need = Math.max(need, mode === 'column'
-      ? perSide[side].lineAt + gap + Math.max(...own.map((d) => d.textWidth)) - R
-      : Math.max(...own.map((d) => Math.abs(d.ex) + lateral + gap + d.textWidth)) - R);
+    perSide[side] = { lineAt: maxE + lateral, outerX: R + width };   /* lineAt = column 档的公共竖线 */
   }
 
-  /* ⚠️ **向上取整不是为了好看，是为了不把刚好装得下的标签判成装不下**：
-     带宽正是由文本宽反推的，于是 maxWidth = R + band − inner 在实数意义上恰好等于该文本宽；
-     L1 的 dropOversized 会**重新测量**同一段文字再比大小，两次浮点运算差 1e-14 就能让
-     「恰好装得下」翻成 false，而引线已经画出去了 —— 结果是一条指向空处的线（实测过）。
-     取整给出 <1px 的余量，稳稳盖住这点误差，顺带让画布尺寸落在整像素上。 */
-  const width = Math.max(0, Math.min(Math.ceil(need), bandCap));
-  const band = { left: width, right: width };      /* [PIE-13] 两侧恒等 → 圆心恒在画布中心 */
-  for (const side of ['left', 'right']) perSide[side].outerX = R + width;
-
-  const items = entries.map((d) => {
+  return entries.map((d) => {
     const dir = d.side === 'right' ? 1 : -1;
     const { outerX, lineAt } = perSide[d.side];
     const e = Math.abs(d.ex);
     const inner = e + lateral + gap;          /* 文字最内侧能起排的位置，三档共用 */
     if (mode === 'edge') {
       /* 文字外沿贴边 → 末端 = 外沿 − 文字宽 − 净距；最窄不短于自己的定长横段 */
-      const end = Math.max(e + lateral, outerX - d.textWidth - gap);
+      const end = Math.max(e + lateral, outerX - (d.textWidth ?? 0) - gap);
       return {
         lineEndX: dir * end,
         textX: dir * outerX,
@@ -197,6 +186,16 @@ export function alignOutside(entries, mode, { lateral = 0, gap = 0, bandCap = In
       maxWidth: Math.max(0, outerX - (end + gap)),
     };
   });
+}
 
-  return { band, items };
+/*
+ * [PIE-13][PIE-02] 每侧标签带宽 —— **只看容器，不看文本**（理由见 alignOutside 的说明）。
+ *   avail   = 容器宽 − 图例带（含 24px 间距）
+ *   R       = 外半径
+ *   maxBand = --size-donut-label-band-max（三主题 120px）
+ * 容器越宽带宽越宽，到 maxBand 封顶；两侧同值，故环恒在画布正中。
+ * 取整让画布落在整像素上（此处不再有「刚好装得下被判成装不下」的问题——带宽已与文本解耦）。
+ */
+export function labelBand(avail, R, maxBand = Infinity) {
+  return Math.max(0, Math.min(Math.floor((avail - 2 * R) / 2), maxBand));
 }

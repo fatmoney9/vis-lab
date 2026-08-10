@@ -98,6 +98,7 @@
   --line-height-legend: 16px;
   --color-text-legend: rgba(0, 0, 0, 0.6);
   --size-legend-marker: 12px;
+  --size-legend-label-max: 120px;
   --spacing-legend-marker-label: var(--spacing-2);
   --spacing-legend-item-h: var(--spacing-12);
   --spacing-legend-item-v: var(--spacing-12);
@@ -156,6 +157,10 @@
   --size-donut-label-line-lateral: 8px;
   --size-donut-label-band-max: 120px;
   --spacing-donut-label-gap: var(--spacing-8);
+  --font-size-donut-label-name: var(--font-size-extra-small);
+  --line-height-donut-label-name: var(--line-height-small);
+  --font-size-donut-label-value: var(--font-size-extra-small);
+  --line-height-donut-label-value: var(--line-height-small);
   --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -295,6 +300,7 @@
   --line-height-legend: 14px;
   --color-text-legend: #4F4F5E;
   --size-legend-marker: 12px;
+  --size-legend-label-max: 120px;
   --spacing-legend-marker-label: var(--spacing-6);
   --spacing-legend-item-h: var(--spacing-20);
   --spacing-legend-item-v: var(--spacing-12);
@@ -353,6 +359,10 @@
   --size-donut-label-line-lateral: 8px;
   --size-donut-label-band-max: 120px;
   --spacing-donut-label-gap: var(--spacing-8);
+  --font-size-donut-label-name: var(--font-size-data-label);
+  --line-height-donut-label-name: var(--line-height-data-label);
+  --font-size-donut-label-value: var(--font-size-data-label);
+  --line-height-donut-label-value: var(--line-height-data-label);
   --color-text-data-label-on-light: #292933;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-extra-small);
@@ -495,6 +505,7 @@
   --line-height-legend: 16px;
   --color-text-legend: rgba(0, 0, 0, 0.6);
   --size-legend-marker: 12px;
+  --size-legend-label-max: 120px;
   --spacing-legend-marker-label: var(--spacing-6);
   --spacing-legend-item-h: var(--spacing-16);
   --spacing-legend-item-v: var(--spacing-12);
@@ -553,6 +564,10 @@
   --size-donut-label-line-lateral: 16px;
   --size-donut-label-band-max: 120px;
   --spacing-donut-label-gap: var(--spacing-8);
+  --font-size-donut-label-name: var(--font-size-extra-small);
+  --line-height-donut-label-name: var(--line-height-small);
+  --font-size-donut-label-value: var(--font-size-medium);
+  --line-height-donut-label-value: var(--line-height-medium);
   --color-text-data-label-on-light: #000000;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);

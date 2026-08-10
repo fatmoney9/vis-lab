@@ -105,6 +105,18 @@
   font-family: var(--font-family-cn);
 }
 
+/* [LEGEND-13] 纵向单列图例的标签超宽即省略号截断。**只管纵列**：横排放不下会自动换行
+   （LEGEND-01），长名称撑不爆宽度；纵列一项一行、不换行，长名称会一路把图例撑宽，
+   而图例宽参与「图 + 间距 + 图例」整组居中的布局计算（PIE-09），撑宽即整组偏移。
+   图例标签是 HTML <span> 不是 SVG <text>，故截断是纯 CSS —— 不必测量、不必二分；
+   完整名称由原生 title 兜底（图例本就有 pointer events，要点击显隐，见 legend.js）。 */
+.dv-legend--column .dv-legend-label {
+  max-width: var(--size-legend-label-max);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* [LEGEND-06] 关闭态：文字 + marker 均切 color-text-quaternary（比常态类特异性更高，胜出） */
 .dv-legend-item--off .dv-legend-marker { color: var(--color-text-quaternary); }
 .dv-legend-item--off .dv-legend-label { color: var(--color-text-quaternary); }
@@ -193,6 +205,14 @@
    这里**用会随明暗翻转的 --color-text-primary 是对的**（与档② 的两个恒定 token 相反）：
    档③ 的底是页面底色而非系列色，跟着模式翻转才不会白底白字。 */
 .dv-data-label--neutral { fill: var(--color-text-primary); }
+
+/* [PIE-15] 饼环外侧标签两段各自的字号（名称段 / 数值段）。THS 两段同值、Ainvest 数值段更大
+   （12/16 vs 14/18），iFinD-PC 别名回通用标签 token = 行为不变。
+   ⚠️ 这两个类**同时用于渲染与测量**（core/label.js 的 classOf 是唯一来源）——
+   只在渲染时挂、拿别的类去量，截断点就会算错、文字溢出画布。
+   行高不写进 CSS：SVG <text> 不吃 line-height，行高 token 是给 JS 读去算块高与碰撞区间的。 */
+.dv-data-label--donut-name { font-size: var(--font-size-donut-label-name); }
+.dv-data-label--donut-value { font-size: var(--font-size-donut-label-value); }
 
 /* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
    主题无关的结构样式（无颜色）。 */
