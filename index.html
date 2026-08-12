@@ -196,6 +196,9 @@
     .example-card {
       position: relative;
       min-width: 0;
+      /* 卡片作 column flex，好让预览区 flex:1 吸走网格拉伸出来的高度（见 .example-card__preview） */
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
       border: 1px solid var(--shell-divider);
       border-radius: 8px;
@@ -205,8 +208,15 @@
     }
     .example-card:hover { border-color: var(--shell-divider-strong); box-shadow: var(--shell-shadow); transform: translateY(-2px); }
     .example-card:focus-visible { outline: 0; border-color: var(--shell-link); box-shadow: var(--shell-shadow); }
-    .example-card__preview { min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
-    .example-card__preview .chart-host { pointer-events: none; }
+    /* 预览区把图表**竖直居中**。以前只写 min-height:210 就完事，比它矮的图会贴顶——
+       饼环自然高只有 2R（THS 140），186 的内容区里下方白 46px，看着就是「整张图偏上」。
+       与 .stage__canvas 当初同一个坑，这里补同一条治法。
+       flex:1 是另一半：网格默认 stretch，同行有更高的卡片时整张卡被拉高，
+       预览区不吸走这段高度的话，空白会落到标题行**下面**（实测搜索结果混排时饼卡底部空 28px）。
+       用 margin:auto 而不是 align-items:center——本块 overflow:hidden，图比容器高时
+       后者连顶部一起裁，auto 边距在余量为负时退化成 0、只裁下边。 */
+    .example-card__preview { flex: 1; display: flex; min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
+    .example-card__preview .chart-host { width: 100%; margin: auto 0; pointer-events: none; }
     .example-card__body { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; }
     .example-card__title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
     .example-card__tag { flex: none; color: var(--shell-text-3); font-size: 11px; }
