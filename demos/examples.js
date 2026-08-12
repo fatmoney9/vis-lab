@@ -105,6 +105,135 @@ export const skewItems = (n) => Array.from({ length: n }, (_, i) => ({
   value: i === 0 ? 98000 : Math.max(1, Math.round(60 / i)),
 }));
 
+/* 财报收支拆解：季度间保持同一拓扑；有符号流量保持会计守恒，负值只表达贡献方向。 */
+const yi = (value) => value * 1e8;
+const sankeyNode = (id, name, role, stage, order = 0) => ({
+  id,
+  name,
+  role,
+  stage,
+  order,
+});
+
+const FINANCIAL_SANKEY_NODES = [
+  sankeyNode('domestic', '国内政企业务', 'income', 0, 0),
+  sankeyNode('other-business', '其他业务', 'income', 0, 1),
+  sankeyNode('international', '国际业务', 'income', 0, 2),
+  sankeyNode('revenue', '营业收入', 'income', 1),
+  sankeyNode('cost', '营业成本', 'expense', 2, 0),
+  sankeyNode('gross', '毛利', 'profit', 2, 1),
+  sankeyNode('other-operating', '其他经营收益', 'income', 2, 2),
+  sankeyNode('operating-expense', '费用及营业税', 'expense', 3, 0),
+  sankeyNode('operating-profit', '营业利润', 'profit', 3, 1),
+  sankeyNode('non-operating', '营业外净收入', 'income', 3, 2),
+  sankeyNode('total-profit', '利润总额', 'profit', 4),
+  sankeyNode('net-profit', '净利润', 'profit', 5, 0),
+  sankeyNode('income-tax', '所得税费用', 'expense', 5, 1),
+  sankeyNode('parent-profit', '归母净利润', 'profit', 6, 0),
+  sankeyNode('minority-interest', '少数股东权益', 'expense', 6, 1),
+];
+
+const makeFinancialSankeyQuarter = ({
+  period,
+  shortPeriod,
+  sources,
+  cost,
+  operatingExpense,
+  otherOperating,
+  nonOperating,
+  incomeTax,
+  minorityInterest,
+  statusLabel = '盈利',
+}) => {
+  const [domestic, otherBusiness, international] = sources.map(yi);
+  const revenue = domestic + otherBusiness + international;
+  const costValue = yi(cost);
+  const gross = revenue - costValue;
+  const operatingExpenseValue = yi(operatingExpense);
+  const grossToOperating = gross - operatingExpenseValue;
+  const otherOperatingValue = yi(otherOperating);
+  const operatingProfit = grossToOperating + otherOperatingValue;
+  const nonOperatingValue = yi(nonOperating);
+  const totalProfit = operatingProfit + nonOperatingValue;
+  const incomeTaxValue = yi(incomeTax);
+  const netProfit = totalProfit - incomeTaxValue;
+  const minorityInterestValue = yi(minorityInterest);
+
+  return {
+    nodes: FINANCIAL_SANKEY_NODES.map((node) => ({ ...node })),
+    links: [
+      { source: 'domestic', target: 'revenue', value: domestic },
+      { source: 'other-business', target: 'revenue', value: otherBusiness },
+      { source: 'international', target: 'revenue', value: international },
+      { source: 'revenue', target: 'cost', value: costValue },
+      {
+        source: 'revenue',
+        target: 'gross',
+        value: gross,
+        negativeSource: 'cost',
+      },
+      { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
+      { source: 'gross', target: 'operating-profit', value: grossToOperating },
+      { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
+      { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
+      { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
+      { source: 'total-profit', target: 'net-profit', value: netProfit },
+      { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
+      { source: 'net-profit', target: 'parent-profit', value: netProfit - minorityInterestValue },
+      { source: 'net-profit', target: 'minority-interest', value: minorityInterestValue },
+    ],
+    legendLabels: { income: '收入', expense: '支出', profit: '利润' },
+    period,
+    shortPeriod,
+    statusLabel,
+    showEdgeLabels: false,
+  };
+};
+
+const FINANCIAL_SANKEY_PERIOD_INPUTS = [
+  ['2025 一季报', '25 Q1', [148, 55, 12], 188, 18, -0.8, 0.3, 0.8, 1.1],
+  ['2025 半年报', '25 Q2', [162, 61, 14], 205, 20, -0.4, 0.5, 1.2, 1.4],
+  ['2025 三季报', '25 Q3', [176, 67, 15], 222, 22, 0.2, 0.4, 1.5, 1.8],
+  ['2025 年报', '25 Q4', [6.1, 2.2, 0.62], 8.960136, 0.261273, -0.056309, 0.000071, -0.080673, 0.009906, '亏损'],
+  ['2026 一季报', '26 Q1', [190.71, 72.68, 16.46], 243.8, 24.4, -1.11, 0.015083, 0.945083, 1.73],
+  ['2026 半年报', '26 Q2', [205, 78, 18], 260, 26, -0.4, 0.6, 1.4, 2.1],
+  ['2026 三季报', '26 Q3', [218, 84, 20], 276, 28, 0.6, 0.9, 1.9, 2.5],
+  ['2026 年报', '26 Q4', [236, 92, 22], 298, 31, 1.2, 1.1, 2.3, 3],
+];
+
+export const financialSankeyPeriods = () => {
+  const periods = FINANCIAL_SANKEY_PERIOD_INPUTS.map(([
+    period,
+    shortPeriod,
+    sources,
+    cost,
+    operatingExpense,
+    otherOperating,
+    nonOperating,
+    incomeTax,
+    minorityInterest,
+    statusLabel,
+  ]) => makeFinancialSankeyQuarter({
+    period,
+    shortPeriod,
+    sources,
+    cost,
+    operatingExpense,
+    otherOperating,
+    nonOperating,
+    incomeTax,
+    minorityInterest,
+    statusLabel,
+  }));
+  const scaleMax = Math.max(...periods.map((period) => period.links
+    .filter((link) => link.target === 'revenue')
+    .reduce((sum, link) => sum + link.value, 0)));
+
+  return periods.map((period) => ({ ...period, scaleMax }));
+};
+
+export const financialSankey = () => financialSankeyPeriods()[0];
+
 /* ── 两面共用的展示维度 ──────────────────────────────────────── */
 
 export const THEMES = [
@@ -134,9 +263,12 @@ export const CHART_CAPABILITIES = {
      **不声明 dataLabel**：饼环的显隐与形态是同一件事（PIE-12「引线与标签强绑定」——
      「显示但没形态」不是合法状态），故合并进 labelLayout 一个三档旋钮，见 buildConfig。
      legend / labelLayout / labelAlign 是本族专属，cartesian 不声明。
-     [LEGEND-06][LEGEND-14] legendSelect 两族都声明：图例点击的三档语义与图表类型无关
-     （它改的是「点击是筛还是强调」，不是某种图元的形态）。 */
+     [LEGEND-06][LEGEND-14] legendSelect 只有 cartesian / pie 声明：它是「点击图例发生什么」的
+     三档语义，前提是图例可点。桑基的图例是静态色卡（renderLegend 不接 onToggle/onHover，
+     且标了 role="list"），没有点击可言，故本族不声明——不是漏了。 */
   pie: { animation: true, legend: true, labelLayout: true, labelAlign: true, legendSelect: true },
+  /* 桑基当前由节点 hover / 点击和季度播放 API 承担交互，不复用坐标轴或饼环旋钮。 */
+  sankey: { density: false },
 };
 
 /*
@@ -248,6 +380,16 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'sankey-financial', group: '桑基图', chart: 'sankey',
+    title: '财报收支拆解', spec: 'SANKEY-01 / SANKEY-24 / SANKEY-26', surfaces: BOTH,
+    description: '收入、成本与利润按真实业务阶段展开，负值保留方向并参与有符号守恒。',
+    summary: '15 节点 · 14 条流向 · 8 期',
+    preferredWidth: 812,
+    logicNote: '节点只接收业务角色、阶段与有符号流量；节点宽高、列距、最小可见粗细和主题语义色均由 Sankey token 解析。',
+    playback: { periods: financialSankeyPeriods() },
+    cfg: () => financialSankey(),
+  },
+  {
     id: 'donut', group: '饼图与环形图', chart: 'pie',
     title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
     description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
@@ -318,6 +460,7 @@ export const EXAMPLES = [
 export const CHART_FAMILIES = {
   cartesian: '直角坐标图',
   pie: '占比图',
+  sankey: '流向图',
 };
 
 /* 某个面要展示的示例（surfaces 缺省 = 两面都进） */
@@ -353,6 +496,7 @@ export const supportsArea = (example) => {
 export const capabilitiesOf = (example) => {
   const caps = CHART_CAPABILITIES[example.chart] ?? {};
   return {
+    density: caps.density !== false,
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,

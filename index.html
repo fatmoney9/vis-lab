@@ -6,6 +6,7 @@
   <title>Vis Lab · 可视化组件库</title>
   <link rel="stylesheet" href="./tokens/tokens.css" />
   <link rel="stylesheet" href="./charts/styles.css" />
+  <link rel="stylesheet" href="./charts/charts/sankey/styles.css?v=main-integration1" />
   <style>
     :root {
       color-scheme: light;
@@ -217,6 +218,20 @@
        后者连顶部一起裁，auto 边距在余量为负时退化成 0、只裁下边。 */
     .example-card__preview { flex: 1; display: flex; min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
     .example-card__preview .chart-host { width: 100%; margin: auto 0; pointer-events: none; }
+    /* 桑基在卡片里的收缩覆盖。两个 !important 是**必需**的：组件用
+       `.dv-sankey { min-width: var(--dv-sankey-render-width, 100%) }` 把容器顶到算出来的图宽
+       （详情页量到 1152px），卡片只有 268px，不解除就横向撑爆整张卡。
+       ⚠️ 上面那条通用规则已把预览区做成居中的 flex 容器，故这里**不再写
+       `height: 210px`**——`flex:1` 的 flex-basis:0% 本就压过 height，那行是死代码。
+       图例在卡片里藏掉：卡片是缩略图，静态色卡挤掉的是图本身的高度。 */
+    .example-card[data-chart="sankey"] .dv-sankey {
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-height: 185px;
+      overflow: hidden;
+    }
+    .example-card[data-chart="sankey"] .dv-sankey__legend-host { display: none; }
+    .example-card[data-chart="sankey"] .dv-sankey__svg { width: 100%; height: 185px; }
     .example-card__body { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; }
     .example-card__title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
     .example-card__tag { flex: none; color: var(--shell-text-3); font-size: 11px; }
@@ -237,8 +252,9 @@
     .spec-chip { flex: none; padding: 4px 8px; border-radius: 4px; background: var(--shell-brand-weak); color: var(--shell-brand); font-size: 11px; }
     .stage { overflow: hidden; border: 1px solid var(--shell-divider-strong); border-radius: 8px; background: var(--shell-panel); box-shadow: var(--shell-shadow); }
     .stage__bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--shell-divider); }
-    .stage__theme { font-size: 13px; font-weight: 500; }
-    .stage__meta { color: var(--shell-text-3); font-size: 11px; }
+    .stage__theme { flex: none; font-size: 13px; font-weight: 500; }
+    .stage__meta { min-width: 0; overflow: hidden; color: var(--shell-text-3); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .stage__period { color: var(--shell-text-2); font-weight: var(--font-weight-medium); }
     /* 演示区把外壳**两个方向都居中**。以前外壳写死 420px 高、正好撑满这块，
        看不出没做垂直居中；改成「高度由图表撑开」后矮图（如饼环只有 2R）就会贴顶。
        用 flex + 子元素 margin:auto 而不是 align-items:center —— 这块 overflow:auto，
@@ -253,7 +269,7 @@
       min-width: 320px;
       min-height: 160px;          /* resize 的下限，两个方向都恒定生效（同 playground 卡片） */
       max-width: 100%;
-      width: min(100%, 736px);
+      width: min(100%, var(--chart-preferred-width, 736px));
       margin: auto;   /* 左右 + 上下都居中（见 .stage__canvas 的说明） */
       padding: 16px;
       overflow: auto;
@@ -278,6 +294,232 @@
        ⚠️ 这里写死一个 height 会让卡片在 pointerdown 的瞬间就从「内容高」跳到那个数——
        手还没动，尺寸先变了。resize 手柄本就会从当前渲染尺寸开始写 inline 宽高，无需代劳。 */
     .stage__surface.is-resized .chart-host { height: 100%; }
+    .stage__surface[data-playback="true"] { display: block; }
+    .chart-playback-layout {
+      --chart-playback-chart-height: 243px;
+      --chart-playback-height: 88px;
+      --chart-playback-timeline-height: calc(var(--spacing-20) + var(--spacing-16));
+      --chart-playback-control-height: calc(var(--spacing-20) + var(--spacing-8));
+      --chart-playback-label-gap: var(--spacing-8);
+      --chart-playback-label-max-width: calc(var(--spacing-24) * 4);
+      display: grid;
+      grid-template-rows: var(--chart-playback-chart-height) var(--chart-playback-height);
+      width: 100%;
+      min-width: 0;
+      container: chart-playback / inline-size;
+    }
+    .chart-playback-layout > .chart-host {
+      min-width: 0;
+      height: var(--chart-playback-chart-height);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      overscroll-behavior-x: contain;
+      touch-action: pan-x pan-y;
+    }
+    .chart-playback-layout > .chart-host::-webkit-scrollbar { display: none; }
+    .stage__surface[data-playback="true"].is-resized .chart-playback-layout {
+      grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--chart-playback-height);
+      height: 100%;
+    }
+    .chart-playback {
+      display: grid;
+      grid-template-rows: var(--chart-playback-timeline-height) var(--chart-playback-control-height);
+      gap: var(--spacing-8);
+      box-sizing: border-box;
+      width: 100%;
+      height: var(--chart-playback-height);
+      min-width: 0;
+      padding: var(--spacing-4) 0 var(--spacing-12);
+    }
+    .chart-playback__timeline { position: relative; height: var(--chart-playback-timeline-height); }
+    .chart-playback__timeline::before {
+      position: absolute;
+      z-index: 0;
+      top: var(--spacing-8);
+      right: 0;
+      left: 0;
+      height: var(--spacing-8);
+      border-radius: var(--radius-2);
+      background: var(--color-background-weak);
+      content: '';
+    }
+    .chart-playback__range {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: var(--size-slider-height);
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    .chart-playback__range::-webkit-slider-runnable-track { height: var(--spacing-8); background: transparent; }
+    .chart-playback__range::-webkit-slider-thumb {
+      width: var(--size-slider-height);
+      height: var(--size-slider-height);
+      margin-top: calc((var(--size-slider-height) - var(--spacing-8)) / -2);
+      appearance: none;
+      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
+      border-radius: var(--radius-slider-handle);
+      background-color: var(--color-datazoom-handle);
+      background-image:
+        url('./assets/sankey/slider-grip-line.svg'),
+        url('./assets/sankey/slider-grip-line.svg'),
+        url('./assets/sankey/slider-grip-line.svg');
+      background-position: 7px center, 12px center, 16px center;
+      background-repeat: no-repeat;
+      background-size: 1.5px 9.5px;
+      box-shadow: var(--shadow-datazoom-handle);
+    }
+    .chart-playback__range::-moz-range-track { height: var(--spacing-8); border: 0; background: transparent; }
+    .chart-playback__range::-moz-range-thumb {
+      width: var(--size-slider-height);
+      height: var(--size-slider-height);
+      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
+      border-radius: var(--radius-slider-handle);
+      background-color: var(--color-datazoom-handle);
+      background-image:
+        url('./assets/sankey/slider-grip-line.svg'),
+        url('./assets/sankey/slider-grip-line.svg'),
+        url('./assets/sankey/slider-grip-line.svg');
+      background-position: 7px center, 12px center, 16px center;
+      background-repeat: no-repeat;
+      background-size: 1.5px 9.5px;
+      box-shadow: var(--shadow-datazoom-handle);
+    }
+    .chart-playback__range:focus-visible { outline: none; }
+    .chart-playback__range:focus-visible::-webkit-slider-thumb,
+    .chart-playback__range:focus-visible::-moz-range-thumb {
+      outline: var(--size-grid-line) solid var(--color-text-secondary);
+      outline-offset: var(--spacing-2);
+    }
+    .chart-playback__ticks { position: absolute; z-index: 1; inset: 0; }
+    .chart-playback__tick {
+      position: absolute;
+      top: 0;
+      display: grid;
+      justify-items: center;
+      align-items: end;
+      height: var(--chart-playback-timeline-height);
+      min-width: 0;
+      padding: var(--spacing-24) 0 0;
+      border: 0;
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-family: var(--font-family-number);
+      font-size: var(--font-size-xxs);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-super-small);
+      white-space: nowrap;
+      cursor: pointer;
+      transform: translateX(-50%);
+    }
+    .chart-playback__tick::before {
+      position: absolute;
+      top: var(--spacing-10);
+      left: 50%;
+      width: var(--size-grid-line);
+      height: var(--spacing-4);
+      background: var(--color-grey-03);
+      content: '';
+      transform: translateX(-50%);
+    }
+    .chart-playback__tick:first-child { justify-items: start; transform: none; }
+    .chart-playback__tick:first-child::before { left: 0; transform: none; }
+    .chart-playback__tick:last-child { justify-items: end; transform: translateX(-100%); }
+    .chart-playback__tick:last-child::before { right: 0; left: auto; transform: none; }
+    .chart-playback__tick.is-current { color: var(--color-text-primary); }
+    .chart-playback__tick-label {
+      display: block;
+      width: clamp(
+        0px,
+        calc(100cqi / var(--chart-playback-interval-count) - var(--chart-playback-label-gap)),
+        var(--chart-playback-label-max-width)
+      );
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chart-playback__tick:first-child .chart-playback__tick-label,
+    .chart-playback__tick:last-child .chart-playback__tick-label {
+      width: clamp(
+        0px,
+        calc((100cqi / var(--chart-playback-interval-count) - var(--chart-playback-label-gap)) / 2),
+        var(--chart-playback-label-max-width)
+      );
+    }
+    .chart-playback__tick-label--compact { display: none; }
+    .chart-playback__controls,
+    .chart-playback__steps { display: flex; align-items: center; }
+    .chart-playback__controls { justify-content: space-between; gap: var(--spacing-8); }
+    .chart-playback__primary {
+      display: inline-grid;
+      flex: none;
+      width: var(--chart-playback-control-height);
+      height: var(--chart-playback-control-height);
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: var(--color-price-up);
+      cursor: pointer;
+    }
+    .chart-playback__play-icon { display: block; width: 8.37px; height: 9.49px; transform: translateX(.5px); }
+    .chart-playback__pause-icon { display: none; grid-template-columns: repeat(2, var(--spacing-2)); gap: var(--spacing-2); height: var(--spacing-10); }
+    .chart-playback__pause-icon::before,
+    .chart-playback__pause-icon::after {
+      border-radius: var(--radius-1);
+      background: var(--color-text-inverse);
+      content: '';
+    }
+    .chart-playback__primary.is-playing .chart-playback__play-icon { display: none; }
+    .chart-playback__primary.is-playing .chart-playback__pause-icon { display: grid; }
+    .chart-playback__period {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .chart-playback__steps { gap: var(--spacing-8); margin-left: auto; }
+    .chart-playback__step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-2);
+      width: calc(var(--spacing-24) * 3);
+      height: var(--chart-playback-control-height);
+      padding: 0 var(--spacing-6);
+      border: 0;
+      border-radius: var(--radius-4);
+      background: var(--color-background-weak);
+      color: var(--color-text-primary);
+      font-family: var(--font-family-cn);
+      font-size: var(--font-size-small);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-small);
+      cursor: pointer;
+    }
+    .chart-playback__step:hover:not(:disabled) { background: var(--color-visualization-highlight-block); }
+    .chart-playback__arrow {
+      flex: none;
+      width: var(--spacing-16);
+      height: var(--spacing-16);
+      background: currentColor;
+      -webkit-mask: url('./assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
+      mask: url('./assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
+    }
+    .chart-playback__arrow--prev { transform: scaleX(-1); }
+    .chart-playback__step:disabled { cursor: default; opacity: .5; }
+    @container chart-playback (max-width: 600px) {
+      .chart-playback__tick-label--full { display: none; }
+      .chart-playback__tick-label--compact { display: block; }
+    }
     .logic-card { margin-top: 20px; padding: 16px; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
     .logic-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
     .logic-card p { margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
@@ -354,7 +596,7 @@
   <div class="workspace" id="workspace">
     <aside class="sidebar">
       <!-- 侧栏抬头不再写死某一个组件名（曾是「CartesianChart / 直角坐标图」）：
-           库里已有两族、后面还会更多，族名一律由 CHART_FAMILIES 派生并渲染进导航分节。 -->
+           图表族名一律由 CHART_FAMILIES 派生并渲染进导航分节。 -->
       <div class="sidebar__head">
         <span class="sidebar__eyebrow" id="sidebar-eyebrow"></span>
         <strong>图表库</strong>
@@ -417,6 +659,7 @@
       zoom: false,
       axisTitle: false,
       animation: true, /* [MOTION-07] 与其他旋钮相反：默认开 */
+      periodIndex: 0,
     };
 
     const main = document.getElementById('main-content');
@@ -427,8 +670,10 @@
     const searchInput = document.getElementById('search-input');
     const searchClear = document.getElementById('search-clear');
     let charts = [];
+    let chartCleanups = [];
 
     function destroyCharts() {
+      chartCleanups.splice(0).forEach((cleanup) => cleanup());
       charts.forEach((chart) => chart.destroy());
       charts = [];
     }
@@ -460,7 +705,7 @@
     function mountChart(host, example, overrides = {}) {
       const { instance, cfg } = mountExample(host, example, { ...state, ...overrides });
       charts.push(instance);
-      return cfg;
+      return { instance, cfg };
     }
 
     function renderGallery() {
@@ -482,7 +727,7 @@
         </header>
         ${items.length ? sections.map((section) => `<section class="gallery-section">
           <h2 class="section-title">${section.group}</h2>
-          <div class="example-grid">${section.items.map((item) => `<a class="example-card" href="#${item.id}" data-id="${item.id}">
+          <div class="example-grid">${section.items.map((item) => `<a class="example-card" href="#${item.id}" data-id="${item.id}" data-chart="${item.chart}">
             <div class="example-card__preview" data-theme="ths" data-platform="pc" data-mode="light"><div class="chart-host"></div></div>
             <div class="example-card__body"><span class="example-card__title">${item.title}</span><span class="example-card__tag">${item.spec.split(' / ')[0]}</span></div>
           </a>`).join('')}</div>
@@ -508,6 +753,75 @@
       return MOBILE_RESOLUTIONS.find((item) => item.id === id) || MOBILE_RESOLUTIONS[0];
     }
 
+    const playbackPeriodsOf = (example) => example.playback?.periods ?? [];
+
+    function clampPeriodIndex(example, index = state.periodIndex) {
+      const periods = playbackPeriodsOf(example);
+      return periods.length ? Math.max(0, Math.min(periods.length - 1, Math.round(index))) : 0;
+    }
+
+    function activeExample(example) {
+      const periods = playbackPeriodsOf(example);
+      if (!periods.length) return example;
+      const period = periods[clampPeriodIndex(example)];
+      return { ...example, cfg: () => period };
+    }
+
+    function playbackMarkup(example) {
+      const periods = playbackPeriodsOf(example);
+      if (!periods.length) return '<div class="chart-host"></div>';
+      const currentIndex = clampPeriodIndex(example);
+      const lastIndex = periods.length - 1;
+      const ticks = periods.map((period, index) => `
+        <button
+          class="chart-playback__tick${index === currentIndex ? ' is-current' : ''}"
+          type="button"
+          data-period-index="${index}"
+          style="left:${lastIndex ? index / lastIndex * 100 : 0}%"
+          aria-label="${period.period}"
+          aria-current="${index === currentIndex ? 'true' : 'false'}"
+          title="${period.period}"
+        >
+          <span class="chart-playback__tick-label chart-playback__tick-label--full">${period.period}</span>
+          <span class="chart-playback__tick-label chart-playback__tick-label--compact">${period.shortPeriod}</span>
+        </button>`).join('');
+
+      return `<div class="chart-playback-layout" style="--chart-playback-interval-count:${Math.max(1, lastIndex)}">
+        <div class="chart-host"></div>
+        <div class="chart-playback" aria-label="季度数据播放轴">
+          <div class="chart-playback__timeline">
+            <input
+              class="chart-playback__range"
+              type="range"
+              min="0"
+              max="${lastIndex}"
+              step="1"
+              value="${currentIndex}"
+              aria-label="季度进度"
+            />
+            <div class="chart-playback__ticks">${ticks}</div>
+          </div>
+          <div class="chart-playback__controls">
+            <button class="chart-playback__primary" type="button" aria-label="播放季度变化" title="播放">
+              <img class="chart-playback__play-icon" src="./assets/sankey/play.svg" alt="" aria-hidden="true" />
+              <span class="chart-playback__pause-icon" aria-hidden="true"></span>
+            </button>
+            <output class="chart-playback__period" aria-live="polite">${periods[currentIndex].period}</output>
+            <div class="chart-playback__steps">
+              <button class="chart-playback__step chart-playback__step--prev" type="button">
+                <span class="chart-playback__arrow chart-playback__arrow--prev" aria-hidden="true"></span>
+                <span>上一期</span>
+              </button>
+              <button class="chart-playback__step chart-playback__step--next" type="button">
+                <span>下一期</span>
+                <span class="chart-playback__arrow" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     /* 摘要器在 demos/examples.js：它内部调的就是同一个 buildConfig，故这里展示的
        与真正传进组件的是同一份 cfg（铁律3：面不自己拼配置，也不自己猜配置的形状）。
        只有**不进 cfg** 的三项单列在前：主题 / 明暗写在容器的 data-* 上走 CSS 级联，
@@ -518,17 +832,150 @@
         theme: state.theme,
         ...(state.platform === 'mobile' ? { viewport: mobileResolutionOf(state.mobileResolution).label } : {}),
         mode: state.mode,
-        ...describeConfig(example, state),
+        ...describeConfig(activeExample(example), state),
+      };
+    }
+
+    function mountPlayback(surface, example, chart) {
+      const periods = playbackPeriodsOf(example);
+      const range = surface.querySelector('.chart-playback__range');
+      const ticks = surface.querySelector('.chart-playback__ticks');
+      const toggle = surface.querySelector('.chart-playback__primary');
+      const output = surface.querySelector('.chart-playback__period');
+      const previous = surface.querySelector('.chart-playback__step--prev');
+      const next = surface.querySelector('.chart-playback__step--next');
+      let isPlaying = false;
+      let disposed = false;
+      let transitionTargetIndex = null;
+
+      const renderPlaybackState = () => {
+        if (disposed) return;
+        const currentIndex = clampPeriodIndex(example);
+        const currentPeriod = periods[currentIndex];
+        range.value = `${currentIndex}`;
+        output.value = currentPeriod.period;
+        surface.dataset.period = currentPeriod.period;
+        const stagePeriod = main.querySelector('[data-stage-period]');
+        if (stagePeriod) stagePeriod.textContent = `${currentPeriod.period} · ${currentPeriod.statusLabel}`;
+        toggle.classList.toggle('is-playing', isPlaying);
+        toggle.setAttribute('aria-label', isPlaying ? '暂停季度变化' : '播放季度变化');
+        toggle.title = isPlaying ? '暂停' : '播放';
+        previous.disabled = currentIndex <= 0;
+        next.disabled = currentIndex >= periods.length - 1;
+        ticks.querySelectorAll('[data-period-index]').forEach((tick) => {
+          const isCurrent = Number(tick.dataset.periodIndex) === currentIndex;
+          tick.classList.toggle('is-current', isCurrent);
+          tick.setAttribute('aria-current', isCurrent ? 'true' : 'false');
+        });
+        const logicConfig = document.getElementById('logic-config');
+        if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
+      };
+
+      const stopPlayback = () => {
+        isPlaying = false;
+        chart.pause();
+        renderPlaybackState();
+      };
+
+      const goToPeriod = async (targetIndex, animate = true) => {
+        if (disposed) return false;
+        const target = clampPeriodIndex(example, targetIndex);
+        transitionTargetIndex = target;
+        state.periodIndex = target;
+        renderPlaybackState();
+        const completed = await chart.update({
+          ...periods[target],
+          platform: state.platform,
+        }, { animate });
+        if (disposed) return false;
+        if (completed) {
+          transitionTargetIndex = null;
+          renderPlaybackState();
+        }
+        return completed;
+      };
+
+      const playPeriods = async () => {
+        if (isPlaying) {
+          stopPlayback();
+          return;
+        }
+        isPlaying = true;
+        renderPlaybackState();
+        if (transitionTargetIndex !== null) {
+          const completed = await goToPeriod(transitionTargetIndex, true);
+          if (!completed || !isPlaying || disposed) {
+            isPlaying = false;
+            renderPlaybackState();
+            return;
+          }
+        }
+        if (state.periodIndex >= periods.length - 1) await goToPeriod(0, false);
+        while (!disposed && isPlaying && state.periodIndex < periods.length - 1) {
+          const completed = await goToPeriod(state.periodIndex + 1, true);
+          if (!completed || !isPlaying || disposed) break;
+          await new Promise((resolve) => setTimeout(resolve, 120));
+        }
+        isPlaying = false;
+        renderPlaybackState();
+      };
+
+      const onToggle = () => { void playPeriods(); };
+      const onRange = () => {
+        const requestedIndex = Number(range.value);
+        stopPlayback();
+        void goToPeriod(requestedIndex);
+      };
+      const onPrevious = () => {
+        stopPlayback();
+        void goToPeriod(state.periodIndex - 1);
+      };
+      const onNext = () => {
+        stopPlayback();
+        void goToPeriod(state.periodIndex + 1);
+      };
+      const onTick = (event) => {
+        const tick = event.target.closest('[data-period-index]');
+        if (!tick) return;
+        stopPlayback();
+        void goToPeriod(Number(tick.dataset.periodIndex));
+      };
+
+      toggle.addEventListener('click', onToggle);
+      range.addEventListener('input', onRange);
+      previous.addEventListener('click', onPrevious);
+      next.addEventListener('click', onNext);
+      ticks.addEventListener('click', onTick);
+      renderPlaybackState();
+
+      return () => {
+        disposed = true;
+        isPlaying = false;
+        chart.pause();
+        toggle.removeEventListener('click', onToggle);
+        range.removeEventListener('input', onRange);
+        previous.removeEventListener('click', onPrevious);
+        next.removeEventListener('click', onNext);
+        ticks.removeEventListener('click', onTick);
       };
     }
 
     function renderDetail() {
       const example = state.detail;
+      state.periodIndex = clampPeriodIndex(example);
       const theme = THEMES.find((item) => item.id === state.theme);
       const mobileResolution = mobileResolutionOf(state.mobileResolution);
+      const hasPlayback = playbackPeriodsOf(example).length > 0;
+      const currentPeriod = hasPlayback ? playbackPeriodsOf(example)[state.periodIndex] : null;
       /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
-      const mobileSurfaceStyle = state.platform === 'mobile'
-        ? ` style="--mobile-chart-width:${mobileResolution.chartWidth}px"`
+      const surfaceVariables = [
+        ...(example.preferredWidth ? [`--chart-preferred-width:${example.preferredWidth}px`] : []),
+        ...(state.platform === 'mobile'
+          ? [`--mobile-chart-width:${mobileResolution.chartWidth}px`]
+          : []),
+      ];
+      const surfaceStyle = surfaceVariables.length
+        ? ` style="${surfaceVariables.join(';')}"`
         : '';
       /* 旋钮按图表类型能力显隐——接入饼 / 环等无类目轴的图表时，缩放轴等开关自动不出现 */
       const caps = capabilitiesOf(example);
@@ -550,17 +997,17 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution.label}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${DENSITY[state.density]} 类目</span>
+              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution.label}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${example.summary ?? `${DENSITY[state.density]} 类目`}</span>
             </div>
             <div class="stage__canvas">
-              <div class="stage__surface" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-resolution="${state.mobileResolution}"${mobileSurfaceStyle}>
-                <div class="chart-host"></div>
+              <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-resolution="${state.mobileResolution}" data-playback="${hasPlayback}"${surfaceStyle}>
+                ${playbackMarkup(example)}
               </div>
             </div>
           </section>
           <section class="logic-card">
             <h2>配置边界</h2>
-            <p>面板只编辑当前主分支组件真实支持的数据与语义配置。颜色、字号、线宽、圆角和主题形态仍由 token 与 behavior 控制；水印按主题规范恒开，不提供实例开关。</p>
+            <p>${example.logicNote ?? '面板只编辑当前主分支组件真实支持的数据与语义配置。颜色、字号、线宽、圆角和主题形态仍由 token 与 behavior 控制；水印按主题规范恒开，不提供实例开关。'}</p>
           </section>
         </div>
         <aside class="settings" aria-label="示例配置">
@@ -573,7 +1020,7 @@
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
             ${state.platform === 'mobile' ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="mobile-resolution-select">移动端分辨率</label><span class="field__hint">仅决定初始宽度</span></div><select class="select" id="mobile-resolution-select">${MOBILE_RESOLUTIONS.map((item) => `<option value="${item.id}"${state.mobileResolution === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>` : ''}
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
-            <div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>
+            ${caps.density ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>` : ''}
             ${caps.dataLabel ? `<div class="field"><span class="field__label">数据标签</span><span class="field__hint">LABEL-05 · 默认 = 各图表自己的规则；强开 = 分组柱 / 堆叠也画</span>${segment('dataLabel', [['auto', '默认'], ['on', '强开']], state.dataLabel)}</div>` : ''}
             ${caps.labelLayout ? `<div class="field"><span class="field__label">标签形态</span><span class="field__hint">PIE-12 · 引线与标签强绑定，故显隐与形态是同一个选择</span>${segment('labelLayout', [['off', '关'], ['outside', '引线'], ['inside', '扇区内']], state.labelLayout)}</div>` : ''}
             ${caps.labelAlign ? `<div class="field"><span class="field__label">标签对齐</span><span class="field__hint">PIE-13 · 仅引线档生效</span>${segment('labelAlign', [['anchor', '就近'], ['column', '成列'], ['edge', '贴边']], state.labelAlign, state.labelLayout !== 'outside')}</div>` : ''}
@@ -586,13 +1033,14 @@
             <button class="button" id="reset-button" type="button">恢复默认配置</button>
           </div>
           <div class="settings__panel" id="logic-panel" hidden>
-            <pre class="code-block">${JSON.stringify(currentConfig(example), null, 2)}</pre>
-            <p class="logic-note">缩放窗口通过语义参数进入 L2；主题同时控制值 token、behavior 与恒开水印。</p>
+            <pre class="code-block" id="logic-config">${JSON.stringify(currentConfig(example), null, 2)}</pre>
+            <p class="logic-note">${example.logicNote ?? '缩放窗口通过语义参数进入 L2；主题同时控制值 token、behavior 与恒开水印。'}</p>
           </div>
         </aside>
       </div>`;
 
-      mountChart(main.querySelector('.stage .chart-host'), example);
+      const { instance } = mountChart(main.querySelector('.stage .chart-host'), activeExample(example));
+      if (hasPlayback) chartCleanups.push(mountPlayback(main.querySelector('.stage__surface'), example, instance));
       /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
          host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。
          判定用右下 18px 热区：resize 手柄本身不派发独立事件，只能靠这个位置推断。 */
@@ -614,7 +1062,7 @@
         state.theme = event.target.value;
         rerenderDetail();
       });
-      document.getElementById('density-select').addEventListener('change', (event) => {
+      document.getElementById('density-select')?.addEventListener('change', (event) => {
         state.density = event.target.value;
         rerenderDetail();
       });
@@ -643,7 +1091,7 @@
           theme: 'ths', platform: 'pc', mobileResolution: 'mobile-375', mode: 'light', density: 'few',
           dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
           legendSelect: 'multi',
-          area: false, zoom: false, axisTitle: false, animation: true,
+          area: false, zoom: false, axisTitle: false, animation: true, periodIndex: 0,
         });
         rerenderDetail();
       });

@@ -1,0 +1,124 @@
+/* SankeyChart 独立样式：不并入 charts/styles.css，避免影响现有图表。 */
+
+.dv-sankey {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: var(--dv-sankey-render-width, 100%);
+  font-family: var(--font-family-cn);
+}
+
+.dv-sankey__legend-host {
+  flex: none;
+  pointer-events: none;
+}
+
+.dv-sankey__legend-host .dv-legend-item {
+  cursor: default;
+}
+
+.dv-sankey__svg {
+  display: block;
+  flex: none;
+  width: var(--dv-sankey-render-width, 100%);
+  max-width: none;
+  height: var(--dv-sankey-render-height, auto);
+  overflow: visible;
+}
+
+/* [SANKEY-08] 单色边带，色取终节点语义色；固定 20% 透明度由 sankey token 下发。 */
+.dv-sankey__edge-ribbon {
+  fill: var(--dv-sankey-color);
+  fill-opacity: var(--dv-sankey-edge-opacity);
+  stroke: var(--dv-sankey-color);
+  stroke-width: var(--spacing-8);
+  stroke-opacity: 0;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.dv-sankey__node-rect {
+  fill: var(--dv-sankey-color);
+  cursor: pointer;
+}
+
+.dv-sankey__node-label {
+  fill: var(--color-text-primary);
+  font-weight: var(--font-weight-regular);
+  pointer-events: none;
+}
+
+.dv-sankey__node-label-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.dv-sankey__node-title {
+  fill: var(--color-text-primary);
+  font-family: var(--font-family-cn);
+}
+
+.dv-sankey__edge-label {
+  fill: var(--color-text-secondary);
+  font-family: var(--dv-sankey-number-font-family);
+  font-size: var(--font-size-xxs);
+  font-weight: var(--font-weight-medium);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-sankey__node-value {
+  fill: var(--dv-sankey-color);
+  font-family: var(--dv-sankey-number-font-family);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-sankey .dv-tooltip__title,
+.dv-sankey .dv-tooltip__marker {
+  display: none;
+}
+
+.dv-sankey .dv-tooltip__row {
+  align-items: center;
+}
+
+.dv-sankey .dv-tooltip__label {
+  white-space: nowrap;
+}
+
+.dv-sankey .dv-tooltip__value {
+  color: var(--dv-sankey-tooltip-value-color);
+  font-family: var(--dv-sankey-number-font-family);
+}
+
+/* [SANKEY-16] 负号只表达数值方向，不覆盖收入/支出/利润节点的业务语义色。 */
+.dv-sankey__node-value.is-negative,
+.dv-sankey__edge-label.is-negative {
+  fill: var(--color-text-primary);
+}
+
+/* [SANKEY-10] 高亮只改变可见度，不改变语义色或重新排序。 */
+.dv-sankey__edge.is-active .dv-sankey__edge-ribbon {
+  fill-opacity: var(--dv-sankey-edge-highlight-opacity);
+}
+
+.dv-sankey__edge.is-dimmed,
+.dv-sankey__node.is-dimmed,
+.dv-sankey__node-label.is-dimmed {
+  opacity: var(--opacity-visualization-dim);
+}
+
+.dv-sankey__edge:focus,
+.dv-sankey__node:focus {
+  outline: none;
+}
+
+.dv-sankey__node:focus .dv-sankey__node-rect {
+  stroke: var(--color-text-primary);
+  stroke-width: var(--size-grid-line);
+  vector-effect: non-scaling-stroke;
+}

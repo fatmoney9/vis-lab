@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SankeyChart · 独立预览</title>
+  <link rel="stylesheet" href="../tokens/tokens.css" />
+  <link rel="stylesheet" href="../charts/styles.css" />
+  <link rel="stylesheet" href="../charts/charts/sankey/styles.css?v=viewport1" />
+  <style>
+    /* 与 cartesian-preview.html 保持一致：这里只放 Playground 外壳样式，
+       桑基图生产样式仍由 charts/charts/sankey/styles.css 提供。 */
+    * { box-sizing: border-box; }
+
+    html,
+    body { min-height: 100%; }
+
+    body {
+      margin: var(--spacing-0);
+      background: var(--color-background-weak);
+      color: var(--color-text-primary);
+      font-family: var(--font-family-cn);
+    }
+
+    .sankey-preview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-24);
+      padding: var(--spacing-24);
+    }
+
+    .sankey-preview__head {
+      display: grid;
+      gap: var(--spacing-8);
+    }
+
+    .sankey-preview__head h1,
+    .sankey-preview__head p {
+      margin: var(--spacing-0);
+    }
+
+    .sankey-preview__head h1 {
+      font-size: var(--font-size-extra-large);
+      line-height: var(--line-height-extra-large);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-preview__head p {
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-extra-small);
+      line-height: var(--line-height-small);
+    }
+
+    .sankey-preview__eyebrow {
+      color: var(--color-text-tertiary);
+      font-size: var(--font-size-xxs);
+      line-height: var(--line-height-super-small);
+    }
+
+    .sankey-preview__list {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-24);
+    }
+
+    .sankey-preview__section {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--spacing-16);
+      min-width: 0;
+    }
+
+    .sankey-preview__section-head {
+      display: grid;
+      gap: var(--spacing-4);
+    }
+
+    .sankey-preview__section-title,
+    .sankey-preview__section-description {
+      margin: var(--spacing-0);
+    }
+
+    .sankey-preview__section-title {
+      font-size: var(--font-size-large);
+      line-height: var(--line-height-large);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-preview__section-description {
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-extra-small);
+      line-height: var(--line-height-small);
+    }
+
+    .sankey-preview__card {
+      min-width: 0;
+      padding: var(--spacing-24);
+      border: var(--size-grid-line) solid var(--color-visualization-divider);
+      border-radius: var(--radius-10);
+      color: var(--color-text-primary);
+    }
+
+    .sankey-preview__card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacing-12);
+      margin-bottom: var(--spacing-16);
+    }
+
+    .sankey-preview__card-title {
+      margin: var(--spacing-0);
+      font-size: var(--font-size-medium);
+      line-height: var(--line-height-medium);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-preview__card-meta {
+      color: var(--color-text-tertiary);
+      font-size: var(--font-size-xxs);
+      line-height: var(--line-height-super-small);
+    }
+
+    .sankey-preview__host {
+      width: 100%;
+      height: auto;
+      overflow-x: auto;
+    }
+
+    .sankey-preview__complex-layout {
+      --sankey-demo-frame-width: 812px;
+      --sankey-demo-frame-height: 375px;
+      --sankey-demo-header-height: 44px;
+      --sankey-demo-chart-height: 243px;
+      --sankey-demo-playback-height: 88px;
+      display: grid;
+      grid-template-columns: minmax(0, var(--sankey-demo-frame-width)) calc(var(--spacing-24) * 12);
+      gap: var(--spacing-24);
+      align-items: start;
+    }
+
+    .sankey-preview__complex-content {
+      display: grid;
+      grid-template-rows:
+        var(--sankey-demo-header-height)
+        var(--sankey-demo-chart-height)
+        var(--sankey-demo-playback-height);
+      width: min(100%, var(--sankey-demo-frame-width));
+      max-width: var(--sankey-demo-frame-width);
+      height: var(--sankey-demo-frame-height);
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .sankey-preview__complex-content > .sankey-preview__card-head {
+      align-items: center;
+      flex-direction: row;
+      height: var(--sankey-demo-header-height);
+      margin-bottom: var(--spacing-0);
+    }
+
+    .sankey-preview__complex-host {
+      width: 100%;
+      min-width: 0;
+      height: var(--sankey-demo-chart-height);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      overscroll-behavior-x: contain;
+      touch-action: pan-x pan-y;
+    }
+
+    .sankey-preview__complex-host::-webkit-scrollbar {
+      display: none;
+    }
+
+    .sankey-playback {
+      display: grid;
+      grid-template-rows: calc(var(--spacing-20) + var(--spacing-16)) calc(var(--spacing-20) + var(--spacing-8));
+      gap: var(--spacing-8);
+      box-sizing: border-box;
+      width: 100%;
+      height: var(--sankey-demo-playback-height);
+      min-width: 0;
+      min-height: var(--sankey-demo-playback-height);
+      padding: var(--spacing-4) var(--spacing-0) var(--spacing-12);
+    }
+
+    .sankey-playback[hidden] {
+      display: none;
+    }
+
+    .sankey-playback__timeline {
+      position: relative;
+      height: calc(var(--spacing-20) + var(--spacing-16));
+    }
+
+    .sankey-playback__timeline::before {
+      position: absolute;
+      z-index: 0;
+      top: var(--spacing-8);
+      right: 0;
+      left: 0;
+      height: var(--spacing-8);
+      border-radius: var(--radius-2);
+      background: var(--color-background-weak);
+      content: '';
+    }
+
+    .sankey-playback__range {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: var(--size-slider-height);
+      margin: var(--spacing-0);
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .sankey-playback__range::-webkit-slider-runnable-track {
+      height: var(--spacing-8);
+      background: transparent;
+    }
+
+    .sankey-playback__range::-webkit-slider-thumb {
+      width: var(--size-slider-height);
+      height: var(--size-slider-height);
+      margin-top: calc((var(--size-slider-height) - var(--spacing-8)) / -2);
+      appearance: none;
+      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
+      border-radius: var(--radius-slider-handle);
+      background-color: var(--color-datazoom-handle);
+      background-image:
+        url('../assets/sankey/slider-grip-line.svg'),
+        url('../assets/sankey/slider-grip-line.svg'),
+        url('../assets/sankey/slider-grip-line.svg');
+      background-position: 7px center, 12px center, 16px center;
+      background-repeat: no-repeat;
+      background-size: 1.5px 9.5px;
+      box-shadow: var(--shadow-datazoom-handle);
+    }
+
+    .sankey-playback__range::-moz-range-track {
+      height: var(--spacing-8);
+      border: 0;
+      background: transparent;
+    }
+
+    .sankey-playback__range::-moz-range-thumb {
+      width: var(--size-slider-height);
+      height: var(--size-slider-height);
+      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
+      border-radius: var(--radius-slider-handle);
+      background-color: var(--color-datazoom-handle);
+      background-image:
+        url('../assets/sankey/slider-grip-line.svg'),
+        url('../assets/sankey/slider-grip-line.svg'),
+        url('../assets/sankey/slider-grip-line.svg');
+      background-position: 7px center, 12px center, 16px center;
+      background-repeat: no-repeat;
+      background-size: 1.5px 9.5px;
+      box-shadow: var(--shadow-datazoom-handle);
+    }
+
+    .sankey-playback__range:focus-visible {
+      outline: none;
+    }
+
+    .sankey-playback__range:focus-visible::-webkit-slider-thumb,
+    .sankey-playback__range:focus-visible::-moz-range-thumb {
+      outline: var(--size-grid-line) solid var(--color-text-secondary);
+      outline-offset: var(--spacing-2);
+    }
+
+    .sankey-playback__ticks {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+    }
+
+    .sankey-playback__tick {
+      position: absolute;
+      top: 0;
+      display: grid;
+      justify-items: center;
+      align-items: end;
+      height: calc(var(--spacing-20) + var(--spacing-16));
+      min-width: 0;
+      padding: var(--spacing-24) var(--spacing-0) var(--spacing-0);
+      border: 0;
+      background: transparent;
+      color: var(--color-text-secondary);
+      font-family: var(--font-family-number);
+      font-size: var(--font-size-xxs);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-super-small);
+      white-space: nowrap;
+      cursor: pointer;
+      transform: translateX(-50%);
+    }
+
+    .sankey-playback__tick:nth-child(1) { left: 0; }
+    .sankey-playback__tick:nth-child(2) { left: 14.2857%; }
+    .sankey-playback__tick:nth-child(3) { left: 28.5714%; }
+    .sankey-playback__tick:nth-child(4) { left: 42.8571%; }
+    .sankey-playback__tick:nth-child(5) { left: 57.1429%; }
+    .sankey-playback__tick:nth-child(6) { left: 71.4286%; }
+    .sankey-playback__tick:nth-child(7) { left: 85.7143%; }
+    .sankey-playback__tick:nth-child(8) { left: 100%; }
+
+    .sankey-playback__tick::before {
+      position: absolute;
+      top: var(--spacing-10);
+      left: 50%;
+      width: 1px;
+      height: var(--spacing-4);
+      background: var(--color-grey-03);
+      content: '';
+      transform: translateX(-50%);
+    }
+
+    .sankey-playback__tick:first-child {
+      justify-items: start;
+      transform: none;
+    }
+
+    .sankey-playback__tick:first-child::before {
+      left: 0;
+      transform: none;
+    }
+
+    .sankey-playback__tick:last-child {
+      justify-items: end;
+      transform: translateX(-100%);
+    }
+
+    .sankey-playback__tick:last-child::before {
+      right: 0;
+      left: auto;
+      transform: none;
+    }
+
+    .sankey-playback__tick.is-current {
+      color: var(--color-text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-playback__tick-label--compact {
+      display: none;
+    }
+
+    .sankey-playback__controls,
+    .sankey-playback__steps {
+      display: flex;
+      align-items: center;
+    }
+
+    .sankey-playback__controls {
+      justify-content: space-between;
+      gap: var(--spacing-8);
+    }
+
+    .sankey-playback__primary {
+      display: inline-grid;
+      flex: none;
+      width: calc(var(--spacing-20) + var(--spacing-8));
+      height: calc(var(--spacing-20) + var(--spacing-8));
+      place-items: center;
+      padding: var(--spacing-0);
+      border: 0;
+      border-radius: 50%;
+      background: var(--color-price-up);
+      cursor: pointer;
+    }
+
+    .sankey-playback__play-icon {
+      display: block;
+      width: 8.37px;
+      height: 9.49px;
+      transform: translateX(0.5px);
+    }
+
+    .sankey-playback__pause-icon {
+      display: none;
+      grid-template-columns: repeat(2, var(--spacing-2));
+      gap: var(--spacing-2);
+      height: var(--spacing-10);
+    }
+
+    .sankey-playback__pause-icon::before,
+    .sankey-playback__pause-icon::after {
+      border-radius: var(--radius-1);
+      background: var(--color-text-inverse);
+      content: '';
+    }
+
+    .sankey-playback__primary.is-playing .sankey-playback__play-icon {
+      display: none;
+    }
+
+    .sankey-playback__primary.is-playing .sankey-playback__pause-icon {
+      display: grid;
+    }
+
+    .sankey-playback__period {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .sankey-playback__steps {
+      gap: var(--spacing-8);
+      margin-left: auto;
+    }
+
+    .sankey-playback__step {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacing-2);
+      width: calc(var(--spacing-24) * 3);
+      height: calc(var(--spacing-20) + var(--spacing-8));
+      padding: var(--spacing-0) var(--spacing-6);
+      border: 0;
+      border-radius: var(--radius-4);
+      background: var(--color-background-weak);
+      color: var(--color-text-primary);
+      font-family: var(--font-family-cn);
+      font-size: var(--font-size-small);
+      font-weight: var(--font-weight-medium);
+      line-height: var(--line-height-small);
+      cursor: pointer;
+    }
+
+    .sankey-playback__step:hover:not(:disabled) {
+      background: var(--color-visualization-highlight-block);
+    }
+
+    .sankey-playback__period-arrow {
+      flex: none;
+      width: var(--spacing-16);
+      height: var(--spacing-16);
+      background: currentColor;
+      -webkit-mask: url('../assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
+      mask: url('../assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
+    }
+
+    .sankey-playback__period-arrow--prev {
+      transform: scaleX(-1);
+    }
+
+    .sankey-playback__step:disabled {
+      color: var(--color-text-primary);
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    .sankey-preview__complex-card[data-mode="dark"] {
+      background: var(--color-grey-01);
+      border-color: var(--color-background-weak);
+    }
+
+    .sankey-preview__complex-card[data-mode="dark"] .sankey-preview__config,
+    .sankey-preview__complex-card[data-mode="dark"] .sankey-preview__config-summary,
+    .sankey-preview__complex-card[data-mode="dark"] .sankey-preview__option-label {
+      border-color: var(--color-background-weak);
+    }
+
+    .sankey-preview__config {
+      display: grid;
+      align-content: start;
+      gap: var(--spacing-20);
+      min-width: 0;
+      padding-left: var(--spacing-24);
+      border-left: var(--size-grid-line) solid var(--color-visualization-divider);
+    }
+
+    .sankey-preview__config-head,
+    .sankey-preview__config-summary {
+      display: grid;
+      gap: var(--spacing-4);
+    }
+
+    .sankey-preview__config-title,
+    .sankey-preview__config-description {
+      margin: var(--spacing-0);
+    }
+
+    .sankey-preview__config-title {
+      font-size: var(--font-size-medium);
+      line-height: var(--line-height-medium);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-preview__config-description,
+    .sankey-preview__config-summary {
+      color: var(--color-text-tertiary);
+      font-size: var(--font-size-xxs);
+      line-height: var(--line-height-super-small);
+    }
+
+    .sankey-preview__config-fieldset {
+      display: grid;
+      gap: var(--spacing-8);
+      min-width: 0;
+      margin: var(--spacing-0);
+      padding: var(--spacing-0);
+      border: var(--spacing-0);
+    }
+
+    .sankey-preview__config-legend {
+      padding: var(--spacing-0);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-extra-small);
+      line-height: var(--line-height-small);
+    }
+
+    .sankey-preview__options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--spacing-6);
+    }
+
+    .sankey-preview__options--two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sankey-preview__option {
+      position: relative;
+      min-width: 0;
+      cursor: pointer;
+    }
+
+    .sankey-preview__option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .sankey-preview__option-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(var(--spacing-20) * 2);
+      padding: var(--spacing-8) var(--spacing-6);
+      overflow: hidden;
+      border: var(--size-grid-line) solid var(--color-visualization-divider);
+      border-radius: var(--radius-4);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-extra-small);
+      line-height: var(--line-height-small);
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sankey-preview__option input:checked + .sankey-preview__option-label {
+      border-color: var(--color-text-primary);
+      background: var(--color-background-weak);
+      color: var(--color-text-primary);
+      font-weight: var(--font-weight-medium);
+    }
+
+    .sankey-preview__option input:focus-visible + .sankey-preview__option-label {
+      outline: var(--size-grid-line) solid var(--color-text-primary);
+      outline-offset: var(--spacing-2);
+    }
+
+    .sankey-preview__config-summary {
+      padding-top: var(--spacing-16);
+      border-top: var(--size-grid-line) solid var(--color-visualization-divider);
+    }
+
+    @media (max-width: 900px) {
+      .sankey-preview__complex-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .sankey-preview__config {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        padding-top: var(--spacing-24);
+        padding-left: var(--spacing-0);
+        border-top: var(--size-grid-line) solid var(--color-visualization-divider);
+        border-left: var(--spacing-0);
+      }
+
+      .sankey-preview__config-head,
+      .sankey-preview__config-summary {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .sankey-preview {
+        padding: var(--spacing-16);
+      }
+
+      .sankey-preview__card {
+        padding: var(--spacing-16);
+      }
+
+      .sankey-preview__card-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .sankey-playback__tick-label--full {
+        display: none;
+      }
+
+      .sankey-playback__tick-label--compact {
+        display: inline;
+      }
+
+      .sankey-preview__config {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body data-theme="ths" data-platform="pc" data-mode="light">
+  <main class="sankey-preview">
+    <header class="sankey-preview__head">
+      <p class="sankey-preview__eyebrow">Vis Lab · SankeyChart</p>
+      <h1>资金流向桑基图</h1>
+      <p>收入、支出、利润决定颜色；数值符号参与财务恒等式，终止分支停在真实阶段。</p>
+    </header>
+
+    <section class="sankey-preview__section" aria-labelledby="basic-title">
+      <header class="sankey-preview__section-head">
+        <h2 class="sankey-preview__section-title" id="basic-title">基础样式</h2>
+        <p class="sankey-preview__section-description">相同数据在三套业务主题下的默认 PC 浅色表现。</p>
+      </header>
+      <div class="sankey-preview__list" id="preview-list"></div>
+    </section>
+
+    <section class="sankey-preview__section" aria-labelledby="complex-title">
+      <header class="sankey-preview__section-head">
+        <h2 class="sankey-preview__section-title" id="complex-title">财报收支拆解</h2>
+        <p class="sankey-preview__section-description">盈利与亏损共用同一拓扑：负值保留方向与角色，只用绝对值计算节点高度和边宽。</p>
+      </header>
+
+      <article
+        class="sankey-preview__card sankey-preview__complex-card"
+        id="complex-card"
+        data-theme="ths"
+        data-platform="mobile"
+        data-mode="light"
+      >
+        <div class="sankey-preview__complex-layout">
+          <div class="sankey-preview__complex-content">
+            <header class="sankey-preview__card-head">
+              <h3 class="sankey-preview__card-title" id="complex-card-title">2025 一季报 · 盈利</h3>
+              <span class="sankey-preview__card-meta" id="complex-meta">THS · 移动端 · Light</span>
+            </header>
+            <div class="sankey-preview__host sankey-preview__complex-host" id="complex-host"></div>
+            <div class="sankey-playback" id="complex-playback" aria-label="季度数据播放轴">
+              <div class="sankey-playback__timeline">
+                <input
+                  class="sankey-playback__range"
+                  id="complex-playback-range"
+                  type="range"
+                  min="0"
+                  max="7"
+                  step="1"
+                  value="0"
+                  aria-label="季度进度"
+                />
+                <div class="sankey-playback__ticks" id="complex-playback-ticks"></div>
+              </div>
+              <div class="sankey-playback__controls">
+                <button
+                  class="sankey-playback__primary"
+                  id="complex-playback-toggle"
+                  type="button"
+                  aria-label="播放季度变化"
+                  title="播放"
+                >
+                  <img
+                    class="sankey-playback__play-icon"
+                    src="../assets/sankey/play.svg"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <span class="sankey-playback__pause-icon" aria-hidden="true"></span>
+                </button>
+                <output class="sankey-playback__period" id="complex-playback-period">2025 一季报</output>
+                <div class="sankey-playback__steps">
+                  <button class="sankey-playback__step" id="complex-playback-prev" type="button">
+                    <span class="sankey-playback__period-arrow sankey-playback__period-arrow--prev" aria-hidden="true"></span>
+                    <span>上一期</span>
+                  </button>
+                  <button class="sankey-playback__step" id="complex-playback-next" type="button">
+                    <span>下一期</span>
+                    <span class="sankey-playback__period-arrow" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sankey-preview__config" aria-labelledby="config-title">
+            <header class="sankey-preview__config-head">
+              <h3 class="sankey-preview__config-title" id="config-title">预览配置</h3>
+              <p class="sankey-preview__config-description" id="config-description">选择后即时更新图表。</p>
+            </header>
+
+            <fieldset class="sankey-preview__config-fieldset">
+              <legend class="sankey-preview__config-legend">业绩状态</legend>
+              <div class="sankey-preview__options sankey-preview__options--two">
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-scenario" value="profit" checked />
+                  <span class="sankey-preview__option-label">盈利</span>
+                </label>
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-scenario" value="loss" />
+                  <span class="sankey-preview__option-label">亏损</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="sankey-preview__config-fieldset">
+              <legend class="sankey-preview__config-legend">主题</legend>
+              <div class="sankey-preview__options">
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-theme" value="ths" checked />
+                  <span class="sankey-preview__option-label">THS</span>
+                </label>
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-theme" value="ifind-pc" />
+                  <span class="sankey-preview__option-label">iFinD PC</span>
+                </label>
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-theme" value="ainvest" />
+                  <span class="sankey-preview__option-label">Ainvest</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="sankey-preview__config-fieldset" id="complex-platform-fieldset">
+              <legend class="sankey-preview__config-legend">平台</legend>
+              <div class="sankey-preview__options sankey-preview__options--two">
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-platform" value="pc" />
+                  <span class="sankey-preview__option-label">PC</span>
+                </label>
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-platform" value="mobile" checked />
+                  <span class="sankey-preview__option-label">移动端</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="sankey-preview__config-fieldset">
+              <legend class="sankey-preview__config-legend">模式</legend>
+              <div class="sankey-preview__options sankey-preview__options--two">
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-mode" value="light" checked />
+                  <span class="sankey-preview__option-label">浅色</span>
+                </label>
+                <label class="sankey-preview__option">
+                  <input type="radio" name="complex-mode" value="dark" />
+                  <span class="sankey-preview__option-label">深色</span>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="sankey-preview__config-summary" aria-live="polite">
+              <span id="complex-summary-count">15 个节点 · 14 条流向</span>
+              <span id="complex-summary-rule">终止分支按实际阶段收口，主利润链继续向右</span>
+              <span id="complex-summary-size">812×375px · 桑基图区高 243px</span>
+            </div>
+          </aside>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script type="importmap">
+    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+  </script>
+  <script type="module">
+    import { SankeyChart } from '../charts/charts/sankey/index.js?v=playbackloss1';
+
+    const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });
+    const income = (id, name, extra = {}) => node(id, name, 'income', extra);
+    const expense = (id, name, extra = {}) => node(id, name, 'expense', extra);
+    const profit = (id, name, extra = {}) => node(id, name, 'profit', extra);
+    const yi = (value) => value * 1e8;
+    const wan = (value) => value * 1e4;
+    const LEGEND_LABELS = { income: '收入', expense: '支出', profit: '利润' };
+
+    const DATA = {
+      nodes: [
+        income('consumer', '消费电子', { stage: 0 }),
+        income('automotive', '汽车电子', { stage: 0 }),
+        income('industrial', '工业控制', { stage: 0 }),
+        income('revenue', '营业收入', { stage: 1 }),
+        expense('cost', '营业成本', { stage: 2, order: 0 }),
+        profit('gross', '毛利润', { stage: 2, order: 1 }),
+        expense('research', '研发费用', { stage: 3, order: 0 }),
+        expense('management', '管理费用', { stage: 3, order: 1 }),
+        profit('operating', '营业利润', { stage: 3, order: 2 }),
+        profit('net', '净利润', { stage: 4, order: 0 }),
+        expense('tax', '所得税', { stage: 4, order: 1 }),
+      ],
+      links: [
+        { source: 'consumer', target: 'revenue', value: 450 },
+        { source: 'automotive', target: 'revenue', value: 300 },
+        { source: 'industrial', target: 'revenue', value: 250 },
+        { source: 'revenue', target: 'cost', value: 450 },
+        { source: 'revenue', target: 'gross', value: 550 },
+        { source: 'gross', target: 'research', value: 150 },
+        { source: 'gross', target: 'management', value: 100 },
+        { source: 'gross', target: 'operating', value: 300 },
+        { source: 'operating', target: 'net', value: 250 },
+        { source: 'operating', target: 'tax', value: 50 },
+      ],
+      legendLabels: LEGEND_LABELS,
+    };
+
+    const PROFIT_NODES = [
+        income('domestic', '国内政企业务', { stage: 0, order: 0 }),
+        income('other-business', '其他业务', { stage: 0, order: 1 }),
+        income('international', '国际业务', { stage: 0, order: 2 }),
+        income('revenue', '营业收入', { stage: 1 }),
+        expense('cost', '营业成本', { stage: 2, order: 0 }),
+        profit('gross', '毛利', { stage: 2, order: 1 }),
+        income('other-operating', '其他经营收益', { stage: 2, order: 2 }),
+        expense('operating-expense', '费用及营业税', { stage: 3, order: 0 }),
+        profit('operating-profit', '营业利润', { stage: 3, order: 1 }),
+        income('non-operating', '营业外净收入', { stage: 3, order: 2 }),
+        profit('total-profit', '利润总额', { stage: 4 }),
+        profit('net-profit', '净利润', { stage: 5, order: 0 }),
+        expense('income-tax', '所得税费用', { stage: 5, order: 1 }),
+        profit('parent-profit', '归母净利润', { stage: 6, order: 0 }),
+        expense('minority-interest', '少数股东权益', { stage: 6, order: 1 }),
+    ];
+
+    const makeProfitQuarter = ({
+      period,
+      shortPeriod,
+      sources,
+      cost,
+      operatingExpense,
+      otherOperating,
+      nonOperating,
+      incomeTax,
+      minorityInterest,
+      statusLabel = '盈利',
+    }) => {
+      const [domestic, otherBusiness, international] = sources.map(yi);
+      const revenue = domestic + otherBusiness + international;
+      const costValue = yi(cost);
+      const gross = revenue - costValue;
+      const operatingExpenseValue = yi(operatingExpense);
+      const grossToOperating = gross - operatingExpenseValue;
+      const otherOperatingValue = yi(otherOperating);
+      const operatingProfit = grossToOperating + otherOperatingValue;
+      const nonOperatingValue = yi(nonOperating);
+      const totalProfit = operatingProfit + nonOperatingValue;
+      const incomeTaxValue = yi(incomeTax);
+      const netProfit = totalProfit - incomeTaxValue;
+      const minorityInterestValue = yi(minorityInterest);
+
+      return {
+        nodes: PROFIT_NODES,
+        links: [
+          { source: 'domestic', target: 'revenue', value: domestic },
+          { source: 'other-business', target: 'revenue', value: otherBusiness },
+          { source: 'international', target: 'revenue', value: international },
+          { source: 'revenue', target: 'cost', value: costValue },
+          { source: 'revenue', target: 'gross', value: gross },
+          { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
+          { source: 'gross', target: 'operating-profit', value: grossToOperating },
+          { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
+          { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
+          { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
+          { source: 'total-profit', target: 'net-profit', value: netProfit },
+          { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
+          {
+            source: 'net-profit',
+            target: 'parent-profit',
+            value: netProfit - minorityInterestValue,
+          },
+          {
+            source: 'net-profit',
+            target: 'minority-interest',
+            value: minorityInterestValue,
+          },
+        ],
+        legendLabels: LEGEND_LABELS,
+        period,
+        shortPeriod,
+        statusLabel,
+      };
+    };
+
+    const QUARTER_DATA = [
+      ['2025 一季报', '25 Q1', [148, 55, 12], 188, 18, -0.8, 0.3, 0.8, 1.1],
+      ['2025 半年报', '25 Q2', [162, 61, 14], 205, 20, -0.4, 0.5, 1.2, 1.4],
+      ['2025 三季报', '25 Q3', [176, 67, 15], 222, 22, 0.2, 0.4, 1.5, 1.8],
+      ['2025 年报', '25 Q4', [186, 71, 16], 295, 32, -3, 1, 1.7, 2, '亏损'],
+      ['2026 一季报', '26 Q1', [190.71, 72.68, 16.46], 243.8, 24.4, -1.11, 0.015083, 0.945083, 1.73],
+      ['2026 半年报', '26 Q2', [205, 78, 18], 260, 26, -0.4, 0.6, 1.4, 2.1],
+      ['2026 三季报', '26 Q3', [218, 84, 20], 276, 28, 0.6, 0.9, 1.9, 2.5],
+      ['2026 年报', '26 Q4', [236, 92, 22], 298, 31, 1.2, 1.1, 2.3, 3],
+    ].map(([
+      period,
+      shortPeriod,
+      sources,
+      cost,
+      operatingExpense,
+      otherOperating,
+      nonOperating,
+      incomeTax,
+      minorityInterest,
+      statusLabel,
+    ]) => makeProfitQuarter({
+      period,
+      shortPeriod,
+      sources,
+      cost,
+      operatingExpense,
+      otherOperating,
+      nonOperating,
+      incomeTax,
+      minorityInterest,
+      statusLabel,
+    }));
+
+    const PROFIT_DATA = QUARTER_DATA[0];
+
+    const LOSS_DATA = {
+      nodes: [
+        income('revenue', '营业收入', { stage: 0 }),
+        expense('cost', '营业成本', { stage: 1, order: 0 }),
+        profit('gross', '毛利', { stage: 1, order: 1 }),
+        income('other-operating', '其他经营收益', { stage: 1, order: 2 }),
+        expense('operating-expense', '费用及营业税', { stage: 2, order: 0 }),
+        profit('operating-profit', '营业利润', { stage: 2, order: 1 }),
+        income('non-operating', '营业外净收入', { stage: 2, order: 2 }),
+        profit('total-profit', '利润总额', { stage: 3 }),
+        profit('net-profit', '净利润', { stage: 4, order: 0 }),
+        expense('income-tax', '所得税费用', { stage: 4, order: 1 }),
+        profit('parent-profit', '归母净利润', { stage: 5 }),
+      ],
+      links: [
+        { source: 'revenue', target: 'cost', value: yi(8.960136) },
+        { source: 'revenue', target: 'gross', value: wan(-401.36) },
+        { source: 'gross', target: 'operating-expense', value: wan(2612.73) },
+        { source: 'gross', target: 'operating-profit', value: wan(-3014.09) },
+        { source: 'other-operating', target: 'operating-profit', value: wan(-563.09) },
+        { source: 'operating-profit', target: 'total-profit', value: wan(-3577.18) },
+        { source: 'non-operating', target: 'total-profit', value: 7100 },
+        { source: 'total-profit', target: 'net-profit', value: wan(-2769.74) },
+        { source: 'total-profit', target: 'income-tax', value: wan(-806.73) },
+        { source: 'net-profit', target: 'parent-profit', value: wan(-2769.74) },
+      ],
+      legendLabels: LEGEND_LABELS,
+      period: '2024 一季报',
+      statusLabel: '亏损',
+    };
+
+    const THEMES = [
+      { id: 'ths', name: 'THS' },
+      { id: 'ifind-pc', name: 'iFinD PC' },
+      { id: 'ainvest', name: 'Ainvest' },
+    ];
+
+    const list = document.getElementById('preview-list');
+
+    THEMES.forEach((theme) => {
+      const card = document.createElement('section');
+      card.className = 'sankey-preview__card';
+      card.dataset.theme = theme.id;
+      card.dataset.platform = 'pc';
+      card.dataset.mode = 'light';
+      card.innerHTML = `
+        <header class="sankey-preview__card-head">
+          <h2 class="sankey-preview__card-title">${theme.name}</h2>
+          <span class="sankey-preview__card-meta">PC · Light · 10 条流向</span>
+        </header>
+        <div class="sankey-preview__host"></div>
+      `;
+      list.appendChild(card);
+      SankeyChart(card.querySelector('.sankey-preview__host'), {
+        ...DATA,
+        platform: 'pc',
+      });
+    });
+
+    const complexCard = document.getElementById('complex-card');
+    const complexCardTitle = document.getElementById('complex-card-title');
+    const complexMeta = document.getElementById('complex-meta');
+    const configDescription = document.getElementById('config-description');
+    const platformFieldset = document.getElementById('complex-platform-fieldset');
+    const complexSummaryCount = document.getElementById('complex-summary-count');
+    const complexSummaryRule = document.getElementById('complex-summary-rule');
+    const complexSummarySize = document.getElementById('complex-summary-size');
+    const complexPlayback = document.getElementById('complex-playback');
+    const complexPlaybackRange = document.getElementById('complex-playback-range');
+    const complexPlaybackTicks = document.getElementById('complex-playback-ticks');
+    const complexPlaybackToggle = document.getElementById('complex-playback-toggle');
+    const complexPlaybackPeriod = document.getElementById('complex-playback-period');
+    const complexPlaybackPrev = document.getElementById('complex-playback-prev');
+    const complexPlaybackNext = document.getElementById('complex-playback-next');
+    const complexHost = document.getElementById('complex-host');
+    complexHost.addEventListener('dv:sankey-layout', (event) => {
+      const { recommendedHeight, renderedHeight, renderedWidth } = event.detail;
+      complexSummarySize.textContent = [
+        `推荐高 ${Math.round(recommendedHeight)}px`,
+        `当前 ${Math.round(renderedHeight)}px`,
+        `绘图区宽 ${Math.round(renderedWidth)}px`,
+      ].join(' · ');
+    });
+    const complexChart = SankeyChart(complexHost, {
+      ...PROFIT_DATA,
+      platform: 'mobile',
+    });
+    let periodPosition = 0;
+    let isPlaying = false;
+    let transitionTargetIndex = null;
+    const complexState = {
+      scenario: 'profit',
+      theme: 'ths',
+      platform: 'mobile',
+      mode: 'light',
+    };
+    const themeNames = Object.fromEntries(THEMES.map((theme) => [theme.id, theme.name]));
+    const platformNames = { pc: 'PC', mobile: '移动端' };
+    const modeNames = { light: 'Light', dark: 'Dark' };
+
+    const clampPeriod = (value) => Math.max(0, Math.min(QUARTER_DATA.length - 1, value));
+    const compactPeriodLabel = (period) => {
+      const label = period.replace(/^\d{4}\s*/, '');
+      return label === '年报' ? label : label.replace(/报$/, '');
+    };
+
+    complexPlaybackTicks.innerHTML = QUARTER_DATA.map((quarter, index) => `
+      <button
+        class="sankey-playback__tick"
+        type="button"
+        data-period-index="${index}"
+        aria-label="${quarter.period}"
+      >
+        <span class="sankey-playback__tick-label--full">${quarter.period}</span>
+        <span class="sankey-playback__tick-label--compact">
+          ${compactPeriodLabel(quarter.period)}
+        </span>
+      </button>
+    `).join('');
+
+    const renderPlaybackState = () => {
+      const displayQuarterIndex = Math.round(clampPeriod(periodPosition));
+      const progress = displayQuarterIndex / (QUARTER_DATA.length - 1) * 100;
+      const displayPeriod = QUARTER_DATA[displayQuarterIndex].period;
+      const displayStatus = QUARTER_DATA[displayQuarterIndex].statusLabel;
+      complexPlaybackRange.value = `${displayQuarterIndex}`;
+      complexPlaybackRange.style.setProperty('--playback-progress', `${progress}%`);
+      complexPlaybackPeriod.value = displayPeriod;
+      complexPlaybackToggle.classList.toggle('is-playing', isPlaying);
+      complexPlaybackToggle.setAttribute(
+        'aria-label',
+        isPlaying ? '暂停季度变化' : '播放季度变化',
+      );
+      complexPlaybackToggle.title = isPlaying ? '暂停' : '播放';
+      complexPlaybackPrev.disabled = displayQuarterIndex <= 0;
+      complexPlaybackNext.disabled = displayQuarterIndex >= QUARTER_DATA.length - 1;
+      complexPlaybackTicks.querySelectorAll('[data-period-index]').forEach((tick) => {
+        tick.classList.toggle(
+          'is-current',
+          Number(tick.dataset.periodIndex) === displayQuarterIndex,
+        );
+      });
+      if (complexState.scenario === 'profit') {
+        complexCardTitle.textContent = `${displayPeriod} · ${displayStatus}`;
+      }
+    };
+
+    const stopPlayback = () => {
+      isPlaying = false;
+      complexChart.pause();
+      renderPlaybackState();
+    };
+
+    const goToPeriod = async (targetIndex, animate = true) => {
+      const target = Math.round(clampPeriod(targetIndex));
+      transitionTargetIndex = target;
+      periodPosition = target;
+      renderPlaybackState();
+      const completed = await complexChart.update({
+        ...QUARTER_DATA[target],
+        platform: complexState.platform,
+      }, {
+        animate,
+      });
+      if (completed) {
+        transitionTargetIndex = null;
+        renderPlaybackState();
+      }
+      return completed;
+    };
+
+    const playPeriods = async () => {
+      if (complexState.scenario !== 'profit') return;
+      if (isPlaying) {
+        stopPlayback();
+        return;
+      }
+      isPlaying = true;
+      renderPlaybackState();
+      if (transitionTargetIndex !== null) {
+        const completed = await goToPeriod(transitionTargetIndex, true);
+        if (!completed || !isPlaying) {
+          isPlaying = false;
+          renderPlaybackState();
+          return;
+        }
+      }
+      if (periodPosition >= QUARTER_DATA.length - 1) {
+        await goToPeriod(0, false);
+      }
+      while (isPlaying && periodPosition < QUARTER_DATA.length - 1) {
+        const completed = await goToPeriod(periodPosition + 1, true);
+        if (!completed || !isPlaying) break;
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+      isPlaying = false;
+      renderPlaybackState();
+    };
+
+    const updateComplexPreview = () => {
+      const scenario = complexState.scenario === 'profit'
+        ? QUARTER_DATA[Math.round(clampPeriod(periodPosition))]
+        : LOSS_DATA;
+      const isIfindPc = complexState.theme === 'ifind-pc';
+      if (isIfindPc && complexState.platform !== 'pc') {
+        complexState.platform = 'pc';
+        document.querySelector('input[name="complex-platform"][value="pc"]').checked = true;
+      }
+      platformFieldset.hidden = isIfindPc;
+      configDescription.textContent = isIfindPc
+        ? 'iFinD PC 仅支持 PC；iFinD 移动端直接使用 THS 主题。'
+        : '选择后即时更新图表。';
+      complexCard.dataset.theme = complexState.theme;
+      complexCard.dataset.platform = complexState.platform;
+      complexCard.dataset.mode = complexState.mode;
+      complexPlayback.hidden = complexState.scenario !== 'profit';
+      complexCardTitle.textContent = `${scenario.period} · ${scenario.statusLabel}`;
+      complexMeta.textContent = [
+        themeNames[complexState.theme],
+        platformNames[complexState.platform],
+        modeNames[complexState.mode],
+      ].join(' · ');
+      complexSummaryCount.textContent = `${scenario.nodes.length} 个节点 · ${scenario.links.length} 条流向`;
+      complexSummaryRule.textContent = complexState.scenario === 'loss'
+        ? '负值不反转流向；角色色保持不变，负数文字使用正文色'
+        : '终止分支按实际阶段收口，主利润链继续向右';
+      complexChart.update({
+        ...scenario,
+        platform: complexState.platform,
+      });
+      renderPlaybackState();
+    };
+
+    complexPlaybackToggle.addEventListener('click', playPeriods);
+    complexPlaybackRange.addEventListener('input', () => {
+      const requestedPosition = Math.round(clampPeriod(Number(complexPlaybackRange.value)));
+      stopPlayback();
+      goToPeriod(requestedPosition);
+    });
+    complexPlaybackPrev.addEventListener('click', () => {
+      stopPlayback();
+      goToPeriod(Math.max(0, periodPosition - 1));
+    });
+    complexPlaybackNext.addEventListener('click', () => {
+      stopPlayback();
+      goToPeriod(Math.min(QUARTER_DATA.length - 1, periodPosition + 1));
+    });
+    complexPlaybackTicks.addEventListener('click', (event) => {
+      const tick = event.target.closest('[data-period-index]');
+      if (!tick) return;
+      stopPlayback();
+      goToPeriod(Number(tick.dataset.periodIndex));
+    });
+
+    document.querySelectorAll('input[name^="complex-"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        transitionTargetIndex = null;
+        stopPlayback();
+        const key = input.name.replace('complex-', '');
+        complexState[key] = input.value;
+        updateComplexPreview();
+      });
+    });
+    renderPlaybackState();
+  </script>
+</body>
+</html>
