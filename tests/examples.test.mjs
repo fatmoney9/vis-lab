@@ -73,6 +73,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     legend: false,
     labelLayout: false,
     labelAlign: false,
+    legendSelect: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
