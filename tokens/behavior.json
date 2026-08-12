@@ -13,7 +13,6 @@
       "x-collision": "[AXIS-06] X 轴标签碰撞策略：segment3 / hide",
       "number-format": "[FORMAT-01] 数值显示格式：system = cn（万/千万/亿/兆）/ en（K/M/B/T）/ plain（千分位）；max-decimals 最多小数位；min-abbr 缩写起始阈值（en）",
       "legend-marker": "[LEGEND-03] 图例标记本体形态。mode=by-type（按图表类型分形，shapes 为 type→{shape,w,h,r} 映射，default 兜底）/ unified（全类型统一，直接给 {shape,w,h}）。shape：rect 方块 / line 横粗线 / dot 实心圆 / box 描边方 / split 左右两色（涨跌固定色）。尺寸单位 px、居中于 size-legend-marker 容器",
-      "legend-select": "[LEGEND-06] 图例点击显隐模式：multi = 独立多选开关 / single = 单选聚焦（隐藏其他）。source 未指明各主题默认，暂全 multi（待办）",
       "tooltip-position": "[TOOLTIP-04..07] 气泡位置档：follow = 跟随式（默认鼠标右下、容器碰撞才左翻躲避）/ top-anchor = 顶部锚定式（贴 grid 上沿 + 下三角、水平跟随）/ side-fixed = 两侧固定式（固定上方左右对侧切换）。无坐标系图 → follow 特例随饼环切片消费",
       "y-label-align": "[AXIS-03] Y 轴标签水平对齐：auto = 贴轴线一侧随位置自动 / right = 全部右对齐（Ainvest 特例；只影响 outside 右列——inside 右侧与 outside 左列本就右对齐）",
       "line-point-shape": "[LINE-01] 折线数据点形状：circle = 实心圆 / diamond = 正方形旋转 45°（iFinD 特例）。尺寸走值 token size-line-point（含描边）",
@@ -45,7 +44,6 @@
         "default": { "shape": "rect", "w": 6, "h": 6, "r": 1 }
       }
     },
-    "legend-select": "multi",
     "tooltip-position": "side-fixed",
     "y-label-align": "auto",
     "line-point-shape": "circle",
@@ -71,7 +69,6 @@
         "default": { "shape": "rect", "w": 12, "h": 12, "r": 2 }
       }
     },
-    "legend-select": "multi",
     "tooltip-position": "follow",
     "y-label-align": "auto",
     "line-point-shape": "diamond",
@@ -89,7 +86,6 @@
     "x-collision": "segment3",
     "number-format": { "system": "en", "max-decimals": 1, "min-abbr": 10000 },
     "legend-marker": { "mode": "unified", "shape": "dot", "w": 10, "h": 10 },
-    "legend-select": "multi",
     "tooltip-position": "top-anchor",
     "y-label-align": "right",
     "line-point-shape": "circle",

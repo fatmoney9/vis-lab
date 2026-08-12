@@ -65,19 +65,24 @@ export function renderMarker(sel, spec, container) {
  *   host   容器元素（图例在其内建/复用一个 .dv-legend 根）
  *   items  [{ key, label, type, colorVar }]
  *          type = 系列类型（选 marker 形状）；colorVar = 系列色的 CSS 变量名（marker currentColor 取之）
- *   opts   { marker, align='left', layout='row', state:{hidden:Set}, onToggle(key), onHover(key|null) }
+ *   opts   { marker, align='left', layout='row', state:{hidden:Set, selected}, onToggle(key), onHover(key|null) }
  *          marker = resolveBehavior 的 legend-marker；align 无 token（默认左）；
  *          layout = [LEGEND-01] 排布主轴：'row' 横排换行（默认）/ 'column' 纵向单列一项一行。
  *                   align 的语义与方向无关（「左对齐」两种方向下都指靠左），只是实现从
  *                   justify-content 换成 align-items——CSS 里表达，本模块只挂类。
  *                   **方位（图例摆在图的哪一侧）不归本模块**：那是容器 flex 方向，
  *                   由 L2 给图表根元素挂 .dv-chart--legend-* 决定（LEGEND-10）。
- *          state.hidden 由调用方持有（配合 applyToggle）；关闭态 → .dv-legend-item--off
+ *          state.hidden   由调用方持有（配合 applyToggle）；关闭态 → .dv-legend-item--off
+ *          state.selected 由调用方持有（配合 applyFocus，LEGEND-14 强调档）；
+ *                         有选中时，**非选中项** → .dv-legend-item--dim。
+ *                         ⚠️ 与 --off 是两套：--off 走 color-text-quaternary（「已关闭」的语义），
+ *                         而强调档下什么都没关，故只压不透明度、不换色，语义才对得上。
  *          onHover：进入项 emit key、离开 emit null——L2 据此对其他系列施加 opacity-visualization-dim
  */
 export function renderLegend(host, items, opts = {}) {
   const { marker, align = 'left', layout = 'row', state = {}, onToggle, onHover } = opts;
   const hidden = state.hidden ?? new Set();
+  const selected = state.selected ?? null;
   const container = tokenNum(host, '--size-legend-marker') || 12;
 
   const root = select(host)
@@ -101,6 +106,9 @@ export function renderLegend(host, items, opts = {}) {
 
   item
     .classed('dv-legend-item--off', (d) => hidden.has(d.key))
+    /* [LEGEND-14] 强调档：有选中时其余项压暗。没有选中（selected=null）时整排都不带这个类，
+       即「全部同权」——那是正常读数，不是「全部关闭」。 */
+    .classed('dv-legend-item--dim', (d) => selected != null && d.key !== selected)
     /* 系列色只经自定义属性下发，不写 color——好让 --off 类以更高特异性覆盖为 quaternary */
     .style('--dv-series-color', (d) => `var(${d.colorVar})`)
     .on('click', (_e, d) => onToggle && onToggle(d.key))
@@ -116,32 +124,6 @@ export function renderLegend(host, items, opts = {}) {
   });
 }
 
-/*
- * [LEGEND-06] 点击显隐两模式（纯逻辑，L1 唯一实现，L2 在 onToggle 里调用后重渲）。
- *   multi ——独立开关：命中项在 hidden 中增删。
- *   single——单选聚焦：点非唯一可见项 → 只留该项（其余全 hidden）；点当前唯一可见项 → 恢复全显。
- *
- * [LEGEND-12] **最后一个可见项不可关**：点它原样返回（外观与图形都不变，等同没点）。
- * 单选模式本就恒留一项，本条让多选与之一致，「全隐」这个状态两模式下都不存在——
- * 它对任何图表都不是有用的读数（饼环直接空白一片，轴图只剩空网格），
- * 而恢复的唯一入口又正是刚被点灰的那个图例项，容易读成「图挂了」。
- * 收在这里而不是给 L2 加开关：加参数就等于每个新图表都要记得传，而这条对谁都成立。
- *
- * 返回新的 hidden Set（不改入参）。selectMode 由 behavior 的 legend-select 决定。
- */
-export function applyToggle(hidden, key, allKeys, selectMode = 'multi') {
-  if (selectMode === 'single') {
-    const visible = allKeys.filter((k) => !hidden.has(k));
-    const soleVisible = visible.length === 1 && visible[0] === key;
-    return soleVisible ? new Set() : new Set(allKeys.filter((k) => k !== key));
-  }
-  const next = new Set(hidden);
-  if (next.has(key)) {
-    next.delete(key);          /* 打开恒可行 */
-    return next;
-  }
-  /* [LEGEND-12] 要关的正是最后一个亮着的 → 不动 */
-  if (allKeys.filter((k) => !next.has(k)).length <= 1) return next;
-  next.add(key);
-  return next;
-}
+/* [LEGEND-06][LEGEND-14] 点击的状态迁移（applyToggle / applyFocus）住在 core/legend-state.js。
+   那边不 import d3，故可被 node --test 直接加载；本文件不再 re-export——
+   同一个函数留两个门只会让下一个人挑错那个（同 examples.js 不留「扁平分类名」版本的取舍）。 */

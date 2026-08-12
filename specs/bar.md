@@ -27,7 +27,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，系列 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`） | `charts/charts/cartesian/index.js`（复用 legend.js 的 `renderLegend` / `applyToggle`） | ✅ |
+| BAR-04 | 系列配色按 **COLOR** 规范固定槽位（[color.md](color.md)，L2 写 `--dv-series-i`）；**hover 弱化**其他系列（LEGEND-05，系列 `<g>` opacity=`opacity-visualization-dim`）；**点击显隐**（LEGEND-06，隐藏系列不画其 `<g>`） | `charts/charts/cartesian/index.js`（复用 legend.js 的 `renderLegend`、legend-state.js 的 `applyToggle` / `applyFocus`） | ✅ |
 | BAR-07 | **折柱组合**（`type` 混用 + `axis` 绑定）：柱、折线同图；柱走 band 内分组、折线走类目中心叠加（[line.md](line.md) LINE-01）；柱线**分色板、禁交叉**（COLOR-05）。多量纲用**双 Y**——每系列 `axis: primary/secondary`，两轴 `niceSplitDual` 共享刻度 + 0 对齐（AXIS-02/SCALE-04），主轴在 `y-main-side`、副轴反侧。图例按各系列真实 type 显柱 / 线 marker（LEGEND-03） | `charts/charts/cartesian/index.js`（按 axis→type 双重分区）+ `core/mark.js` `renderLine` | ✅ 主测 stack:none |
 
 ## 样式 token

@@ -121,6 +121,16 @@
 .dv-legend-item--off .dv-legend-marker { color: var(--color-text-quaternary); }
 .dv-legend-item--off .dv-legend-label { color: var(--color-text-quaternary); }
 
+/* [LEGEND-14] 强调档的非选中项：**压不透明度，不换色**。
+   与上面的 --off 刻意用两条不同的通道，因为语义不同——quaternary 是「已关闭」，
+   而强调档下一项都没关（数据构成完整），只是让位给被强调的那项。换成 quaternary 会让
+   「这些系列还在图上」这件事读不出来。
+   与图元弱化同一个 token（--opacity-visualization-dim，THS/Ainvest 0.2、iFinD-PC 0.1）：
+   同一个「弱化」语义不该有两个值，图例与图元的弱化程度因此恒等。
+   整项一起压（marker + label 同降），不逐元素写——marker 的色是 currentColor 跟随系列色，
+   分开压会让色标与文字出现两种深浅。 */
+.dv-legend-item--dim { opacity: var(--opacity-visualization-dim); }
+
 /* [BAR-01] 柱：填充跟随所在分组 <g> 的 currentColor（= 系列色，由 L2 写 --dv-series-i）。
    hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 移除，不在此表达。 */
 .dv-bar { fill: currentColor; }
