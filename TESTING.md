@@ -48,6 +48,7 @@ node hooks/lint-spec-ids.mjs
 - `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计；
 - `charts/core/label.js`：省略号截断（`truncateBatch`——**测量函数经参数注入**，故无需伪造 DOM，同 `motion.js` 注入时钟的做法）：装得下原样返回、超宽截到**最长**可行前缀（不保守多截）、连「1 字 + `…`」都放不下则回落丢弃、一批混合各归各位、**按轮批量测量**（调用次数随轮数而非标签数增长）、按码点切不劈开代理对。
 - `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
+- `charts/core/legend-state.js`：图例点击的状态迁移——`applyToggle` 两档（multi 独立开关 / single 只留一项）+ LEGEND-12「最后一个可见项不可关」（含「全隐不可达」与承接 multi 遗留 hidden 的判据），`applyFocus` 强调档（选中迁移 + 不产生 hidden）。**这些逻辑此前零覆盖**，因为它们原本住在 import d3 的 `legend.js` 里、`node --test` 加载不了；单开一个纯模块正是为此。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
 - `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
@@ -106,7 +107,7 @@ L2 临场拼装 L1，也不得加入只为截图好看的样式参数。
 - SVG、网格线、柱、折线和点的数量；
 - `null` 不生成图元、0 值占位符合规则；
 - 图层顺序和系列固定颜色槽位；
-- 图例点击后的可见系列、关闭态和堆叠 refit；
+- 图例点击后的可见系列、关闭态和堆叠 refit；强调档（`legendSelect: 'focus'`）另断言**图元一个不少**、无关闭态、非选中项 opacity 等于该主题的 `--opacity-visualization-dim`（LEGEND-14）；
 - hover 最近类目、Tooltip 标题/行序/数值；
 - 指示线与分组柱 block 的互斥；
 - mouseleave 延迟、滚动立即隐藏；

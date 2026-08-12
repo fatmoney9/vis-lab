@@ -128,13 +128,15 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  *   animation 入场生长开关（MOTION-01/07，**默认开**——与其他旋钮相反，关掉才落进 cfg）
  */
 export const CHART_CAPABILITIES = {
-  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true },
+  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true, legendSelect: true },
   /* 饼 / 环无类目轴、无 Y 轴、无折线：zoom / area / axisTitle 一概不声明，
      两个预览面的对应旋钮据此自动不出现（见 specs/pie.md 活 demo 的验收点）。
      **不声明 dataLabel**：饼环的显隐与形态是同一件事（PIE-12「引线与标签强绑定」——
      「显示但没形态」不是合法状态），故合并进 labelLayout 一个三档旋钮，见 buildConfig。
-     legend / labelLayout / labelAlign 是本族专属，cartesian 不声明。 */
-  pie: { animation: true, legend: true, labelLayout: true, labelAlign: true },
+     legend / labelLayout / labelAlign 是本族专属，cartesian 不声明。
+     [LEGEND-06][LEGEND-14] legendSelect 两族都声明：图例点击的三档语义与图表类型无关
+     （它改的是「点击是筛还是强调」，不是某种图元的形态）。 */
+  pie: { animation: true, legend: true, labelLayout: true, labelAlign: true, legendSelect: true },
 };
 
 /*
@@ -354,6 +356,7 @@ export const capabilitiesOf = (example) => {
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
+    legendSelect: !!caps.legendSelect,
   };
 };
 
@@ -369,7 +372,7 @@ export function buildConfig(example, state = {}) {
   const {
     density = 'few', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
-    labelLayout = 'off', labelAlign = 'anchor',
+    labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi',
   } = state;
   const caps = capabilitiesOf(example);
   const cfg = { ...example.cfg(DENSITY[density] ?? DENSITY.few), platform };
@@ -403,6 +406,9 @@ export function buildConfig(example, state = {}) {
   /* [PIE-09] 图例布局：'auto' = 用示例自己声明的（两个示例各展一种，不动旋钮就能同屏对比）；
      旋钮给了具体值才覆盖。示例没声明也不写进 cfg —— 让组件默认（'right'）说话。 */
   if (caps.legend && legend !== 'auto') cfg.legend = legend;
+  /* [LEGEND-06][LEGEND-14] 图例点击语义：'multi' 是组件默认，故不落进 cfg——
+     「逻辑」面板里没有 legendSelect = 走默认（多选显隐），同 animation 的口径。 */
+  if (caps.legendSelect && legendSelect !== 'multi') cfg.legendSelect = legendSelect;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;

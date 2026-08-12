@@ -31,7 +31,8 @@ import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
-import { renderLegend, applyToggle } from '../../core/legend.js';
+import { renderLegend } from '../../core/legend.js';
+import { applyToggle, applyFocus } from '../../core/legend-state.js';
 import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { renderDataLabels } from '../../core/label.js';
@@ -43,7 +44,7 @@ import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi' } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -71,7 +72,6 @@ export function CartesianChart(host, cfg) {
   const yAlign = b['y-label-align'];        /* [AXIS-03] Ainvest 右对齐特例 */
   const pointShape = b['line-point-shape']; /* [LINE-01] 数据点形状（iFinD 菱形特例） */
   const marker = b['legend-marker'];
-  const selectMode = b['legend-select'];
   const format = makeFormatter(b['number-format']);       /* [FORMAT-01] */
   const pctFormat = (v) => `${Math.round(v * 100)}%`;     /* [BAR-06] 归一化轴 */
 
@@ -94,7 +94,11 @@ export function CartesianChart(host, cfg) {
   }
 
   const legendItems = resolved.map((r) => ({ key: r.name, label: r.name, type: r.type, colorVar: r.colorVar }));
-  const state = { hidden: new Set() };
+  /* [LEGEND-06][LEGEND-14] 点击的两条状态线，按 legendSelect 分流、互不相干：
+     hidden 是「筛」（multi / single 档改它，隐藏系列退出值域计算）、
+     selected 是「强调」（focus 档改它，值域一点不动、只改视觉权重）。
+     两者都挂在 build 外——resize / 显隐会整树重绘，状态不该因此丢失。 */
+  const state = { hidden: new Set(), selected: null };
   let hoverKey = null;
 
   /* DOM 骨架（一次性）：图例在上、绘图区在下（LEGEND-04） */
@@ -104,16 +108,33 @@ export function CartesianChart(host, cfg) {
 
   /* [LEGEND-05] hover 弱化：柱 / 线系列 <g> 的 opacity，图例本身不动。
      数据标签也按系列分组（dataset.key 同名），随其所属系列一起弱化——否则柱变淡、数字仍全黑。 */
+  /* [LEGEND-05][LEGEND-14] 弱化的**唯一出口**：两个来源都收在这里，各自不单独写 opacity。
+     hover 是临时态、选中是常驻态，**hover 优先**——指针停在 B 上时读的就该是 B，
+     松开后自然回落到常驻的那个（PIE-10「两者独立叠加」的同一条取舍）。
+     `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
   function applyDim() {
+    const emph = hoverKey ?? state.selected;
     const dim = getComputedStyle(host).getPropertyValue('--opacity-visualization-dim').trim() || '1';
     select(plotHost).selectAll('g.dv-bar-series, g.dv-line-series, g.dv-data-label-series')
-      .attr('opacity', function () { return hoverKey && this.dataset.key !== hoverKey ? dim : 1; });
+      .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
   }
 
   function drawLegend() {
     renderLegend(legendHost, legendItems, {
       marker, align, state,
-      onToggle: (key) => { state.hidden = applyToggle(state.hidden, key, keys, selectMode); hoverKey = null; build(); }, /* [LEGEND-06] */
+      /* [LEGEND-06][LEGEND-14] 按档分流：focus 只动 selected（不重排数据，故**不必 build**，
+         改一层 opacity 就够）；multi / single 动 hidden，值域要按可见系列重算，必须整树重绘。 */
+      onToggle: (key) => {
+        if (legendSelect === 'focus') {
+          state.selected = applyFocus(state.selected, key);
+          drawLegend();
+          applyDim();
+          return;
+        }
+        state.hidden = applyToggle(state.hidden, key, keys, legendSelect);
+        hoverKey = null;
+        build();
+      },
       onHover: (key) => { hoverKey = key; applyDim(); },
     });
   }
