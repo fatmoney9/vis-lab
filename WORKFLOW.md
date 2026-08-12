@@ -77,7 +77,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
    在 demo 或文档里手写 SVG、手调间距 = 违规。拼装逻辑是规范的一部分，必须固化在 L2。
 4. **组件 API 不暴露样式参数。** 只收数据和语义配置（platform、unit、initialZoom 等）。
    想改样式 = 改 token 或修订规范条目，不是给 API 加参数。
-5. **每条规范有稳定 ID**（如 `MARK-01`、`AXIS-02`），权威定义写在规范文档里；
+5. **每条规范有稳定 ID**（如 `BAR-01`、`AXIS-02`），权威定义写在规范文档里；
    实现处的代码注释必须引用 ID——**计算代码同样如此**（如"固定 5 条网格线"的
    刻度函数标注 `SCALE-01`）。修订规范时全库搜索 ID 定位所有实现点。
 6. **D3 等第三方依赖只允许 charts 包（L1/L2）引用。** L3 的 demo 和文档站
@@ -182,7 +182,12 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 | `core/tooltip.js` | ① 气泡标题行可省 ② **删掉 `place()` 的容器尺寸参数**，三个位置档的 clamp 边界改由本模块按档自取 | ① 无类目维度的图没有标题 ② 见下 |
 | `core/label.js` | ① 前景色从「压不压色块」的布尔升为 `tone` 枚举（档③ 中性色 LABEL-09，后来又多一个 `neutral-secondary` 给名称段降级）② `dropCollisions` 从 `{left,width}` 泛化成 `{start,size}`，两轴共用 | ① 引线标签既不跟随系列色也不反色，且一条标签里两段要分层级 ② 外侧标签判的是**纵向**重叠 |
 
-**接入当时 `behavior.json` 与 `palette.js` 一行未动**（`behavior.json` 至今仍未动）。
+**接入当时 `behavior.json` 与 `palette.js` 一行未动**。
+`behavior.json` 后来动过一次，但方向相反——**是删键不是加键**：2026-08-12 把 `legend-select`
+移出主题矩阵、改为组件 cfg 的 `legendSelect`（`specs/legend.md` LEGEND-06 / LEGEND-14）。
+理由是它压根不是品牌分叉：源文档只列出模式、从未指定哪个品牌用哪种，真正的差异在图表类型与场景。
+**这条比「接新图型没加键」更值得记**——键放错通道时，症状是那条待办永远填不上值，
+而不是报错；判据仍是 LEGEND-10 立的那条：品牌之间形态真的不同才进本文件。
 `palette.js` 是 2026-08-06 才因**设计源给出 THS 独立的饼扇区色板**加了一条分支：色板文件多一个可选键
 `pie-multi`、取色器多一条 `type:'pie'` 走该盘的规则，未声明该盘的主题回落通用 `bar-multi`（COLOR-08）。
 这是**数据侧新增了一套色板**逼出来的，不是「接新图型逼出 L1 改动」——接入 `PieChart` 当时扇区确实是

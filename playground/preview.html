@@ -230,6 +230,17 @@
         </div>
       </div>
 
+      <!-- [LEGEND-06][LEGEND-14] 图例点击的三档语义。前两档「筛」——隐藏项退出数据构成
+           （饼环重算 360°、轴图重算值域）；强调档「不筛」——构成一点不动，只压不透明度。 -->
+      <div class="field">
+        <div class="field-label"><b>图例点击</b><span>legendSelect</span></div>
+        <div class="seg" id="seg-legend-select">
+          <button data-value="multi" class="is-active">多选</button>
+          <button data-value="single">单选</button>
+          <button data-value="focus">强调</button>
+        </div>
+      </div>
+
       <div class="field">
         <div class="field-label"><b>轴标题</b><span>axisTitle</span></div>
         <div class="seg" id="seg-axis-title">
@@ -306,7 +317,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -368,6 +379,7 @@
     document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
     document.getElementById('seg-label-align').closest('.field').hidden = !caps.labelAlign;
     document.getElementById('seg-legend').closest('.field').hidden = !caps.legend;
+    document.getElementById('seg-legend-select').closest('.field').hidden = !caps.legendSelect;
     /* [PIE-13] 对齐档只在引线形态下有意义：置灰而不隐藏（见 CSS 说明） */
     document.getElementById('seg-label-align').querySelectorAll('button')
       .forEach((b) => { b.disabled = state.labelLayout !== 'outside'; });
@@ -402,6 +414,7 @@
         /* [PIE-12][PIE-13] 'auto' = 走组件默认（外侧引线 + 就近），同 legend 的口径 */
         labelLayout: state.labelLayout,
         labelAlign: state.labelAlign,
+        legendSelect: state.legendSelect, /* [LEGEND-06][LEGEND-14] 多选 / 单选 / 强调 */
         axisTitle: state.axisTitle === 'on',
         animation: state.animation === 'on',
       }).instance;
@@ -436,6 +449,7 @@
   wireSeg('seg-label-layout', 'labelLayout');
   wireSeg('seg-label-align', 'labelAlign');
   wireSeg('seg-legend', 'legend');
+  wireSeg('seg-legend-select', 'legendSelect');
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');

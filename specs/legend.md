@@ -26,8 +26,9 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | LEGEND-05 | **hover 弱化（Web · 多系列）**：hover 某图例项 → 该系列图形保持原色，**其他系列图形不透明度降低**（THS 20% / iFinD 10% / Ainvest 20%）；**图例本身（文字 / marker）不变**；离开即恢复。适用多系列图（分组 / 堆叠 / 归一堆叠 / 多折线 / 线柱组合等）；单系列基础图、K 线**无此效**。**移动端通常无 hover**，交互只靠点击。<br>值 `--opacity-visualization-dim`（THS/Ainvest 0.2、iFinD 0.1）由 **L2 图形渲染消费**；L1 图例仅 `emit onHover(key\|null)` | `--opacity-visualization-dim`（值 token，三主题）；`renderLegend()` 的 `onHover` 回调 | ✅ |
-| LEGEND-06 | **点击显隐 · 两模式**（L1 参数化 `selectMode`，主题经 `legend-select` 选定）：<br>**多选（分组）**：点击某项 → 该项文字 + marker 变 `color-text-quaternary`，对应系列**隐藏**；每项独立开关。<br>**单选**：点击某项 → 弱化并隐藏**其他**项对应系列（聚焦当前）；点其他项切换选择，点已选中项恢复原始。<br>弱化 = 文字 / marker 用 `color-text-quaternary`；隐藏 = 对应系列图形不渲染（L2 执行）。L1 仅渲染关闭态外观 + `emit onToggle(key)` | `tokens/behavior.json` → `legend-select`；`renderLegend()` 的 `onToggle` 回调、`.dv-legend-item--off` | ✅ |
-| LEGEND-12 | **最后一个可见项不可关**（两模式共通，**全部图表**）：点击当前唯一亮着的图例项 → **原样返回**，该项保持彩色、图形保持渲染，等同没点。<br>**为什么不是「允许全隐」**：全隐对任何图表都不是有用的读数——饼环直接空白一片、轴图只剩一副空网格；而恢复的唯一入口恰恰是刚被点灰的那个图例项，用户很容易读成「图挂了」。单选模式（LEGEND-06）本就恒留一项，本条只是让多选与之一致，于是「全隐」这个状态在两个模式下都不存在。<br>**收在 L1 的 `applyToggle` 里、不给 L2 加开关**：加参数就等于每个新接入的图表都要记得传，而这条规则对谁都成立——同 [tooltip.md](tooltip.md)「位置档的边界」删掉容器尺寸参数的取舍 | `core/legend.js` → `applyToggle()` | ✅ |
+| LEGEND-06 | **点击显隐 · 两模式**（L1 参数化 `selectMode`，调用方经 cfg 的 `legendSelect` 选定）：<br>**多选（`multi`，默认）**：点击某项 → 该项文字 + marker 变 `color-text-quaternary`，对应系列**隐藏**；每项独立开关。<br>**单选（`single`）**：点击某项 → 弱化并隐藏**其他**项对应系列（聚焦当前）；点其他项切换选择，点已选中项恢复原始。<br>弱化 = 文字 / marker 用 `color-text-quaternary`；隐藏 = 对应系列图形不渲染（L2 执行）。L1 仅渲染关闭态外观 + `emit onToggle(key)`。<br>**两档共同的特征是「筛」——改变数据构成**：隐藏项退出计算，饼环按可见项重新闭合 360°、轴图按可见系列重算值域。不改构成的那一档见 LEGEND-14。<br>⚠️ **本条曾经住在 `behavior.json` 的 `legend-select` 键上（主题级），已迁出**。迁出的理由与 LEGEND-10「方位」同源：源文档只列出两种模式、**从未指明哪个品牌用哪种**，它不是品牌形态差异；真正的差异在**图表类型与场景**（单选把饼环打成一个满环、占比读数归零，对轴图却正是「只看这一条」的常用诉求），而那是调用方最清楚的事。属「要哪种形态」的语义配置而非样式参数（WORKFLOW 铁律4，同 `variant` / `dataLabel`） | cfg `legendSelect`；`core/legend-state.js` → `applyToggle()`；`renderLegend()` 的 `onToggle` 回调、`.dv-legend-item--off` | ✅ |
+| LEGEND-14 | **点击强调（`legendSelect: 'focus'`）——第三档，与 LEGEND-06 两档互斥**：点击某项 → 该项保持原样，**其余项与其对应图形一并降到 `opacity-visualization-dim`**；点其他项把强调移过去，**再点已选中项取消**、回到全部同权。<br>**分水岭是「不筛」——数据构成一点不动**：没有任何系列/扇区退出计算，故饼环仍是完整的 360°、轴图值域不变。这正是它存在的理由——`single` 档在饼环上会只剩一个扇区、重新闭合成一个纯色满环，"占比"这件本体信息归零，而 100% 的环与"只有一条数据"的环长得一模一样；`focus` 保留完整的环，只是把非强调扇区压暗。<br>**LEGEND-12「最后一项不可关」在本档不适用**：这里从来没有「关」这回事，取消强调回到的是「全部同权」而非「全部隐藏」，那是个正常读数。<br>**弱化用不透明度、不用 `color-text-quaternary`**：后者是「已关闭」的语义，而本档一项都没关，换色会让「这些系列还在图上」读不出来。图例项与图元共用同一个 `opacity-visualization-dim`（THS/Ainvest 0.2、iFinD-PC 0.1）——同一个「弱化」语义不该有两个值。<br>**hover 优先于常驻强调**（LEGEND-05 是临时态）：强调 A 时 hover B → 读的是 B，指针离开后回落到 A。<br>**饼环：图例项是第四个入口**——与 PIE-17 的扇区面 / 引线 / 外侧标签共用**同一个** selected 状态（PIE-03 一个扇区 = 一个图例项），故点扇区与点图例完全等价，且本档下扇区点击在三主题都生效（见 [pie.md](pie.md) PIE-10 的两条视觉通道） | cfg `legendSelect`；`core/legend-state.js` → `applyFocus()`；`.dv-legend-item--dim`；`--opacity-visualization-dim` | ✅ |
+| LEGEND-12 | **最后一个可见项不可关**（LEGEND-06 两档共通，**全部图表**）：点击当前唯一亮着的图例项 → **原样返回**，该项保持彩色、图形保持渲染，等同没点。<br>**为什么不是「允许全隐」**：全隐对任何图表都不是有用的读数——饼环直接空白一片、轴图只剩一副空网格；而恢复的唯一入口恰恰是刚被点灰的那个图例项，用户很容易读成「图挂了」。单选模式（LEGEND-06）本就恒留一项，本条只是让多选与之一致，于是「全隐」这个状态在两个模式下都不存在。<br>**LEGEND-14 强调档不适用本条**——那一档不产生隐藏，取消强调回到的是「全部同权」而非「全部隐藏」。<br>**收在 L1 的 `applyToggle` 里、不给 L2 加开关**：加参数就等于每个新接入的图表都要记得传，而这条规则对谁都成立——同 [tooltip.md](tooltip.md)「位置档的边界」删掉容器尺寸参数的取舍 | `core/legend-state.js` → `applyToggle()` | ✅ |
 
 ## 图例溢出
 
@@ -52,18 +53,20 @@
 横排换行行距 `spacing-legend-row-v` ·
 容器边距 `spacing-legend-container-v-top` / `-v-bottom` / `spacing-legend-container-h` ·
 图例与绘图区间距（`right` / `bottom` 方位）`spacing-legend-chart-gap`（三主题 24px）·
-关闭态文字/标记 `color-text-quaternary` · hover 弱化不透明度 `opacity-visualization-dim`。
+关闭态文字/标记 `color-text-quaternary` · 弱化不透明度 `opacity-visualization-dim`
+（hover 弱化 LEGEND-05 与强调档弱化 LEGEND-14 **共用这一个值**，图例与图元也共用）。
 
 **标记本体尺寸 / 形状不是 token**（形态规范，走 `behavior.json` 的 `legend-marker`，见 LEGEND-03）。
 **对齐方式不是 token**（默认左对齐，L2 可传 `align`）。
 **排布方向不是 token**（横排 / 纵列，L2 传 `layout`，见 LEGEND-01）。
 **方位不是 token、也不是主题分叉**（LEGEND-10，由调用方按场景选，L2 挂 `.dv-chart--legend-*`）。
+**点击语义不是 token、也不是主题分叉**（LEGEND-06 / LEGEND-14，cfg 的 `legendSelect` 三档，同上判例）。
 
 ## 待办
 
 - [ ] LEGEND-07 / LEGEND-08 图例溢出与分页器（含「给绘图区让位」的 L2 高度协商）——下一条规范单，届时给 `behavior.json` 三主题补 `legend-overflow` 键。
 - [ ] LEGEND-09 右侧下拉选项。
-- [ ] `legend-select` 的 **per-主题 单选/多选映射**：源文档只列出两种模式、未指明各主题默认，暂三主题全 `multi`（L1 两模式均已实现，改 behavior 即切换）。
+- [x] ~~`legend-select` 的 per-主题 单选/多选映射~~ —— **本待办已作废，不是「暂缓」而是「问题提错了」**：源文档从未指明各主题默认，正因为模式选择根本不是品牌差异。已把该键从 `behavior.json` 移出、改为 cfg 的 `legendSelect`（判例同 LEGEND-10「方位」），三档 `multi` / `single` / `focus` 由调用方按场景选，见 LEGEND-06 / LEGEND-14。
 - [ ] iFinD-PC `legend-marker` dvIcon 精确尺寸核对（源文档尺寸表述略糊，现取 线 12×3 / 方 12×12 / 圆点 8×8 占位）。
 - [x] 系列色板已由 `tokens/palette.json` + `core/palette.js` 接入固定槽位，marker 复用系列 `colorVar`（COLOR 规范）。
 - [x] `tokens.css` 构建已接入；playground 提供三主题明暗切换用于目检。

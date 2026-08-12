@@ -29,7 +29,8 @@ import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { measureTexts } from '../../core/measure.js';
 import { resolveSeriesColors } from '../../core/palette.js';
-import { renderLegend, applyToggle } from '../../core/legend.js';
+import { renderLegend } from '../../core/legend.js';
+import { applyToggle, applyFocus } from '../../core/legend-state.js';
 import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '../../core/label.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
@@ -65,6 +66,7 @@ export function PieChart(host, cfg) {
   const {
     name, items, variant = 'donut', legend = 'right', platform = 'pc',
     dataLabel = 'auto', labelLayout = 'outside', labelAlign = 'anchor', animation = true,
+    legendSelect = 'multi',
   } = cfg;
   /* [PIE-02] 调用方明确给容器高度时随容器适配；未给时用环形容器 token 作高度包络（口径同 GRID-03）。 */
   let usesContainerHeight = host.clientHeight >= 40;
@@ -88,17 +90,20 @@ export function PieChart(host, cfg) {
 
   const b = resolveBehavior(host, platform);
   const marker = b['legend-marker'];
-  const selectMode = b['legend-select'];
   const format = makeFormatter(b['number-format']);       /* [FORMAT-01] 与标签 / 气泡同一份 */
   const wm = b['watermark'];                              /* [PIE-07] 水印（三主题恒有） */
 
   const keys = resolved.map((r) => r.name);
   const legendItems = resolved.map((r) => ({ key: r.name, label: r.name, type: MARKER_TYPE, colorVar: r.colorVar }));
-  const state = { hidden: new Set() };
+  /* [LEGEND-06][LEGEND-14][PIE-10] 点击的两条状态线，按 legendSelect 分流：
+     hidden 是「筛」（multi / single 档改它，隐藏扇区退出分母、剩余重新闭合 360°）、
+     selected 是「强调」（focus 档改它，分母一点不动、只改视觉权重）。
+     ⚠️ **selected 就是 PIE-10 那个扇区选中态本身，不是另开一个**：PIE-03 说一个扇区 = 一个图例项，
+     PIE-17 已把扇区面 / 引线 / 外侧标签收成同一套入口，focus 档下图例项是**第四个**入口。
+     两处各持一份状态必然出现「点扇区选中了、图例没跟着亮」这种自相矛盾的画面。
+     都挂在 build 外：resize / 显隐会整树重建，状态不该因此丢失。 */
+  const state = { hidden: new Set(), selected: null };
   let hoverKey = null;
-  /* [PIE-10] 点击选中的扇区（强调态的常驻档）。挂在组件作用域而非 build 内：
-     resize / 图例显隐都会整树重建，选中态应当跨重建保留，同 state.hidden。 */
-  let selectedKey = null;
 
   /* DOM 骨架（一次性）。[PIE-09][LEGEND-10] 与 cartesian 的关键差别：**绘图区在前、图例在后**。
      饼环没有「图例在上」这种形态（左右 / 上下两种结构里图例都在图之后），DOM 序 = 阅读序 =
@@ -110,10 +115,18 @@ export function PieChart(host, cfg) {
 
   /* [LEGEND-05] hover 弱化：扇区 <g> 的 opacity，图例本身不动。
      数据标签也按扇区分组（dataset.key 同名），随其所属扇区一起弱化——否则扇区变淡、数字仍全黑。 */
+  /* [LEGEND-05][LEGEND-14] 弱化的**唯一出口**：两个来源都收在这里，各自不单独写 opacity。
+     hover 是临时态、选中是常驻态，**hover 优先**——指针停在 B 上时读的就该是 B，
+     松开后自然回落到常驻的那个（同 PIE-10「两者独立叠加」的取舍）。
+     [PIE-10] 这是选中态的**第二条视觉通道**。第一条是外扩，而 `size-donut-hover-expand`
+     在 THS / iFinD-PC 是 0px（规范有意：0 即天然无形态），故那两个主题下选中态此前没有任何表达；
+     不透明度这条不随主题归零，focus 档因此三主题都看得见。两条通道并存、互不替代。
+     `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
   function applyDim() {
+    const emph = hoverKey ?? state.selected;
     const dim = getComputedStyle(host).getPropertyValue('--opacity-visualization-dim').trim() || '1';
     select(plotHost).selectAll('g.dv-pie-series, g.dv-data-label-series')
-      .attr('opacity', function () { return hoverKey && this.dataset.key !== hoverKey ? dim : 1; });
+      .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
   }
 
   /* [PIE-09][LEGEND-10] 方位定内部排布与对齐：左右结构纵向单列左对齐、上下结构横向居中换行。
@@ -124,7 +137,15 @@ export function PieChart(host, cfg) {
   function drawLegend() {
     renderLegend(legendHost, legendItems, {
       marker, layout: legendLayout, align: legendAlign, state,
-      onToggle: (key) => { state.hidden = applyToggle(state.hidden, key, keys, selectMode); hoverKey = null; build(); }, /* [LEGEND-06][PIE-03] */
+      /* [LEGEND-06][LEGEND-14][PIE-03] 按档分流：focus 只动 selected——分母不变、角度不重算，
+         故**不必 build**，改一层 opacity 即可（顺带走 selectEmphasis 让外扩通道也跟上）；
+         multi / single 动 hidden，剩余扇区要重新闭合 360°，必须整树重绘。 */
+      onToggle: (key) => {
+        if (legendSelect === 'focus') return selectEmphasis(applyFocus(state.selected, key));
+        state.hidden = applyToggle(state.hidden, key, keys, legendSelect);
+        hoverKey = null;
+        build();
+      },
       onHover: (key) => { hoverKey = key; applyDim(); },
     });
   }
@@ -138,6 +159,20 @@ export function PieChart(host, cfg) {
   /* [PIE-11] 强调态外扩的补间。与 stopGrow 同样挂在组件作用域：build 重建时要先停掉旧的，
      否则残余的 rAF 会继续往已被移除的节点上写。 */
   let stopEmph = () => {};
+  /* [LEGEND-14][PIE-10] 选中态落到图元上的动作（抬层 + 外扩补间）。实现必须住在 build 内
+     ——它要用到逐扇区的 `<g>` 与补间闭包；而图例点击发生在 build 外，故同 stopEmph 的模式
+     留一个组件作用域的钩子，每轮 build 重新赋值，build 跑完前是空操作。 */
+  let emphasizeSlice = () => {};
+
+  /* [LEGEND-14] 选中态的**唯一写入口**。四个入口（图例项 + PIE-17 的扇区面 / 引线 / 外侧标签）
+     都走它，三处表达（图例弱化、图元弱化、外扩）因此不可能各走各的。
+     顺序要紧：先落状态，再让三处各自去读它。 */
+  function selectEmphasis(next) {
+    state.selected = next;
+    drawLegend();
+    emphasizeSlice();
+    applyDim();
+  }
 
   /* 主流程：画布 → 扇区（顺带接 hover、收生长闭包）→ 标签 → 水印 → 入场扫掠 */
   function build() {
@@ -380,7 +415,10 @@ export function PieChart(host, cfg) {
        与图例 hover 的 hoverKey 是两条链路：这里管几何、那边管弱化透明度。 */
     const expand = tokenNum(plotHost, '--size-donut-hover-expand') || 0;
     let emphHover = null;
-    const emphasized = (n) => n === emphHover || n === selectedKey;
+    const emphasized = (n) => n === emphHover || n === state.selected;
+    /* [LEGEND-14] key → 把该扇区抬到最上的闭包。图例点击够不着扇区那层的闭包，
+       故同 hitBinders 的做法在这里留一手（见下方 emphasizeSlice 的赋值）。 */
+    const raisers = new Map();
     let currentT = 1; /* 扫掠进度：强调态重绘要沿用当前帧，否则动画中途 hover 会瞬间跳到终态 */
 
     /* [PIE-11] 每个扇区当前的外扩量（px），由补间逐帧写入；draw 只读它，不读布尔状态。
@@ -457,6 +495,7 @@ export function PieChart(host, cfg) {
 
       /* [PIE-10] 外扩的扇区会压住相邻扇区，故强调时把它抬到同层最上（DOM 序 = 绘制序）。 */
       const raiseAbove = () => g.raise();
+      raisers.set(r.name, raiseAbove);
 
       /* [PIE-05][PIE-17] 按扇区命中（无坐标轴 → 没有「最近类目」可言，不做 X 切片）。
          **一个扇区的所有可命中件共用同一套处理**：扇区面、引线（含命中带）、外侧标签。
@@ -477,10 +516,17 @@ export function PieChart(host, cfg) {
           emphHover = null;
           animateEmphasis();
         })
-        /* [PIE-10] 点击 = 常驻强调：单选，再点自己取消、点别的移过去。 */
+        /* [PIE-10][LEGEND-14] 点击 = 常驻强调：单选，再点自己取消、点别的移过去。
+           ⚠️ **门槛按档分**，两档下这行点击的意义不同：
+           · focus 档——选中态有不透明度这条不随主题归零的通道（见 applyDim），故恒可点，
+             且要走 selectEmphasis 让图例项一起跟上（四个入口共用一个状态）；
+           · multi / single 档——维持 PIE-10 原样：选中态只有外扩这一条通道，
+             `size-donut-hover-expand` 为 0 的主题（THS / iFinD-PC）本就无形态可言，
+             照旧提前返回。规范原话「0 即天然无形态」，这不是缺陷，故不在本档补表达。 */
         .on('click', () => {
+          if (legendSelect === 'focus') return selectEmphasis(applyFocus(state.selected, r.name));
           if (!expand) return;
-          selectedKey = selectedKey === r.name ? null : r.name;
+          state.selected = applyFocus(state.selected, r.name);
           raiseAbove();
           animateEmphasis();
         });
@@ -550,6 +596,15 @@ export function PieChart(host, cfg) {
         });
       }
     });
+
+    /* [LEGEND-14][PIE-10] 把「选中态落到图元上」的动作交给组件作用域的钩子——图例点击在 build 外，
+       够不着上面那些逐扇区闭包。抬层要抬**当前**选中的那个（可能刚从别的扇区移过来）；
+       选中项已被隐藏（multi 档遗留的 hidden）或为 null 时 raisers 取不到，跳过抬层即可，
+       外扩补间仍要跑——它负责把上一个选中项的外扩量收回去。 */
+    emphasizeSlice = () => {
+      raisers.get(state.selected)?.();
+      animateEmphasis();
+    };
 
     /* [PIE-07] 标签层在扇区之后追加 = 压在扇区之上（层级 = DOM 顺序，同 LABEL-08），水印仍在最末。
        每扇区一个 <g>：dataset.key 让图例 hover 弱化连同标签一起生效（applyDim）。

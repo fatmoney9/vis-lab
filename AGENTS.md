@@ -34,6 +34,8 @@
 当前有**两个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
+
+**两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
 - **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
   - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
   - 半径 = `clamp(默认半径 × 0.5, 短边/2, 默认半径)`——token 是上限，**收缩有底**（THS/iFinD 35、Ainvest 40）；触底后环溢出画布而非继续变小（PIE-02）
@@ -46,6 +48,6 @@
   - **可命中面 = 扇区面 + 引线 + 外侧标签**，三者共用同一套绑定（接在扇区 `<g>` 上，标签层复用同一个函数），引线另叠透明命中带。**外侧标签放行 `pointer-events` 是 LABEL-08 的例外**（落在环外、不压图元）；**扇区内档必须保持 `none`**，否则在扇区中间挖出死区（PIE-17）
   - **超宽截名称、不丢整条**（PIE-16）：数值段恒完整（截断的数字是错的数字），保底 1 字 + `…`；连最短形态都放不下才回落丢弃。图例侧另有纯 CSS 截断 + `title` 兜底（LEGEND-13）
   - **标签带宽只看容器不看文本**（PIE-13）：`min((容器宽 − 图例带)/2 − R, size-donut-label-band-max)`，两侧同值。这是为切断「带宽由文本反推 ↔ 文本按带宽截断」的环——改动它前先读 PIE-13 的说明
-  - 强调态外扩：hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）
+  - 强调态**两条视觉通道**：① 外扩——hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）；② 不透明度弱化——**不随主题归零**，故 THS / iFinD-PC 只有在 `legendSelect: 'focus'` 档才看得见「点击选中」（LEGEND-14）。⚠️ 另两档下点扇区在那两个主题确实毫无反应，那是「0 即天然无形态」的预期结果，**不是缺陷、不要去补**。focus 档下图例项是扇区面 / 引线 / 标签之外的**第四个**入口，四者共用同一个 selected
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
