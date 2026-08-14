@@ -47,19 +47,17 @@ git switch -c feat/tooltip-12-touch
 
 ## 提交前验证
 
-修改 token 后先重建：
+所有提交至少运行一次完整门禁（会顺带重建 `tokens.css` 与水印资源模块）：
 
 ```bash
-node tokens/build.mjs
+sh hooks/check.sh        # 等价 npm run check
 ```
 
-所有提交至少运行：
+这条脚本是**唯一一份检查清单**，`hooks/pre-commit` 和 CI 调的都是它，所以本地通过基本等于 CI 通过。
+剩下的差异只可能来自环境（Node 版本、大小写敏感的文件系统）或漏提交生成物。新增检查项只改
+`hooks/check.sh`，不要在文档或 CI 里另抄一份。
 
-```bash
-node --test tests/*.mjs
-sh hooks/lint-layers.sh
-node hooks/lint-spec-ids.mjs
-```
+CI 侧多带一个 `--verify`：重建后要求生成物与提交内容零差异，因此生成物必须与源 token 放在同一提交。
 
 测试分层、用例规范、视觉基线和失败处理规则见 [TESTING.md](TESTING.md)。
 

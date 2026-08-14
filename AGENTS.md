@@ -8,15 +8,18 @@
 
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
-- 重建 token：`node tokens/build.mjs`。
-- 运行单元测试：`node --test tests/*.mjs`。
-- 提交前门禁：`node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.mjs`。
+- 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
+  水印资源重建、语法、单测、分层、Spec ID 共六项，`hooks/pre-commit` 与 CI 调的都是它。
+  **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
+- 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
+  测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。
 - 仓库已配置 `core.hooksPath=hooks`；不要绕过 pre-commit。
 - 完整测试分层、覆盖矩阵和基线规则见 `TESTING.md`。
 
 ## 技术栈
 
-原生 ES Modules、D3 v7（预览页 import map）、SVG、CSS 自定义属性、Node.js token 构建脚本；无 package manager 和打包器。
+原生 ES Modules、D3 v7（预览页 import map）、SVG、CSS 自定义属性、Node.js token 构建脚本；无打包器。
+根目录 `package.json` 只登记命令并声明 `"type": "module"`，**零依赖、无需 `npm install`**——所有脚本都能直接手敲。
 
 ## 目录与约定
 

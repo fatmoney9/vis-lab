@@ -15,6 +15,9 @@ concurrency:
 
 jobs:
   quality:
+    # ⚠️ 这个 name 是 ruleset「保护main」登记的必需检查名，按字符串精确匹配。
+    #    改名会让 PR 永远卡在等一个不会上报的检查上——要改必须同步去
+    #    Settings → Rules → Rulesets → 保护main 改掉那一项。
     name: token、单测、分层与规范检查
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -27,24 +30,7 @@ jobs:
         with:
           node-version: 24
 
-      - name: 重建并核对 token
-        run: |
-          node tokens/build.mjs
-          git diff --exit-code -- tokens/tokens.css
-
-      - name: 重建并核对水印资源模块
-        run: |
-          node assets/build-watermark-assets.mjs
-          git diff --exit-code -- charts/core/watermark-assets.js
-
-      - name: 检查 JavaScript 语法
-        run: find charts hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -n1 node --check
-
-      - name: 运行逻辑单元测试
-        run: node --test tests/*.mjs
-
-      - name: 检查分层依赖
-        run: sh hooks/lint-layers.sh
-
-      - name: 检查 Spec ID 回引
-        run: node hooks/lint-spec-ids.mjs
+      # 检查清单住在 hooks/check.sh（唯一一份，本地 pre-commit 调的是同一个脚本）。
+      # --verify：重建生成物后要求与提交内容零差异——CI 只验不改。
+      - name: 运行质量门禁
+        run: sh hooks/check.sh --verify

@@ -7,10 +7,8 @@
 
 ## 验证结果
 
-- [ ] 已运行 `node tokens/build.mjs`，生成文件与 token 源一致
-- [ ] 已运行 `node --test tests/*.mjs`
-- [ ] 已运行 `sh hooks/lint-layers.sh`
-- [ ] 已运行 `node hooks/lint-spec-ids.mjs`
+- [ ] 已运行 `sh hooks/check.sh`（token / 水印重建、语法、单测、分层、Spec ID 六项全过）
+- [ ] 生成文件（`tokens/tokens.css`、`charts/core/watermark-assets.js`）与源改动在同一提交
 - [ ] 已在本地 Preview 验证受影响图表
 - [ ] 已检查 PC / 移动端（不适用时在下方说明）
 - [ ] 已检查亮色 / 深色（不适用时在下方说明）

@@ -17,8 +17,8 @@
 
 ```bash
 python3 -m http.server 8123     # 预览需 HTTP 服务，file:// 打不开（ES Module + fetch）
-node tokens/build.mjs           # 改过 tokens/*.json 后重建 tokens.css
-node --test tests/*.mjs         # 纯逻辑单测
+sh hooks/check.sh               # 全部质量门禁六项（等价 npm run check）
+node --test "tests/**/*.test.mjs"   # 只跑纯逻辑单测（等价 npm test；引号不能去）
 ```
 
 | 地址 | 用途 |
@@ -29,8 +29,11 @@ node --test tests/*.mjs         # 纯逻辑单测
 提交前门禁（`hooks/pre-commit` 会跑，不要绕过）：
 
 ```bash
-node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.mjs
+sh hooks/check.sh
 ```
+
+这是**唯一一份检查清单**，pre-commit 与 CI 调的都是它；加检查项只改 `hooks/check.sh` 一处。
+根目录 `package.json` 只登记命令，零依赖、无需 `npm install`。
 
 ## 目录导览
 
@@ -42,7 +45,7 @@ node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.m
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 两个预览面共享的示例数据源与图表类型注册表 |
 | `index.html` · `playground/` | L3 | 两个预览面，只负责展示 |
-| `tests/` · `hooks/` | — | 纯逻辑单测与提交前守卫 |
+| `tests/` · `hooks/` | — | 纯逻辑单测与提交前守卫；`hooks/check.sh` 是门禁清单的唯一权威 |
 
 依赖方向只能向下：L3 → L2 → L1 → L0。
 
