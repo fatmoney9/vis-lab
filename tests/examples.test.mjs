@@ -73,6 +73,8 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     legend: false,
     labelLayout: false,
     labelAlign: false,
+    /* [LEGEND-06][LEGEND-14] 桑基的图例是静态色卡（renderLegend 不接 onToggle/onHover，
+       且标了 role="list"），没有「点击图例发生什么」可言，故此档恒 false。 */
     legendSelect: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });

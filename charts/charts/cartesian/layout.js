@@ -19,13 +19,12 @@
    （s=柱宽/barMax=间距/gapMax，恒保持 barMax:gapMax，如 32:2）——间距只在柱顶到 barMax 时才是满值 gapMax。
    ratio>0（三主题 2:1）时容器内**左右两侧再留白**：内容块(柱+柱间距) : 两侧留白总和 = ratio:1，
    内容块只能占 container 的 ratio/(ratio+1) → 进一步压小 s（ratio=0 退化为不留侧白、内容块铺满 container）。
-   containerMax = size-bar-group-container-max。定位把内容块在 band 内居中（侧白即两侧自然余量、对称）。 */
+   containerMax = size-bar-group-container-max。定位把内容块在 band 内居中（侧白即两侧自然余量、对称）。
+   n=1（分组被隐藏到只剩一根）不特判：通用式退化为 contentAtMax=barMax → width=min(barMax, contentRegion)，
+   同样吃 ratio 侧白 → 与 n≥2 一样随 band 变窄等比收缩。（曾有 n===1 早返回漏掉 ratio，柱宽变成
+   min(band, barMax)：band≥barMax 时钉死在上限、缩放轴拖动毫无反应，band<barMax 时柱宽=band、柱贴柱无间隙。） */
 export function groupedBars(n, band, barMax, gapMax, containerMax = Infinity, ratio = 0) {
   const container = Math.min(band, containerMax);
-  if (n === 1) {
-    const width = Math.min(container, barMax);
-    return [{ offset: (band - width) / 2, width }];
-  }
   const contentRegion = ratio > 0 ? (container * ratio) / (ratio + 1) : container;
   const contentAtMax = n * barMax + (n - 1) * gapMax;         /* 全部顶到最大时的内容块宽 */
   const s = Math.min(1, contentRegion / contentAtMax);        /* 放不下 → 柱与间距同比缩小 */

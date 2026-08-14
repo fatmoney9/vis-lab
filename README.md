@@ -8,7 +8,7 @@
 
 一套 design token 驱动的图表组件：用 D3 做计算、项目代码显式装配 SVG、样式全部走 CSS 变量，
 同一份组件代码横跨 **THS / iFinD-PC / Ainvest 三个主题** × PC/移动端 × 明暗。
-当前有两族图表：**直角坐标图**（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）与**饼 / 环**。
+当前有三族图表：**直角坐标图**（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）、**饼 / 环**与**桑基**（流向流量、季度播放）。
 
 核心约定是**「每条规范只有一个家」**：`specs/` 里每条规则有稳定 ID（`BAR-02`、`LABEL-05`…），
 实现处的代码注释回引该 ID，提交前守卫校验回引有效。改规范时代码只该改一个地方。
@@ -38,7 +38,7 @@ node --test tests/*.mjs && sh hooks/lint-layers.sh && node hooks/lint-spec-ids.m
 |---|---|---|
 | `tokens/` | L0 | 三主题值 token、行为矩阵、系列色板；`tokens.css` 是生成物，不要手改 |
 | `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、动效、比例尺、格式化 |
-| `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `pie`（饼 / 环） |
+| `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `pie`（饼 / 环）· `sankey`（流向流量 / 季度播放） |
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 两个预览面共享的示例数据源与图表类型注册表 |
 | `index.html` · `playground/` | L3 | 两个预览面，只负责展示 |

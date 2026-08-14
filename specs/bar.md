@@ -47,4 +47,5 @@
 - [x] 分组柱间距改为**柱与间距同比缩小**（间距上限 `size-bar-group-inner-gap-max`，仅柱顶到 `size-bar-max` 时取满值）；容器内左右留白比接入 `size-bar-group-gap-ratio`：内容块(柱+间距) : 两侧留白 = 三主题 `2:1`（内容块占 container 的 2/3；初版 THS/iFinD 曾为 `0`，后统一）→ BAR-02。
 - [x] `size-bar-container-max`（单柱容器）+ 新增 `size-bar-gap-ratio`（柱:两侧留白，三主题 `2:1`）接入：**基础单柱 + 堆叠单列**在 container 内留侧白居中、窄 band 等比收缩（宽/常规 band 因 `container-max·2/3 = bar-max` 仍满宽、视觉同旧）→ BAR-03/05 `singleBar()`。分组柱（≥2 声明）仍走 `size-bar-group-*`，隐藏到 1 根不切单柱容器。
 - [x] 堆叠段圆角：**段间直角**，只给「整根堆叠的最外端」圆角（正向最上段顶 / 负向最下段底，沿用 BAR-01 远离基线端 `radius-bar-top`，仅 THS=2 可见）→ BAR-05。
+- [x] 修分组柱**隐藏到 1 根时不随缩放等比收缩**：`groupedBars` 的 `n === 1` 早返回漏掉 `size-bar-group-gap-ratio` 侧白，柱宽退化成 `min(band, size-bar-max)`——band ≥ 柱宽上限时**恒等于上限、拖缩放轴纹丝不动**，band < 上限时柱宽 = band、**柱贴柱无间隙**（n≥2 一直正常）。删掉早返回走通用式：`contentAtMax = barMax` 自然退化为 `min(barMax, contentRegion)`，与 n≥2 共用同一套容器/侧白规则。实测三主题 band 变窄后柱宽/band 恒为 2/3，n≥2 输出逐位不变 → BAR-02。
 - [x] 隐藏系列时 Y 轴：**非堆叠**用全声明的稳定轴；**堆叠**按可见系列重算 refit。

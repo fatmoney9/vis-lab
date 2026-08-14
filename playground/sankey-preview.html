@@ -6,7 +6,7 @@
   <title>SankeyChart · 独立预览</title>
   <link rel="stylesheet" href="../tokens/tokens.css" />
   <link rel="stylesheet" href="../charts/styles.css" />
-  <link rel="stylesheet" href="../charts/charts/sankey/styles.css?v=viewport1" />
+  <link rel="stylesheet" href="../charts/charts/sankey/styles.css" />
   <style>
     /* 与 cartesian-preview.html 保持一致：这里只放 Playground 外壳样式，
        桑基图生产样式仍由 charts/charts/sankey/styles.css 提供。 */
@@ -786,7 +786,7 @@
     { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
   </script>
   <script type="module">
-    import { SankeyChart } from '../charts/charts/sankey/index.js?v=playbackloss1';
+    import { SankeyChart } from '../charts/charts/sankey/index.js';
 
     const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });
     const income = (id, name, extra = {}) => node(id, name, 'income', extra);
