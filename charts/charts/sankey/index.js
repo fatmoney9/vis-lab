@@ -12,12 +12,12 @@ import {
   sankeyNodeDashboard,
   sankeyNodeDashboardValueColor,
   sankeyRelatedNeighborhood,
-} from './interaction.js?v=dashboardcolor1';
+} from './interaction.js';
 import {
   cubicOut,
   hasSameSankeyTopology,
   interpolateSankeyConfig,
-} from './playback.js?v=playbackloss1';
+} from './playback.js';
 import {
   assertSankeyConfig,
   fitSankeyValueFontSize,
@@ -26,8 +26,8 @@ import {
   resolveSankeyLabelSlot,
   resolveSankeyCanvasHeight,
   truncateSankeyTitle,
-} from './layout.js?v=playbackloss1';
-import { resolveSankeyStyle } from './style.js?v=playbackloss1';
+} from './layout.js';
+import { resolveSankeyStyle } from './style.js';
 
 const LEGEND_ROLES = [
   { key: 'income', fallback: '收入' },
