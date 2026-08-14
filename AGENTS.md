@@ -25,17 +25,20 @@
 - `demos/` 是两个预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
   `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
+  **唯一已知例外是桑基**：因 SANKEY-23 的 812×375 固定财报外框，另有 `playground/sankey-preview.html`
+  独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
+  这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
 - `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
 - 多人分支、中文提交、验证和 PR 约定以 `CONTRIBUTING.md` 为准。
 
 ## 当前状态与下一步
 
-当前有**两个 L2 图表组件**：
+当前有**三个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
-**两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
+**直角坐标系与饼环两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14；**桑基不适用**——其图例是静态色卡，见下）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
 - **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
   - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
   - 半径 = `clamp(默认半径 × 0.5, 短边/2, 默认半径)`——token 是上限，**收缩有底**（THS/iFinD 35、Ainvest 40）；触底后环溢出画布而非继续变小（PIE-02）
@@ -49,5 +52,11 @@
   - **超宽截名称、不丢整条**（PIE-16）：数值段恒完整（截断的数字是错的数字），保底 1 字 + `…`；连最短形态都放不下才回落丢弃。图例侧另有纯 CSS 截断 + `title` 兜底（LEGEND-13）
   - **标签带宽只看容器不看文本**（PIE-13）：`min((容器宽 − 图例带)/2 − R, size-donut-label-band-max)`，两侧同值。这是为切断「带宽由文本反推 ↔ 文本按带宽截断」的环——改动它前先读 PIE-13 的说明
   - 强调态**两条视觉通道**：① 外扩——hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）；② 不透明度弱化——**不随主题归零**，故 THS / iFinD-PC 只有在 `legendSelect: 'focus'` 档才看得见「点击选中」（LEGEND-14）。⚠️ 另两档下点扇区在那两个主题确实毫无反应，那是「0 即天然无形态」的预期结果，**不是缺陷、不要去补**。focus 档下图例项是扇区面 / 引线 / 标签之外的**第四个**入口，四者共用同一个 selected
+- **SankeyChart**（`charts/charts/sankey/`，见 `specs/sankey.md` SANKEY-01..26）：表达节点间的**流向与流量**，**不属于堆叠图表族**。无坐标轴、无 band。要点：
+  - **`role`（业务角色，定颜色）与 `stage`（横向阶段）必须由数据显式声明**——渲染器**不得**从「第几列」或「值是不是负数」反推。终止节点也不等同于最右列节点
+  - 节点高与边宽只用**几何量 `magnitude = abs(value)`**，符号只表达贡献方向；最小 1px 只放大可见线宽，**不反写**原始值、节点比例、标签数值或会计守恒（SANKEY-17/25）
+  - 主节点中心恒定在画板**垂直中轴**，后续列按流入重心逐级回拉中轴（SANKEY-21）
+  - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
+  - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

@@ -156,6 +156,16 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 4. 写 demo（只传数据），嵌入规范页
 5. 亮/暗两种外观下目检，确认 token 链路贯通
 
+**L1 成本的两个实测点**：`PieChart` 动了 L1 四个文件六处（明细见第八节），`SankeyChart` 则
+**`charts/core/` 一个文件未动**——前者付掉了「为轴图设的隐含假设」那笔账，后者因此免单。
+
+**桑基的 L3 例外**（截至 2026-08-13 唯一一例，接新图型前先读）：上面第 4 步的常态是「只改 `demos/`」，
+但桑基另加了 `playground/sankey-preview.html` 独立面，并在 `index.html` / `playground/preview.html` 里
+写了专属样式与旋钮接线。原因是 SANKEY-23 要求 **812×375px 固定财报演示外框**（桑基可视区恒 243px），
+三主题并排卡片网格表达不了。代价要认清：**该独立面自带数据、不 import `demos/examples.js`**，
+是全库唯一脱离单一示例源的展示面，改示例时需要两处同步。新图型若无类似的固定外框硬需求，
+不要照抄这条路径。
+
 ### 从现有产品反抽参数（需要时）
 
 优先级：① 图表库运行时实例直接要配置（如 `echarts.getInstanceByDom(el).getOption()`）
@@ -166,9 +176,10 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-08-10，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
-**两个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）
-与 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）、
+截至 2026-08-13，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+**三个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+`PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
+与 `SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
 以及 token 合同、纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
 
@@ -211,8 +222,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
 3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
    也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
-4. **接入更多图型**：饼 / 环已落（[specs/pie.md](specs/pie.md)）；横向条形 HBar、K 线等同法——
+4. **接入更多图型**：饼 / 环（[specs/pie.md](specs/pie.md)）与桑基（[specs/sankey.md](specs/sankey.md)）已落；横向条形 HBar、K 线等同法——
    L2 组件 + `demos/registry.js` 登记 + `CHART_CAPABILITIES` 声明能力，两个预览面无需改动。
+   ⚠️ 桑基是**目前唯一的例外**：除上述三步外还额外动了 L3（见第七节「新增一种图表」的例外说明）。
 5. **进阶工具**：token 对照表自动生成。
 
 ---

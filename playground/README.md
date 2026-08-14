@@ -7,6 +7,11 @@
 - 加示例 / 接新图表类型改 `demos/`，不改本目录——步骤见 `demos/examples.js` 文件头
 - 分层与目录边界见 [WORKFLOW.md](../WORKFLOW.md)，本页不复述
 
+本目录还有第二个入口 <http://localhost:8123/playground/sankey-preview.html>（`SankeyChart · 独立预览`）：
+SANKEY-23 要求 812×375px 固定财报演示外框、桑基可视区恒 243px，三主题并排卡片网格表达不了，故单开一面。
+⚠️ 它**自带数据、不 import `demos/examples.js`**，是全库唯一脱离单一示例源的展示面——改桑基示例要两处同步。
+这是上面第二条的**唯一例外**，理由与代价见 [WORKFLOW.md](../WORKFLOW.md) 第七节。
+
 ## 与对外站点的差异
 
 | | 本页 | `index.html` |
