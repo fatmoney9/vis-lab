@@ -18,23 +18,32 @@
 
 ## 二、本地验证命令
 
-单元测试使用 Node.js 内置 `node:test`，不引入 package manager 或第三方依赖。项目源码是浏览器原生
-ES Modules，Node 运行 `.js` 模块时需要显式指定默认模块类型：
+所有改动至少运行一次完整门禁——只有一条命令，`hooks/pre-commit` 与 CI 调的都是它：
 
 ```sh
-node --test tests/*.mjs
+sh hooks/check.sh          # 等价 npm run check
 ```
 
-所有改动至少运行：
+它按顺序跑六项：重建并校验 token 合同 → 重建水印资源模块 → 语法检查 → 纯逻辑单测 → 分层守卫 →
+Spec ID 回引守卫。**清单只维护在 `hooks/check.sh` 里，本文档不再抄一份**：此前 README /
+CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份，条数从 3 到 6 不等，
+除 CI 外全都漏了水印资源重建——集中一份正是为了消掉这种漂移。新增检查项只改那个脚本。
+
+只想跑单测时（内置 `node:test`，无第三方依赖）：
 
 ```sh
-node tokens/build.mjs
-node --test tests/*.mjs
-sh hooks/lint-layers.sh
-node hooks/lint-spec-ids.mjs
+node --test "tests/**/*.test.mjs"    # 等价 npm test
 ```
 
-`node tokens/build.mjs` 会更新生成文件 `tokens/tokens.css`。若只是检查，应在执行后确认生成物没有意外差异。
+**引号不能去掉**：要让 node 自己展开 `**`，交给 shell 展开只会匹配一层。写成 `tests/*.mjs` 时，
+`tests/` 子目录里的测试文件会被**静默跳过**——不报错、不警告，只是那些用例从此不再执行。
+
+`hooks/check.sh` 会更新生成文件 `tokens/tokens.css` 与 `charts/core/watermark-assets.js`。CI 侧多带
+一个 `--verify`：重建后要求生成物与提交内容零差异，因此**生成物必须与源改动放在同一提交**。
+
+> 项目源码是浏览器原生 ES Modules。根目录 `package.json` 声明 `"type": "module"`，Node 由此把 `.js`
+> 按 ESM 解析（此前无 package.json，靠 Node 的语法探测兜底）。该文件只登记命令，**零依赖、无需
+> `npm install`**；不想用 npm 就直接敲 `sh hooks/check.sh`，完全等价。
 
 ## 三、单元测试规则
 

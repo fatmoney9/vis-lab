@@ -1,22 +1,16 @@
 #!/bin/sh
-# 提交前：用源 JSON 重新生成 tokens/tokens.css，并把生成物一并纳入本次提交，
-# 保证 tokens.css 永不与源脱节。build 顺带跑合同/分叉/悬空-循环别名校验——
-# 坏 JSON 会让 build 退出码 1、从而拦截提交。
+# 提交前：跑 hooks/check.sh 的全部检查，并把重新生成的产物一并纳入本次提交，
+# 保证 tokens.css / watermark-assets.js 永不与源脱节。
+#
+# 检查清单本身不在这里——住在 hooks/check.sh（唯一一份，CI 调的是同一个脚本）。
+# 因此「本地过了 CI 挂了」只可能来自环境差异（node 版本、大小写敏感的文件系统）
+# 或漏提交生成物，不会再来自两边清单不一致。
 #
 # 安装（每个克隆一次）：git config core.hooksPath hooks
 set -e
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "✗ pre-commit：未找到 node，无法重新生成 tokens.css（跳过校验会导致漂移）。" >&2
-  exit 1
-fi
+# 成功时保持安静、失败时打出完整输出——提交流程里刷屏没有意义，但失败信息一个字都不能吞。
+out=$(sh hooks/check.sh 2>&1) || { printf '%s\n' "$out" >&2; exit 1; }
 
-node tokens/build.mjs >/dev/null   # 校验失败 → 非零退出 → 拦截提交（错误打到 stderr）
-git add tokens/tokens.css
-
-node assets/build-watermark-assets.mjs >/dev/null   # 由 assets/watermarks/*.svg 重生成水印 data URI 模块（缺资源/缺尺寸 → 退出码1 拦截）
-git add charts/core/watermark-assets.js
-
-node --test tests/*.mjs >/dev/null # 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20/24）
-sh hooks/lint-layers.sh >/dev/null       # 分层守卫（L1 不依赖 L2；L2 调 L1 或标 [L2-LOCAL]）→ 违规拦截提交
-node hooks/lint-spec-ids.mjs >/dev/null  # Spec ID 回引守卫（代码引用的 [ID] 必须在 specs 有定义）→ 违规拦截提交
+# 生成物随源一起进提交；CI 侧用 --verify 只验不改，两边合起来才保证不脱节。
+git add tokens/tokens.css charts/core/watermark-assets.js

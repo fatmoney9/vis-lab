@@ -217,7 +217,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 后续按以下顺序推进：
 
-1. **上视觉保险**：Playwright 视觉回归接入 CI；补组件色值字面量 lint 与色板 CVD/对比度校验。
+1. **上视觉保险**：Playwright 浏览器 / 视觉测试接入 CI，之后补色值字面量 lint 与色板 CVD/对比度校验。
+   **具体步骤与推进顺序见 `TESTING.md` 第七节「接入路线」，此处不复述。**
 2. **补未完成规范**：图例溢出、移动端触摸、数据更新 / 退场动效等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签、轴标题、动效已落地
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
 3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
@@ -231,8 +232,12 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 九、质量保障
 
-- **已接入 · 逻辑单测**：格式化、值域、布局、堆叠和系列归一化等纯函数使用 `node:test`，按 Spec ID 覆盖边界
-- **待接入 · 视觉回归**：每个 demo 的关键状态（默认 / hover / 图例隐藏 / 暗色）截图存基线，改动逐像素对比
-- **待接入 · token lint**：CI 扫描组件源码，出现色值字面量即失败
-- **待接入 · 色板校验**：任何新色板/新主题入库前跑 CVD 与对比度校验脚本
-- 完整分层、覆盖矩阵、基线审批和失败处理以 `TESTING.md` 为准；未接入项不得标为自动化覆盖
+测试按六层组织，从静态门禁一路到视觉回归；当前**静态门禁与逻辑单测已接入**，其余待接入。
+静态门禁的六项检查集中在 `hooks/check.sh`——提交前守卫与 CI 调的是同一个脚本，故本地通过基本等于 CI 通过。
+
+**分层清单、各层现状、覆盖矩阵、基线审批与失败处理一律以 `TESTING.md` 为准；未接入项不得标为自动化覆盖。**
+
+本节不再复述具体条目。此前这里挂着一份摘要，久而久之停在了早期状态——漏掉静态门禁这一整层、
+单测覆盖也只列到最早那几个模块，而本文件两处都写着「以 TESTING.md 为准」。
+**承认了权威在别处，就不该再留一份会过期的副本**；判据同第一节「规范只有一个家」。
+测试进展只更新 `TESTING.md` 一处。
