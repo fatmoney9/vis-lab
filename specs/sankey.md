@@ -239,3 +239,24 @@ SankeyChart(host, {
 - 专属布局：`charts/charts/sankey/layout.js`
 - 独立样式：`charts/charts/sankey/styles.css`
 - 独立预览：`playground/sankey-preview.html`
+
+## 待办
+
+均为 2026-08-17 人工复查发现的**工程欠账，不是规范缺口**——功能与上表一致，只是实现方式违反了
+`WORKFLOW.md` 第三节「L1 有则复用」。两条守卫已把它们登记为已知欠账并**冻结增量**（新文件不得再犯），
+清掉后需同步删除守卫里的 DEBT 行：
+
+- [ ] `index.js` 的 `svgTextMeasurer` 重写了 `core/measure.js`（[AXIS-08] 自称全库唯一测量源）。
+      根因是 `measureTexts` 只能按类名量、表达不了 SANKEY-18 的逐节点字号——按 `WORKFLOW.md` 第八节
+      的判据应**给 `measureTexts` 加可选字号参数**，而不是在 L2 自带一份。守卫：`hooks/lint-layers.sh` 分层③
+- [ ] `playback.js` 的 `cubicOut` 与 `core/motion.js` 的 `easeOutCubic`（[MOTION-03]）是同一份数学；
+      差异只在 `cubicOut` 多做了 `Number(x) || 0` 的 NaN 兜底。合流前先确认该兜底是否要一并上提 L1
+- [ ] `index.js` 内联 `window.matchMedia('(prefers-reduced-motion: reduce)')` 重写了
+      `core/motion.js` 的 `reducedMotion`（[MOTION-07]）；L1 那份的 `view` 参数可注入、因而可测，内联这份不可测
+- [ ] `tests/sankey.test.mjs` 有 15 处把 `index.js` / `styles.css` 当文本读来断言，违反 `TESTING.md`
+      第三节「不断言内部实现步骤」。实测：一次不改行为的格式调整即可让测试变红。
+      守卫：`hooks/lint-test-hygiene.mjs`
+
+另有一项**需要产品决策、非欠账**：`tokens/sankey.json` 的 12 个语义色每主题只有一个平值，
+无 `{light, dark}` 分叉（`tokens/<theme>.json` 支持该分叉并会输出 `[data-mode="dark"]` 作用域），
+故桑基在暗色模式下节点色不变。本规范全篇未定义明暗行为——要不要支持，先在此定规则再改实现。

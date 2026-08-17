@@ -27,5 +27,35 @@ for f in $(find charts/charts -name '*.js' 2>/dev/null); do
   fi
 done
 
-if [ "$fail" = 0 ]; then echo "✓ 分层守卫通过（L1 不依赖 L2；L2 全部调 L1 或标注专属）"; fi
+# ③ L2 不许重写 L1 已有的能力。
+#    只认能精确定位归属的信号——守卫宁可漏报，也不能误报：一旦开始吵，就会被绕过。
+#      getComputedTextLength          → core/measure.js（[AXIS-08] 全库唯一测量源）
+#      matchMedia                     → core/motion.js  reducedMotion（[MOTION-07]）
+#      1 - (1 - x) ** 3               → core/motion.js  easeOutCubic（[MOTION-03]）
+#    换个写法抄同一个算法（纯语义重复）本守卫查不出，靠 AGENTS.md「L1 能力索引」+ review 兜。
+#
+#    已知欠账：清掉一条就删一行；**新文件一律不得加进本列表**。
+DEBT="charts/charts/sankey/index.js charts/charts/sankey/playback.js"
+REWRITE_RE="getComputedTextLength|matchMedia|1 - \(1 - [A-Za-z0-9_.]+\) \*\* 3"
+
+for f in $(find charts/charts -name '*.js' 2>/dev/null); do
+  hits=$(grep -nE "$REWRITE_RE" "$f" 2>/dev/null || true)
+  case " $DEBT " in
+    *" $f "*)
+      # 欠账清掉后要记得从列表里删——否则这份列表自己会变成过期副本
+      if [ -z "$hits" ]; then
+        echo "✗ [分层③] $f 已不再重写 L1，请从 hooks/lint-layers.sh 的 DEBT 列表里删除该行" >&2
+        fail=1
+      fi
+      continue
+      ;;
+  esac
+  if [ -n "$hits" ]; then
+    echo "✗ [分层③] $f 重写了 L1 已有的能力——请改用 L1（见 AGENTS.md「L1 能力索引」）：" >&2
+    echo "$hits" | sed 's/^/    /' >&2
+    fail=1
+  fi
+done
+
+if [ "$fail" = 0 ]; then echo "✓ 分层守卫通过（L1 不依赖 L2；L2 调 L1 或标注专属；未重写 L1 能力）"; fi
 exit $fail

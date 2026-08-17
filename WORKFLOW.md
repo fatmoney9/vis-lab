@@ -71,6 +71,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 1. **颜色只来自权威数据源。** 元素色来自 `tokens/<theme>.json` 生成的 CSS 变量；系列色只在
    `tokens/palette.json` 定义，由取色器写入 `--dv-series-N`。生产组件源码内禁止色值字面量
    （`#hex`、`rgb(`、颜色名）；结构样式集中在 `charts/styles.css`。
+   **本条已上守卫**（`hooks/lint-color-literals.mjs`，扫 `charts/` 下 .js/.css）：注释里为解释缘由
+   而提到颜色是放行的，`transparent` / `currentColor` 等「跟随上游」关键字同样放行；
+   唯一豁免文件是生成物 `core/watermark-assets.js`（色按 WATERMARK-01 烘焙在源 SVG 内）。
 2. **系列颜色按固定槽位顺序分配，不接受配置。** 图表 API 没有 color 参数（有意设计）；
    图例显隐、数据过滤都不重排颜色——颜色跟随实体，不跟随排名。
 3. **demo 不拼装。** L3 的 demo 只传"数据 + 少量语义配置"调用 L2 组件。
@@ -217,7 +220,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 后续按以下顺序推进：
 
-1. **上视觉保险**：Playwright 浏览器 / 视觉测试接入 CI，之后补色值字面量 lint 与色板 CVD/对比度校验。
+1. **上视觉保险**：Playwright 浏览器 / 视觉测试接入 CI，之后补色板 CVD/对比度校验。
+   （**色值字面量 lint 已于 2026-08-17 接入**——`hooks/lint-color-literals.mjs`；在此之前
+   第四节的拼接铁律 1 一直只靠纪律执行、无人检查。）
    **具体步骤与推进顺序见 `TESTING.md` 第七节「接入路线」，此处不复述。**
 2. **补未完成规范**：图例溢出、移动端触摸、数据更新 / 退场动效等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签、轴标题、动效已落地
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
@@ -233,7 +238,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 ## 九、质量保障
 
 测试按六层组织，从静态门禁一路到视觉回归；当前**静态门禁与逻辑单测已接入**，其余待接入。
-静态门禁的六项检查集中在 `hooks/check.sh`——提交前守卫与 CI 调的是同一个脚本，故本地通过基本等于 CI 通过。
+静态门禁的八项检查集中在 `hooks/check.sh`——提交前守卫与 CI 调的是同一个脚本，故本地通过基本等于 CI 通过。
 
 **分层清单、各层现状、覆盖矩阵、基线审批与失败处理一律以 `TESTING.md` 为准；未接入项不得标为自动化覆盖。**
 
