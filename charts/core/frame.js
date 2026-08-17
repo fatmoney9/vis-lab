@@ -1,15 +1,6 @@
 import { select } from 'd3';
 import { tokenNum } from './tokens.js';
 
-/* ── 常量（待 token 化项登记在 specs/axes.md 待办）──────────────────── */
-/* [AXIS-01] outside 布局：网格线与标签间距（规范定值 8px）。
-   标签绘制（axis.js renderYLabels）与列宽预留（本文件）共用此常量。
-   注意：8px 只是「标签 ↔ 网格」间距，网格与画布边缘之间**不留白**（无标签侧贴边） */
-export const Y_LABEL_GAP_OUTSIDE = 8;
-const X_GAP_TOP_INSIDE = 4;          // [AXIS-04] inside：底部网格线 → X 标签顶部
-const X_GAP_TOP_OUTSIDE_LABEL = 4;   // [AXIS-04] outside：底部 Y 标签外缘 → X 标签顶部
-const X_GAP_BOTTOM = 4;              // [AXIS-04] X 标签底部 → 标签带下沿
-
 /*
  * 画布骨架：SVG + 绘制区几何。
  * [AXIS-01] yForm 决定四周留白：
@@ -55,22 +46,42 @@ export function createFrame(host, opts = {}) {
   const lineH = tokenNum(host, '--line-height-axis') || 14;
   const halfLabel = Math.ceil(lineH / 2);
 
-  /* [AXISTITLE-02] Y 标题带叠在 Y 标签带之上（标签带自身的留白口径不变） */
-  const topPad = titleTopH + (yForm === 'outside' ? halfLabel + 2 : 0);
+  /* [AXIS-01][AXIS-04] 绘制区几何留白经 token 下发（源码禁字面量，三主题同值、走间距阶梯别名）：
+       --spacing-axis-y-label-gap    outside 的「Y 标签 ↔ 网格」净距；**标签绘制（axis.js
+                                     renderYLabels）与本文件的列宽预留必须同源**，故两处都读这一个 token。
+                                     它只是标签与网格的间距——网格与画布边缘之间不留白（无标签侧贴边）
+       --spacing-axis-x-band-top     X 标签带上净距。inside 从底部网格线量起；outside 因底部 Y 标签
+                                     以末条网格线为垂直中心、向下溢出半行高，故另加 halfLabel——
+                                     **那是几何修正，不是第二个规范值**，所以两种布局共用一个 token
+       --spacing-axis-x-band-bottom  X 标签底 → 标签带下沿
+     注意 tokenNum 取不到时返回 0（不是 NaN），token 名写错会让间距静默归零而非报错；
+     名字拼写由 tokens/*.json 的三主题合同校验兜住源侧，代码侧只能靠这行注释和预览目检。 */
+  const yLabelGap = tokenNum(host, '--spacing-axis-y-label-gap');
+  const xBandTopGap = tokenNum(host, '--spacing-axis-x-band-top');
+  const xBandBottomGap = tokenNum(host, '--spacing-axis-x-band-bottom');
+
+  /* [AXIS-01] outside 的顶部留白**恰为 halfLabel**：顶部 Y 标签以首条网格线为垂直中心、
+     上溢半行高，留够这半行即可，不再多垫。
+     2026-08-17 前这里是 `halfLabel + 2`，那 2px 自初始提交起无出处、规范无对应条目。
+     实测确认它不是防裁保险——`.dv-chart__plot > svg` 声明了 overflow:visible（见 styles.css，
+     为 DATAZOOM-01 的手柄描边/投影留的），标签越过画布上沿照样完整绘制、不会被切；
+     它只是纯视觉留白，经目检对比后决定去掉。**副作用：outside 布局的 SVG 总高减 2px。**
+     [AXISTITLE-02] Y 标题带叠在其上（标签带自身的留白口径不变）。 */
+  const topPad = titleTopH + (yForm === 'outside' ? halfLabel : 0);
   /* outside 的底部 Y 标签以末条网格线为垂直中心，会向下溢出 halfLabel；
      因此 X 标签位置 = 网格线 + halfLabel + 规范净距 4px。 */
-  const xGapTop = yForm === 'outside' ? halfLabel + X_GAP_TOP_OUTSIDE_LABEL : X_GAP_TOP_INSIDE;
+  const xGapTop = (yForm === 'outside' ? halfLabel : 0) + xBandTopGap;
   /* [AXISTITLE-02] X 标题带接在 X 标签带下沿之后 */
   const bottomPad = (xBand
-    ? xGapTop + lineH + X_GAP_BOTTOM
-    : yForm === 'outside' ? halfLabel + 2 : 0) + titleBottomH;
+    ? xGapTop + lineH + xBandBottomGap
+    : yForm === 'outside' ? halfLabel : 0) + titleBottomH;
 
   /* [AXIS-01] 左右：仅有标签一侧预留标签列，无标签侧贴边（0，不设边缘留白） */
   const pad = { left: 0, right: 0 };
   if (yForm === 'outside') {
-    pad[ySide] = Math.ceil(yLabelWidth) + Y_LABEL_GAP_OUTSIDE;
+    pad[ySide] = Math.ceil(yLabelWidth) + yLabelGap;
     if (yLabelWidthSecondary > 0) {
-      pad[ySide === 'left' ? 'right' : 'left'] = Math.ceil(yLabelWidthSecondary) + Y_LABEL_GAP_OUTSIDE;
+      pad[ySide === 'left' ? 'right' : 'left'] = Math.ceil(yLabelWidthSecondary) + yLabelGap;
     }
   }
 

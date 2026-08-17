@@ -89,6 +89,9 @@
   },
   "spacing-axis-y-inset-gap": "{spacing-8}",
   "spacing-axis-x-label-min-gap": "{spacing-8}",
+  "spacing-axis-y-label-gap": "{spacing-8}",
+  "spacing-axis-x-band-top": "{spacing-4}",
+  "spacing-axis-x-band-bottom": "{spacing-4}",
 
   "$section-09": "通用文字颜色",
   "color-text-primary": { "light": "#000000", "dark": "#ffffff" },

@@ -86,6 +86,9 @@
   "color-text-axis": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
   "spacing-axis-y-inset-gap": "{spacing-8}",
   "spacing-axis-x-label-min-gap": "{spacing-8}",
+  "spacing-axis-y-label-gap": "{spacing-8}",
+  "spacing-axis-x-band-top": "{spacing-4}",
+  "spacing-axis-x-band-bottom": "{spacing-4}",
 
   "$section-09": "通用文字颜色",
   "color-text-primary": { "light": "rgba(0, 0, 0, 0.84)", "dark": "rgba(255, 255, 255, 0.84)" },

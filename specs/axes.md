@@ -58,10 +58,11 @@
 ## 待办
 
 - [x] 轴标签级间距 token 化：`SAFE_GAP` → `--spacing-axis-y-inset-gap`（AXIS-01 inside 数据让位安全间距）、`MIN_X_GAP` → `--spacing-axis-x-label-min-gap`（AXIS-06 X 碰撞阈值），三主题以 `{spacing-8}` 别名录入 `$section-08`，值不变。**frame.js 绘制区几何留白**（`Y_LABEL_GAP_OUTSIDE` / `X_GAP_TOP_INSIDE` / `X_GAP_TOP_OUTSIDE_LABEL` / `X_GAP_BOTTOM`）本轮不并入，保留字面量
-- [ ] frame.js 绘制区几何留白 token 化（承上；当前 X 带间距为 inside 上 4px、outside 为半行高后再留 4px、下 4px）。注：`EDGE_PAD` 已整体移除——outside 无标签侧、xBand:false 底部、inside 顶部全部归零（贴边）；图例与 grid 的间距由图例容器 padding（`--spacing-legend-container-v-bottom`）唯一承担，frame 不重复垫
+- [x] frame.js 绘制区几何留白 token 化（承上，2026-08-17 完成）：`Y_LABEL_GAP_OUTSIDE` → `--spacing-axis-y-label-gap`（`{spacing-8}`）、X 带上下间距 → `--spacing-axis-x-band-top` / `--spacing-axis-x-band-bottom`（均 `{spacing-4}`），三主题同值、走间距阶梯别名，值不变。**两处并作一个 token**：原 `X_GAP_TOP_INSIDE` 与 `X_GAP_TOP_OUTSIDE_LABEL` 同为 4px，规范原文即「outside 为半行高后再留 4px」——半行高是几何修正（底部 Y 标签以末条网格线为中心、下溢半行高），不是第二个规范值，故 `xGapTop = (outside ? halfLabel : 0) + token`。**`Y_LABEL_GAP_OUTSIDE` 的 export 已删**：`axis.js` 标签绘制与 `frame.js` 列宽预留改为各自读同一个 token（两处必须同源，否则标签与它占的那列错开）。注：`EDGE_PAD` 已整体移除——outside 无标签侧、xBand:false 底部、inside 顶部全部归零（贴边）；图例与 grid 的间距由图例容器 padding（`--spacing-legend-container-v-bottom`）唯一承担，frame 不重复垫
+- [x] outside 顶部/底部留白去掉多余的 2px（2026-08-17）：原为 `halfLabel + 2`，该 2px 自初始提交起无出处、本规范无对应条目。实测排除了「防裁切保险」这一可能——`.dv-chart__plot > svg` 声明 `overflow: visible`（为 DATAZOOM-01 手柄描边/投影所留），标签越过画布上沿仍完整绘制。故它只是视觉留白，经三主题目检对比后去掉，顶部留白改为**恰好 halfLabel**。**影响：outside 布局（iFinD-PC / Ainvest）SVG 总高各减 2px，THS inside 不受影响**
 - [x] `--font-weight-axis` 并入 token 合同：三主题以别名录入（THS/iFinD `{font-weight-medium}`、Ainvest `{font-weight-regular}`），经 `tokens/build.mjs` 输出为 `var(--font-weight-*)`
 - [x] AXIS-02 iFinD 双 Y「两侧共用一份标签」镜像模式：`y-dual-shared` 开关驱动，`mirror = y-dual-shared && !dual`（单系列/同量纲时反侧镜像主轴同一套；真·双量纲走标准 dual 两侧各一套不同值——已按此决定落地并预览验证）
-- [ ] AXIS-02 遗留：「副 Y 出现条件」（量纲/数量级判断）的自动化——当前靠调用方显式声明 `axis:'secondary'`，自动判定留给 L2 组件
-- [ ] inside 布局下 0 轴标签是否省略——沿用"不越下沿"规则，暂不省略
+- [ ] AXIS-02 遗留：「副 Y 出现条件」（量纲/数量级判断）的自动化——当前靠调用方显式声明 `axis:'secondary'`（`cartesian/series.js` 缺省 `'primary'`）。**这条是「要不要做」待决，不是「待实现」**：`cartesian/index.js` 里 `const dual = resolved.some(r => r.axis === 'secondary')` 的注释「用声明判定，副轴存在性稳定」正是反对自动化的理由——量纲是业务语义、机器判不了，数量级又随数据漂，自动判定会让同一张图在换周期或拖缩放轴时坐标系自己跳出/跳回。要推翻这条，先给出「副轴不随数据抖动」的判据
+- [x] inside 布局下 0 轴标签是否省略——**已决定并已实现：不省略**。`core/axis.js` 最顶标签 `y+3` 配 `hanging`、其余 `y-4` 贴线上方，故最底的 0 标签恒压在轴线之上、不越下沿
 - [x] 缩放轴（datazoom）本体的规范化组件——已落地 [datazoom.md](datazoom.md)（DATAZOOM-01..07：`core/datazoom.js` + L2 窗口切片）；本页 SCALE-02 仍是「窗口→Y 轴重算」联动数学的权威，datazoom.md DATAZOOM-07 回引之
-- [ ] AXIS-07 刻度线方向：inside 布局网格铺满画布，刻度线只能向内画（向外会被裁）——方向规则待规范确认
+- [x] AXIS-07 刻度线方向——**关闭：能力预留，全主题默认关，链路未接入**。`core/grid.js` 的 `renderTicks()`（含 `inward` 方向开关）**全库无任何调用点**，也没有 token / 旋钮能把 `show` 打开，与 AXIS-07 正文「默认不显示（全主题）」一致。因此「向内还是向外」当下无从验证——什么都没渲染。要接入时再连同方向一并定，并同步把本条重开

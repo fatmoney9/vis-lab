@@ -1,4 +1,3 @@
-import { Y_LABEL_GAP_OUTSIDE } from './frame.js';
 import { tokenNum } from './tokens.js';
 import { measureTexts } from './measure.js';
 
@@ -6,9 +5,12 @@ const fmt = new Intl.NumberFormat('en-US');
 export const formatValue = (v) => fmt.format(v);
 
 /* 轴标签级间距经 token 下发（源码禁字面量）：
- *   --spacing-axis-y-inset-gap   [AXIS-01] inside 数据让位安全间距
+ *   --spacing-axis-y-inset-gap     [AXIS-01] inside 数据让位安全间距
  *   --spacing-axis-x-label-min-gap [AXIS-06] 相邻 X 标签最小净距（碰撞阈值）
- * frame.js 的绘制区几何留白仍为字面量（见 specs/axes.md 待办，本轮不并入）。 */
+ *   --spacing-axis-y-label-gap     [AXIS-01] outside「Y 标签 ↔ 网格」净距；**与 frame.js 的
+ *                                  列宽预留同源**——两处必须读同一个 token，否则标签会与它自己
+ *                                  占的那列错开。2026-08-17 前这是 frame.js 导出的字面量常量。
+ * frame.js 的绘制区几何留白已一并 token 化（specs/axes.md 待办第 2 条）。 */
 
 /*
  * [AXIS-01][AXIS-03] Y 轴标签。
@@ -16,7 +18,7 @@ export const formatValue = (v) => fmt.format(v);
  *   最顶标签顶对齐、贴顶线向下——不得高过绘制区上沿（最常见错误）；
  *   其余标签底对齐、贴线上方；0/最底标签不越下沿。
  * outside（网格外部 + 与网格线居中）：
- *   距网格 Y_LABEL_GAP_OUTSIDE（8px，与 frame.js 列宽预留同源），上下居中；
+ *   距网格 --spacing-axis-y-label-gap（8px，与 frame.js 列宽预留同源），上下居中；
  *   顶/底标签超出绘制区约半行高（createFrame 已留位）。
  * [AXIS-03] 对齐：默认（align=auto）贴轴线一侧、随位置自动（内/外 × 左/右由 anchor 适配）；
  *           align=right（Ainvest 特例，behavior y-label-align）全部右对齐——只需改 outside 右列
@@ -39,10 +41,11 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
       .attr('dominant-baseline', (d) => (d === topTick ? 'hanging' : 'auto'));
   } else {
     const alignEnd = side === 'right' && align === 'right'; /* [AXIS-03] 右列右对齐特例 */
+    const gap = tokenNum(frame.host, '--spacing-axis-y-label-gap');
     sel
       .attr('x', side === 'left'
-        ? frame.grid.left - Y_LABEL_GAP_OUTSIDE
-        : alignEnd ? frame.width : frame.grid.right + Y_LABEL_GAP_OUTSIDE)
+        ? frame.grid.left - gap
+        : alignEnd ? frame.width : frame.grid.right + gap)
       .attr('text-anchor', side === 'left' || alignEnd ? 'end' : 'start')
       .attr('y', (d) => y(d))
       .attr('dominant-baseline', 'middle');

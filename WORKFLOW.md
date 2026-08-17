@@ -183,8 +183,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 **三个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 与 `SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）、
-共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`，已发布到 GitHub Pages，
-以及 token 合同、纯逻辑单元测试、分层和 Spec ID 提交前守卫。完整测试流程见 `TESTING.md`。
+共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`（桑基另有独立面，见第七节例外），
+已发布到 GitHub Pages，以及**八项提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试、
+分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量，2026-08-17 扩至八项）。完整测试流程见 `TESTING.md`。
 
 **接一个新图型要动多少 L1——`PieChart` 给出了实测答案**：除自身的 L2 目录与规范页外，L1 动了**四个文件、六处**，
 且全部是「把既有构件参数化 / 把说不清的约定收回 L1」而非新造抽象：
