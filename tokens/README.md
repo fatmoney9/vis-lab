@@ -7,7 +7,14 @@
 - `ths.json`：THS 主题的完整值 token；
 - `ifind-pc.json`：iFinD-PC 主题的完整值 token；
 - `ainvest.json`：Ainvest 主题的完整值 token；
-- `behavior.json`：需要参与几何计算或逻辑分支的主题形态与行为配置。
+- `behavior.json`：需要参与几何计算或逻辑分支的主题形态与行为配置；
+- `palette.json`：系列色板（`bar-multi` / `line-multi` / `pie-multi` / `single-default` 等），由取色器
+  `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；
+- `sankey.json`：**桑基专属**几何、数字字体链、播放时长与三主题语义色。它不参与 `build.mjs`
+  构建，由 `charts/charts/sankey/style.js` 运行时直接 fetch 并自校验——是本目录唯一一条
+  不走「JSON → tokens.css → CSS 变量」链路的通道。其中的语义色计划迁入各主题文件（届时可用
+  `{color-price-up}` 一类别名，见 `specs/sankey.md` 待办）；几何与播放参数是图表常量，仍留本文件；
+- `build.mjs` → `tokens.css`：构建脚本与其生成物。`tokens.css` **是生成文件，不要手改**。
 
 ## 值 Token
 
