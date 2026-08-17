@@ -9,12 +9,47 @@
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
-  水印资源重建、语法、单测、分层、Spec ID 共六项，`hooks/pre-commit` 与 CI 调的都是它。
+  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量共八项，`hooks/pre-commit` 与 CI 调的都是它。
   **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
 - 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
   测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。
 - 仓库已配置 `core.hooksPath=hooks`；不要绕过 pre-commit。
 - 完整测试分层、覆盖矩阵和基线规则见 `TESTING.md`。
+
+## L1 能力索引（动手写计算或渲染前，先查这张表）
+
+**L1 已经有的，禁止在 L2 重写一份。** 这是本项目最容易破、且机器最难查的一条纪律——
+`hooks/lint-layers.sh` 自己就写着它查不出「语义重复」。索引放在这里，就是为了让写代码的人
+（含 AI 会话）在动手前有一处可查，而不是回头靠 review 抓。
+
+| 我要… | 用 L1 的 | 关键导出 |
+|---|---|---|
+| **量文字渲染宽度** | `core/measure.js` | `measureTexts` —— **全库唯一测量源**（[AXIS-08]），不要另起一份 |
+| **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
+| 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
+| 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
+| 数值格式化 | `core/format.js` | `makeFormatter` |
+| 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
+| Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸） |
+| 系列取色 | `core/palette.js` | `resolveSeriesColors` |
+| 比例尺与刻度 | `core/scale.js` | `niceSplit` · `niceSplitDual` · `linearY` · `bandX` |
+| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` |
+| 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderGrid` · `axisTitleBand` … |
+| 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
+| 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
+| hover 指示线 | `core/crosshair.js` | `renderCrosshairX` · `renderCrosshairBlock` |
+| 缩放轴 | `core/datazoom.js` | `renderDataZoom` |
+| 水印 | `core/watermark.js` | `watermarkAnchor` · `renderWatermark` |
+
+**L1 有、但签名不合用时怎么办：参数化 L1，不要在 L2 另写一份。**
+这是 `WORKFLOW.md` 第八节用 `PieChart` 实测出来的结论——接新图型的 L1 成本几乎全部来自
+「为轴图设的隐含假设被无轴图暴露」，正确修法是把假设收回 L1（如 tooltip `place()` 删掉容器尺寸参数），
+而不是让新图型自带一份。判断粒度见 `WORKFLOW.md` 第三节。
+
+**已知反例（`SankeyChart`，欠账未清，不要照抄）**：它自带了 `svgTextMeasurer`（重写 `measure.js`）、
+`cubicOut`（重写 `motion.js` 的 `easeOutCubic`）与内联 `matchMedia`（重写 `reducedMotion`）。
+其中测量那条是因为 `measureTexts` 只能按类名量、表达不了 SANKEY-18 的逐节点字号——
+按上一段的判据，那本该是给 `measureTexts` 加可选字号，而不是在 L2 复制一份。见 `specs/sankey.md` 待办。
 
 ## 技术栈
 
