@@ -51,7 +51,7 @@ node --test "tests/**/*.test.mjs"    # 等价 npm test
 
 优先测试无 DOM、无 CSS 计算样式、无网络依赖的确定性逻辑：
 
-- `charts/core/split.js`：Y 轴刻度三件套（`niceSplit` / `niceSplitDual`）——分割线恒 5 条、interval 必取自 `INTERVAL_STEPS × 10ⁿ`、**0 恒精确落线**、轴值域完整覆盖数据、占比最大化（与穷举所有负值段数方案对拍）、退化值域不产生零宽轴、双轴 0 对齐同一条线。**与 `scale.js` 分开只为可测**：那边 import d3、`node --test` 加载不了。
+- `charts/core/split.js`：Y 轴刻度三件套（`niceSplit` / `niceSplitDual`）——分割线恒 5 条、interval 必取自 `INTERVAL_STEPS × 10ⁿ`、**0 恒精确落线**、轴值域完整覆盖数据、占比最大化（与穷举所有负值段数方案对拍）、退化值域不产生零宽轴、双轴 0 对齐同一条线；以及 **LABEL-10 呼吸位上限 `headroom`**——缺省 / 传 0 与旧签名逐值等价、有数据的一侧必留够、顶格数据加了上限后不再顶格、上限大到一格塞不下时退回不留（不产生荒谬间隔）、不破坏 SCALE-01 两条硬约束。其中「占比下限约 80%」一条兼做**护栏**：改了 `INTERVAL_STEPS` 就会红，提醒同步 SCALE-01。**与 `scale.js` 分开只为可测**：那边 import d3、`node --test` 加载不了。
 - `charts/core/format.js`：主题数值格式边界；
 - `charts/charts/cartesian/series.js`：默认值和固定系列槽位；
 - `charts/charts/cartesian/layout.js`：分组、单柱、普通堆叠和百分比堆叠；

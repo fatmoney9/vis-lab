@@ -8,7 +8,7 @@
 
 | 文件 | 职责 | 权威规范 |
 |---|---|---|
-| `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用） | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08） |
+| `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用）。另导出 `verticalGeometry()`：上下留白与绘图区高度的**纯计算**，与刻度无关故可在算刻度前先问出来（LABEL-10 的呼吸位需要它），`createFrame` 内部也调它、公式只此一份 | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08）、data-label.md（LABEL-10） |
 | `split.js` | **刻度三件套的纯数学**（min/max/interval、0 恒落线、占比最大化、双轴共享分割线）。零依赖，故可被 node 加载、有单测 | axes.md（SCALE-01/03/04） |
 | `scale.js` | 值 → 像素的比例尺（`linearY` / `bandX`，依赖 d3）。**刻度数学不在这里**——见 `split.js`，拆开只为可测 | axes.md（SCALE-02） |
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
