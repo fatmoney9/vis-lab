@@ -22,8 +22,9 @@
  *           true 入场生长 / false 直接终态；系统「减弱动态效果」下恒直接终态（MOTION-07）
  */
 import { select } from 'd3';
-import { createFrame, observeResize } from '../../core/frame.js';
-import { niceSplit, niceSplitDual, linearY, bandX } from '../../core/scale.js';
+import { createFrame, observeResize, verticalGeometry } from '../../core/frame.js';
+import { niceSplit, niceSplitDual } from '../../core/split.js';
+import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
 import { tokenNum } from '../../core/tokens.js';
@@ -170,23 +171,6 @@ export function CartesianChart(host, cfg) {
     const secondary = viewResolved.filter((r) => r.axis === 'secondary');
     const yFormat = stack === 'percent' ? pctFormat : format;
 
-    /* [SCALE-01/04] 值域（见 domain.js）：双轴共享刻度 + 0 对齐；单轴普通 niceSplit */
-    let pSplit;
-    let sSplit;
-    if (dual) {
-      const dd = niceSplitDual(axisDomain(viewCats, primary, stack, state.hidden), axisDomain(viewCats, secondary, stack, state.hidden));
-      pSplit = dd.primary; sSplit = dd.secondary;
-    } else {
-      pSplit = niceSplit(...axisDomain(viewCats, primary, stack, state.hidden));
-    }
-
-    /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
-    const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
-
-    /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量。
-       轴标题不参与——它贴画布外缘，与标签列宽无关（AXISTITLE-04）。 */
-    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
-    const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     /* [DATAZOOM-01] 缩放带高度：启用时预留「上间距 6 + max(轨道高, 手柄高) + 下间距 6」；不启用为 0（无回归）。
        上下 6px 为结构留白常量（比 X 带的 4px 略大，给缩放轴与 X 标签多留分隔；待 token 化）。 */
     const dzSliderH = zoomOn ? (tokenNum(plotHost, '--size-slider-height') || 16) : 0;
@@ -197,6 +181,46 @@ export function CartesianChart(host, cfg) {
     const titleBand = axisTitleBand(titleLineH, titleGap);
     const titleTopH = titles.y || showY2Title ? titleBand : 0;
     const titleBottomH = titles.x ? titleBand : 0;
+
+    /* [LABEL-05] 标签显隐判定：只依赖声明（系列构成 + dataLabel），与几何无关，故可提到算刻度之前。
+       柱仅单柱系列出标签、线仅纯折线且单条；dataLabel:true/false 强制覆盖。 */
+    const stacked = stack !== 'none';
+    const bars = viewResolved.filter((r) => r.type === 'bar');
+    const lines = viewResolved.filter((r) => r.type === 'line');
+    const showBarLabel = dataLabel === true || (dataLabel !== false && !stacked && bars.length === 1);
+    const showLineLabel = dataLabel === true || (dataLabel !== false && !bars.length && lines.length === 1);
+
+    /* [LABEL-10][SCALE-03] 数据标签的呼吸位：会出标签时，要求图元末端离边界刻度至少一个标签高
+       （行高 + 图元净距，两者皆有 token，无需设计另给数值）。这里把像素需求换算成刻度算法认识的
+       「轴跨度占比」交给 niceSplit —— 于是呼吸位落在**网格内部**：刻度不再顶格，标签自然有地方待，
+       而 X 标签带与网格线的距离一步不动。
+       绘图区高度与刻度无关（刻度只影响 Y 标签列宽），故能先问出来、不必先画一趟再重算。 */
+    const labelGap = tokenNum(plotHost, '--spacing-data-label-gap');
+    const labelLineH = tokenNum(plotHost, '--line-height-data-label');
+    const labelHeadroom = (showBarLabel || showLineLabel) ? labelLineH + labelGap : 0;
+    const { gridH } = verticalGeometry(plotHost, {
+      ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
+      yForm, navH, titleTopH, titleBottomH,
+    });
+    const headroom = labelHeadroom > 0 && gridH > 0 ? labelHeadroom / gridH : 0;
+
+    /* [SCALE-01/04] 值域（见 domain.js）：双轴共享刻度 + 0 对齐；单轴普通 niceSplit */
+    let pSplit;
+    let sSplit;
+    if (dual) {
+      const dd = niceSplitDual(axisDomain(viewCats, primary, stack, state.hidden), axisDomain(viewCats, secondary, stack, state.hidden), { headroom });
+      pSplit = dd.primary; sSplit = dd.secondary;
+    } else {
+      pSplit = niceSplit(...axisDomain(viewCats, primary, stack, state.hidden), { headroom });
+    }
+
+    /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
+    const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
+
+    /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量。
+       轴标题不参与——它贴画布外缘，与标签列宽无关（AXISTITLE-04）。 */
+    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
+    const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     const frame = createFrame(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
       yForm, ySide, yLabelWidth, yLabelWidthSecondary, navH,
@@ -219,9 +243,6 @@ export function CartesianChart(host, cfg) {
       }
     }
 
-    const stacked = stack !== 'none';
-    const bars = viewResolved.filter((r) => r.type === 'bar');
-    const lines = viewResolved.filter((r) => r.type === 'line');
     /* x 排布：有柱（单柱/分组/堆叠）一律 slot=铺满整格、格间距最小 0（侧白/组间距归容器残量，见 bandX）；纯折线点居中留 inset */
     const xMode = bars.length ? 'slot' : 'center';
     const x = bandX(viewCats, dataL, dataR, { mode: xMode });
@@ -245,14 +266,10 @@ export function CartesianChart(host, cfg) {
        文本走与轴 / tooltip 同一份 makeFormatter（LABEL-07）。
        锚点在各 mark 分支里顺手算进 labelBatches（复用同一批 slots / segs，不重算布局），
        统一到所有 mark 之后渲染 —— 层级见 LABEL-08。 */
-    const showBarLabel = dataLabel === true || (dataLabel !== false && !stacked && bars.length === 1);
-    const showLineLabel = dataLabel === true || (dataLabel !== false && !bars.length && lines.length === 1);
     /* [LABEL-06①] 密度阈值：**柱与线统一**——某系列在当前可见窗口内的非 null 值多于 5 个 →
        该系列标签整体不出（不是逐个挑着显示）。5 与 line.md 的数据点 >13 同属规范值常量。
        缩放后窗口内 ≤5 会重新出现（与 SCALE-02 的窗口重算同一口径）。 */
     const withinLabelDensity = (values) => values.filter((v) => v != null).length <= 5;
-    const labelGap = tokenNum(plotHost, '--spacing-data-label-gap');
-    const labelLineH = tokenNum(plotHost, '--line-height-data-label');
     /* [LABEL-01] 净距一律从**图元边缘**算起：柱是柱顶边，折线是数据点外缘——故折线要再让开点的半高，
        否则 4px 全被点吃掉（THS 点直径 6 → 半高 3，净距只剩 1px）。
        半高：circle = 直径/2；diamond（iFinD）= 正方形绕中心转 45°，含描边的半对角 = 直径 × √2/2。 */

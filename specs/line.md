@@ -49,6 +49,6 @@
 - [ ] **高密度降采样**：数据量大时降采样渲染避免卡顿（不影响趋势）。
 - [x] **主线渐变面积**：series 级可开启配置 `area:true`（仅 stack:none）——渐变从**最大值**处 `opacity-line-area-from`（0.2）到 **grid 底部** `-to`（0），面积填至 grid 底部（决定：非 0 基准轴）；实现 `core/mark.js` `renderLine(opts.area)`。
 - [x] `size-line-stroke-multi` 接入：声明 ≥2 条线时**仅非主线**切换（主线=首条声明线保持 `size-line-stroke`，含数据点描边同步）；组合折柱只有 1 条线时仍用 `size-line-stroke`。
-- [ ] 图与数据标签最大占画布高 95%（顶部 5% 喘息）——当前靠 niceSplit 取整余量，未显式预留；
+- [x] 图与数据标签的顶部喘息空间 —— 2026-08-18 落地为 **[data-label.md](data-label.md) LABEL-10**。原设想的「最大占画布高 95%」**定不出来**：需求是像素量（放得下一个数据标签），而占比是比例，同一个百分比在不同高度的画布上换算出的像素完全不同；最终改为按 `标签高 ÷ 绘图区高` 现算的动态上限，交给 `niceSplit` 的 `headroom` 参数；
   已与 [data-label.md](data-label.md) 的「顶部空间预留」待办合并（SCALE-03 占比可达 100% 时标签越顶，
   现靠 svg `overflow:visible` 溢出到卡片留白）。
