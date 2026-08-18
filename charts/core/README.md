@@ -9,7 +9,8 @@
 | 文件 | 职责 | 权威规范 |
 |---|---|---|
 | `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用） | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08） |
-| `scale.js` | 比例尺与刻度算法（含双轴 0 对齐） | axes.md（SCALE-01..04） |
+| `split.js` | **刻度三件套的纯数学**（min/max/interval、0 恒落线、占比最大化、双轴共享分割线）。零依赖，故可被 node 加载、有单测 | axes.md（SCALE-01/03/04） |
+| `scale.js` | 值 → 像素的比例尺（`linearY` / `bandX`，依赖 d3）。**刻度数学不在这里**——见 `split.js`，拆开只为可测 | axes.md（SCALE-02） |
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞 | axes.md（AXIS-01..08） |
 | `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |

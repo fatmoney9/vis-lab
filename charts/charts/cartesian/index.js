@@ -23,7 +23,8 @@
  */
 import { select } from 'd3';
 import { createFrame, observeResize } from '../../core/frame.js';
-import { niceSplit, niceSplitDual, linearY, bandX } from '../../core/scale.js';
+import { niceSplit, niceSplitDual } from '../../core/split.js';
+import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
 import { tokenNum } from '../../core/tokens.js';

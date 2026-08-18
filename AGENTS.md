@@ -36,7 +36,7 @@
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
 | Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
-| 比例尺与刻度 | `core/scale.js` | `niceSplit` · `niceSplitDual` · `linearY` · `bandX` |
+| 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
 | 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` |
 | 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderGrid` · `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
