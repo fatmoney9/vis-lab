@@ -83,15 +83,16 @@ test('SCALE-03：占比最大化——所选方案的占比不低于任何可行
   }
 });
 
-test('SCALE-03：档位数组最大相邻比 1.33 → 正值场景占比下限约 75%', () => {
+test('SCALE-03：档位数组最大相邻比 1.25 → 正值场景占比下限约 80%', () => {
   const utils = [];
-  for (let hi = 100; hi <= 1000; hi += 3) {
+  for (let hi = 100; hi <= 1000; hi += 1) {
     const s = niceSplit(0, hi);
     utils.push(hi / (s.max - s.min));
   }
   const lowest = Math.min(...utils);
-  assert.ok(lowest > 0.7, `实测最低占比 ${lowest}，低于文档声称的 ≈75%`);
-  assert.ok(lowest < 0.8, `实测最低占比 ${lowest}，高于预期区间——档位数组可能已改，请同步 SCALE-01 的说明`);
+  /* 本条是护栏：改了 INTERVAL_STEPS 就会红，提醒同步 SCALE-01 的说明与本区间 */
+  assert.ok(lowest > 0.78, `实测最低占比 ${lowest}，低于文档声称的 ≈80%——档位数组变疏了？`);
+  assert.ok(lowest < 0.85, `实测最低占比 ${lowest}，高于预期区间——档位数组变密了？请同步 SCALE-01 的说明`);
 });
 
 test('SCALE-03：退化值域（min === max）不产生零宽轴', () => {
@@ -126,4 +127,82 @@ test('SCALE-04：双 Y 各自覆盖自己的数据', () => {
   const { primary, secondary } = niceSplitDual([-300, 400], [0, 90]);
   assert.ok(primary.min <= -300 && primary.max >= 400);
   assert.ok(secondary.min <= 0 && secondary.max >= 90);
+});
+
+/* ── [SCALE-03] 动态占比上限 headroom ───────────────────────────────── */
+
+/* 数据端点与边界刻度之间实际留出的「轴跨度占比」 */
+const gapFractions = (s, lo, hi) => {
+  const span = s.max - s.min;
+  return {
+    top: (s.max - Math.max(0, hi)) / span,
+    bottom: (Math.min(0, lo) - s.min) / span,
+  };
+};
+
+test('SCALE-03：headroom 缺省 / 传 0 与旧签名完全等价（不出标签的图零变化）', () => {
+  for (const [name, lo, hi] of CASES) {
+    const a = niceSplit(lo, hi);
+    const b = niceSplit(lo, hi, { headroom: 0 });
+    const c = niceSplit(lo, hi, Y_SPLIT_LINES); /* 旧的「第三参是数字」写法 */
+    assert.deepEqual(b.ticks, a.ticks, `${name}：headroom:0 改变了刻度`);
+    assert.deepEqual(c.ticks, a.ticks, `${name}：数字型第三参不兼容`);
+  }
+});
+
+test('SCALE-03：headroom > 0 时，有数据的一侧必留够呼吸位', () => {
+  for (const h of [0.05, 0.1, 0.15]) {
+    for (const [name, lo, hi] of CASES) {
+      if (hi === 0 && lo === 0) continue; /* 全零退化值域另有兜底 */
+      const s = niceSplit(lo, hi, { headroom: h });
+      const g = gapFractions(s, lo, hi);
+      if (hi > 0) assert.ok(g.top >= h - 1e-9, `${name} h=${h}：顶部只留了 ${g.top.toFixed(3)}`);
+      if (lo < 0) assert.ok(g.bottom >= h - 1e-9, `${name} h=${h}：底部只留了 ${g.bottom.toFixed(3)}`);
+    }
+  }
+});
+
+test('SCALE-03：顶格数据加了 headroom 后不再顶格', () => {
+  for (const [lo, hi] of [[0, 400000], [0, 480000], [0, 40], [-320000, 0]]) {
+    const before = niceSplit(lo, hi);
+    const after = niceSplit(lo, hi, { headroom: 0.1 });
+    const gb = gapFractions(before, lo, hi);
+    const ga = gapFractions(after, lo, hi);
+    const side = hi > 0 ? 'top' : 'bottom';
+    assert.ok(gb[side] < 1e-9, `${lo}~${hi}：前置条件不成立，改前就不顶格`);
+    assert.ok(ga[side] >= 0.1 - 1e-9, `${lo}~${hi}：改后仍未留够（${ga[side].toFixed(3)}）`);
+  }
+});
+
+test('SCALE-03：headroom 大到一格都塞不下时退回不留，不产生荒谬间隔', () => {
+  /* S=4，headroom≥0.25 时正侧分母 posSeg−h×S 对 posSeg=1 已 ≤0 */
+  for (const h of [0.25, 0.4, 0.9, 1, 5]) {
+    const s = niceSplit(0, 400000, { headroom: h });
+    assert.ok(Number.isFinite(s.interval) && s.interval > 0, `h=${h}：interval 非法`);
+    assert.ok(s.max >= 400000 - 1e-9, `h=${h}：轴顶没盖住数据`);
+    assert.ok(s.max <= 400000 * 4, `h=${h}：轴顶 ${s.max} 膨胀失控`);
+    assert.ok(s.ticks.some((t) => t === 0), `h=${h}：0 不再落线`);
+  }
+});
+
+test('SCALE-03：headroom 不破坏 SCALE-01 的两条硬约束', () => {
+  for (const h of [0.05, 0.12, 0.3]) {
+    for (const [name, lo, hi] of CASES) {
+      const s = niceSplit(lo, hi, { headroom: h });
+      assert.equal(s.ticks.length, Y_SPLIT_LINES, `${name} h=${h}：分割线数`);
+      assert.ok(s.ticks.some((t) => t === 0), `${name} h=${h}：0 必须落线`);
+      assert.ok(intervalFromSteps(s.interval), `${name} h=${h}：interval ${s.interval} 不在档位数组内`);
+      assert.ok(s.min <= Math.min(0, lo) + 1e-9 && s.max >= Math.max(0, hi) - 1e-9, `${name} h=${h}：未覆盖数据`);
+    }
+  }
+});
+
+test('SCALE-04：双 Y 传 headroom 后仍共享分割线、0 仍对齐', () => {
+  for (const [a, b] of [[[0, 400], [0, 90]], [[-300, 400], [0, 90]], [[-50, 50], [-2, 8]]]) {
+    const { primary, secondary } = niceSplitDual(a, b, { headroom: 0.1 });
+    assert.equal(primary.ticks.indexOf(0), secondary.ticks.indexOf(0), `${a}/${b}：0 不在同一条线`);
+    assert.equal(primary.ticks.length, secondary.ticks.length);
+    assert.ok(primary.min <= a[0] && primary.max >= a[1], `${a}：主轴未覆盖`);
+    assert.ok(secondary.min <= b[0] && secondary.max >= b[1], `${b}：副轴未覆盖`);
+  }
 });

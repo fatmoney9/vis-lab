@@ -29,6 +29,7 @@
 | LABEL-03 | **档① · 图形外空白区**（柱顶上方 / 折点上方，不压任何填充）：**跟随该系列的图形色**。经所在 `<g>` 的 `color: var(--dv-series-i)` + `fill: currentColor` 取色，**不走 `color-text-*` token**——系列色是色板色（`tokens/palette.json`），见 [color.md](color.md) 与 WORKFLOW 铁律1 | `charts/cartesian/index.js`（`<g>` 上写 `--dv-series-i`）；`.dv-data-label` | ✅ |
 | LABEL-04 | **档② · 落在色块内**（堆叠段内居中等）：按**局部背景对比度自动切换**——浅底深字 / 深底浅字。判据 = 该段系列色 hex 的 **WCAG 相对亮度**（sRGB 逆伽马 + 0.2126/0.7152/0.0722 加权），阈值取**黑白前景的对比度交叉点 √(1.05×0.05) − 0.05 ≈ 0.179**——**不是直觉的 0.5**：0.5 会把 `#52BBFF` 一类浅色系列判成深底、配浅色文字只剩约 2:1 对比。hex 由 L2 从 `resolveSeriesColors` 结果透传，修饰类 `--on-light` / `--on-dark` 承载，JS 内无色值字面量。<br>**两个前景 token 恒定、不随明暗模式翻转**（`color-text-data-label-on-light` = 各主题浅色模式的正文墨色定值 / `-on-dark` = `color-text-inverse-primary`，后者本就无明暗分叉）：标签的底是**系列色**不是页面底色，直接用会翻转的 `color-text-primary` 会让暗色模式下的浅色系列（如 iFinD `#F2D755`）拿到白字 → 白底白字 | `core/label.js` → `labelTone(hex)`；`tokens/*.json §21`；`.dv-data-label--on-light/-on-dark` | ✅ |
 | LABEL-09 | **档③ · 有引线关联**（当前唯一消费者：饼 / 环的外侧标签，[pie.md](pie.md) PIE-12）：文字走**中性文字色**、**不跟随系列色**；**引线**才跟随（`currentColor` = 该扇区的固定色槽）。<br>**档内再分两级**（`tone: 'neutral'` / `'neutral-secondary'`）：同一条标签里**名称段走 `color-text-secondary`、数值段走 `color-text-primary`**。名称是「这是谁」的索引、数值才是读数，名称降一级让读数先跳出来；两级都不带系列色，故这是档③ 的内部层级、**不是第四档**（判定顺序那条「先看有没有引线」不变）。**只有两段式文本才用得上两级**——当前即饼环外侧标签（PIE-15）；将来别的消费者接进来若只有一段，用 `'neutral'` 即可。<br>**为什么不复用档①**：档① 的前提是「图形外空白区的标签靠颜色认领自己的系列」，而有引线时**色彩关联已由线本身承担**——线从扇区上长出来，比同色文字强得多。两个后果让中性色更优：① 饼环的标签天然环绕四周，一圈七八个不同色的文字比一圈中性文字吵得多；② 色板里的浅色（THS `#52BBFF` L≈0.445、iFinD `#F2D755`）作**正文色**在浅底上对比度不足，作 **1px 细线**却完全够用——同一个色值，当线合格、当字不合格。<br>**随明暗模式翻转是对的**（与档② 的两个恒定 token 相反）：档③ 的底就是**页面底色**、不是系列色，故直接用会翻转的 `color-text-primary` 正合适，档② 那条「不能用会翻转的 token」的理由在这里不成立。<br>**不新增 token**：`color-text-primary` / `color-text-secondary` 三主题 × 明暗早已齐备 | `core/label.js`（`tone:'neutral' \| 'neutral-secondary'`）；`.dv-data-label--neutral` / `--neutral-secondary`；`charts/charts/pie/index.js` | ✅ |
+| LABEL-10 | **标签的呼吸空间由坐标轴让出，而不是由画布或 X 标签带让出**：图表会显示数据标签时，坐标轴必须在**有数据的一侧**留出至少「一个标签高」——即标签行高 `line-height-data-label` + 图元净距 `spacing-data-label-gap`（THS 16 / iFinD-PC 18 / Ainvest 20px）。正值标签在图元上方、负值在下方，故两端对称适用。<br>**换算成刻度算法的入参**：`headroom = 标签高 ÷ 绘图区高`，是一个随容器高度变化的比例而**非固定百分比**——同样 6.6% 的余量，网格高 150px 只有 10px（放不下）、400px 有 26px（够）。<br>**呼吸位落在网格内部**：刻度不顶格，图元自然够不着边界网格线，X 标签带与网格线的距离一步不动。<br>不显示标签时 `headroom = 0`，刻度与未引入本规则时**逐像素一致**。绘图区矮到一格都塞不下标签时退回不留（宁可挤也不产生荒谬间隔） | `charts/charts/cartesian/index.js` 算 `headroom` → `core/split.js` `niceSplit(min, max, { headroom })`（见 [axes.md](axes.md) SCALE-03）；绘图区高由 `core/frame.js` `verticalGeometry()` 先行给出——它与刻度无关，故无需先画一趟再重算 | ✅ |
 
 ## 显隐
 
@@ -71,7 +72,9 @@
 
 ## 待办
 
-- [ ] **顶部空间预留**（合并 [line.md](line.md) 的「图与数据标签最大占画布高 95%」）：`SCALE-03` 明确**不预加呼吸空间**，数据圆整时占比可达 100%（如 hi=400 / 4 段 → interval=100 → 轴顶=400），此时柱顶标签越过 grid 顶沿——当前靠 `.dv-chart__plot > svg { overflow:visible }` 画进卡片留白，未显式留位。
+- [x] **标签的呼吸空间（上下两端）** —— 2026-08-18 落地为 **LABEL-10**（见上表）。呼吸位由坐标轴让出、落在网格内部：`niceSplit` 接 `headroom`（= 标签高 ÷ 绘图区高）参数，分母扣掉呼吸位后再取档位。实测 `line` / `combo-single` 顶部余量由 5.8px 增至 17.8~35.8px；不出标签的图 `headroom = 0`，刻度逐像素不变。
+  排除过的两条路（勿再试）：撑高画布 / 推远 X 标签——违背「间距应在 grid 内部」；整体扩值域——取整只能整段加，全正数据会凭空出现负刻度（0~48万 → 轴底 −15万）并空出 40px+。
+  同轮把 `INTERVAL_STEPS` 由 10 档扩到 16 档（[axes.md](axes.md) SCALE-01）：上限只保证「至少留够」，实际留多少取决于能跳到哪一档，密化把中位超额留白由 9.5% 降到 6.5%。**副作用**：档位密化对**不出标签的图**同样生效（轴贴数据更紧），实测 `stack` / `stackNeg` / `line-stack` 共 9 组刻度收窄（如 80万 → 70万），占比均值 89.5% → 92.7%。
 - [ ] `spacing-data-label-gap` / `spacing-data-label-min-gap` **暂定 4px**：原体系未给净距数值，待设计确认后改 token（三主题同步）。
 - [ ] **跨系列碰撞**：LABEL-06② 的一次调用 = 一个系列跨类目（同一行），故**同一类目内相邻系列**的标签不参与彼此的碰撞判定。默认显隐下分组柱不出标签、遇不到；仅 `dataLabel:true` 强开分组柱时可见相邻柱头数字贴近。要覆盖需把同组多系列并进一次调用（届时补 LABEL-06④）。
 - [x] **饼 / 环外侧标签 + 引线** → 前景色落成 **LABEL-09（档③）**，形态 / 引线几何 / 三档对齐 / 左右分栏判重叠
