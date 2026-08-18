@@ -6,7 +6,7 @@
       "系列色一律写死 hex、不走值 token；light/dark 同色、无深色派生；整套替换、绝不跨主题混用",
       "build.mjs 不读此文件（只读 ths/ifind-pc/ainvest.json），故色板不会被输出为 CSS 变量",
       "取色：单系列 → single-default；多系列 → bar-multi 按序号取、超出循环。count = 声明系列数（图例隐藏不重排色，见 COLOR-04）",
-      "THS 多系列柱=末行「固定第 N 色」前 N；单系列另用 single-default（#3366FF，非 bar-multi[0] 的 #52BBFF）——「整套换」非「序号叠加」",
+      "THS 多系列柱=末行「固定第 N 色」前 N；单系列另用 single-default（#3366FF，非 bar-multi[0] 的 #52BBFF）——「整套换」非「序号叠加」。设计表的其余行不再计划补入，理由见 specs/color.md 待办里已撤销的那条",
       "line-multi = 折柱组合的折线子序列（柱线分色板、禁交叉，COLOR-05）；iFinD 用浅盘避撞柱色。仅组合使用：纯折线（无柱声明）走通用 bar-multi",
       "pie-multi = 饼环扇区盘（COLOR-08），可选键：主题不声明即回落 bar-multi。THS 有设计稿独立的 11 色扇区盘，iFinD / Ainvest 暂无、仍走通用盘",
       "动态条形 16 色等后续切片再补键（dynamic-bar）"
