@@ -55,7 +55,7 @@ sh hooks/check.sh
 |---|---|
 | 加一个图表示例 | `demos/examples.js` 加一项（两个预览面自动生效） |
 | 接一种新图表（横条 / K 线…） | `demos/registry.js` 登记组件 + `demos/examples.js` 声明能力与示例；步骤见该文件头，可照 `charts/charts/pie/` 抄 |
-| 改颜色 / 字号 / 间距 | `tokens/<theme>.json` 后 `node tokens/build.mjs`；**源码里禁止色值字面量** |
+| 改颜色 / 字号 / 间距 | `tokens/<theme>.json` 后 `node tokens/build.mjs`；**源码里禁止色值字面量与字体名** |
 | 改布局形态（轴位置、碰撞策略…） | `tokens/behavior.json`，L1 保持主题无关 |
 | 改一条规范 | 先改 `specs/*.md` 的条目，再改对应的那一个模块 |
 

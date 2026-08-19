@@ -9,7 +9,7 @@
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
-  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量共八项，`hooks/pre-commit` 与 CI 调的都是它。
+  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用共九项，`hooks/pre-commit` 与 CI 调的都是它。
   **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
 - 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
   测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。

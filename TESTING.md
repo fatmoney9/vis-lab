@@ -9,7 +9,7 @@
 
 | 层级 | 验证内容 | 当前状态 | 执行位置 |
 |---|---|---|---|
-| 静态门禁 | token 合同、生成物、语法、分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量 | 已接入 | pre-commit / CI |
+| 静态门禁 | token 合同、生成物、语法、分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用 | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
 | DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 待接入 | Playwright |
 | 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 待接入 | Playwright |
@@ -24,8 +24,8 @@
 sh hooks/check.sh          # 等价 npm run check
 ```
 
-它按顺序跑八项：重建并校验 token 合同 → 重建水印资源模块 → 语法检查 → 纯逻辑单测 → 分层守卫 →
-Spec ID 回引守卫 → 测试卫生守卫 → 色值字面量守卫。**清单只维护在 `hooks/check.sh` 里，本文档不再抄一份**：此前 README /
+它按顺序跑九项：重建并校验 token 合同 → 重建水印资源模块 → 语法检查 → 纯逻辑单测 → 分层守卫 →
+Spec ID 回引守卫 → 测试卫生守卫 → 色值字面量守卫 → 字体引用守卫。**清单只维护在 `hooks/check.sh` 里，本文档不再抄一份**：此前 README /
 CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份，条数从 3 到 6 不等，
 除 CI 外全都漏了水印资源重建——集中一份正是为了消掉这种漂移。新增检查项只改那个脚本。
 
