@@ -74,6 +74,13 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
    **本条已上守卫**（`hooks/lint-color-literals.mjs`，扫 `charts/` 下 .js/.css）：注释里为解释缘由
    而提到颜色是放行的，`transparent` / `currentColor` 等「跟随上游」关键字同样放行；
    唯一豁免文件是生成物 `core/watermark-assets.js`（色按 WATERMARK-01 烘焙在源 SVG 内）。
+   **字体同理，但守卫形态不同**（`hooks/lint-font-literals.mjs`）：颜色有语法、字体没有——
+   `#3366FF` 一眼认得出，`THSJinRongTi` 和任意标识符长得一样，正则无从判断某串是不是字体名。
+   故字体守的是**声明位置**：`charts/` 下 CSS 的 `font-family` 值必须是 var，且该 var 必须在
+   `tokens.css` 里真实存在（「是个 var」不够——运行时注入的私有属性同样是 var，却绕开主题通道），
+   `font` 简写禁用；JS 里一律不许出现 `font-family` / `fontFamily`；字体名只许出现在三个主题文件
+   `tokens/{ths,ifind-pc,ainvest}.json` 里，非主题 token 文件（sankey / behavior / palette）写字体
+   会让三个主题共用同一个字体。当前带 4 项欠账（同属 SANKEY-19 的桑基专属字体链）。
 2. **系列颜色按固定槽位顺序分配，不接受配置。** 图表 API 没有 color 参数（有意设计）；
    图例显隐、数据过滤都不重排颜色——颜色跟随实体，不跟随排名。
 3. **demo 不拼装。** L3 的 demo 只传"数据 + 少量语义配置"调用 L2 组件。
@@ -184,8 +191,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 与 `SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`（桑基另有独立面，见第七节例外），
-已发布到 GitHub Pages，以及**八项提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试、
-分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量，2026-08-17 扩至八项）。完整测试流程见 `TESTING.md`。
+已发布到 GitHub Pages，以及**九项提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试、
+分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用，2026-08-19 扩至九项）。完整测试流程见 `TESTING.md`。
 
 **接一个新图型要动多少 L1——`PieChart` 给出了实测答案**：除自身的 L2 目录与规范页外，L1 动了**四个文件、六处**，
 且全部是「把既有构件参数化 / 把说不清的约定收回 L1」而非新造抽象：
