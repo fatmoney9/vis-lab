@@ -242,7 +242,7 @@ export const financialSankey = () => financialSankeyPeriods()[0];
 /* ── 两面共用的展示维度 ──────────────────────────────────────── */
 
 export const THEMES = [
-  { id: 'ths', label: 'THS 同花顺', dot: '#3366FF' },
+  { id: 'ths', label: 'THS', dot: '#3366FF' },
   { id: 'ifind-pc', label: 'iFinD PC', dot: '#4D5999' },
   { id: 'ainvest', label: 'Ainvest', dot: '#265FFC' },
 ];
