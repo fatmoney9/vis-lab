@@ -60,6 +60,7 @@
   --spacing-axis-y-inset-gap: var(--spacing-8);
   --spacing-axis-x-label-min-gap: var(--spacing-8);
   --spacing-axis-y-label-gap: var(--spacing-8);
+  --spacing-axis-y-label-inside-gap: var(--spacing-0);
   --spacing-axis-x-band-top: var(--spacing-4);
   --spacing-axis-x-band-bottom: var(--spacing-4);
   --color-text-primary: rgba(0, 0, 0, 0.84);
@@ -266,6 +267,7 @@
   --spacing-axis-y-inset-gap: var(--spacing-8);
   --spacing-axis-x-label-min-gap: var(--spacing-8);
   --spacing-axis-y-label-gap: var(--spacing-8);
+  --spacing-axis-y-label-inside-gap: var(--spacing-0);
   --spacing-axis-x-band-top: var(--spacing-4);
   --spacing-axis-x-band-bottom: var(--spacing-4);
   --color-text-primary: #292933;
@@ -475,6 +477,7 @@
   --spacing-axis-y-inset-gap: var(--spacing-8);
   --spacing-axis-x-label-min-gap: var(--spacing-8);
   --spacing-axis-y-label-gap: var(--spacing-8);
+  --spacing-axis-y-label-inside-gap: var(--spacing-0);
   --spacing-axis-x-band-top: var(--spacing-4);
   --spacing-axis-x-band-bottom: var(--spacing-4);
   --color-text-primary: #000000;
