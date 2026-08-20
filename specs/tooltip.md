@@ -46,7 +46,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | TOOLTIP-08 | X 轴竖指示线：hover 即出（默认开）、贯穿 grid 全高，并**向下延伸出绘图区至轴标签区**（连接被高亮的轴标签贴片）；线色 `color-visualization-highlight-line`、线型 `dash-highlight-line`（iFinD 虚线 3 3 特例，THS / Ainvest 实线 none）；**纯分组柱不画竖线、换 block 形态**（TOOLTIP-11） | `core/crosshair.js` → `renderCrosshairX()` · `.dv-crosshair-x` | ✅ |
-| TOOLTIP-09 | X 轴标签高亮贴片（默认开）：当前类目标签处出现完整贴片（背景比文字大一圈）——文字**字号 / 行高 / 字重与轴标签同源**（`font-size-axis` / `line-height-axis` / `font-weight-axis`）、字色 `color-text-highlight-tick`、背景 `color-visualization-highlight-background-tick`、圆角 `radius-axis-label-tag`、左右内边距 `spacing-axis-label-tag-pad-h`（THS 1px / Ainvest 3px）、上下由行高撑；**即使该标签被碰撞策略隐藏也照常显示**（贴片以类目中心定位、独立于 AXIS-06 结果） | `core/crosshair.js` → `renderAxisTag()` · `.dv-axis-tag-*` | ✅ |
+| TOOLTIP-09 | X 轴标签高亮贴片（默认开）：当前类目标签处出现完整贴片（背景比文字大一圈）——文字**字号 / 行高 / 字重与轴标签同源**（`font-size-axis` / `line-height-axis` / `font-weight-axis`）、字色 `color-text-highlight-tick`、背景 `color-visualization-highlight-background-tick`、圆角 `radius-axis-label-tag`、左右内边距 `spacing-axis-label-tag-pad-h`（THS 1px / Ainvest 3px）、上下由行高撑；**即使该标签被碰撞策略隐藏也照常显示**（贴片以类目中心定位、独立于 AXIS-06 结果）。<br>**竖直居中的口径：背景以「文字实际盒」（`getBBox`）为中心，文字位置不动**——文字仍锚在 `xBandTop` 与相邻 X 轴标签同基线，移的只是底，故高亮的那一个标签不会相对邻居跳位。2026-08-19 前是 `xBandTop + fontSize/2 − lineH/2`，即**拿 `font-size` 当文字盒高的替身**；字体 em 盒是 1.17–1.42 倍 `font-size`（随字体而变），THS / iFinD 恰好蒙对、**Ainvest 偏上 1.2px**。改测实际盒后三主题上下留白实测均为 0 偏差，且与 TOOLTIP-12 的 Y 值徽标逐像素同构 | `core/crosshair.js` → `renderAxisTag()` · `.dv-axis-tag-*` | ✅ |
 
 ## 交互行为
 

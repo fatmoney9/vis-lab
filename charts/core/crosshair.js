@@ -18,7 +18,6 @@ import { tokenNum } from './tokens.js';
 export function renderAxisTag(layer, frame, { x, label }) {
   const pad = tokenNum(frame.host, '--spacing-axis-label-tag-pad-h');
   const radius = tokenNum(frame.host, '--radius-axis-label-tag');
-  const fontSize = tokenNum(frame.host, '--font-size-axis');
 
   const g = layer.selectAll('g.dv-axis-tag').data([0]).join('g').attr('class', 'dv-axis-tag');
   const bg = g.selectAll('rect.dv-axis-tag-bg').data([0]).join('rect').attr('class', 'dv-axis-tag-bg');
@@ -26,14 +25,24 @@ export function renderAxisTag(layer, frame, { x, label }) {
     .attr('class', 'dv-axis-tag-text')
     .attr('dominant-baseline', 'hanging')
     .attr('text-anchor', 'middle')
+    /* y 必须**在量 getBBox 之前**就位：bbox 的 y 是绝对坐标，未定位时读到的是 0，
+       背景会被摆到画布顶端。横向的 x 不受此累（getComputedTextLength 是纯字宽、与位置无关），
+       故仍留到下面与 bx 一起设。 */
+    .attr('y', frame.xBandTop)
     .text(label);
 
   const w = text.node().getComputedTextLength() + 2 * pad;
   const bx = Math.max(0, Math.min(x - w / 2, frame.width - w));
-  const by = frame.xBandTop + fontSize / 2 - frame.lineH / 2; /* 背景以文字竖直居中、高 = 行高 */
+  /* 背景以**文字实际盒**竖直居中、高 = 行高。**文字位置不动**（仍锚在 xBandTop，与相邻 X 轴标签
+     同基线），移的只是底——高亮的那一个标签因此不会相对邻居跳位。
+     2026-08-19 前这里是 `xBandTop + fontSize / 2 - lineH / 2`，即**拿 fontSize 当文字盒高的替身**。
+     字体的 em 盒是 1.17–1.42 倍 fontSize（随字体而变），THS / iFinD 恰好蒙对，Ainvest 偏上 1.2px。
+     改测 getBBox 后三主题上下留白实测均为 0 偏差，且与 Y 值徽标（TOOLTIP-12）逐像素同构。 */
+  const box = text.node().getBBox();
+  const by = box.y + box.height / 2 - frame.lineH / 2;
   bg.attr('x', bx).attr('y', by).attr('width', w).attr('height', frame.lineH)
     .attr('rx', radius).attr('ry', radius);
-  text.attr('x', bx + w / 2).attr('y', frame.xBandTop);
+  text.attr('x', bx + w / 2);
   return by;
 }
 
