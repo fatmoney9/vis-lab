@@ -13,7 +13,17 @@
 ## 颜色
 
 - 折线色是**系列色**，不走值 token（色值只写在 `tokens/palette.json`，见 [color.md](color.md)）：单条 → 单系列默认色；纯多折线 → 通用 `bar-multi`；折柱组合中的折线 → `line-multi`（COLOR-05，柱线分色板、禁交叉）。
-- 数据点 fill 默认 = 折线色；**hover 切白心/黑心已完成**（iFinD 保持实心），选中态仍待办。
+- 数据点 fill 默认 = 折线色；**hover 切白心/黑心已完成**（iFinD 保持实心）。
+- **折线没有自己的选中态**——点击选中是[跨图型的交互](tooltip.md)（tooltip.md「点击分片选中」，未定），
+  不是折线特性，故本页不再挂待办。此处曾有一条 `- [ ] 选中态：选中底色 color-background-weak`，
+  已于 2026-08-19 删除，理由三条：① 它是引入时那条合并条目「hover / 选中态：数据点切白心；选中底色」
+  被拆开后剩下的半截，原意是**数据点 fill 的状态表**（默认 / hover / 选中），不是「折线有点击选中」这个结论；
+  ② [bar.md](bar.md) 里「选中」出现 0 次，而 tooltip.md 那条描述的恰是「类目 **block 柱状**高亮」——
+  折线单独有、柱没有说不通；③ 真正有选中态的只有饼环，且 [pie.md](pie.md) PIE-03 明确写着它**就是**
+  图例强调的那个 `selected`（LEGEND-14）、不是另开一个——饼环有得起是因为「一个扇区 = 一个实体」点得中，
+  折线是一条连续路径，没有这种可点实体。<br>顺带消掉一个双头：那条待办写底色用 `color-background-weak`，
+  tooltip.md 写 `color-visualization-highlight-block`，两者透明度差一倍半（0.04 / 0.1）；
+  底色口径统一由 tooltip.md 那条定，本页不再给第二个值。
 
 ## 多折线 / 堆叠折线（三旋钮组合，非新组件）
 
@@ -39,13 +49,13 @@
 
 ## 待办（line.md 其余条目，后续切片）
 
-- [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点」已随 tooltip 落地（[tooltip.md](tooltip.md) TOOLTIP-10，L2 按类目给 `.dv-line-point[data-i]` 挂 `.is-active` 压过静默）；「选中态即使隐藏也高亮当前点」归点击分片选中切片（tooltip.md 待办）。
+- [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点」已随 tooltip 落地（[tooltip.md](tooltip.md) TOOLTIP-10，L2 按类目给 `.dv-line-point[data-i]` 挂 `.is-active` 压过静默）；原文另有「选中态即使隐藏也高亮当前点」一句——**折线本身没有选中态**（见上「颜色」小节），
+  该句是跨图型的点击选中落地后才谈得上的附带要求，随 [tooltip.md](tooltip.md)「点击分片选中」一并定，本页不单独挂账。
 - [x] **数据标签**（折线上方数值）：已落地 [data-label.md](data-label.md)（LABEL-01..08）——**全端统一**「非 null 点数 > 5 隐藏该线全部标签」+ 未超阈值时碰撞过滤（决定：统一阈值取代原文「移动端计数 / Web 碰撞」端分叉，同本页数据点 >13 的处理）；该阈值**柱线通用**（非折线专属）。默认显隐：纯折线且单条才显示，多折线与折柱组合中的折线均不显示（标签让给柱）。
 - [x] **hover 数据点中心填充**：十字准星唤出的当前点（`.is-active`）fill 切
   `color-visualization-line-point-hover`——THS / Ainvest 亮色 #FFF、暗色 #000（白心/黑心），
   iFinD = `currentColor`（保持实心不参与）；描边不变 = 系列色；层级压过指示线
   （tooltip.md TOOLTIP-10 副本层）。实现 styles.css `.dv-line-point.is-active`。
-- [ ] **选中态**：选中底色（`color-background-weak`）→ 归点击分片选中切片（tooltip.md 待办）。
 - [ ] **高密度降采样**：数据量大时降采样渲染避免卡顿（不影响趋势）。
 - [x] **主线渐变面积**：series 级可开启配置 `area:true`（仅 stack:none）——渐变从**最大值**处 `opacity-line-area-from`（0.2）到 **grid 底部** `-to`（0），面积填至 grid 底部（决定：非 0 基准轴）；实现 `core/mark.js` `renderLine(opts.area)`。
 - [x] `size-line-stroke-multi` 接入：声明 ≥2 条线时**仅非主线**切换（主线=首条声明线保持 `size-line-stroke`，含数据点描边同步）；组合折柱只有 1 条线时仍用 `size-line-stroke`。
