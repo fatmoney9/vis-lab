@@ -431,6 +431,13 @@
   stroke-dasharray: var(--dash-highlight-line);
 }
 
+/* [TOOLTIP-12] Y 轴横指示线：与竖线**共用同一组 token**——同一个 hover 指示语义，不因方向分叉 */
+.dv-crosshair-y {
+  stroke: var(--color-visualization-highlight-line);
+  stroke-width: var(--size-grid-line);
+  stroke-dasharray: var(--dash-highlight-line);
+}
+
 /* [TOOLTIP-11] hover 指示 block（纯分组柱）：类目底色带（网格之上、mark 之下），三主题同 token */
 .dv-crosshair-block { fill: var(--color-visualization-highlight-block); }
 

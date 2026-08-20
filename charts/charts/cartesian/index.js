@@ -45,7 +45,7 @@ import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi' } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = host.clientHeight >= 40;
 
@@ -451,11 +451,23 @@ export function CartesianChart(host, cfg) {
 
     /* ── hover 全链路（气泡 + X 指示线/block + 轴贴片 + 线点唤出）：接线见 hover.js ──
        [TOOLTIP-11] blockWidth = 分组柱容器宽（与 groupedBars 的 container 同一算法，BAR-02） */
+    /* [TOOLTIP-12] Y 横线 + Y 值徽标（cfg `yIndicator`，默认关）。
+       **徽标侧归属不另立规则：哪一侧画了 Y 标签，哪一侧就有徽标**——与上面两行 renderYLabels
+       同一个 oppTicks 判据，故三种情形自动各就各位：单轴 1 个；iFinD 镜像（y-dual-shared 且非真
+       双量纲）2 个、同一把标尺故同值；真·双量纲 2 个、各用自己的标尺故不同值——一条横线同时读出
+       两个量纲各是多少，正是双 Y 图最难目测的那件事。
+       值走 yFormat（与 Y 轴标签同一份格式化，percent 档显原值），不是气泡的 format。 */
+    const yAxes = yIndicator
+      ? [{ side: ySide, y: yP, format: yFormat },
+        ...(oppTicks ? [{ side: oppSide, y: dual ? yS : yP, format: yFormat }] : [])]
+      : [];
+
     stopHover = bindHover(plotHost, frame, {
       categories: viewCats, x, series: viewResolved, hidden: state.hidden,
       format, marker, position: b['tooltip-position'],
       indicator: hoverBlock ? 'block' : 'line',
       blockLayer, blockWidth: hoverBlock ? Math.min(band, groupMax) : 0,
+      yAxes, yForm, yAlign,
     });
 
     /* [DATAZOOM-04..07] 缩放轴：拿**全量** categories/resolved 画迷你阴影（每类目取可见系列 |值| 包络）+

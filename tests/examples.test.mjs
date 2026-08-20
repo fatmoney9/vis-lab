@@ -76,12 +76,27 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     /* [LEGEND-06][LEGEND-14] 桑基的图例是静态色卡（renderLegend 不接 onToggle/onHover，
        且标了 role="list"），没有「点击图例发生什么」可言，故此档恒 false。 */
     legendSelect: false,
+    /* [TOOLTIP-12] 桑基无 Y 轴，没有「这个高度相当于多少」可言，故恒 false。 */
+    yIndicator: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
   assert.equal(cfg.animation, undefined);
   assert.equal(cfg.nodes.length, 15);
   assert.equal(cfg.links.length, 14);
+});
+
+test('TOOLTIP-12：Y 向指示默认关，只有开才落进 cfg', () => {
+  const cartesian = EXAMPLES.filter((example) => capabilitiesOf(example).yIndicator);
+  assert.ok(cartesian.length, '应有直角坐标系示例声明 yIndicator 能力');
+  for (const e of cartesian) {
+    /* 默认关 = cfg 里根本没有这个字段（同 zoom / axisTitle 的口径，不写 false） */
+    assert.equal(buildConfig(e).yIndicator, undefined, `示例「${e.id}」不开时不该落进 cfg`);
+    assert.equal(buildConfig(e, { yIndicator: true }).yIndicator, true, `示例「${e.id}」开了没落进 cfg`);
+  }
+  /* 不声明该能力的图型（桑基）即便旋钮给了 true 也不该被塞进 cfg */
+  const sankey = EXAMPLES.find((example) => example.chart === 'sankey');
+  assert.equal(buildConfig(sankey, { yIndicator: true }).yIndicator, undefined);
 });
 
 test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一个亏损季度', () => {

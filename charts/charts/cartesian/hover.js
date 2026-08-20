@@ -11,18 +11,27 @@
  * 图例 hover（弱化其它系列 applyDim）是另一条链路，留在 index.js。
  * [TOOLTIP-11] 指示形态分发：indicator='block'（纯分组柱，判定在 index）时竖线换 block 底色带——
  * 画进 index 建在 mark 之下的 blockLayer（底色），显隐与气泡/贴片同一 timer。
+ * [TOOLTIP-12] Y 横线 + Y 值徽标：默认关（yAxes 为空），开启后随指针高度走、与 X 向各构件同一 timer 收口。
  *   series —— resolved 系列（声明序）；hidden —— 已隐藏系列名集合（行 = 可见系列按声明序，TOOLTIP-02）
  */
 import { select } from 'd3';
 import { tokenNum } from '../../core/tokens.js';
 import { createTooltip } from '../../core/tooltip.js';
-import { renderCrosshairX, renderCrosshairBlock, renderAxisTag } from '../../core/crosshair.js';
+import { renderCrosshairX, renderCrosshairY, renderCrosshairBlock, renderAxisTag, renderYAxisTags } from '../../core/crosshair.js';
 
 export function bindHover(plotHost, frame, { categories, x, series, hidden, format, marker, position,
-  indicator = 'line', blockLayer = null, blockWidth = 0 }) {
+  indicator = 'line', blockLayer = null, blockWidth = 0,
+  /* [TOOLTIP-12] Y 横线 + Y 值徽标：yAxes 为空 = 该能力关闭（默认），故不开时零开销、几何一步不动。
+     每项 { side, y, format }——y 是该轴的比例尺，本层只调 invert 把像素翻译成值。 */
+  yAxes = [], yForm = 'inside', yAlign = 'auto' }) {
   const tooltip = createTooltip(plotHost);
   const hoverG = frame.svg.append('g').style('display', 'none'); /* 指示线 + 贴片层，画在 mark 之上 */
   const crossLayer = hoverG.append('g');
+  /* [TOOLTIP-12] Y 横线 + 徽标自成一组：它比其余 hover 件多一条显隐条件（指针须在 grid 纵向范围内），
+     整组一起开合，免得给每个构件各写一次判断 */
+  const yLayer = hoverG.append('g');
+  const yCrossLayer = yLayer.append('g');
+  const yTagLayer = yLayer.append('g');
   const tagLayer = hoverG.append('g');                           /* 贴片压过指示线端头 */
   const activeLayer = hoverG.append('g');                        /* 唤出点副本层：仅让 hover 数据点压过指示线，其余层级不动 */
   const centers = categories.map((c) => x(c) + x.bandwidth() / 2);
@@ -44,6 +53,20 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
       wrap.appendChild(this.cloneNode(true));
       activeLayer.node().appendChild(wrap);
     });
+  };
+  /* [TOOLTIP-12] 显示精度对齐**指针能分辨的精度**，不是浮点算出来多少写多少。
+     裸插值形如 299354.84——那个 .84 是假精度：iFinD 这张图 1px ≈ 1300 元，
+     指针根本分辨不到 1 分钱，写出来只是噪声，还会让人误以为读数很准。
+     故先按「1px 值跨度的十的幂」取整再交给 format。自适应：值域小的图（如增长率 12~21，
+     1px ≈ 0.05）step 落到 0.01，两位小数照样留得住。
+     cn / en 体系（万 / K）因为先除以 1e4 / 1e3，噪声本来就不显眼；**plain 体系（iFinD）
+     不处理就会满屏小数**——所以这一步不能只在某个体系里做。 */
+  const snapToPointer = (scale, py) => {
+    const v = scale.invert(py);
+    const perPx = Math.abs(scale.invert(1) - scale.invert(0));
+    if (!(perPx > 0)) return v;
+    const step = 10 ** Math.floor(Math.log10(perPx));
+    return Math.round(v / step) * step;
   };
   const hideHover = () => { tooltip.hide(); hoverG.style('display', 'none'); blockLayer?.style('display', 'none'); setActivePoints(-1); };
   const hideOnScroll = () => {
@@ -82,6 +105,19 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
       renderCrosshairX(crossLayer, frame, centers[i], tagTop); /* [TOOLTIP-08] 竖线连到贴片上沿 */
     }
     setActivePoints(i);
+
+    /* [TOOLTIP-12] Y 横线 + Y 值徽标。**值是指针高度的插值、不是数据读数**——
+       气泡回答「这个类目各系列是多少」，本徽标回答「指针停在这个高度相当于多少」，
+       用来目测一个点大概落在什么量级，故走 y.invert(py) 而非取 series 里的值。
+       纵向出界即整组不画：grid 之外没有对应的值，硬画会显示超出值域的数字。 */
+    if (yAxes.length && py >= frame.grid.top && py <= frame.grid.bottom) {
+      yLayer.style('display', null);
+      const items = yAxes.map((ax) => ({ y: py, side: ax.side, label: ax.format(snapToPointer(ax.y, py)) }));
+      renderCrosshairY(yCrossLayer, frame, py,
+        renderYAxisTags(yTagLayer, frame, items, { form: yForm, align: yAlign }));
+    } else {
+      yLayer.style('display', 'none');
+    }
   });
   frame.svg.on('mouseleave', () => {
     clearTimeout(hideTimer);
