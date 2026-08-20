@@ -46,7 +46,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | TOOLTIP-08 | X 轴竖指示线：hover 即出（默认开）、贯穿 grid 全高，并**向下延伸出绘图区至轴标签区**（连接被高亮的轴标签贴片）；线色 `color-visualization-highlight-line`、线型 `dash-highlight-line`（iFinD 虚线 3 3 特例，THS / Ainvest 实线 none）；**纯分组柱不画竖线、换 block 形态**（TOOLTIP-11） | `core/crosshair.js` → `renderCrosshairX()` · `.dv-crosshair-x` | ✅ |
-| TOOLTIP-09 | X 轴标签高亮贴片（默认开）：当前类目标签处出现完整贴片（背景比文字大一圈）——文字**字号 / 行高 / 字重与轴标签同源**（`font-size-axis` / `line-height-axis` / `font-weight-axis`）、字色 `color-text-highlight-tick`、背景 `color-visualization-highlight-background-tick`、圆角 `radius-axis-label-tag`、左右内边距 `spacing-axis-label-tag-pad-h`（THS 1px / Ainvest 3px）、上下由行高撑；**即使该标签被碰撞策略隐藏也照常显示**（贴片以类目中心定位、独立于 AXIS-06 结果）。<br>**竖直居中的口径：背景以「文字实际盒」（`getBBox`）为中心，文字位置不动**——文字仍锚在 `xBandTop` 与相邻 X 轴标签同基线，移的只是底，故高亮的那一个标签不会相对邻居跳位。2026-08-19 前是 `xBandTop + fontSize/2 − lineH/2`，即**拿 `font-size` 当文字盒高的替身**；字体 em 盒是 1.17–1.42 倍 `font-size`（随字体而变），THS / iFinD 恰好蒙对、**Ainvest 偏上 1.2px**。改测实际盒后三主题上下留白实测均为 0 偏差，且与 TOOLTIP-12 的 Y 值徽标逐像素同构 | `core/crosshair.js` → `renderAxisTag()` · `.dv-axis-tag-*` | ✅ |
+| TOOLTIP-09 | X 轴标签高亮贴片（默认开）：当前类目标签处出现完整贴片（背景比文字大一圈）——文字**字号 / 行高 / 字重与轴标签同源**（`font-size-axis` / `line-height-axis` / `font-weight-axis`）、字色 `color-text-highlight-tick`、背景 `color-visualization-highlight-background-tick`、圆角 `radius-axis-label-tag`、左右内边距 `spacing-axis-label-tag-pad-h`（THS 1px / Ainvest 3px）、上下由行高撑；**即使该标签被碰撞策略隐藏也照常显示**（贴片以类目中心定位、独立于 AXIS-06 结果）。<br>**竖直居中的口径：背景以「文字实际盒」（`getBBox`）为中心，文字位置不动**——文字仍锚在 `xBandTop` 与相邻 X 轴标签同基线，移的只是底，故高亮的那一个标签不会相对邻居跳位。2026-08-20 前是 `xBandTop + fontSize/2 − lineH/2`，即**拿 `font-size` 当文字盒高的替身**；字体 em 盒是 1.17–1.42 倍 `font-size`（随字体而变），THS / iFinD 恰好蒙对、**Ainvest 偏上 1.2px**。改测实际盒后三主题上下留白实测均为 0 偏差，且与 TOOLTIP-12 的 Y 值徽标逐像素同构 | `core/crosshair.js` → `renderAxisTag()` · `.dv-axis-tag-*` | ✅ |
 
 ## 交互行为
 
@@ -79,7 +79,7 @@ Y 徽标**未新增任何 token**）。
 ## 待办（后续切片）
 
 - [ ] **点击分片选中**：点击 → 类目 block 柱状高亮 `color-visualization-highlight-block`（选中态 + 展示该点其他数据表现），与 hover 指示线独立。
-  **本条是「选中态」在全项目的唯一出处**——[line.md](line.md) 原有的折线选中待办已于 2026-08-19 删除并指回本条
+  **本条是「选中态」在全项目的唯一出处**——[line.md](line.md) 原有的折线选中待办已于 2026-08-20 删除并指回本条
   （折线是连续路径、没有可点的实体；真正有选中态的饼环，其选中就是图例强调的 `selected`，见 [pie.md](pie.md) PIE-03）。
   **动工前先解决两件事**：① **与 TOOLTIP-11 的形态冲突**——那条已定死 block 仅**纯分组柱**专属、其余图型（单柱 /
   堆叠 / 折线 / 组合 / 双 Y）维持竖线，故本条不能不加区分地给所有图型出 block；② **底色只留一个值**——本条用

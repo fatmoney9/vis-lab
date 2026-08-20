@@ -34,7 +34,7 @@ export function renderAxisTag(layer, frame, { x, label }) {
   const bx = Math.max(0, Math.min(x - w / 2, frame.width - w));
   /* 背景以**文字实际盒**竖直居中、高 = 行高。**文字位置不动**（仍锚在 xBandTop，与相邻 X 轴标签
      同基线），移的只是底——高亮的那一个标签因此不会相对邻居跳位。
-     2026-08-19 前这里是 `xBandTop + fontSize / 2 - lineH / 2`，即**拿 fontSize 当文字盒高的替身**。
+     2026-08-20 前这里是 `xBandTop + fontSize / 2 - lineH / 2`，即**拿 fontSize 当文字盒高的替身**。
      字体的 em 盒是 1.17–1.42 倍 fontSize（随字体而变），THS / iFinD 恰好蒙对，Ainvest 偏上 1.2px。
      改测 getBBox 后三主题上下留白实测均为 0 偏差，且与 Y 值徽标（TOOLTIP-12）逐像素同构。 */
   const box = text.node().getBBox();

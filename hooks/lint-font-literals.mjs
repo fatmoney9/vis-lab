@@ -16,7 +16,7 @@
  *      （哪怕只是注入一个自定义属性），①的检查就被绕过去了。
  *      **读是放行的**：`getComputedStyle(el).fontFamily` 拿的是级联已解析的结果，
  *      正是「跟随 token」而非绕过它（core/measure.js 的 measureInk 就靠它把真实字体
- *      交给 Canvas 量墨迹）。本条 2026-08-19 由「出现即违规」收窄至此——
+ *      交给 Canvas 量墨迹）。本条 2026-08-20 由「出现即违规」收窄至此——
  *      原措辞把读也拦了，等于逼人绕开唯一正确的取值方式。
  *   ③ 字体名只许出现在三个主题文件 tokens/{ths,ifind-pc,ainvest}.json。
  *      其余 token 文件（sankey / behavior / palette）出现 font-family 类的键即违规。
