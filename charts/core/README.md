@@ -14,13 +14,13 @@
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞 | axes.md（AXIS-01..08） |
 | `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |
-| `measure.js` | 渲染级文本测量，全库唯一测量源（零依赖，可被 node 加载） | axes.md（AXIS-08） |
+| `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 量**宽**——走隐藏 SVG + 真实类名，因为宽度受 `tabular-nums` / `letter-spacing` 等 Canvas 表达不了的 CSS 特性影响；`measureInk` 量**墨迹上下边**——走 Canvas，因为 SVG 的 `getBBox()` 对 text 返回的是 em 盒不是墨迹（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08） |
 | `mark.js` | 柱 / 线 / 数据点的图元渲染（返回逐帧重绘闭包供生长动效驱动） | bar.md、line.md、motion.md |
 | `motion.js` | 缓动曲线与逐帧生长循环（零 DOM，rAF / 时钟可注入） | motion.md（MOTION-01..07） |
 | `label.js` | 数据标签渲染、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤（`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列） | data-label.md（LABEL-01..09） |
 | `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列） | legend.md（LEGEND-01/10/11） |
 | `legend-state.js` | 图例点击的状态迁移：`applyToggle`（筛，改 hidden）/ `applyFocus`（强调，改 selected）。**与 legend.js 分开只为一件事**——那边 import d3，住在里面就一行测不了 | legend.md（LEGEND-06/12/14） |
-| `tooltip.js` · `crosshair.js` | 浮层气泡、指示线与轴贴片（气泡标题行可省，供无坐标系图用；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸——见 tooltip.md「位置档的边界」） | tooltip.md |
+| `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（气泡标题行可省，供无坐标系图用；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸——见 tooltip.md「位置档的边界」；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md |
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |
 | `palette.js` | 系列取色器 | color.md |
