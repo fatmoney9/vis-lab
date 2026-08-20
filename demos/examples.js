@@ -262,7 +262,7 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  *   animation 入场生长开关（MOTION-01/07，**默认开**——与其他旋钮相反，关掉才落进 cfg）
  */
 export const CHART_CAPABILITIES = {
-  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true, legendSelect: true },
+  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true, legendSelect: true, yIndicator: true },
   /* 饼 / 环无类目轴、无 Y 轴、无折线：zoom / area / axisTitle 一概不声明，
      两个预览面的对应旋钮据此自动不出现（见 specs/pie.md 活 demo 的验收点）。
      **不声明 dataLabel**：饼环的显隐与形态是同一件事（PIE-12「引线与标签强绑定」——
@@ -505,7 +505,7 @@ export const capabilitiesOf = (example) => {
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
-    legendSelect: !!caps.legendSelect,
+    legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
   };
 };
 
@@ -521,7 +521,7 @@ export function buildConfig(example, state = {}) {
   const {
     density = 'few', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
-    labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi',
+    labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
   } = state;
   const caps = capabilitiesOf(example);
   const cfg = { ...example.cfg(DENSITY[density] ?? DENSITY.few), platform };
@@ -558,6 +558,8 @@ export function buildConfig(example, state = {}) {
   /* [LEGEND-06][LEGEND-14] 图例点击语义：'multi' 是组件默认，故不落进 cfg——
      「逻辑」面板里没有 legendSelect = 走默认（多选显隐），同 animation 的口径。 */
   if (caps.legendSelect && legendSelect !== 'multi') cfg.legendSelect = legendSelect;
+  /* [TOOLTIP-12] Y 横线 + Y 值徽标：组件默认关，故只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。 */
+  if (caps.yIndicator && yIndicator) cfg.yIndicator = true;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;

@@ -90,6 +90,7 @@
   "spacing-axis-y-inset-gap": "{spacing-8}",
   "spacing-axis-x-label-min-gap": "{spacing-8}",
   "spacing-axis-y-label-gap": "{spacing-8}",
+  "spacing-axis-y-label-inside-gap": "{spacing-0}",
   "spacing-axis-x-band-top": "{spacing-4}",
   "spacing-axis-x-band-bottom": "{spacing-4}",
 

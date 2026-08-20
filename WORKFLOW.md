@@ -78,9 +78,15 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
    `#3366FF` 一眼认得出，`THSJinRongTi` 和任意标识符长得一样，正则无从判断某串是不是字体名。
    故字体守的是**声明位置**：`charts/` 下 CSS 的 `font-family` 值必须是 var，且该 var 必须在
    `tokens.css` 里真实存在（「是个 var」不够——运行时注入的私有属性同样是 var，却绕开主题通道），
-   `font` 简写禁用；JS 里一律不许出现 `font-family` / `fontFamily`；字体名只许出现在三个主题文件
-   `tokens/{ths,ifind-pc,ainvest}.json` 里，非主题 token 文件（sankey / behavior / palette）写字体
-   会让三个主题共用同一个字体。当前带 4 项欠账（同属 SANKEY-19 的桑基专属字体链）。
+   `font` 简写禁用；JS 里不许**写**字体（`.style()` / `.attr()` / `setProperty` / `setAttribute`
+   传字体属性、给 `.fontFamily` 赋值、或在 JS 字符串里拼 `font-family:`）——**读是放行的**，
+   `getComputedStyle(el).fontFamily` 拿的是级联已解析的结果，正是「跟随 token」而非绕过它
+   （`core/measure.js` 的 `measureInk` 靠它把真实字体交给 Canvas 量墨迹）；字体名只许出现在三个主题
+   文件 `tokens/{ths,ifind-pc,ainvest}.json` 里——**只有那三个进 token 合同**（`tokens/build.mjs`
+   校验键集一致、分叉完整并生成 CSS 变量），写在别处的字体不受合同保护、也不保证有主题分叉。
+   当前带 3 项欠账（同属 SANKEY-19 的桑基专属字体链，见 `specs/sankey.md` 该条的 ⚠️ 说明）。
+   ⚠️ 规则②的措辞 2026-08-20 由「出现即违规」收窄至「写入才违规」——原措辞把读也拦了，
+   等于逼人绕开唯一正确的取值方式。
 2. **系列颜色按固定槽位顺序分配，不接受配置。** 图表 API 没有 color 参数（有意设计）；
    图例显隐、数据过滤都不重排颜色——颜色跟随实体，不跟随排名。
 3. **demo 不拼装。** L3 的 demo 只传"数据 + 少量语义配置"调用 L2 组件。

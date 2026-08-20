@@ -28,7 +28,7 @@
 
 | 我要… | 用 L1 的 | 关键导出 |
 |---|---|---|
-| **量文字渲染宽度** | `core/measure.js` | `measureTexts` —— **全库唯一测量源**（[AXIS-08]），不要另起一份 |
+| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08]），不要另起一份。两者用不同手段是有理由的，见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
@@ -41,7 +41,7 @@
 | 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderGrid` · `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
-| hover 指示线 | `core/crosshair.js` | `renderCrosshairX` · `renderCrosshairBlock` |
+| hover 指示线 / 轴高亮贴片 | `core/crosshair.js` | `renderCrosshairX` · `renderCrosshairY` · `renderCrosshairBlock` · `renderAxisTag`（X 贴片）· `renderYAxisTags`（Y 值徽标） |
 | 缩放轴 | `core/datazoom.js` | `renderDataZoom` |
 | 水印 | `core/watermark.js` | `watermarkAnchor` · `renderWatermark` |
 

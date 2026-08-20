@@ -265,6 +265,19 @@
         </div>
       </div>
 
+      <!-- [TOOLTIP-12] Y 横线 + Y 值徽标：默认关。线与徽标强绑定，故一个开关不是两个。
+           验收看点：① 徽标值随指针高度连续变化（是 y.invert 插值、不是数据读数）；
+           ② 三主题的徽标各落在自己的 Y 标签位置上（THS/Ainvest inside 在网格内、iFinD outside 在标签列）；
+           ③ 切到「双 Y 轴」示例：两侧徽标同时出且**数值不同**（各用自己的标尺）；
+              切到 iFinD 卡看镜像轴：两侧同时出但**数值相同**（同一把标尺）。 -->
+      <div class="field">
+        <div class="field-label"><b>Y 向指示</b><span>yIndicator</span></div>
+        <div class="seg" id="seg-y-indicator">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
       <div class="field">
         <div class="field-label"><b>动效</b><span>animation</span></div>
         <div class="seg" id="seg-animation">
@@ -317,7 +330,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', area: 'off', zoom: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -386,6 +399,7 @@
     document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
+    document.getElementById('seg-y-indicator').closest('.field').hidden = !caps.yIndicator;
     document.getElementById('seg-animation').closest('.field').hidden = !caps.animation;
 
     THEMES.forEach((t) => {
@@ -416,6 +430,7 @@
         labelAlign: state.labelAlign,
         legendSelect: state.legendSelect, /* [LEGEND-06][LEGEND-14] 多选 / 单选 / 强调 */
         axisTitle: state.axisTitle === 'on',
+        yIndicator: state.yIndicator === 'on', /* [TOOLTIP-12] Y 横线 + Y 值徽标，默认关 */
         animation: state.animation === 'on',
       }).instance;
     });
@@ -453,6 +468,7 @@
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');
+  wireSeg('seg-y-indicator', 'yIndicator');
   wireSeg('seg-animation', 'animation');
   /* [MOTION-04] 生长只在实例首次挂载时播，故「重播」= 整卡重建（render 本就 destroy + 新建三张卡）。
      动任意旋钮都会走同一条路径，所以它们也都会重播——这正是规范里「重建实例 = 重新入场」的表现。 */

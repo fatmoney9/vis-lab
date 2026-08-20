@@ -11,11 +11,20 @@
  *      里真实存在。「是个 var」不够——运行时注入的私有变量（.style('--dv-x-font-family', …)）
  *      同样是 var，却完全绕开主题通道，正是本守卫要抓的形态。顺带禁用 font 简写：
  *      它把 family 混在字号行高里，无法只对 family 这一段要求 token。
- *   ② charts/**\/*.js 不许出现 font-family / fontFamily。字体只在 CSS 里声明；
- *      JS 一旦能写字体（哪怕只是注入一个自定义属性），①的检查就被绕过去了。
+ *   ② charts/**\/*.js 不许**写**字体（.style()/.attr()/setProperty/setAttribute 传字体属性、
+ *      直接给 .fontFamily 赋值、或在 JS 字符串里拼 `font-family:`）。JS 一旦能写字体
+ *      （哪怕只是注入一个自定义属性），①的检查就被绕过去了。
+ *      **读是放行的**：`getComputedStyle(el).fontFamily` 拿的是级联已解析的结果，
+ *      正是「跟随 token」而非绕过它（core/measure.js 的 measureInk 就靠它把真实字体
+ *      交给 Canvas 量墨迹）。本条 2026-08-20 由「出现即违规」收窄至此——
+ *      原措辞把读也拦了，等于逼人绕开唯一正确的取值方式。
  *   ③ 字体名只许出现在三个主题文件 tokens/{ths,ifind-pc,ainvest}.json。
- *      其余 token 文件（sankey / behavior / palette）出现 font-family 类的键即违规——
- *      那种文件不随主题分叉，写在里面的字体会让**所有主题共用同一个字体**。
+ *      其余 token 文件（sankey / behavior / palette）出现 font-family 类的键即违规。
+ *      理由不是「那些文件一律不分主题」（tokens/sankey.json 的**颜色**就是按
+ *      base/ths/ifind-pc/ainvest 分块的），而是**只有那三个主题文件进 token 合同**——
+ *      tokens/build.mjs 校验它们键集一致、分叉完整并生成 CSS 变量；写在别处的字体
+ *      既不受合同保护，也不保证有对应的主题分叉。sankey.json 的 typography 块正是
+ *      这种情况：扁平一条、三主题共用，于是 iFinD / Ainvest 也在用 THS 的字体。
  *
  * 后果与颜色一致：写死的字体不随主题、不随品牌改版而变，且**不会报错**，
  * 只是在别的主题下和页面其余部分对不上。静默漂移正是守卫存在的理由。
@@ -31,7 +40,6 @@ import { join } from 'node:path';
 const DEBT = new Set([
   'charts/charts/sankey/styles.css',
   'charts/charts/sankey/index.js',
-  'charts/charts/sankey/style.js',
   'tokens/sankey.json',
 ]);
 
@@ -98,11 +106,21 @@ for (const file of walk('charts', ['.css'])) {
   }
 }
 
-/* ② JS：字体只在 CSS 里声明 */
+/* ② JS：不许**写**字体（读放行，见顶部说明） */
+const JS_WRITES = [
+  /\.(?:style|attr)\s*\(\s*['"`][^'"`]*font-family/g,
+  /set(?:Property|Attribute)\s*\(\s*['"`][^'"`]*font-family/g,
+  /\.fontFamily\s*=(?!=)/g,
+  /['"`][^'"`]*font-family\s*:/g, /* JS 字符串里拼的内联样式 */
+];
 for (const file of walk('charts', ['.js'])) {
   const code = stripComments(readFileSync(file, 'utf8'), false);
-  for (const m of code.matchAll(/font-family|fontFamily/g)) {
-    add(file, lineOf(code, m.index), 'JS 里声明了字体——字体只在 CSS 里写，否则规则①的 token 检查会被绕过');
+  for (const pattern of JS_WRITES) {
+    pattern.lastIndex = 0;
+    let m;
+    while ((m = pattern.exec(code))) {
+      add(file, lineOf(code, m.index), 'JS 里写了字体——字体只在 CSS 里声明，否则规则①的 token 检查会被绕过');
+    }
   }
 }
 
@@ -111,7 +129,7 @@ for (const file of walk('tokens', ['.json'])) {
   if (THEME_FILES.has(file.slice('tokens/'.length))) continue;
   const text = readFileSync(file, 'utf8');
   for (const m of text.matchAll(/"[\w-]*font[\w-]*family[\w-]*"\s*:/gi)) {
-    add(file, lineOf(text, m.index), '非主题 token 文件里写了字体——该文件不随主题分叉，会让三个主题共用同一个字体');
+    add(file, lineOf(text, m.index), '非主题 token 文件里写了字体——只有三个主题文件进 token 合同（build.mjs 校验分叉完整），写在别处的字体不保证随主题变');
   }
 }
 
