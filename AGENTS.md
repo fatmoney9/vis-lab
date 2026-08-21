@@ -2,7 +2,7 @@
 
 ## 定位
 
-这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、饼 / 环与桑基三族）。
+这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、饼 / 环、桑基与矩形树图四族）。
 
 ## 运行与验证
 
@@ -28,13 +28,14 @@
 
 | 我要… | 用 L1 的 | 关键导出 |
 |---|---|---|
-| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08]），不要另起一份。两者用不同手段是有理由的，见模块注释 |
+| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
 | Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸） |
+| 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
 | 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高） |
@@ -82,7 +83,7 @@
 
 ## 当前状态与下一步
 
-当前有**三个 L2 图表组件**：
+当前有**四个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
@@ -106,5 +107,6 @@
   - 主节点中心恒定在画板**垂直中轴**，后续列按流入重心逐级回拉中轴（SANKEY-21）
   - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
   - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
+- **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积、标签降级顺序与下钻，文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

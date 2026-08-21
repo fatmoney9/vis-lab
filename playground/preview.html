@@ -185,11 +185,20 @@
       </div>
 
       <div class="field">
-        <div class="field-label"><b>数据量</b><span>类目数</span></div>
+        <div class="field-label"><b id="density-label">项数</b><span id="density-hint">按示例定义</span></div>
         <div class="seg" id="seg-density">
-          <button data-value="few" class="is-active">少 4</button>
-          <button data-value="mid">中 16</button>
-          <button data-value="many">多 36</button>
+          <button data-value="few" class="is-active">少量</button>
+          <button data-value="mid">中量</button>
+          <button data-value="many">大量</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>THS 颜色模式</b><span>仅影响 THS 卡片</span></div>
+        <div class="seg" id="seg-treemap-color">
+          <button data-value="intensity" class="is-active">程度</button>
+          <button data-value="semantic-binned">涨跌（分档）</button>
+          <button data-value="semantic-flat">涨跌（不分档）</button>
         </div>
       </div>
 
@@ -292,8 +301,8 @@
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
-        数据量对所有分类生效（类目数 4 / 16 / 36）：看柱容器收缩（BAR-03）、X 标签碰撞（AXIS-06）、
-        折线数据点显隐分档（&gt;13 全隐）；多数据下折线含负值区。
+        右侧三档按图表定义数据场景：直角坐标图使用类目数 4 / 16 / 36；三类矩形树图各自切换本类型内的项数。
+        可据此检查柱容器收缩（BAR-03）、X 标签碰撞（AXIS-06）、折线数据点显隐，以及各树图在密度变化时的标签降级。
         轴标题开关给图表挂 <code>axisTitle:{y,x}</code>（双 Y 分类另有 <code>y2</code>）：默认不显示，开后
         Y 标题在 Y 标签带上方另起一带、X 标题在 X 标签带下方另起一带；Y 标题<b>贴自己那一侧的画布外缘</b>
         （左轴左对齐、右轴右对齐，标题多长都不会被裁），X 标题右对齐绘图区右缘
@@ -308,7 +317,7 @@
         THS/iFinD 轨道内双色迷你阴影、Ainvest 纯轨道（<code>datazoom-data-shadow:false</code>）。
         动效开关控制<b>入场生长</b>（specs/motion.md）：柱从 0 轴竖向长高、折线自左向右拉线，
         面积 / 堆叠填充带 / 数据点跟随同一条前沿；堆叠是<b>整根一起长</b>而非逐段接力（MOTION-06）。
-        时长<b>处处统一 480ms</b>（MOTION-02，<code>motion-duration-grow</code>）——切任意示例 / 数据量 / 主题都不变，
+        时长<b>处处统一 480ms</b>（MOTION-02，<code>motion-duration-grow</code>）——切任意示例 / 数据场景 / 主题都不变，
         三主题横排时三张卡同时起跑、同时收束；缓动统一 <code>cubicOut</code>。
         （源规范原本按生长占比分 320 / 480 两档，本仓库实测 33 种组合里只有 2 种落短档，故取消分档，见 specs/motion.md 偏差 1。）
         <b>只在实例首次挂载时播一次</b>：拖缩放轴手柄、点图例显隐、拖拽卡片改尺寸都<b>不得重放</b>
@@ -325,12 +334,12 @@
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf } from '../demos/examples.js';
+  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf } from '../demos/examples.js';
 
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -347,7 +356,11 @@
     btn.className = 'nav-item';
     btn.textContent = cat.title;
     btn.dataset.id = cat.id;
-    btn.addEventListener('click', () => { state.category = cat.id; render(); });
+    btn.addEventListener('click', () => {
+      state.category = cat.id;
+      state.density = defaultDensityOf(cat);
+      render();
+    });
     navEl.appendChild(btn);
   });
 
@@ -387,7 +400,16 @@
     /* 旋钮按当前示例的能力显隐（demos/examples.js 的 CHART_CAPABILITIES ∩ 本示例配置形态）：
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
+    const densityControl = densityControlOf(cat);
     document.getElementById('seg-density').closest('.field').hidden = !caps.density;
+    document.getElementById('density-label').textContent = densityControl.label;
+    document.getElementById('density-hint').textContent = densityControl.hint;
+    document.getElementById('seg-density').querySelectorAll('button').forEach((button) => {
+      const option = densityControl.options.find(({ id }) => id === button.dataset.value);
+      button.textContent = option.label;
+      button.classList.toggle('is-active', button.dataset.value === state.density);
+    });
+    document.getElementById('seg-treemap-color').closest('.field').hidden = !caps.treemapColor;
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
     document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
     document.getElementById('seg-label-align').closest('.field').hidden = !caps.labelAlign;
@@ -420,6 +442,7 @@
          两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
       chartInstances[t.id] = mountExample(host, cat, {
         density: state.density,
+        treemapColor: state.treemapColor,
         platform: state.platform,
         zoom: state.zoom === 'on',
         area: state.area === 'on',
@@ -460,6 +483,7 @@
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
+  wireSeg('seg-treemap-color', 'treemapColor');
   wireSeg('seg-label', 'label');
   wireSeg('seg-label-layout', 'labelLayout');
   wireSeg('seg-label-align', 'labelAlign');

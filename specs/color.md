@@ -2,7 +2,7 @@
 
 > 权威源：各主题设计稿的「色板」章节（THS / iFinD-PC / Ainvest 各一套）。
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
-> 适用范围：所有图表的**数据系列色**（柱 / 折线 / 饼扇区 / 散点 …）。饼环的扇区取色见 COLOR-08
+> 适用范围：所有图表的**数据实体颜色**（柱 / 折线 / 饼扇区 / 矩形树图数据项 / 散点 …）。饼环的扇区取色见 COLOR-08
 > ——取色单位是扇区而非系列，但走的仍是这里的同一套色板与同一个取色器。
 > **元素色**（网格线、文字、tooltip、涨跌语义色等）不在此篇——它们是值 token，见 [tokens 的 README](../tokens/README.md)。
 
@@ -23,10 +23,12 @@
 | COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色使用**完整的声明系列列表**，不是当前可见系列——隐藏一个系列不会重新调用取色或改变其余系列的固定槽位 | `CartesianChart` 传入归一化后的 `series`，并按 `seriesIndex` 固定 `--dv-series-i` | ✅ |
 | COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
 | COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → **`pie-multi`** 按序号取、超出循环（COLOR-02）。<br>**扇区自成一盘（`pie-multi`）而非借用 `bar-multi`**：饼环把全部槽位同时摆在一个圆里，相邻扇区直接接边、没有柱间距与轴带隔开，需要的色数也远多于分组柱（36 扇区是 demo 常态）——THS 因此在设计稿里给了**独立的 11 色扇区盘**（`#52BBFF` 起，较 `bar-multi` 的 7 色更长、色相分布更匀）。<br>**该键可选、缺省回落 `bar-multi`**：iFinD-PC（24 色）/ Ainvest（8 色）设计稿未另出扇区盘，不声明 `pie-multi` 即沿用通用盘，行为与本条落地前完全一致——「整套换」的边界是主题，不是图型。<br>**取色器只加一条分支**：`type: 'pie'` 走 `pie-multi ?? bar-multi` 的独立序号，与柱 / 线两个计数器互不干扰。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `palette.json` 各主题可选 `pie-multi`；`core/palette.js` → `resolveSeriesColors()` 的 pie 分支；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
+| COLOR-09 | **数据项视觉颜色是 L1 通用能力**：`series` 消费固定系列槽位；`intensity` 使用主题单系列主色，并按数据秩映射全局五档透明度；`semantic-binned` / `semantic-flat` 复用全局涨跌色，0 复用中性灰。颜色解析只接收已归一化的数值数组，不识别图表、主题或业务字段；具体模式由 behavior 选择，业务字段到 `colorValue` 的映射由 L3 数据层完成。 | `core/visual-color.js`；`opacity-visualization-level-1..5`；`ratio-visualization-semantic-bin-1/2` | ✅ |
 
 ## 样式 token / 数据边界
 
 - **系列色**（本篇）：`tokens/palette.json`（写死 hex，不入 tokens.css）→ `core/palette.js` 取色 → L2 写成 `--dv-series-i`（host 上）→ 柱 / 图例 marker 用 `currentColor` / `var(--dv-series-i)`。
+- **数据项颜色策略**（COLOR-09）：L2 把系列槽位、主色和归一化数值交给 `core/visual-color.js`；L1 只组合既有 palette 与全局 token，不维护图表私有色值。
 - **元素色**：值 token，走 `tokens/*.json` → `tokens.css`（明暗分叉、作用域化），见 axes / legend / tooltip 各篇。
 
 ## 待办

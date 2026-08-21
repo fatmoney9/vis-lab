@@ -352,6 +352,102 @@
      放行让其渲染进卡片内边距、不被切平。图元本身都在 grid 内，不受影响。 */
 .dv-chart__plot > svg { display: block; overflow: visible; }
 
+/* [TREEMAP-03..08] 矩形树图：上级路径独占导航带，局部树图画板固定 160px。
+   导航是路径而不是营销式胶囊；当前层禁用，祖先层可点击返回。 */
+.dv-chart--treemap { width: 100%; }
+.dv-chart--treemap > .dv-chart__plot { flex: none; width: 100%; }
+.dv-chart--treemap > .dv-chart__plot > .dv-treemap {
+  overflow: hidden;
+  border-radius: var(--radius-treemap-canvas);
+}
+.dv-treemap-breadcrumb {
+  display: flex;
+  align-items: center;
+  height: var(--line-height-extra-large);
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-data-label);
+  line-height: var(--line-height-data-label);
+}
+.dv-treemap-breadcrumb[hidden] { display: none; }
+.dv-treemap-breadcrumb__item { display: inline-flex; align-items: center; min-width: 0; }
+.dv-treemap-breadcrumb__item:last-child { flex: 1; }
+.dv-treemap-breadcrumb__button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dv-treemap-breadcrumb__button:hover:not(:disabled) { color: var(--color-text-primary); }
+.dv-treemap-breadcrumb__button:disabled { color: var(--color-text-primary); cursor: default; }
+.dv-treemap-breadcrumb__button:focus-visible { outline: var(--size-grid-line) solid currentColor; outline-offset: var(--spacing-2); }
+.dv-treemap-breadcrumb__separator { flex: none; margin: 0 var(--spacing-4); }
+
+/* [TREEMAP-03] 2px 单元间隔由布局器计算；画板外角为 4px，内部单元保持直角且不另加描边。 */
+.dv-treemap-node__rect {
+  fill: currentColor;
+  stroke: var(--color-background-weak);
+  stroke-width: var(--spacing-0);
+}
+.dv-treemap-node { cursor: pointer; }
+.dv-treemap-node:focus-visible { outline: none; }
+.dv-treemap-node:focus-visible .dv-treemap-node__rect {
+  stroke: var(--color-text-primary);
+  stroke-width: calc(var(--size-grid-line) * 2);
+}
+.dv-treemap-node__mask {
+  pointer-events: none;
+  fill: var(--color-visualization-highlight-block);
+  opacity: 0;
+}
+.dv-treemap-node__mask.is-active { opacity: 1; }
+
+/* [TREEMAP-05/12/16] 各形态的字号上下限由 token 给出；名称走系统字体，数值走金融数字字体。
+   单元格内文字固定使用 84% 白，不再因底色动态切换黑白。 */
+.dv-treemap-label { pointer-events: none; }
+.dv-treemap-label text { fill: var(--color-text-inverse-primary); }
+.dv-treemap-label__name {
+  font-family: var(--font-family-cn);
+  font-size: var(--dv-treemap-name-size, var(--font-size-treemap-local-label-name));
+  font-weight: var(--font-weight-treemap-name);
+}
+.dv-treemap-label__value {
+  font-family: var(--font-family-number);
+  font-size: var(--dv-treemap-value-size, var(--font-size-treemap-local-label-value));
+  font-weight: var(--font-weight-data-label);
+  font-variant-numeric: tabular-nums;
+}
+
+/* [IMAGECONTENT-03] 通用图片内容结构；具体图表负责前景色与尺寸 token。 */
+.dv-image-content { pointer-events: none; }
+.dv-image-content__label {
+  font-family: var(--font-family-cn);
+  font-size: var(--dv-image-content-label-size);
+  font-weight: var(--dv-image-content-label-weight, var(--font-weight-regular));
+}
+.dv-image-content__value {
+  font-family: var(--font-family-number);
+  font-size: var(--dv-image-content-value-size);
+  font-weight: var(--dv-image-content-value-weight, var(--font-weight-medium));
+  font-variant-numeric: tabular-nums;
+}
+.dv-treemap-label.dv-image-content {
+  --dv-image-content-label-weight: var(--font-weight-treemap-name);
+  --dv-image-content-value-weight: var(--font-weight-data-label);
+}
+
 /* [WATERMARK-05] 水印：品牌 logo <image>，颜色/透明度烘焙在 SVG 内、明暗各一份（不走 token 链路）。
    pointer-events:none —— 永不抢鼠标，贴数据之上也不影响 hover/tooltip 命中。 */
 .dv-watermark { pointer-events: none; }
@@ -397,10 +493,19 @@
 
 /* [TOOLTIP-01][TOOLTIP-02] 标题行：下边框 = iFinD 分割线特例（THS/Ainvest transparent 只占 1px 无形） */
 .dv-tooltip__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
   color: var(--color-text-tooltip-title);
   padding-bottom: var(--spacing-tooltip-row);
   border-bottom: 1px solid var(--color-visualization-tooltip-divider);
   margin-bottom: var(--spacing-tooltip-row);
+}
+.dv-tooltip__title-icon {
+  flex: none;
+  width: var(--spacing-24);
+  height: var(--spacing-24);
+  object-fit: contain;
 }
 .dv-tooltip__rows { display: flex; flex-direction: column; gap: var(--spacing-tooltip-row); }
 
@@ -423,7 +528,6 @@
   white-space: nowrap; /* [TOOLTIP-03] 数值永不换行 */
   font-variant-numeric: tabular-nums;
 }
-
 /* [TOOLTIP-08] X 轴竖指示线：线色/虚实随主题 token（iFinD 虚线 3 3）；线宽与网格线同源 */
 .dv-crosshair-x {
   stroke: var(--color-visualization-highlight-line);

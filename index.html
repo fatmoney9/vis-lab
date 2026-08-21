@@ -218,6 +218,10 @@
        后者连顶部一起裁，auto 边距在余量为负时退化成 0、只裁下边。 */
     .example-card__preview { flex: 1; display: flex; min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
     .example-card__preview .chart-host { width: 100%; margin: auto 0; pointer-events: none; }
+    /* 列表缩略图统一使用局部树图高度；全局树图详情页仍读取自身推荐高度。 */
+    .example-card[data-id="treemap-overall"] .chart-host {
+      --size-treemap-overall-height: var(--size-treemap-local-height);
+    }
     /* 桑基在卡片里的收缩覆盖。两个 !important 是**必需**的：组件用
        `.dv-sankey { min-width: var(--dv-sankey-render-width, 100%) }` 把容器顶到算出来的图宽
        （详情页量到 1152px），卡片只有 268px，不解除就横向撑爆整张卡。
@@ -281,8 +285,10 @@
       transition: background .16s, border-color .16s, box-shadow .16s;
     }
     .stage__surface[data-platform="mobile"] {
+      /* `--mobile-chart-width` 表示图表净宽，不含演示外壳的 16px 内边距与 1px 边框。 */
+      box-sizing: content-box;
       max-width: 100%;
-      width: min(100%, var(--mobile-chart-width));
+      width: min(calc(100% - 34px), var(--mobile-chart-width));
     }
     .stage__surface[data-mode="dark"] { background: var(--shell-dark); border-color: rgba(255, 255, 255, .16); box-shadow: 0 10px 28px rgba(0, 0, 0, .22); }
     /* 高度**不定死**：host 高度 auto，由组件按 --size-chart-region-height 自然撑开——
@@ -622,7 +628,7 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, familiesFor, suggestedLegend, THEMES, DENSITY, capabilitiesOf, describeConfig } from './demos/examples.js';
+    import { examplesFor, familiesFor, suggestedLegend, THEMES, DENSITY, capabilitiesOf, defaultDensityOf, densityControlOf, densityOptionsOf, describeConfig } from './demos/examples.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -631,14 +637,10 @@
        族与族名都从 demos/examples.js 派生，接新组件时本页一行不改。 */
     const FAMILIES = familiesFor('index');
     const ALL = '全部示例';
-    /* 移动端机型预设**只给初始宽度**：高度一概不预设，交给图表按
-       --size-chart-region-height 自然撑开（该 token 按主题分化，故「不同主题多高」
-       不该由外壳猜）。chartWidth = 机型宽减去两侧页边距。 */
+    /* 移动端只保留 375px 推荐档且**只给图表净宽**：高度不预设，交给组件自己的高度 token。
+       chartWidth = 375 - 16 × 2 = 343；演示外壳的 padding / border 不得再吃掉这段净宽。 */
     const MOBILE_RESOLUTIONS = [
       { id: 'mobile-375', label: '375px', chartWidth: 343 },
-      { id: 'mobile-390', label: '390px', chartWidth: 358 },
-      { id: 'mobile-414', label: '414px', chartWidth: 382 },
-      { id: 'mobile-430', label: '430px', chartWidth: 398 },
     ];
 
     const state = {
@@ -650,6 +652,7 @@
       mobileResolution: 'mobile-375',
       mode: 'light',
       density: 'few',
+      treemapColor: 'intensity',
       dataLabel: 'auto',      /* [LABEL-05] 开关的「开」= 按图表类型默认，不落进 cfg */
       labelLayout: 'off',     /* [PIE-12] 饼环显隐 + 形态合一：关 / 引线 / 扇区内，默认关 */
       labelAlign: 'anchor',   /* [PIE-13] 默认就近；仅引线档生效 */
@@ -737,7 +740,7 @@
       main.querySelectorAll('.example-card').forEach((card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
-          density: 'few', platform: 'pc', area: false, zoom: false, axisTitle: false, animation: true,
+          density: defaultDensityOf(example), platform: 'pc', area: false, zoom: false, axisTitle: false, animation: true,
         });
       });
     }
@@ -967,6 +970,10 @@
       const mobileResolution = mobileResolutionOf(state.mobileResolution);
       const hasPlayback = playbackPeriodsOf(example).length > 0;
       const currentPeriod = hasPlayback ? playbackPeriodsOf(example)[state.periodIndex] : null;
+      const densityOptions = densityOptionsOf(example);
+      const densityControl = densityControlOf(example);
+      const densitySummary = example.densitySummary?.[state.density]
+        ?? `${densityOptions[state.density]} 类目`;
       /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
       const surfaceVariables = [
         ...(example.preferredWidth ? [`--chart-preferred-width:${example.preferredWidth}px`] : []),
@@ -997,7 +1004,7 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution.label}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${example.summary ?? `${DENSITY[state.density]} 类目`}</span>
+              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution.label}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${caps.density ? densitySummary : (example.summary ?? `${DENSITY[state.density]} 类目`)}</span>
             </div>
             <div class="stage__canvas">
               <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-resolution="${state.mobileResolution}" data-playback="${hasPlayback}"${surfaceStyle}>
@@ -1020,7 +1027,8 @@
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
             ${state.platform === 'mobile' ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="mobile-resolution-select">移动端分辨率</label><span class="field__hint">仅决定初始宽度</span></div><select class="select" id="mobile-resolution-select">${MOBILE_RESOLUTIONS.map((item) => `<option value="${item.id}"${state.mobileResolution === item.id ? ' selected' : ''}>${item.label}</option>`).join('')}</select></div></div>` : ''}
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
-            ${caps.density ? `<div class="field"><div class="field__row"><div class="field__copy"><label class="field__label" for="density-select">数据密度</label><span class="field__hint">检查碰撞与点显隐</span></div><select class="select" id="density-select"><option value="few"${state.density === 'few' ? ' selected' : ''}>少 · 4</option><option value="mid"${state.density === 'mid' ? ' selected' : ''}>中 · 16</option><option value="many"${state.density === 'many' ? ' selected' : ''}>多 · 36</option></select></div></div>` : ''}
+            ${caps.density ? `<div class="field"><div class="field__copy"><span class="field__label">${densityControl.label}</span><span class="field__hint">${densityControl.hint}</span></div>${segment('density', densityControl.options.map(({ id, label }) => [id, label]), state.density)}</div>` : ''}
+            ${caps.treemapColor && state.theme === 'ths' ? `<div class="field"><span class="field__label">颜色模式</span><span class="field__hint">THS · 程度五档 / 涨跌三档 / 涨跌无档位</span>${segment('treemapColor', [['intensity', '程度'], ['semantic-binned', '涨跌（分档）'], ['semantic-flat', '涨跌（不分档）']], state.treemapColor)}</div>` : ''}
             ${caps.dataLabel ? `<div class="field"><span class="field__label">数据标签</span><span class="field__hint">LABEL-05 · 默认 = 各图表自己的规则；强开 = 分组柱 / 堆叠也画</span>${segment('dataLabel', [['auto', '默认'], ['on', '强开']], state.dataLabel)}</div>` : ''}
             ${caps.labelLayout ? `<div class="field"><span class="field__label">标签形态</span><span class="field__hint">PIE-12 · 引线与标签强绑定，故显隐与形态是同一个选择</span>${segment('labelLayout', [['off', '关'], ['outside', '引线'], ['inside', '扇区内']], state.labelLayout)}</div>` : ''}
             ${caps.labelAlign ? `<div class="field"><span class="field__label">标签对齐</span><span class="field__hint">PIE-13 · 仅引线档生效</span>${segment('labelAlign', [['anchor', '就近'], ['column', '成列'], ['edge', '贴边']], state.labelAlign, state.labelLayout !== 'outside')}</div>` : ''}
@@ -1088,9 +1096,10 @@
       });
       document.getElementById('reset-button').addEventListener('click', () => {
         Object.assign(state, {
-          theme: 'ths', platform: 'pc', mobileResolution: 'mobile-375', mode: 'light', density: 'few',
+          theme: 'ths', platform: 'pc', mobileResolution: 'mobile-375', mode: 'light', density: defaultDensityOf(state.detail),
           dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
           legendSelect: 'multi',
+          treemapColor: 'intensity',
           area: false, zoom: false, axisTitle: false, animation: true, periodIndex: 0,
         });
         rerenderDetail();
@@ -1156,12 +1165,14 @@
       const nextDetail = EXAMPLES.find((example) => example.id === id) || null;
       if ((state.detail?.id || null) === (nextDetail?.id || null)) return;
       state.detail = nextDetail;
+      state.density = defaultDensityOf(nextDetail);
       render();
     }
 
     window.addEventListener('popstate', syncRoute);
     window.addEventListener('hashchange', syncRoute);
     state.detail = EXAMPLES.find((example) => example.id === window.location.hash.slice(1)) || null;
+    state.density = defaultDensityOf(state.detail);
     render();
   </script>
 </body>

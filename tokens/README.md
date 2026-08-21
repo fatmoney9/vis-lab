@@ -14,6 +14,8 @@
   构建，由 `charts/charts/sankey/style.js` 运行时直接 fetch 并自校验——是本目录唯一一条
   不走「JSON → tokens.css → CSS 变量」链路的通道。其中的语义色计划迁入各主题文件（届时可用
   `{color-price-up}` 一类别名，见 `specs/sankey.md` 待办）；几何与播放参数是图表常量，仍留本文件；
+- `ths.json` / `ifind-pc.json` / `ainvest.json` 的 Treemap 分节保存变体高度、主题差异、布局阈值与
+  透明度阶梯；通用字体、间距、圆角、反白文字和涨跌色直接复用前置公共 token；
 - `build.mjs` → `tokens.css`：构建脚本与其生成物。`tokens.css` **是生成文件，不要手改**。
 
 ## 值 Token
