@@ -1,12 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { statSync } from 'node:fs';
 
 import {
   EXAMPLES,
   buildConfig,
   capabilitiesOf,
+  defaultDensityOf,
+  densityControlOf,
+  densityOptionsOf,
   describeConfig,
   financialSankeyPeriods,
+  treemapHierarchy,
 } from '../demos/examples.js';
 import { hasSameSankeyTopology } from '../charts/charts/sankey/playback.js';
 import { assertSankeyConfig } from '../charts/charts/sankey/layout.js';
@@ -78,6 +83,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     legendSelect: false,
     /* [TOOLTIP-12] 桑基无 Y 轴，没有「这个高度相当于多少」可言，故恒 false。 */
     yIndicator: false,
+    treemapColor: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
@@ -145,9 +151,9 @@ test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）',
  * 给无轴图误开一个轴相关能力，面上会冒出一个点了没反应的旋钮、cfg 里会多一个组件不认识的字段——
  * 两者都不报错，故在这里拦。
  */
-test('PIE-05/PIE-08：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
-  const axisless = EXAMPLES.filter((e) => e.chart === 'pie');
-  assert.ok(axisless.length > 0, 'EXAMPLES 里应至少有一个饼环示例，否则本守卫形同虚设');
+test('PIE-05/PIE-08/TREEMAP-08：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
+  const axisless = EXAMPLES.filter((e) => ['pie', 'treemap'].includes(e.chart));
+  assert.ok(axisless.length > 0, 'EXAMPLES 里应至少有一个无坐标系示例，否则本守卫形同虚设');
   for (const e of axisless) {
     const caps = capabilitiesOf(e);
     assert.equal(caps.zoom, false, `示例「${e.id}」是无类目轴的图，不该声明缩放轴能力`);
@@ -158,6 +164,108 @@ test('PIE-05/PIE-08：无坐标系图不得声明轴相关能力，旋钮开着�
     assert.equal(cfg.zoom, undefined, `示例「${e.id}」开缩放轴旋钮不该装进 cfg`);
     assert.equal(cfg.axisTitle, undefined, `示例「${e.id}」开轴标题旋钮不该装进 cfg`);
   }
+});
+
+test('TREEMAP-01/06：矩形树图示例使用递归层级数据，并声明下钻层级', () => {
+  const example = EXAMPLES.find((item) => item.id === 'treemap-entry');
+  assert.ok(example, 'EXAMPLES 中应注册矩形树图示例');
+  const cfg = buildConfig(example, { platform: 'mobile' });
+  assert.equal(cfg.platform, 'mobile');
+  assert.equal(cfg.root.name, '全部行业');
+  assert.equal(cfg.root.children.length, 6);
+  assert.ok(cfg.root.children.every((node) => node.children.length >= 3));
+  const entryValues = cfg.root.children.map((node) => node.children
+    .reduce((sum, child) => sum + child.value, 0));
+  assert.deepEqual(entryValues, [...entryValues].sort((a, b) => b - a), '入口节点应按程度值降序声明');
+  assert.deepEqual(cfg.root, treemapHierarchy());
+  assert.deepEqual(capabilitiesOf(example), {
+    density: true,
+    zoom: false,
+    dataLabel: false,
+    axisTitle: false,
+    animation: true,
+    area: false,
+    legend: false,
+    labelLayout: false,
+    labelAlign: false,
+    legendSelect: false,
+    yIndicator: false,
+    treemapColor: true,
+  });
+});
+
+test('TREEMAP-17/COLOR-09：颜色策略只装进矩形树图配置，强度模式走组件默认', () => {
+  const treemap = EXAMPLES.find((item) => item.id === 'treemap-overall');
+  const bar = EXAMPLES.find((item) => item.id === 'basic');
+  assert.equal(buildConfig(treemap, { treemapColor: 'intensity' }).colorMode, undefined);
+  assert.equal(buildConfig(treemap, { treemapColor: 'semantic-binned' }).colorMode, 'semantic-binned');
+  assert.equal(buildConfig(treemap, { treemapColor: 'semantic-flat' }).colorMode, 'semantic-flat');
+  assert.equal(buildConfig(bar, { treemapColor: 'semantic-binned' }).colorMode, undefined);
+});
+
+test('TREEMAP-18：业务数据在 L3 归一化为通用 presentation 合同', () => {
+  const children = treemapHierarchy(18).children;
+  assert.equal(children[0].name, '信息技术');
+  assert.equal(children[0].value, 4280);
+  assert.equal(children[0].presentation.label, 'AAPL');
+  assert.match(children[0].presentation.image, /\/aapl\.png$/);
+  assert.ok(children.every((node) => Number.isFinite(node.presentation.colorValue)
+    && node.presentation.details.length === 3));
+  assert.deepEqual(
+    Object.fromEntries(children.map((node) => [
+      node.presentation.label,
+      new URL(node.presentation.image).pathname.split('/').at(-1),
+    ])),
+    {
+      AAPL: 'aapl.png', WSM: 'wsm.png', DOLE: 'dole.png', YSG: 'ysg.png',
+      VKTX: 'vktx.png', YMM: 'ymm.png', CSCO: 'csco.png', MAR: 'mar.png',
+      TEAM: 'team.png', ADMA: 'adma.png', BTSG: 'btsg.png', GLTO: 'glto.png',
+      GSAT: 'gsat.png', MSFT: 'aapl.png', NVDA: 'aapl.png', GOOG: 'aapl.png',
+      AMZN: 'aapl.png', META: 'aapl.png',
+    },
+    'Figma 有真实图标的代码应使用对应资源，其余使用 Apple 图标占位',
+  );
+  assert.ok(children.every((node) => statSync(new URL(node.presentation.image)).size > 1000),
+    '公司图标不应退化为空白或透明占位文件');
+});
+
+test('TREEMAP-11/12/13：入口、通用与全局树图是三个独立示例', () => {
+  const examples = EXAMPLES.filter((item) => item.chart === 'treemap');
+  assert.deepEqual(examples.map(({ id }) => id), ['treemap-entry', 'treemap-local', 'treemap-overall']);
+
+  const expected = [
+    {
+      id: 'treemap-entry', variant: 'entry', values: { few: 3, mid: 6, many: 8 },
+      hint: 'PRD 建议 3–8 个入口模块', ratioMode: 'absolute', labelType: 'twoLineCenter',
+    },
+    {
+      id: 'treemap-local', variant: 'local', values: { few: 10, mid: 18, many: 30 },
+      hint: 'PRD 建议不超过 30 项', ratioMode: 'approximate', labelType: 'twoLineCenter',
+    },
+    {
+      id: 'treemap-overall', variant: 'overall', values: { few: 32, mid: 42, many: 54 },
+      hint: 'PRD 建议 30 项以上', ratioMode: 'absolute', labelType: 'twoLineLeftBottom',
+    },
+  ];
+
+  expected.forEach(({ id, variant, values, hint, ratioMode, labelType }) => {
+    const example = examples.find((item) => item.id === id);
+    assert.deepEqual(densityOptionsOf(example), values);
+    assert.equal(defaultDensityOf(example), 'mid');
+    assert.deepEqual(densityControlOf(example), {
+      label: '项数', hint, default: 'mid',
+      options: [
+        { id: 'few', label: `${values.few}项` },
+        { id: 'mid', label: `${values.mid}项` },
+        { id: 'many', label: `${values.many}项` },
+      ],
+    });
+    const cfg = buildConfig(example);
+    assert.equal(cfg.variant, variant);
+    assert.equal(cfg.root.children.length, values.mid);
+    assert.equal(cfg.ratioMode, ratioMode);
+    assert.equal(cfg.labelType, labelType);
+  });
 });
 
 /* [PIE-09] 饼与环的默认布局相同（都是左右结构），且默认由**组件**给——

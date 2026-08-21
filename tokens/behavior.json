@@ -21,12 +21,14 @@
       "datazoom-handle": "[DATAZOOM-03] 缩放轴手柄形态（代码现画，非 SVG 资源，见 specs/datazoom.md）：shape=rect/circle · w/h 尺寸(px) · r 圆角(rect，缺省走 radius-slider-handle) · grip={n 竖条根数, h 竖条高 px, gap 中心间距 px}（竖条粗细 1.5 为结构常量、色走 color-datazoom-handle-grip；描边宽走 size-slider-handle-border、色走 -handle-border）。THS 24×24 圆角方(3 竖纹)、iFinD 16×16 圆角方(品牌填充, 1 竖纹)、Ainvest 12 圆(白面, 3 竖纹)。尺寸参与缩放带高度计算",
       "datazoom-label": "[DATAZOOM-05] 是否在手柄两侧显示起/终类目提示文本：仅 iFinD-PC 显示；THS / Ainvest 不显示。移动端一律不显示（与端无关的主题开关，端由组件另判）",
       "pie-label-form": "[PIE-15] 饼环外侧标签的名称段与数值段如何排布：inline = 同一行「名称 数值」（前提是两段字号相同，THS / iFinD-PC）/ stacked = 名称在上、数值在下两行（Ainvest，两段字号不同）。**是形态不是数值**：它改变标签块的高与宽（stacked 块高 = 两行行高之和、块宽 = 两段取大者；inline 反之），直接参与 PIE-14 纵向碰撞区间与 PIE-02 画布半高的计算，故走本文件而非值 token。⚠️ inline 档要求两段字号相同——异字号必须用 stacked，否则同一行内混排会让单一 class 的测量系统性偏窄",
+      "treemap-profile": "[TREEMAP-17/18][COLOR-09] 矩形树图主题形态：color-mode=config/series/semantic-binned；content=text/image；root-breadcrumb 控制根层路径。三主题共用单画布面积布局，字段映射由数据层完成，Tooltip 骨架与对侧固定布局也保持一致。像素值仍由主题 token 提供。",
       "watermark": "[WATERMARK-01..05] 图表水印品牌 logo：asset=资源 id（ths / ainvest，iFinD-PC 复用 ths）· anchor=锚角 {top|bottom}-{left|right}（贴 grid 绘图区角）· offset=距对应 grid 物理边净距(px)。真实 SVG 直载（明暗各一份、色烘焙在 SVG 内、不走 token 链路），资源见 charts/core/watermark-assets.js（源 assets/watermarks/*.svg）。平台通用——无 mobile/pc 分叉，unfold 原样透传"
     }
   },
 
   "ths": {
     "pie-label-form": "inline",
+    "treemap-profile": { "color-mode": "config", "content": "text", "root-breadcrumb": true },
     "y-label-form": "inside",
     "y-main-side": "left",
     "y-dual-shared": false,
@@ -55,6 +57,7 @@
   },
   "ifind-pc": {
     "pie-label-form": "inline",
+    "treemap-profile": { "color-mode": "series", "content": "text", "root-breadcrumb": true },
     "y-label-form": "outside",
     "y-main-side": "left",
     "y-dual-shared": true,
@@ -80,6 +83,7 @@
   },
   "ainvest": {
     "pie-label-form": "stacked",
+    "treemap-profile": { "color-mode": "semantic-binned", "content": "image", "root-breadcrumb": false },
     "y-label-form": { "mobile": "inside", "pc": "outside" },
     "y-main-side": "right",
     "y-dual-shared": false,
