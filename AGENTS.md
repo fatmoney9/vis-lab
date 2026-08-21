@@ -9,7 +9,7 @@
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
-  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用共九项，`hooks/pre-commit` 与 CI 调的都是它。
+  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明共十项，`hooks/pre-commit` 与 CI 调的都是它。
   **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
 - 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
   测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。
@@ -49,6 +49,12 @@
 这是 `WORKFLOW.md` 第八节用 `PieChart` 实测出来的结论——接新图型的 L1 成本几乎全部来自
 「为轴图设的隐含假设被无轴图暴露」，正确修法是把假设收回 L1（如 tooltip `place()` 删掉容器尺寸参数），
 而不是让新图型自带一份。判断粒度见 `WORKFLOW.md` 第三节。
+
+**接新图型的硬要求：写一份 L1 复用声明**（`charts/charts/<名>/README.md` 的「L1 复用声明」小节），
+把 `charts/core/` 下**每一个** L1 模块交代成「用」或「不用：<理由>」。由 `hooks/lint-l1-declaration.mjs`
+校验，且**与代码里的 import 逐条对账**——说了用却没 import、或 import 了却没声明，门禁都会红，
+所以这张表退化不成打勾的表格。照抄现成的：`charts/charts/cartesian/README.md`（19/20 用）·
+`charts/charts/pie/README.md`（12/20 用，八条「不用」同一个根因：无坐标系）。
 
 **已知反例（`SankeyChart`，欠账未清，不要照抄）**：它自带了 `svgTextMeasurer`（重写 `measure.js`）、
 `cubicOut`（重写 `motion.js` 的 `easeOutCubic`）与内联 `matchMedia`（重写 `reducedMotion`）。
