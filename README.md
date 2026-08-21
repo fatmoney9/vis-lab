@@ -17,7 +17,7 @@
 
 ```bash
 python3 -m http.server 8123     # 预览需 HTTP 服务，file:// 打不开（ES Module + fetch）
-sh hooks/check.sh               # 全部质量门禁八项（等价 npm run check）
+sh hooks/check.sh               # 全部质量门禁十项（等价 npm run check）
 node --test "tests/**/*.test.mjs"   # 只跑纯逻辑单测（等价 npm test；引号不能去）
 ```
 
@@ -41,7 +41,7 @@ sh hooks/check.sh
 |---|---|---|
 | `tokens/` | L0 | 三主题值 token、行为矩阵、系列色板；`tokens.css` 是生成物，不要手改 |
 | `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、动效、比例尺、格式化 |
-| `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `pie`（饼 / 环）· `sankey`（流向流量 / 季度播放） |
+| `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `pie`（饼 / 环）· `sankey`（流向流量 / 季度播放）。每族的 `README.md` 是它的 **L1 复用声明**（门禁校验，且与代码 import 对账） |
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 两个预览面共享的示例数据源与图表类型注册表 |
 | `index.html` · `playground/` | L3 | 两个预览面，只负责展示 |

@@ -6,6 +6,11 @@
 
 规则的**权威定义在 `specs/*.md`**，本表只说「哪个文件干什么」，不复述规则。
 
+> **本表里的每一个模块，每个 L2 图型都必须交代用不用**——见各族 `charts/charts/<名>/README.md`
+> 的「L1 复用声明」，由 `hooks/lint-l1-declaration.mjs` 校验并与代码里的 import 逐条对账。
+> 故**在此新增或改名一个模块，会让所有 L2 的声明变红**，需同步补一行；这是本表已知的维护成本，
+> 为换取「悄悄不用一个 L1」拦得住而接受（同 `AGENTS.md` L1 能力索引那处的取舍）。
+
 | 文件 | 职责 | 权威规范 |
 |---|---|---|
 | `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用）。另导出 `verticalGeometry()`：上下留白与绘图区高度的**纯计算**，与刻度无关故可在算刻度前先问出来（LABEL-10 的呼吸位需要它），`createFrame` 内部也调它、公式只此一份 | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08）、data-label.md（LABEL-10） |

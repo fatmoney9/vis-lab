@@ -7,7 +7,7 @@
 
 ## 验证结果
 
-- [ ] 已运行 `sh hooks/check.sh`（token / 水印重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用九项全过）
+- [ ] 已运行 `sh hooks/check.sh`（token / 水印重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明十项全过）
 - [ ] 生成文件（`tokens/tokens.css`、`charts/core/watermark-assets.js`）与源改动在同一提交
 - [ ] 已在本地 Preview 验证受影响图表
 - [ ] 已检查 PC / 移动端（不适用时在下方说明）
