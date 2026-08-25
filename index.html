@@ -218,10 +218,6 @@
        后者连顶部一起裁，auto 边距在余量为负时退化成 0、只裁下边。 */
     .example-card__preview { flex: 1; display: flex; min-height: 210px; padding: 12px; overflow: hidden; border-bottom: 1px solid var(--shell-divider); }
     .example-card__preview .chart-host { width: 100%; margin: auto 0; pointer-events: none; }
-    /* 列表缩略图统一使用局部树图高度；全局树图详情页仍读取自身推荐高度。 */
-    .example-card[data-id="treemap-overall"] .chart-host {
-      --size-treemap-overall-height: var(--size-treemap-local-height);
-    }
     /* 桑基在卡片里的收缩覆盖。两个 !important 是**必需**的：组件用
        `.dv-sankey { min-width: var(--dv-sankey-render-width, 100%) }` 把容器顶到算出来的图宽
        （详情页量到 1152px），卡片只有 268px，不解除就横向撑爆整张卡。
@@ -740,7 +736,8 @@
       main.querySelectorAll('.example-card').forEach((card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
-          density: defaultDensityOf(example), platform: 'pc', area: false, zoom: false, axisTitle: false, animation: true,
+          density: defaultDensityOf(example), platform: 'pc', area: false, zoom: false, axisTitle: false,
+          animation: true, compact: true,
         });
       });
     }

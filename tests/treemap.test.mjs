@@ -10,6 +10,7 @@ import {
   pathNames,
   ratioShares,
   resolvePath,
+  treemapPlotHeight,
 } from '../charts/charts/treemap/geometry.js';
 import {
   detailTooltipContent,
@@ -68,19 +69,19 @@ test('TREEMAP-01：父节点递归汇总有效叶子，0 保留，null 与负值
   ]);
 });
 
-test('TREEMAP-02：absolute 保持真实面积比例且总和为 1', () => {
-  const shares = ratioShares([98, 1, 1], 'absolute');
+test('TREEMAP-02：保持真实面积比例且总和为 1', () => {
+  const shares = ratioShares([98, 1, 1]);
   closeTo(shares[0], 0.98);
   closeTo(shares[1], 0.01);
   closeTo(shares[2], 0.01);
   closeTo(shares.reduce((sum, value) => sum + value, 0), 1);
 });
 
-test('TREEMAP-02：approximate 对极端跨度做同层统一压缩', () => {
-  const shares = ratioShares([1_000_000, 1], 'approximate', 100);
-  closeTo(shares[0] / shares[1], 100);
+test('TREEMAP-02：极端跨度不使用无来源的面积压缩上限', () => {
+  const shares = ratioShares([1_000_000, 1]);
+  closeTo(shares[0] / shares[1], 1_000_000, 1e-6);
   closeTo(shares.reduce((sum, value) => sum + value, 0), 1);
-  assert.deepEqual(ratioShares([0, 0], 'approximate', 100), [0, 0]);
+  assert.deepEqual(ratioShares([0, 0]), [0, 0]);
 });
 
 test('TREEMAP-11：6 项入口型形成 3×2 等面积布局', () => {
@@ -94,7 +95,22 @@ test('TREEMAP-11：6 项入口型形成 3×2 等面积布局', () => {
   assert.deepEqual(cells[5], { index: 5, x0: 200, x1: 300, y0: 80, y1: 160 });
 });
 
-test('TREEMAP-05：标题优先，安全空间内显示字号小 2px 的数值', () => {
+test('TREEMAP-08/12：容器高度优先并只扣实际显示的面包屑', () => {
+  assert.equal(treemapPlotHeight({
+    hostHeight: 300, breadcrumbHeight: 24, configuredHeight: 160, useContainerHeight: true,
+  }), 276);
+  assert.equal(treemapPlotHeight({
+    hostHeight: 300, breadcrumbHeight: 0, configuredHeight: 139, useContainerHeight: true,
+  }), 300, 'AInvest 根层隐藏面包屑时不应凭空扣 24px');
+  assert.equal(treemapPlotHeight({
+    hostHeight: 0, breadcrumbHeight: 0, configuredHeight: 160, useContainerHeight: false,
+  }), 160, 'auto 高宿主在首屏使用 L3 验收实例高度');
+  assert.equal(treemapPlotHeight({
+    hostHeight: 0, breadcrumbHeight: 0, configuredHeight: 0, useContainerHeight: false,
+  }), 0, '既无容器高也无 L3 验收高时必须暴露配置缺失');
+});
+
+test('TREEMAP-05：标题优先，THS 数值从名称字号减 2px 开始适配', () => {
   const fit = fitTreemapLabel({
     name: '化学制品', value: '1234', width: 56, height: 52, ...THS_LABEL_METRICS,
   });
@@ -155,17 +171,63 @@ test('TREEMAP-18：三主题共用单画布布局，behavior 只选择内容与�
     'color-mode': 'semantic-binned', content: 'image', 'root-breadcrumb': false,
   });
   assert.deepEqual(
-    ['xl', 'lg', 'md', 'sm'].map((size) => tokenNumber(
-      THEME_TOKENS.ainvest,
-      `size-treemap-block-${size}-image`,
+    Object.values(THEME_TOKENS).map((tokens) => tokenNumber(
+      tokens,
+      'size-treemap-value-font-deviation',
     )),
-    [64, 32, 16, 12],
+    [2, 2, 0],
+    'THS/iFinD 沿用文本树图 -2px 规则，AInvest 原稿没有该逻辑',
   );
-  assert.deepEqual(
-    Object.values(THEME_TOKENS).map((tokens) => tokenNumber(tokens, 'size-treemap-local-height')),
-    [160, 160, 160],
-    '三主题通用矩形树图应使用相同画板高度',
-  );
+  assert.deepEqual([
+    tokenNumber(THEME_TOKENS.ainvest, 'size-treemap-content-image-max'),
+    tokenNumber(THEME_TOKENS.ainvest, 'size-treemap-content-image-min'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-size-treemap-local-label-name'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-size-treemap-local-label-name-min'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-size-treemap-local-label-value'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-size-treemap-local-label-value-min'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-weight-treemap-name'),
+    tokenNumber(THEME_TOKENS.ainvest, 'font-weight-data-label'),
+  ], [64, 12, 28, 11, 20, 11, 600, 500]);
+  assert.deepEqual({
+    down1: THEME_TOKENS.ainvest['color-price-down-gradient-1'],
+    down2: THEME_TOKENS.ainvest['color-price-down-gradient-2'],
+    down3: THEME_TOKENS.ainvest['color-price-down-gradient-3'],
+    even: THEME_TOKENS.ainvest['color-price-even-gradient'],
+    up3: THEME_TOKENS.ainvest['color-price-up-gradient-3'],
+    up2: THEME_TOKENS.ainvest['color-price-up-gradient-2'],
+    up1: THEME_TOKENS.ainvest['color-price-up-gradient-1'],
+  }, {
+    down1: { light: '#F77C7C', dark: '#4D1209' },
+    down2: { light: '#F05045', dark: '#991A12' },
+    down3: { light: '#981400', dark: '#E03838' },
+    even: { light: '#B8B8B8', dark: '#333333' },
+    up3: { light: '#04663D', dark: '#00A15E' },
+    up2: { light: '#009959', dark: '#005C36' },
+    up1: { light: '#2CBD80', dark: '#003821' },
+  }, 'AInvest 三档涨跌色应保持 Figma 范围条的变量和值');
+  assert.deepEqual({
+    down1: THEME_TOKENS.ths['color-price-down-gradient-1'],
+    down2: THEME_TOKENS.ths['color-price-down-gradient-2'],
+    down3: THEME_TOKENS.ths['color-price-down-gradient-3'],
+    up1: THEME_TOKENS.ths['color-price-up-gradient-1'],
+    up2: THEME_TOKENS.ths['color-price-up-gradient-2'],
+    up3: THEME_TOKENS.ths['color-price-up-gradient-3'],
+  }, {
+    down1: '{color-price-down}',
+    down2: 'rgba(7, 171, 75, 0.75)',
+    down3: 'rgba(7, 171, 75, 0.55)',
+    up1: '{color-price-up}',
+    up2: 'rgba(255, 36, 54, 0.75)',
+    up3: 'rgba(255, 36, 54, 0.55)',
+  }, 'THS 三档色应直接包含 100% / 75% / 55% 透明度，不由 core 叠加');
+  Object.values(THEME_TOKENS).forEach((tokens) => {
+    assert.equal(tokens['ratio-visualization-semantic-bin-1'], undefined);
+    assert.equal(tokens['ratio-visualization-semantic-bin-2'], undefined);
+    assert.equal(tokens['size-treemap-entry-height'], undefined);
+    assert.equal(tokens['size-treemap-local-height'], undefined);
+    assert.equal(tokens['size-treemap-overall-height'], undefined);
+    assert.equal(tokens['font-weight-semibold'], undefined);
+  });
 });
 
 test('TREEMAP-18：图片与详情只消费通用 presentation 合同', () => {
@@ -173,22 +235,30 @@ test('TREEMAP-18：图片与详情只消费通用 presentation 合同', () => {
     node: {
       name: 'Apple',
       presentation: {
-        label: 'AAPL', value: '+7.23%', image: '/aapl.png', colorValue: 7.23,
+        label: 'AAPL', value: '+7.23%', image: '/aapl.png', imageFallback: 'A', colorValue: 7.23,
         details: [{ key: 'metric', label: 'Metric', value: '203.98' }],
       },
     },
     displayValue: '+7.23%',
   };
   assert.deepEqual(itemPresentation(item), {
-    label: 'AAPL', value: '+7.23%', image: '/aapl.png', colorValue: 7.23,
+    label: 'AAPL', value: '+7.23%', image: '/aapl.png', imageFallback: 'A', colorValue: 7.23,
     details: [{ key: 'metric', label: 'Metric', value: '203.98' }],
   });
   item.presentation = itemPresentation(item);
   assert.deepEqual(detailTooltipContent(item), {
     title: 'AAPL',
     titleIcon: '/aapl.png',
+    titleIconFallback: 'A',
     rows: [
       { key: 'metric', label: 'Metric', value: '203.98', showMarker: false },
     ],
   });
+});
+
+test('TREEMAP-17：缺失或非法 colorValue 保持为空，不伪装成平盘', () => {
+  assert.equal(itemPresentation({ node: { name: 'Missing' } }).colorValue, null);
+  assert.equal(itemPresentation({
+    node: { name: 'Invalid', presentation: { colorValue: 'not-a-number' } },
+  }).colorValue, null);
 });

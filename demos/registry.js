@@ -32,6 +32,15 @@ export const CHARTS = {
 export function mountExample(host, example, state) {
   const Chart = CHARTS[example.chart];
   if (!Chart) throw new Error(`registry：示例「${example.id}」声明的图表类型 ${example.chart} 未登记`);
+  host.style.removeProperty('--dv-chart-region-height');
+  const regionHeight = state?.compact ? example.compactRegionHeight : example.regionHeight;
+  if (regionHeight) {
+    const theme = host.closest('[data-theme]')?.dataset.theme ?? 'ths';
+    const height = typeof regionHeight === 'number' ? regionHeight : regionHeight[theme];
+    if (Number.isFinite(height) && height > 0) {
+      host.style.setProperty('--dv-chart-region-height', `${height}px`);
+    }
+  }
   const cfg = buildConfig(example, state);
   return { instance: Chart(host, cfg), cfg };
 }

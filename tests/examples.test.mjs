@@ -200,6 +200,7 @@ test('TREEMAP-17/COLOR-09：颜色策略只装进矩形树图配置，强度模�
   assert.equal(buildConfig(treemap, { treemapColor: 'intensity' }).colorMode, undefined);
   assert.equal(buildConfig(treemap, { treemapColor: 'semantic-binned' }).colorMode, 'semantic-binned');
   assert.equal(buildConfig(treemap, { treemapColor: 'semantic-flat' }).colorMode, 'semantic-flat');
+  assert.deepEqual(buildConfig(treemap).colorThresholds, [1, 2]);
   assert.equal(buildConfig(bar, { treemapColor: 'semantic-binned' }).colorMode, undefined);
 });
 
@@ -214,41 +215,61 @@ test('TREEMAP-18：业务数据在 L3 归一化为通用 presentation 合同', (
   assert.deepEqual(
     Object.fromEntries(children.map((node) => [
       node.presentation.label,
-      new URL(node.presentation.image).pathname.split('/').at(-1),
+      node.presentation.image
+        ? new URL(node.presentation.image).pathname.split('/').at(-1)
+        : null,
     ])),
     {
       AAPL: 'aapl.png', WSM: 'wsm.png', DOLE: 'dole.png', YSG: 'ysg.png',
       VKTX: 'vktx.png', YMM: 'ymm.png', CSCO: 'csco.png', MAR: 'mar.png',
       TEAM: 'team.png', ADMA: 'adma.png', BTSG: 'btsg.png', GLTO: 'glto.png',
-      GSAT: 'gsat.png', MSFT: 'aapl.png', NVDA: 'aapl.png', GOOG: 'aapl.png',
-      AMZN: 'aapl.png', META: 'aapl.png',
+      GSAT: 'gsat.png', MSFT: null, NVDA: null, GOOG: null, AMZN: null, META: null,
     },
-    'Figma 有真实图标的代码应使用对应资源，其余使用 Apple 图标占位',
+    '只使用企业自己的真实图标，不借用 Apple 图标占位',
   );
-  assert.ok(children.every((node) => statSync(new URL(node.presentation.image)).size > 1000),
+  assert.deepEqual(
+    Object.fromEntries(children.map((node) => [
+      node.presentation.label,
+      node.presentation.imageFallback,
+    ])),
+    {
+      AAPL: 'A', WSM: 'W', DOLE: 'D', YSG: 'Y', VKTX: 'V', YMM: 'F', CSCO: 'C',
+      MAR: 'M', TEAM: 'A', ADMA: 'A', BTSG: 'B', GLTO: 'G', GSAT: 'G', MSFT: 'M',
+      NVDA: 'N', GOOG: 'A', AMZN: 'A', META: 'M',
+    },
+    '首字母必须来自企业名称；例如 Alphabet= A、Atlassian= A、Full Truck Alliance= F',
+  );
+  assert.ok(children.filter((node) => node.presentation.image)
+    .every((node) => statSync(new URL(node.presentation.image)).size > 1000),
     '公司图标不应退化为空白或透明占位文件');
 });
 
 test('TREEMAP-11/12/13：入口、通用与全局树图是三个独立示例', () => {
   const examples = EXAMPLES.filter((item) => item.chart === 'treemap');
   assert.deepEqual(examples.map(({ id }) => id), ['treemap-entry', 'treemap-local', 'treemap-overall']);
+  assert.deepEqual(examples.map(({ regionHeight }) => regionHeight), [
+    { ths: 160, 'ifind-pc': 160, ainvest: 139 },
+    160,
+    { ths: 320, 'ifind-pc': 320, ainvest: 383 },
+  ], '三个形态的验收高度只留在 L3 示例元数据，不进入主题 token 或 L2 cfg');
+  assert.deepEqual(examples.map(({ compactRegionHeight }) => compactRegionHeight), [160, 160, 160]);
 
   const expected = [
     {
       id: 'treemap-entry', variant: 'entry', values: { few: 3, mid: 6, many: 8 },
-      hint: 'PRD 建议 3–8 个入口模块', ratioMode: 'absolute', labelType: 'twoLineCenter',
+      hint: 'PRD 建议 3–8 个入口模块', labelType: 'twoLineCenter',
     },
     {
       id: 'treemap-local', variant: 'local', values: { few: 10, mid: 18, many: 30 },
-      hint: 'PRD 建议不超过 30 项', ratioMode: 'approximate', labelType: 'twoLineCenter',
+      hint: 'PRD 建议不超过 30 项', labelType: 'twoLineCenter',
     },
     {
       id: 'treemap-overall', variant: 'overall', values: { few: 32, mid: 42, many: 54 },
-      hint: 'PRD 建议 30 项以上', ratioMode: 'absolute', labelType: 'twoLineLeftBottom',
+      hint: 'PRD 建议 30 项以上', labelType: 'twoLineLeftBottom',
     },
   ];
 
-  expected.forEach(({ id, variant, values, hint, ratioMode, labelType }) => {
+  expected.forEach(({ id, variant, values, hint, labelType }) => {
     const example = examples.find((item) => item.id === id);
     assert.deepEqual(densityOptionsOf(example), values);
     assert.equal(defaultDensityOf(example), 'mid');
@@ -263,7 +284,6 @@ test('TREEMAP-11/12/13：入口、通用与全局树图是三个独立示例', (
     const cfg = buildConfig(example);
     assert.equal(cfg.variant, variant);
     assert.equal(cfg.root.children.length, values.mid);
-    assert.equal(cfg.ratioMode, ratioMode);
     assert.equal(cfg.labelType, labelType);
   });
 });

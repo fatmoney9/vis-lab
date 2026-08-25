@@ -3,9 +3,10 @@
  *
  * API 只接收层级数据与形态语义：
  *   { name?, root:{name,value?,children?}, direction='squarify',
- *     variant='local', ratioMode='approximate', labelType='twoLineCenter', colorMode='intensity',
+ *     variant='local', labelType='twoLineCenter', colorMode='intensity', colorThresholds?,
  *     platform='pc', animation=true }
- * 尺寸、间距、圆角、文字和比例跨度全部由 token / 公共构件决定。
+ * 高度由宿主容器决定；间距、圆角、文字和颜色由 token / 公共构件决定；
+ * 语义分档阈值由业务配置提供。
  */
 import { hierarchy, select, treemap, treemapDice, treemapSlice, treemapSquarify } from 'd3';
 import { createFrame, observeResize } from '../../core/frame.js';
@@ -26,6 +27,7 @@ import {
   pathNames,
   ratioShares,
   resolvePath,
+  treemapPlotHeight,
 } from './geometry.js';
 import {
   detailTooltipContent,
@@ -41,38 +43,29 @@ function requiredTokenNum(host, name) {
   return value;
 }
 
-function resolveImageContentMetrics(host, { nameMax, nameMin, valueMax, valueMin }) {
-  const preset = (size, labelSize, valueSize) => ({
-    minWidth: requiredTokenNum(host, `--size-treemap-block-${size}-min-width`),
-    minHeight: requiredTokenNum(host, `--size-treemap-block-${size}-min-height`),
-    imageSize: requiredTokenNum(host, `--size-treemap-block-${size}-image`),
-    labelSize,
-    valueSize,
-  });
+function requiredNonNegativeTokenNum(host, name) {
+  const value = tokenNum(host, name);
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`TreemapChart：缺少非负 token ${name}`);
+  }
+  return value;
+}
+
+function resolveImageContentMetrics(
+  host,
+  { nameMax, nameMin, valueMax, valueMin, valueFontDeviation },
+) {
   return {
     padding: requiredTokenNum(host, '--spacing-4'),
     imageGap: requiredTokenNum(host, '--spacing-6'),
     textGap: requiredTokenNum(host, '--spacing-2'),
-    compact: {
-      minWidth: requiredTokenNum(host, '--size-treemap-block-compact-min-width'),
-      minHeight: requiredTokenNum(host, '--size-treemap-block-compact-min-height'),
-      imageSize: requiredTokenNum(host, '--size-treemap-block-sm-image'),
-      fontSize: requiredTokenNum(host, '--font-size-super-small'),
+    valueFontDeviation,
+    image: {
+      min: requiredTokenNum(host, '--size-treemap-content-image-min'),
+      max: requiredTokenNum(host, '--size-treemap-content-image-max'),
     },
-    presets: [
-      preset('xl', nameMax, valueMax),
-      preset(
-        'lg',
-        requiredTokenNum(host, '--font-size-base'),
-        requiredTokenNum(host, '--font-size-medium'),
-      ),
-      preset(
-        'md',
-        requiredTokenNum(host, '--font-size-extra-small'),
-        requiredTokenNum(host, '--font-size-extra-small'),
-      ),
-      preset('sm', nameMin, valueMin),
-    ],
+    label: { min: nameMin, max: nameMax },
+    value: { min: valueMin, max: valueMax },
   };
 }
 
@@ -104,9 +97,9 @@ export function TreemapChart(host, cfg) {
     root,
     direction = 'squarify',
     variant = 'local',
-    ratioMode = 'approximate',
     labelType = 'twoLineCenter',
     colorMode = 'intensity',
+    colorThresholds,
     platform = 'pc',
     animation = true,
   } = cfg;
@@ -116,9 +109,6 @@ export function TreemapChart(host, cfg) {
   }
   if (!['entry', 'local', 'overall'].includes(variant)) {
     throw new TypeError("TreemapChart：variant 仅支持 'entry'、'local' 或 'overall'");
-  }
-  if (!['absolute', 'approximate'].includes(ratioMode)) {
-    throw new TypeError("TreemapChart：ratioMode 仅支持 'absolute' 或 'approximate'");
   }
   if (!['twoLineCenter', 'twoLineLeftBottom', 'staticCenter'].includes(labelType)) {
     throw new TypeError('TreemapChart：labelType 不是受支持的标签形态');
@@ -130,6 +120,7 @@ export function TreemapChart(host, cfg) {
     throw new TypeError("TreemapChart：platform 仅支持 'pc' 或 'mobile'");
   }
 
+  const initialHostHeight = host.clientHeight;
   host.replaceChildren();
   host.classList.add('dv-chart', 'dv-chart--treemap');
   host.dataset.treemapVariant = variant;
@@ -152,8 +143,8 @@ export function TreemapChart(host, cfg) {
   const wm = behavior.watermark;
   let currentPath = [];
   let firstBuild = true;
-  let selfHeight = host.clientHeight;
-  let usesContainerHeight = false;
+  let selfHeight = initialHostHeight;
+  let usesContainerHeight = initialHostHeight > 0;
   let stopGrow = () => {};
   let stopHover = () => {};
   let transitionOrigin = null;
@@ -196,10 +187,17 @@ export function TreemapChart(host, cfg) {
 
     const current = resolvePath(root, currentPath);
     const items = displayChildren(current);
-    const regionHeight = requiredTokenNum(host, `--size-treemap-${variant}-height`);
-    const plotHeight = usesContainerHeight
-      ? Math.max(1, host.clientHeight - requiredTokenNum(host, '--line-height-extra-large'))
-      : regionHeight;
+    /* [TREEMAP-08/12] 高度由真实容器或 L3 验收实例提供，不属于主题 token。
+       容器接管时只扣实际显示的面包屑高度；AInvest 根层隐藏路径时不会凭空少 24px。 */
+    const plotHeight = treemapPlotHeight({
+      hostHeight: host.clientHeight,
+      breadcrumbHeight: breadcrumbHost.node().getBoundingClientRect().height,
+      configuredHeight: tokenNum(host, '--dv-chart-region-height'),
+      useContainerHeight: usesContainerHeight,
+    });
+    if (!(plotHeight > 0)) {
+      throw new Error('TreemapChart：外层容器必须提供有效高度，或由 L3 设置 --dv-chart-region-height');
+    }
     const width = Math.max(1, plotHost.clientWidth || host.clientWidth);
     const frame = createFrame(plotHost, { width, height: plotHeight, xBand: false, minGridHeight: 0 });
     frame.svg
@@ -230,10 +228,7 @@ export function TreemapChart(host, cfg) {
       semanticValues: items.map((item) => item.presentation.colorValue),
       seriesColors: items.map((item) => colors[item.index] ?? colors[0]),
       primaryColor,
-      thresholds: [
-        requiredTokenNum(host, '--ratio-visualization-semantic-bin-1'),
-        requiredTokenNum(host, '--ratio-visualization-semantic-bin-2'),
-      ],
+      thresholds: colorThresholds,
     });
     host.dataset.treemapColorMode = activeColorMode;
     items.forEach((item, itemIndex) => {
@@ -254,11 +249,7 @@ export function TreemapChart(host, cfg) {
 
     const shares = variant === 'entry'
       ? items.map(() => 1 / items.length)
-      : ratioShares(
-        items.map((item) => item.value),
-        ratioMode,
-        requiredTokenNum(host, '--ratio-treemap-max-area-ratio'),
-      );
+      : ratioShares(items.map((item) => item.value));
     const itemGap = requiredTokenNum(host, '--size-treemap-gap');
     const layoutRoot = hierarchy({ children: items.map((item, index) => ({ item, share: shares[index] })) })
       .sum((datum) => datum.share ?? 0)
@@ -292,13 +283,22 @@ export function TreemapChart(host, cfg) {
     const padding = requiredTokenNum(host, '--spacing-4');
     const labelGap = requiredTokenNum(host, '--spacing-2');
     const lineExtra = requiredTokenNum(host, '--spacing-4');
-    const valueFontDeviation = requiredTokenNum(host, '--size-treemap-value-font-deviation');
+    const valueFontDeviation = requiredNonNegativeTokenNum(
+      host,
+      '--size-treemap-value-font-deviation',
+    );
     const nameMax = requiredTokenNum(host, `--font-size-treemap-${variant}-label-name`);
     const nameMin = requiredTokenNum(host, `--font-size-treemap-${variant}-label-name-min`);
     const valueMax = requiredTokenNum(host, `--font-size-treemap-${variant}-label-value`);
     const valueMin = requiredTokenNum(host, `--font-size-treemap-${variant}-label-value-min`);
     const imageMetrics = usesImageContent
-      ? resolveImageContentMetrics(host, { nameMax, nameMin, valueMax, valueMin })
+      ? resolveImageContentMetrics(host, {
+        nameMax,
+        nameMin,
+        valueMax,
+        valueMin,
+        valueFontDeviation,
+      })
       : null;
     const names = leaves.map((d) => d.data.item.displayName);
     const values = leaves.map((d) => d.data.item.displayValue);
@@ -315,6 +315,7 @@ export function TreemapChart(host, cfg) {
             label: item.displayName,
             value: item.displayValue,
             image: content.image,
+            imageFallback: content.imageFallback,
             width: w,
             height: h,
             metrics: imageMetrics,

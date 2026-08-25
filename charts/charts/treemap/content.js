@@ -6,7 +6,11 @@
 
 import { imageContentTooltip, normalizeImageContent } from '../../core/image-content.js';
 
-const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const finiteOrNull = (value) => {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
 
 export function itemPresentation(item) {
   const node = item?.node ?? {};
@@ -14,7 +18,7 @@ export function itemPresentation(item) {
   const content = normalizeImageContent(source, { label: node.name });
   return {
     ...content,
-    colorValue: finite(source.colorValue),
+    colorValue: finiteOrNull(source.colorValue),
   };
 }
 

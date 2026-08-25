@@ -8,7 +8,7 @@
 export const ITEM_COLOR_MODES = ['series', 'intensity', 'semantic-binned', 'semantic-flat'];
 
 const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-const levelOpacity = (level) => `var(--opacity-visualization-level-${level})`;
+const levelOpacity = (level) => `var(--opacity-visualization-intensity-level-${level})`;
 
 /* [COLOR-09] 数值秩等距分入最多五档；并列值同档，最高值恒为最深档。 */
 export function intensityLevels(values, levelCount = 5) {
@@ -22,17 +22,23 @@ export function intensityLevels(values, levelCount = 5) {
   ));
 }
 
-function semanticFill(value) {
-  if (value === 0) return 'var(--color-grey-05)';
-  return `var(--color-price-${value > 0 ? 'up' : 'down'})`;
+function semanticFlatFill(value) {
+  if (value === 0) return 'var(--color-price-even-gradient)';
+  return `var(--color-price-${value > 0 ? 'up' : 'down'}-gradient-1)`;
 }
 
 function semanticLevel(value, thresholds) {
-  if (value === 0) return 5;
+  if (value === 0) return null;
   const magnitude = Math.abs(value);
-  if (magnitude <= thresholds[0]) return 1;
-  if (magnitude <= thresholds[1]) return 3;
-  return 5;
+  if (magnitude <= thresholds[0]) return 3;
+  if (magnitude <= thresholds[1]) return 2;
+  return 1;
+}
+
+function semanticGradientFill(value, thresholds) {
+  if (value === 0) return 'var(--color-price-even-gradient)';
+  const direction = value > 0 ? 'up' : 'down';
+  return `var(--color-price-${direction}-gradient-${semanticLevel(value, thresholds)})`;
 }
 
 /*
@@ -55,14 +61,37 @@ export function resolveItemColors({
   if (mode === 'intensity' && typeof primaryColor !== 'string') {
     throw new TypeError('intensity 模式必须传入主题单系列主色');
   }
-  if (
-    mode === 'semantic-binned'
-    && (!Array.isArray(thresholds) || thresholds.length !== 2 || thresholds.some((value) => !(value > 0)))
-  ) {
-    throw new TypeError('semantic-binned 模式必须传入两个正数阈值 token');
+  const semanticMode = mode === 'semantic-binned' || mode === 'semantic-flat';
+  if (semanticMode && (!Array.isArray(semanticValues) || semanticValues.length !== values.length)) {
+    throw new TypeError('语义颜色模式必须传入与 values 等长的 semanticValues');
+  }
+  if (mode === 'semantic-binned') {
+    const [lower, upper] = Array.isArray(thresholds) ? thresholds.map(Number) : [];
+    if (
+      thresholds?.length !== 2
+      || !Number.isFinite(lower)
+      || !Number.isFinite(upper)
+      || !(lower > 0 && lower < upper)
+    ) {
+      throw new TypeError('semantic-binned 模式必须传入两个有限、递增的正数业务阈值');
+    }
   }
 
-  const semantics = values.map((_, index) => finite(semanticValues[index]));
+  const semantics = values.map((_, index) => {
+    const rawSemanticValue = semanticValues[index];
+    const semanticValue = Number(rawSemanticValue);
+    if (
+      semanticMode
+      && (
+        rawSemanticValue == null
+        || (typeof rawSemanticValue === 'string' && rawSemanticValue.trim() === '')
+        || !Number.isFinite(semanticValue)
+      )
+    ) {
+      throw new TypeError(`语义颜色模式的 semanticValues[${index}] 必须是有限数`);
+    }
+    return Number.isFinite(semanticValue) ? semanticValue : 0;
+  });
   if (mode === 'series') {
     return values.map((_, index) => ({
       fill: seriesColors[index], opacity: null, semanticValue: semantics[index],
@@ -75,8 +104,10 @@ export function resolveItemColors({
     }));
   }
   return semantics.map((semanticValue) => ({
-    fill: semanticFill(semanticValue),
-    opacity: levelOpacity(mode === 'semantic-binned' ? semanticLevel(semanticValue, thresholds) : 5),
+    fill: mode === 'semantic-binned'
+      ? semanticGradientFill(semanticValue, thresholds)
+      : semanticFlatFill(semanticValue),
+    opacity: null,
     semanticValue,
   }));
 }

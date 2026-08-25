@@ -45,6 +45,9 @@ export function createTooltip(plotHost) {
     .style('border-width', `${ARROW_H}px ${ARROW_W / 2}px 0`);
   const title = root.append('div').attr('class', 'dv-tooltip__title');
   const titleIcon = title.append('img').attr('class', 'dv-tooltip__title-icon').attr('alt', '');
+  const titleIconFallback = title.append('span')
+    .attr('class', 'dv-tooltip__title-icon-fallback')
+    .attr('aria-hidden', 'true');
   const titleLabel = title.append('span').attr('class', 'dv-tooltip__title-label');
   const rowsHost = root.append('div').attr('class', 'dv-tooltip__rows');
   const markerSize = tokenNum(plotHost, '--size-legend-marker') || 12;
@@ -52,19 +55,34 @@ export function createTooltip(plotHost) {
   /*
    * [TOOLTIP-02] 内容：标题行 + 数据行（marker + 系列名左 / 数值右）。
    * 行序由调用方保证 = 图例序（声明序）；marker 与图例同源（legend.js 同一份规格与渲染）。
-   * titleIcon 可选；rows = [{ key, label, type, colorVar, value, showMarker? }]
+   * titleIcon / titleIconFallback 可选；rows = [{ key, label, type, colorVar, value, showMarker? }]
    * （value 已格式化，null 已转 "-"；showMarker=false 时不画 marker）
    */
-  function show({ title: titleText, titleIcon: iconUrl, rows }, marker) {
+  function show({ title: titleText, titleIcon: iconUrl, titleIconFallback: iconFallback, rows }, marker) {
     root.classed('is-visible', true);
     /* [TOOLTIP-02] 标题行**可省**：无标题维度的图（饼 / 环等无坐标系图，见 specs/pie.md PIE-05）
        不传 title 时整行不渲染——渲染成空行并不等于没有，它仍占 spacing-tooltip-row 的下间距
        与 iFinD 特例的标题行下分割线，会在气泡顶部露出一条孤立横线。 */
     const hasTitle = titleText != null && titleText !== '';
+    const hasIcon = hasTitle && Boolean(iconUrl);
+    const hasIconFallback = hasTitle && Boolean(iconFallback);
     title.style('display', hasTitle ? null : 'none');
+    titleIconFallback
+      /* 兜底只表达图片缺失 / 失败，不充当加载中占位。 */
+      .style('display', hasIconFallback && !hasIcon ? null : 'none')
+      .text(hasIconFallback ? iconFallback : '');
     titleIcon
-      .style('display', hasTitle && iconUrl ? null : 'none')
-      .attr('src', hasTitle && iconUrl ? iconUrl : null);
+      .on('load', () => {
+        if (!hasIcon) return;
+        titleIconFallback.style('display', 'none');
+        titleIcon.style('display', null);
+      })
+      .on('error', () => {
+        titleIcon.style('display', 'none');
+        titleIconFallback.style('display', hasIconFallback ? null : 'none');
+      })
+      .style('display', hasIcon ? null : 'none')
+      .attr('src', hasIcon ? iconUrl : null);
     titleLabel.text(hasTitle ? titleText : '');
     const row = rowsHost.selectAll('div.dv-tooltip__row').data(rows, (d) => d.key)
       .join((enter) => {

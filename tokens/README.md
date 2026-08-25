@@ -128,6 +128,37 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
   刻意远短于入场，见 [specs/pie.md](../specs/pie.md) PIE-11）。缓动曲线不在此——`cubic-bezier` 的四个系数
   无法经 `tokenNum` 解析，作为规范值常量留在 `charts/core/motion.js`（见 [specs/motion.md](../specs/motion.md) MOTION-03）。
 
+## Treemap token 溯源审查
+
+2026-08-24 对原 Treemap 分节的 28 个 key 逐项复核。基线来源为《矩形树图规范文档（持续更新）20230309》；
+AInvest 差异来源为 Figma《AInvest矩形树图规范》节点 `0:232`。审查结果是：18 个保留在 Treemap 分节，
+5 个提升为 L1 公共 token，5 个因不属于主题视觉值而删除。
+
+| key | 处理 | 来源与语义 |
+|---|---|---|
+| `size-treemap-entry-height` | 删除 | 高度是实例容器几何。THS / iFinD 的 160px 与 AInvest 的 139px 均迁到 L3 `regionHeight`；AInvest 外部 18px 标题与 4px 间距不计入图面。 |
+| `size-treemap-local-height` | 删除 | 基线局部图面 160px 迁到 L3 `regionHeight`，用于验收实例；组件运行时优先消费实际容器高度。 |
+| `size-treemap-overall-height` | 删除 | 基线规定整体类型高度自适应。Vis Lab 的 320 / 383px 验收高降为 L3 `regionHeight`；其中 383px 可回溯 Figma 实例，320px 明示为实验室验收值，不再冒充设计 token。 |
+| `size-treemap-gap` / `radius-treemap-canvas` | 保留 | 基线为 2px / 4px；AInvest Figma 图面实例为 1px / 6px，主题差异真实存在。 |
+| `size-treemap-value-font-deviation` | 保留 | 它是公式中的差值，不是最终字号：THS / iFinD 为“名称适配字号 − 2px”；AInvest 原稿没有减小逻辑，故为“名称适配字号 − 0px”。 |
+| `font-size-treemap-entry-label-{name\|value}{-min}` | 保留 | 基线文本入口名称 / 数值固定 12px；AInvest 图片内容名称 28→11px、数值 20→11px。 |
+| `font-size-treemap-local-label-{name\|value}{-min}` | 保留 | 基线名称 12→8px、数值 12→6px；AInvest 图片内容名称 28→11px、数值 20→11px。 |
+| `font-size-treemap-overall-label-{name\|value}{-min}` | 保留 | 基线名称 16→8px、数值 14→6px；AInvest 图片内容名称 28→11px、数值 20→11px。 |
+| `font-weight-treemap-name` | 保留语义别名 | 基线文本主题使用 regular；AInvest 的 semibold 直接别名到已有 `font-weight-bold = 600`，不再制造同值的 `font-weight-semibold`。数值继续复用公共 `font-weight-data-label = medium`。 |
+| `size-treemap-content-image-{max\|min}` | 保留 | AInvest Figma 明示图片 64→12px；缺图时“圆形页面一级背景 + 企业名称首字母”占用同一尺寸槽位。键集合为三主题同构；`content=text` 的主题不会消费它。 |
+| `opacity-visualization-intensity-level-1..5` | 移出 Treemap 分节并收窄命名 | 55% / 65% / 75% / 85% / 100% 来自基线强度阶梯，仅供 L1 `intensity` 强度模式消费，不能伪装成 Treemap 私有值；语义色不再叠加该透明度。 |
+| `ratio-visualization-semantic-bin-1/2` | 删除 | AInvest Figma 只说明区间可配置，未规定全产品统一阈值；阈值属于数据业务口径，改由 `colorThresholds` 传入。演示值 `[1, 2]` 只复现 Figma 范围条示例。 |
+
+公共颜色分节使用 `color-price-{up|down}-gradient-1..3` 与 `color-price-even-gradient` 保存语义模式的
+最终颜色，core 只选档，不再另写 `fill-opacity`。THS 三档将基线五档透明度阶梯等距投影为
+100% / 75% / 55%（端点 + 中点）：1 档别名基础涨跌色，2 / 3 档直接保存带 alpha 的 RGBA；
+AInvest 不走透明度近似，直接保存 Figma 的完整 light / dark 色值；iFinD 当前 `color-mode=series`，
+未启用语义分档，等设计源补齐前各档只别名基础涨跌色。`semantic-flat` 固定消费 1 档。
+
+构建器除合同、分叉和别名校验外，还校验值域：`opacity-*` 的最终叶值必须位于 0..1；
+`color-*` 只接受本仓库支持的 hex、`rgb(a)`、颜色关键字或 token 别名。非法值在生成 CSS 前即失败，
+避免浏览器静默忽略后才在视觉验收中暴露。
+
 ## 修改要求
 
 - 不要直接修改自动生成的 CSS 产物，应修改本目录的 JSON 权威源并重新构建；

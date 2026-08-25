@@ -28,7 +28,7 @@
  * 没有同类固定外框硬需求的新图型，照上面三步走即可，不要照抄桑基。
  */
 
-import { ainvestCompanyIcon } from './company-icons.js';
+import { ainvestCompanyIdentity } from './company-icons.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
 
@@ -254,6 +254,8 @@ const TREEMAP_SEMANTIC_VALUES = [
   5.55, 2.55, -0.21, -2.21, 0.83, -1.25, 3.42, -3.25, 0, 1.17, -0.86, 4.68,
   -4.12, 0.16, 2.03, -1.07, 0.62, -0.41,
 ];
+/* AInvest Figma「涨跌色-3梯度」示例：±1 / ±2 为两处分档边界；属于业务配置，不是视觉 token。 */
+const TREEMAP_SEMANTIC_THRESHOLDS = [1, 2];
 const formatPercent = (value) => `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
 
 const ainvestPresentation = (index) => {
@@ -261,11 +263,12 @@ const ainvestPresentation = (index) => {
   const price = 38.5 + ((index * 37.11) % 410);
   const cap = index < 18 ? `${(3.48 - index * 0.13).toFixed(2)}T` : `${Math.round(860 - index * 9.4)}B`;
   const colorValue = TREEMAP_SEMANTIC_VALUES[index % TREEMAP_SEMANTIC_VALUES.length];
-  const image = ainvestCompanyIcon(ticker);
+  const { image, imageFallback } = ainvestCompanyIdentity(ticker);
   return {
     label: ticker,
     value: formatPercent(colorValue),
     image,
+    imageFallback,
     colorValue,
     details: [
       { key: 'price', label: 'Price', value: price.toFixed(2) },
@@ -578,6 +581,8 @@ export const EXAMPLES = [
     id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
     title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
     description: '3–8 个等面积模块组成业务入口，面积不映射业务值，点击可下钻查看下一层。',
+    regionHeight: { ths: 160, 'ifind-pc': 160, ainvest: 139 },
+    compactRegionHeight: 160,
     densityValues: { few: 3, mid: 6, many: 8 },
     densityControl: {
       hint: 'PRD 建议 3–8 个入口模块',
@@ -591,13 +596,15 @@ export const EXAMPLES = [
     },
     cfg: (count) => ({
       name: '行业入口', root: treemapHierarchy(count), variant: 'entry',
-      ratioMode: 'absolute', labelType: 'twoLineCenter',
+      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
     }),
   },
   {
     id: 'treemap-local', group: '矩形树图', chart: 'treemap',
     title: '通用矩形树图', spec: 'TREEMAP-05 / TREEMAP-08 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 局部类型单屏形态，展示头部重点或二级完整数据，兼顾比例和文字可读性。',
+    regionHeight: 160,
+    compactRegionHeight: 160,
     densityValues: { few: 10, mid: 18, many: 30 },
     densityControl: {
       hint: 'PRD 建议不超过 30 项',
@@ -611,13 +618,17 @@ export const EXAMPLES = [
     },
     cfg: (count) => ({
       name: '重点行业', root: treemapHierarchy(count), variant: 'local',
-      ratioMode: 'approximate', labelType: 'twoLineCenter',
+      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
     }),
   },
   {
     id: 'treemap-overall', group: '矩形树图', chart: 'treemap',
     title: '全局矩形树图', spec: 'TREEMAP-12 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 整体类型固定页形态，容纳 30 项以上全量数据，面积严格映射真实占比。',
+    /* 仅用于 Vis Lab 初始验收画布，不进入 L2 cfg / 主题 token：
+       THS/iFinD 的 320 是实验室验收值；AInvest 383 来自 Figma 全局图面实例。 */
+    regionHeight: { ths: 320, 'ifind-pc': 320, ainvest: 383 },
+    compactRegionHeight: 160,
     densityValues: { few: 32, mid: 42, many: 54 },
     densityControl: {
       hint: 'PRD 建议 30 项以上',
@@ -631,7 +642,7 @@ export const EXAMPLES = [
     },
     cfg: (count) => ({
       name: '全市场行业', root: treemapHierarchy(count), variant: 'overall',
-      ratioMode: 'absolute', labelType: 'twoLineLeftBottom',
+      labelType: 'twoLineLeftBottom', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
     }),
   },
   {

@@ -1,7 +1,7 @@
 /*
  * treemap/geometry.js -- [L2-LOCAL] 矩形树图的纯数据几何。
  *
- * 本文件不碰 DOM / d3：递归汇总、比例压缩与文字适配是矩形树图独有的规则，留在本族内，
+ * 本文件不碰 DOM / d3：递归汇总、比例、图面测高与文字适配是矩形树图独有的规则，留在本族内，
  * 同时让 node --test 能直接验证比例与降级顺序。
  */
 
@@ -25,34 +25,36 @@ export function displayChildren(node) {
     .filter((item) => item.value != null && item.value > 0);
 }
 
-/*
- * [TREEMAP-02] 同层统一使用一种面积比例。
- * absolute 保持真实比例；approximate 仅在最大/最小值超过上限时，用统一幂指数把跨度压到上限。
- * 例如 1,000,000:1 在 maxRatio=100 时压成 100:1，顺序不变、同层不混用两套尺度。
- */
-export function ratioShares(values, mode = 'approximate', maxRatio) {
+/* [TREEMAP-02] 面积严格按原始正值占比计算；不引入设计源未定义的长尾压缩阈值。 */
+export function ratioShares(values) {
   if (!values.length) return [];
-  if (!['absolute', 'approximate'].includes(mode)) throw new TypeError('ratioMode 仅支持 absolute 或 approximate');
-  if (mode === 'approximate' && !(Number(maxRatio) > 0)) {
-    throw new TypeError('approximate 面积模式必须传入正数 maxRatio token');
-  }
   const safe = values.map((value) => (Number.isFinite(value) && value > 0 ? value : 0));
   const positive = safe.filter((value) => value > 0);
   if (!positive.length) return safe.map(() => 0);
-
-  let exponent = 1;
-  if (mode === 'approximate') {
-    const ratio = Math.max(...positive) / Math.min(...positive);
-    const limit = Math.max(1, Number(maxRatio));
-    if (ratio > limit) exponent = Math.log(limit) / Math.log(ratio);
-  }
-  const weights = safe.map((value) => value > 0 ? value ** exponent : 0);
-  const total = weights.reduce((sum, value) => sum + value, 0);
-  const shares = weights.map((value) => value / total);
+  const total = safe.reduce((sum, value) => sum + value, 0);
+  const shares = safe.map((value) => value / total);
   const delta = 1 - shares.reduce((sum, value) => sum + value, 0);
   const largest = safe.indexOf(Math.max(...safe));
   shares[largest] += delta;
   return shares;
+}
+
+/* [TREEMAP-08/12] 显式容器高优先；否则使用 L3 给出的图面验收高。
+   面包屑只按实际渲染高度扣除，hidden 时为 0，不按主题或固定行高猜测。 */
+export function treemapPlotHeight({
+  hostHeight,
+  breadcrumbHeight,
+  configuredHeight,
+  useContainerHeight,
+}) {
+  const outer = Number.isFinite(Number(hostHeight)) ? Math.max(0, Number(hostHeight)) : 0;
+  const breadcrumb = Number.isFinite(Number(breadcrumbHeight))
+    ? Math.max(0, Number(breadcrumbHeight))
+    : 0;
+  const available = Math.max(0, outer - breadcrumb);
+  if (useContainerHeight) return available;
+  const configured = Number(configuredHeight);
+  return Number.isFinite(configured) && configured > 0 ? configured : available;
 }
 
 /* [TREEMAP-11] 入口型最多两排，单排内等宽；6 项形成稳定的 3×2 等面积入口。 */

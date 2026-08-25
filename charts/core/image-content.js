@@ -16,6 +16,7 @@ export function normalizeImageContent(source, fallback = {}) {
       ? (fallback.value == null ? null : text(fallback.value))
       : text(content.value),
     image: content.image ? text(content.image) : null,
+    imageFallback: content.imageFallback ? text(content.imageFallback) : null,
     details: Array.isArray(content.details)
       ? content.details.map((row, index) => ({
         key: text(row?.key, index),
@@ -26,110 +27,133 @@ export function normalizeImageContent(source, fallback = {}) {
   };
 }
 
-/* [IMAGECONTENT-02] 按调用方尺寸档从大到小降级；本函数不持有任何像素常量。 */
+function requiredRange(metrics, name) {
+  const range = metrics?.[name];
+  const min = Number(range?.min);
+  const max = Number(range?.max);
+  if (!(min > 0) || !(max >= min)) {
+    throw new TypeError(`图片内容块缺少有效的 ${name} 尺寸上下限`);
+  }
+  return { min, max };
+}
+
+function scaledSize(range, ratio) {
+  return Math.round(range.min + (range.max - range.min) * ratio);
+}
+
+function blockHeightOf({ imageSize, labelSize, valueSize, imageGap, textGap }) {
+  return imageSize
+    + (imageSize && (labelSize || valueSize) ? imageGap : 0)
+    + (labelSize || 0)
+    + (labelSize && valueSize ? textGap : 0)
+    + (valueSize || 0);
+}
+
+/* [IMAGECONTENT-02] 在调用方给定的尺寸上下限内按实际空间连续适配；本函数不持有像素常量。 */
 export function fitImageContent({
   label,
   value,
   image,
+  imageFallback,
   width,
   height,
   metrics,
-  measureLabel = (content, size) => text(content).length * size * 0.62,
-  measureValue = measureLabel,
+  measureLabel,
+  measureValue,
 }) {
-  if (!metrics || !Array.isArray(metrics.presets) || !metrics.presets.length) {
-    throw new TypeError('图片内容块缺少由 token 解析的尺寸档');
+  if (!metrics) throw new TypeError('图片内容块缺少由 token 解析的尺寸上下限');
+  if (typeof measureLabel !== 'function' || typeof measureValue !== 'function') {
+    throw new TypeError('图片内容块必须注入 L1 文字测量函数');
   }
-  const { padding, imageGap, textGap, compact, presets } = metrics;
+  const { padding, imageGap, textGap, valueFontDeviation } = metrics;
+  const imageRange = requiredRange(metrics, 'image');
+  const labelRange = requiredRange(metrics, 'label');
+  const valueRange = requiredRange(metrics, 'value');
+  for (const [name, metric] of Object.entries({
+    padding,
+    imageGap,
+    textGap,
+    valueFontDeviation,
+  })) {
+    if (!Number.isFinite(Number(metric)) || Number(metric) < 0) {
+      throw new TypeError(`图片内容块缺少非负 ${name} 尺寸`);
+    }
+  }
   const innerWidth = Math.max(0, width - padding * 2);
   const innerHeight = Math.max(0, height - padding * 2);
   if (!label || innerWidth <= 0 || innerHeight <= 0) return null;
 
-  for (const preset of presets) {
-    if (width < preset.minWidth || height < preset.minHeight) continue;
-    const imageSize = image ? preset.imageSize : 0;
-    const blockHeight = imageSize
-      + (imageSize ? imageGap : 0)
-      + preset.labelSize
-      + textGap
-      + preset.valueSize;
-    if (blockHeight > innerHeight) continue;
-    if (
-      measureLabel(label, preset.labelSize) > innerWidth
-      || measureValue(value, preset.valueSize) > innerWidth
-    ) continue;
-    return {
-      imageSize,
-      labelSize: preset.labelSize,
-      valueSize: preset.valueSize,
-      showLabel: true,
-      showValue: true,
-      blockHeight,
-    };
-  }
-
-  const compactImageSize = image && Number(compact.imageSize) > 0
-    ? Number(compact.imageSize)
-    : 0;
-  if (
-    compactImageSize
-    && compactImageSize <= innerWidth
-    && compactImageSize <= innerHeight
-  ) {
-    const labelFits = measureLabel(label, compact.fontSize) <= innerWidth;
-    const imageAndLabelHeight = compactImageSize + imageGap + compact.fontSize;
-    if (
-      width >= compact.minWidth
-      && height >= compact.minHeight
-      && labelFits
-      && imageAndLabelHeight <= innerHeight
-    ) {
+  const fitScaled = ({ showImage, showLabel, showValue }) => {
+    const activeRanges = [
+      showImage ? imageRange : null,
+      showLabel ? labelRange : null,
+      showValue ? valueRange : null,
+    ].filter(Boolean);
+    const steps = Math.max(1, ...activeRanges.map((range) => Math.ceil(range.max - range.min)));
+    for (let step = steps; step >= 0; step -= 1) {
+      const ratio = step / steps;
+      const imageSize = showImage ? scaledSize(imageRange, ratio) : 0;
+      const labelSize = showLabel ? scaledSize(labelRange, ratio) : null;
+      const valueSize = showValue
+        ? Math.min(
+          valueRange.max,
+          Math.max(
+            valueRange.min,
+            (labelSize ?? scaledSize(labelRange, ratio)) - valueFontDeviation,
+          ),
+        )
+        : null;
+      const blockHeight = blockHeightOf({ imageSize, labelSize, valueSize, imageGap, textGap });
+      if (imageSize > innerWidth || blockHeight > innerHeight) continue;
+      if (labelSize && measureLabel(label, labelSize) > innerWidth) continue;
+      if (valueSize && measureValue(value, valueSize) > innerWidth) continue;
       return {
-        imageSize: compactImageSize,
-        labelSize: compact.fontSize,
-        valueSize: null,
-        showLabel: true,
-        showValue: false,
-        blockHeight: imageAndLabelHeight,
+        imageSize,
+        ...(showImage && imageFallback
+          ? { imageFallbackSize: scaledSize(labelRange, ratio) }
+          : {}),
+        labelSize,
+        valueSize,
+        showLabel,
+        showValue,
+        blockHeight,
       };
     }
-    return {
-      imageSize: compactImageSize,
-      labelSize: null,
-      valueSize: null,
-      showLabel: false,
-      showValue: false,
-      blockHeight: compactImageSize,
-    };
+    return null;
+  };
+
+  const hasImage = Boolean(image || imageFallback);
+  const hasValue = value != null && text(value) !== '';
+  const full = fitScaled({ showImage: hasImage, showLabel: true, showValue: hasValue });
+  if (full) return full;
+
+  if (hasImage) {
+    const imageAndLabel = fitScaled({ showImage: true, showLabel: true, showValue: false });
+    if (imageAndLabel) return imageAndLabel;
+    const imageSize = Math.min(imageRange.max, Math.floor(innerWidth), Math.floor(innerHeight));
+    if (imageSize >= imageRange.min) {
+      const imageRatio = imageRange.max === imageRange.min
+        ? 0
+        : (imageSize - imageRange.min) / (imageRange.max - imageRange.min);
+      return {
+        imageSize,
+        ...(imageFallback
+          ? { imageFallbackSize: scaledSize(labelRange, imageRatio) }
+          : {}),
+        labelSize: null,
+        valueSize: null,
+        showLabel: false,
+        showValue: false,
+        blockHeight: imageSize,
+      };
+    }
   }
 
-  if (
-    width >= compact.minWidth
-    && height >= compact.minHeight
-    && measureLabel(label, compact.fontSize) <= innerWidth
-  ) {
-    return {
-      imageSize: 0,
-      labelSize: compact.fontSize,
-      valueSize: null,
-      showLabel: true,
-      showValue: false,
-      blockHeight: compact.fontSize,
-    };
-  }
-  if (
-    width >= compact.minWidth
-    && height >= compact.minHeight
-    && measureValue(value, compact.fontSize) <= innerWidth
-  ) {
-    return {
-      imageSize: 0,
-      labelSize: null,
-      valueSize: compact.fontSize,
-      showLabel: false,
-      showValue: true,
-      blockHeight: compact.fontSize,
-    };
+  const labelOnly = fitScaled({ showImage: false, showLabel: true, showValue: false });
+  if (labelOnly) return labelOnly;
+  if (hasValue) {
+    const valueOnly = fitScaled({ showImage: false, showLabel: false, showValue: true });
+    if (valueOnly) return valueOnly;
   }
   return null;
 }
@@ -152,16 +176,55 @@ export function renderImageContent(layer, {
     .attr('class', ['dv-image-content', className].filter(Boolean).join(' '))
     .attr('data-key', key ?? null)
     .style('--dv-image-content-label-size', layout.labelSize == null ? null : `${layout.labelSize}px`)
-    .style('--dv-image-content-value-size', layout.valueSize == null ? null : `${layout.valueSize}px`);
+    .style('--dv-image-content-value-size', layout.valueSize == null ? null : `${layout.valueSize}px`)
+    .style(
+      '--dv-image-content-fallback-size',
+      layout.imageFallbackSize == null ? null : `${layout.imageFallbackSize}px`,
+    );
 
-  if (layout.imageSize && normalized.image) {
-    group.append('image')
-      .attr('class', 'dv-image-content__image')
-      .attr('href', normalized.image)
-      .attr('x', x - layout.imageSize / 2)
-      .attr('y', cursorY)
-      .attr('width', layout.imageSize)
-      .attr('height', layout.imageSize);
+  if (layout.imageSize && (normalized.image || normalized.imageFallback)) {
+    const fallback = normalized.imageFallback
+      ? group.append('g')
+        .attr('class', 'dv-image-content__fallback')
+        .attr('aria-hidden', 'true')
+        /* 兜底是缺失 / 失败态，不是加载中占位；有真实图片时首帧即隐藏。 */
+        .style('display', normalized.image ? 'none' : null)
+      : null;
+    if (fallback) {
+      fallback.append('circle')
+        .attr('class', 'dv-image-content__fallback-bg')
+        .attr('cx', x)
+        .attr('cy', cursorY + layout.imageSize / 2)
+        .attr('r', layout.imageSize / 2);
+      fallback.append('text')
+        .attr('class', 'dv-image-content__fallback-text')
+        .attr('x', x)
+        .attr('y', cursorY + layout.imageSize / 2)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .text(normalized.imageFallback);
+    }
+    const image = normalized.image ? group.append('image') : null;
+    if (image && fallback) {
+      image
+        .on('load', () => {
+          fallback.style('display', 'none');
+          image.style('display', null);
+        })
+        .on('error', () => {
+          image.style('display', 'none');
+          fallback.style('display', null);
+        });
+    }
+    if (image) {
+      image
+        .attr('class', 'dv-image-content__image')
+        .attr('x', x - layout.imageSize / 2)
+        .attr('y', cursorY)
+        .attr('width', layout.imageSize)
+        .attr('height', layout.imageSize)
+        .attr('href', normalized.image);
+    }
     cursorY += layout.imageSize + imageGap;
   }
   if (layout.showLabel) {
@@ -200,6 +263,7 @@ export function imageContentTooltip(content, fallback = {}) {
   return {
     title: normalized.label,
     titleIcon: normalized.image,
+    ...(normalized.imageFallback ? { titleIconFallback: normalized.imageFallback } : {}),
     rows: rows.map((row) => ({ ...row, showMarker: false })),
   };
 }
