@@ -41,20 +41,13 @@ export function ratioShares(values) {
 
 /* [TREEMAP-08/12] 显式容器高优先；否则使用 L3 给出的图面验收高。
    面包屑只按实际渲染高度扣除，hidden 时为 0，不按主题或固定行高猜测。 */
-export function treemapPlotHeight({
-  hostHeight,
-  breadcrumbHeight,
-  configuredHeight,
-  useContainerHeight,
-}) {
-  const outer = Number.isFinite(Number(hostHeight)) ? Math.max(0, Number(hostHeight)) : 0;
-  const breadcrumb = Number.isFinite(Number(breadcrumbHeight))
-    ? Math.max(0, Number(breadcrumbHeight))
-    : 0;
-  const available = Math.max(0, outer - breadcrumb);
-  if (useContainerHeight) return available;
-  const configured = Number(configuredHeight);
-  return Number.isFinite(configured) && configured > 0 ? configured : available;
+export function treemapPlotHeight({ hostHeight, fallbackHeight, useContainerHeight }) {
+  /* [TREEMAP-08] 高度恒由**容器**决定，图面填满整个容器——与 cartesian / pie 同一模型。
+     本族是单层展示、容器内没有别的带要让位，故图面高 = 容器高。
+     容器没给高时退到主题 token `--size-chart-region-height`（THS 160 / iFinD·Ainvest 200），
+     它表达的同样是容器高度。 */
+  const raw = Number(useContainerHeight ? hostHeight : fallbackHeight);
+  return Number.isFinite(raw) ? Math.max(0, raw) : 0;
 }
 
 /* [TREEMAP-11] 入口型最多两排，单排内等宽；6 项形成稳定的 3×2 等面积入口。 */
@@ -185,22 +178,3 @@ export function fitTreemapLabel({
   };
 }
 
-export function resolvePath(root, indexes = []) {
-  let node = root;
-  for (const index of indexes) {
-    if (!Array.isArray(node?.children) || !node.children[index]) return root;
-    node = node.children[index];
-  }
-  return node;
-}
-
-export function pathNames(root, indexes = []) {
-  const names = [root?.name ?? '全部'];
-  let node = root;
-  for (const index of indexes) {
-    node = node?.children?.[index];
-    if (!node) break;
-    names.push(node.name);
-  }
-  return names;
-}

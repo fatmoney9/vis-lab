@@ -166,7 +166,9 @@ test('PIE-05/PIE-08/TREEMAP-08：无坐标系图不得声明轴相关能力，�
   }
 });
 
-test('TREEMAP-01/06：矩形树图示例使用递归层级数据，并声明下钻层级', () => {
+/* [TREEMAP-06] 数据仍是递归结构，但深层只用于**汇总父节点的值**——无下钻后
+   子节点不再是可进入的层级，这条断言守的是「求和口径」而不是「导航层级」。 */
+test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与汇总', () => {
   const example = EXAMPLES.find((item) => item.id === 'treemap-entry');
   assert.ok(example, 'EXAMPLES 中应注册矩形树图示例');
   const cfg = buildConfig(example, { platform: 'mobile' });

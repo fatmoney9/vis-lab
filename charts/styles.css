@@ -353,47 +353,13 @@
 .dv-chart__plot > svg { display: block; overflow: visible; }
 
 /* [TREEMAP-03..08] 矩形树图：上级路径独占导航带，图面高度由真实容器或 L3 验收实例提供。
-   导航是路径而不是营销式胶囊；当前层禁用，祖先层可点击返回。 */
+ */
 .dv-chart--treemap { width: 100%; }
-.dv-chart--treemap > .dv-chart__plot { flex: none; width: 100%; }
+.dv-chart--treemap > .dv-chart__plot { width: 100%; }
 .dv-chart--treemap > .dv-chart__plot > .dv-treemap {
   overflow: hidden;
   border-radius: var(--radius-treemap-canvas);
 }
-.dv-treemap-breadcrumb {
-  display: flex;
-  align-items: center;
-  height: var(--line-height-extra-large);
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-family: var(--font-family-cn);
-  font-size: var(--font-size-data-label);
-  line-height: var(--line-height-data-label);
-}
-.dv-treemap-breadcrumb[hidden] { display: none; }
-.dv-treemap-breadcrumb__item { display: inline-flex; align-items: center; min-width: 0; }
-.dv-treemap-breadcrumb__item:last-child { flex: 1; }
-.dv-treemap-breadcrumb__button {
-  appearance: none;
-  border: 0;
-  padding: 0;
-  max-width: 100%;
-  overflow: hidden;
-  color: inherit;
-  background: transparent;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.dv-treemap-breadcrumb__button:hover:not(:disabled) { color: var(--color-text-primary); }
-.dv-treemap-breadcrumb__button:disabled { color: var(--color-text-primary); cursor: default; }
-.dv-treemap-breadcrumb__button:focus-visible { outline: var(--size-grid-line) solid currentColor; outline-offset: var(--spacing-2); }
-.dv-treemap-breadcrumb__separator { flex: none; margin: 0 var(--spacing-4); }
 
 /* [TREEMAP-03] 单元间隔与画板外角均由主题 token 提供；内部单元保持直角且不另加描边。 */
 .dv-treemap-node__rect {

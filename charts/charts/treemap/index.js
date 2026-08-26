@@ -24,9 +24,7 @@ import {
   displayChildren,
   entryCells,
   fitTreemapLabel,
-  pathNames,
   ratioShares,
-  resolvePath,
   treemapPlotHeight,
 } from './geometry.js';
 import {
@@ -87,10 +85,6 @@ function entryTile(node, x0, y0, x1, y1) {
   });
 }
 
-function hasChildren(node) {
-  return displayChildren(node).length > 0;
-}
-
 export function TreemapChart(host, cfg) {
   const {
     name,
@@ -124,9 +118,6 @@ export function TreemapChart(host, cfg) {
   host.replaceChildren();
   host.classList.add('dv-chart', 'dv-chart--treemap');
   host.dataset.treemapVariant = variant;
-  const breadcrumbHost = select(host).append('nav')
-    .attr('class', 'dv-treemap-breadcrumb')
-    .attr('aria-label', '矩形树图层级路径');
   const plotHost = select(host).append('div').attr('class', 'dv-chart__plot').node();
 
   const behavior = resolveBehavior(host, platform);
@@ -141,40 +132,11 @@ export function TreemapChart(host, cfg) {
   const format = makeFormatter(behavior['number-format']);
   const marker = behavior['legend-marker'];
   const wm = behavior.watermark;
-  let currentPath = [];
   let firstBuild = true;
   let selfHeight = initialHostHeight;
   let usesContainerHeight = initialHostHeight > 0;
   let stopGrow = () => {};
   let stopHover = () => {};
-  let transitionOrigin = null;
-
-  function drawBreadcrumb() {
-    breadcrumbHost.attr(
-      'hidden',
-      !treemapProfile['root-breadcrumb'] && currentPath.length === 0 ? true : null,
-    );
-    const names = pathNames(root, currentPath);
-    const item = breadcrumbHost.selectAll('span.dv-treemap-breadcrumb__item')
-      .data(names.map((label, depth) => ({ label, depth })))
-      .join((enter) => {
-        const span = enter.append('span').attr('class', 'dv-treemap-breadcrumb__item');
-        span.append('button').attr('type', 'button').attr('class', 'dv-treemap-breadcrumb__button');
-        span.append('span').attr('class', 'dv-treemap-breadcrumb__separator').attr('aria-hidden', 'true').text('/');
-        return span;
-      });
-    item.select('button')
-      .text((d) => d.label)
-      .attr('aria-current', (d) => d.depth === names.length - 1 ? 'page' : null)
-      .attr('disabled', (d) => d.depth === names.length - 1 ? true : null)
-      .on('click', (_, d) => {
-        currentPath = currentPath.slice(0, d.depth);
-        transitionOrigin = null;
-        build(true);
-      });
-    item.select('.dv-treemap-breadcrumb__separator')
-      .style('display', (d) => d.depth === names.length - 1 ? 'none' : null);
-  }
 
   function build(forceMotion = false) {
     stopGrow();
@@ -182,21 +144,17 @@ export function TreemapChart(host, cfg) {
     stopGrow = () => {};
     stopHover = () => {};
     plotHost.replaceChildren();
-    host.dataset.treemapDepth = String(currentPath.length);
-    drawBreadcrumb();
 
-    const current = resolvePath(root, currentPath);
-    const items = displayChildren(current);
-    /* [TREEMAP-08/12] 高度由真实容器或 L3 验收实例提供，不属于主题 token。
-       容器接管时只扣实际显示的面包屑高度；AInvest 根层隐藏路径时不会凭空少 24px。 */
+    const items = displayChildren(root);
+    /* [TREEMAP-08] 高度恒由容器决定、图面填满整个容器，与 cartesian / pie 同一模型
+       （那两族的图例 / 缩放轴 / 轴标题同样从容器高里让位；本族没有这类附加带）。 */
     const plotHeight = treemapPlotHeight({
       hostHeight: host.clientHeight,
-      breadcrumbHeight: breadcrumbHost.node().getBoundingClientRect().height,
-      configuredHeight: tokenNum(host, '--dv-chart-region-height'),
+      fallbackHeight: tokenNum(host, '--size-chart-region-height'),
       useContainerHeight: usesContainerHeight,
     });
     if (!(plotHeight > 0)) {
-      throw new Error('TreemapChart：外层容器必须提供有效高度，或由 L3 设置 --dv-chart-region-height');
+      throw new Error('TreemapChart：外层容器必须提供有效高度，或主题需提供 --size-chart-region-height');
     }
     const width = Math.max(1, plotHost.clientWidth || host.clientWidth);
     const frame = createFrame(plotHost, { width, height: plotHeight, xBand: false, minGridHeight: 0 });
@@ -212,7 +170,7 @@ export function TreemapChart(host, cfg) {
 
     /* [TREEMAP-04][TREEMAP-17][COLOR-09] L2 只把主题 behavior 与归一化数值交给 L1：
        series / intensity / semantic 三类颜色策略均不认识主题或业务字段，且不参与面积布局。 */
-    const declared = Array.isArray(current.children) ? current.children : [];
+    const declared = Array.isArray(root.children) ? root.children : [];
     const colors = resolveSeriesColors(host, { series: declared.map(() => ({ type: 'bar' })) });
     const primaryColor = resolveSeriesColors(host, { series: [{ type: 'bar' }] })[0];
     const activeColorMode = treemapProfile['color-mode'] === 'config'
@@ -244,7 +202,6 @@ export function TreemapChart(host, cfg) {
         ? item.presentation.label
         : String(item.node.name ?? '');
       host.style.setProperty(item.colorVar, item.fill);
-      item.path = [...currentPath, item.index];
     });
 
     const shares = variant === 'entry'
@@ -274,7 +231,7 @@ export function TreemapChart(host, cfg) {
       .style('color', (d) => `var(${d.data.item.colorVar})`)
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('aria-label', (d) => `${d.data.item.displayName}，${d.data.item.displayValue}，${hasChildren(d.data.item.node) ? '可下钻' : '可查看详情'}`);
+      .attr('aria-label', (d) => `${d.data.item.displayName}，${d.data.item.displayValue}，可查看详情`);
     groups.append('rect')
       .attr('class', 'dv-treemap-node__rect')
       .style('fill-opacity', (d) => d.data.item.opacity);
@@ -331,7 +288,7 @@ export function TreemapChart(host, cfg) {
             y: (leaf.y0 + leaf.y1 - layout.blockHeight) / 2,
             imageGap: imageMetrics.imageGap,
             textGap: imageMetrics.textGap,
-            key: item.path.join('.'),
+            key: String(item.index),
             className: 'dv-treemap-label',
           });
           return;
@@ -355,7 +312,7 @@ export function TreemapChart(host, cfg) {
         const anchor = center ? 'middle' : 'start';
         const label = labelLayer.append('g')
           .attr('class', 'dv-treemap-label')
-          .attr('data-key', item.path.join('.'))
+          .attr('data-key', String(item.index))
           .style('--dv-treemap-name-size', `${layout.nameSize}px`)
           .style('--dv-treemap-value-size', layout.valueSize == null ? null : `${layout.valueSize}px`);
         layout.nameLines.forEach((line, lineIndex) => {
@@ -383,9 +340,12 @@ export function TreemapChart(host, cfg) {
       valueMeasurer.destroy();
     }
 
-    /* [TREEMAP-07] 共用 L1 看板与对侧固定布局；L2 只装配矩形节点内容。 */
+    /* [TREEMAP-07][TOOLTIP-07] 共用 L1 看板；L2 只装配矩形节点内容。
+       **位置档恒 follow**——与饼环同一条通则：无坐标系图没有「最近类目」可锚，
+       气泡跟指针走才对得上你正在看的那个节点。这不是主题分叉（三主题一致），
+       故在 L2 定死、不给 behavior.json 加键（同 PIE-05 的做法）。 */
     const tooltip = createTooltip(plotHost);
-    const tooltipMode = 'side-fixed';
+    const tooltipMode = 'follow';
     const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
     let hideTimer = 0;
     let pinnedLeaf = null;
@@ -397,9 +357,9 @@ export function TreemapChart(host, cfg) {
       if (usesImageContent) tooltip.show(detailTooltipContent(item), marker);
       else {
         tooltip.show({
-          title: current.name ?? name,
+          title: root.name ?? name,
           rows: [{
-            key: item.path.join('.'), label: item.node.name, type: 'bar',
+            key: String(item.index), label: item.node.name, type: 'bar',
             colorVar: item.colorVar, value: item.displayValue,
           }],
         }, marker);
@@ -418,14 +378,8 @@ export function TreemapChart(host, cfg) {
         hideTimer = setTimeout(() => tooltip.hide(), hideDelay);
       }
     };
+    /* [TREEMAP-06] 单层展示，无下钻：点击只钉住 / 取消钉住 Tooltip。 */
     const activate = (event, leaf) => {
-      const item = leaf.data.item;
-      if (hasChildren(item.node)) {
-        transitionOrigin = { x: leaf.x0, y: leaf.y0, w: leaf.x1 - leaf.x0, h: leaf.y1 - leaf.y0 };
-        currentPath = item.path;
-        build(true);
-        return;
-      }
       pinnedLeaf = pinnedLeaf === leaf ? null : leaf;
       if (pinnedLeaf) showTip(event, leaf);
       else { reset(); tooltip.hide(); }
@@ -444,7 +398,8 @@ export function TreemapChart(host, cfg) {
 
     if (wm) renderWatermark(frame.svg.append('g').attr('class', 'dv-watermark-layer'), frame, { spec: wm, mode: modeOf(host) });
 
-    const origin = transitionOrigin ?? { x: frame.grid.width / 2, y: frame.grid.height / 2, w: 0, h: 0 };
+    /* [MOTION] 入场从画布中心展开——下钻已移除（TREEMAP-06），不再有「从被点方块放大」的起点。 */
+    const origin = { x: frame.grid.width / 2, y: frame.grid.height / 2, w: 0, h: 0 };
     const shapes = groups.selectAll('rect');
     const drawRects = (t = 1) => {
       shapes
@@ -456,7 +411,6 @@ export function TreemapChart(host, cfg) {
     drawRects();
     const animateNow = animation && (firstBuild || forceMotion) && !reducedMotion();
     firstBuild = false;
-    transitionOrigin = null;
     if (animateNow) {
       labelLayer.style('display', 'none');
       drawRects(0);
@@ -480,7 +434,6 @@ export function TreemapChart(host, cfg) {
       host.classList.remove('dv-chart', 'dv-chart--treemap');
       delete host.dataset.treemapVariant;
       delete host.dataset.treemapColorMode;
-      delete host.dataset.treemapDepth;
       host.replaceChildren();
     },
   };

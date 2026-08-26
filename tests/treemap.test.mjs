@@ -7,9 +7,7 @@ import {
   displayChildren,
   entryCells,
   fitTreemapLabel,
-  pathNames,
   ratioShares,
-  resolvePath,
   treemapPlotHeight,
 } from '../charts/charts/treemap/geometry.js';
 import {
@@ -96,18 +94,16 @@ test('TREEMAP-11：6 项入口型形成 3×2 等面积布局', () => {
 });
 
 test('TREEMAP-08/12：容器高度优先并只扣实际显示的面包屑', () => {
+  /* [TREEMAP-08] 单层展示、容器内无附加带，故图面高恒等于容器高，两条来源口径一致。 */
   assert.equal(treemapPlotHeight({
-    hostHeight: 300, breadcrumbHeight: 24, configuredHeight: 160, useContainerHeight: true,
-  }), 276);
+    hostHeight: 300, fallbackHeight: 160, useContainerHeight: true,
+  }), 300, '容器给了高就全部给图面');
   assert.equal(treemapPlotHeight({
-    hostHeight: 300, breadcrumbHeight: 0, configuredHeight: 139, useContainerHeight: true,
-  }), 300, 'AInvest 根层隐藏面包屑时不应凭空扣 24px');
+    hostHeight: 0, fallbackHeight: 200, useContainerHeight: false,
+  }), 200, 'auto 高宿主退到主题 token --size-chart-region-height');
   assert.equal(treemapPlotHeight({
-    hostHeight: 0, breadcrumbHeight: 0, configuredHeight: 160, useContainerHeight: false,
-  }), 160, 'auto 高宿主在首屏使用 L3 验收实例高度');
-  assert.equal(treemapPlotHeight({
-    hostHeight: 0, breadcrumbHeight: 0, configuredHeight: 0, useContainerHeight: false,
-  }), 0, '既无容器高也无 L3 验收高时必须暴露配置缺失');
+    hostHeight: 0, fallbackHeight: 0, useContainerHeight: false,
+  }), 0, '既无容器高也无主题 token 时必须暴露配置缺失');
 });
 
 test('TREEMAP-05：标题优先，THS 数值从名称字号减 2px 开始适配', () => {
@@ -150,25 +146,17 @@ test('TREEMAP-05：L2 标签布局必须由 L1 注入文字测量能力', () => 
   }), /L1 注入文字测量函数/);
 });
 
-test('TREEMAP-06：层级路径可解析并可回到任意祖先', () => {
-  const root = {
-    name: '全部',
-    children: [{ name: '行业', children: [{ name: '子行业', value: 1 }] }],
-  };
-  assert.equal(resolvePath(root, [0, 0]).name, '子行业');
-  assert.deepEqual(pathNames(root, [0, 0]), ['全部', '行业', '子行业']);
-  assert.equal(resolvePath(root, [9]), root, '非法路径回落根节点');
-});
-
 test('TREEMAP-18：三主题共用单画布布局，behavior 只选择内容与颜色能力', () => {
+  /* [TREEMAP-06] 三主题都只有 color-mode 与 content 两个键——层级下钻与顶部路径
+     已按产品决定整体移除，`root-breadcrumb` 一并退场，不留残键。 */
   assert.deepEqual(BEHAVIOR.ths['treemap-profile'], {
-    'color-mode': 'config', content: 'text', 'root-breadcrumb': true,
+    'color-mode': 'config', content: 'text',
   });
   assert.deepEqual(BEHAVIOR['ifind-pc']['treemap-profile'], {
-    'color-mode': 'series', content: 'text', 'root-breadcrumb': true,
+    'color-mode': 'series', content: 'text',
   });
   assert.deepEqual(BEHAVIOR.ainvest['treemap-profile'], {
-    'color-mode': 'semantic-binned', content: 'image', 'root-breadcrumb': false,
+    'color-mode': 'semantic-binned', content: 'image',
   });
   assert.deepEqual(
     Object.values(THEME_TOKENS).map((tokens) => tokenNumber(
