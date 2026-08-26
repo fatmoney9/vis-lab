@@ -133,6 +133,30 @@ export function createFrame(host, opts = {}) {
   };
 }
 
+/*
+ * [GRID-03] 「高度由谁说了算」的两条判据 —— **全库唯一出处**，三族共用。
+ * 收在这里而不是各图型自己写：treemap 曾用 `> 0`、另两族用 `>= 40`，同一个决定两种口径，
+ * 结果容器塌到几像素时行为不一致（2026-08-26 对齐）。新图型直接调这两个，别再抄一份数字。
+ *
+ * `CONTAINER_HEIGHT_MIN = 40`：低于它就认为容器还没布局好 / 塌了，此时用主题默认高度包络
+ * （`--size-chart-region-height`）而不是跟着容器走——跟一个 3px 高的容器只会画出不可读的图。
+ *
+ * ⚠️ **基线由调用方给，本模块不替它决定**——这里有个踩过的坑：
+ *   cartesian 用「首次挂载时的高度」当基线即可；
+ *   pie / treemap **必须**用「本组件上一次 build 产出的高度」（每次 build 末尾刷新）。
+ *   因为容器 height:auto 时图表根的高度**就是图表自己撑出来的**，图元自变（饼环只剩一个扇区、
+ *   外侧标签落到 6 点方向把画布顶高）也会让它变；用固定基线会把这种自变误判成「容器给了新高度」，
+ *   随后从含绘图区的根去减 → 画布依赖画布 → 逐帧坍缩（饼环实测 140 → 28 → 0）。
+ *   详见 pie/index.js 的 observeResize 注释。
+ */
+export const CONTAINER_HEIGHT_MIN = 40;
+
+/* 挂载时：容器是否已给出可用高度（给了就随容器，否则用主题默认包络） */
+export const containerDrivesHeight = (hostHeight) => Number(hostHeight) >= CONTAINER_HEIGHT_MIN;
+
+/* resize 时：这次变高是不是**外部**造成的（1px 容差吸收亚像素抖动） */
+export const containerTookOver = (hostHeight, baseline) => Math.abs(hostHeight - baseline) > 1;
+
 /* [GRID-03] 容器尺寸自适应：宽/高变化（rAF 合帧）后回调重建 */
 export function observeResize(host, cb) {
   let raf = 0;

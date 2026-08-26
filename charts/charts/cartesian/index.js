@@ -22,7 +22,7 @@
  *           true 入场生长 / false 直接终态；系统「减弱动态效果」下恒直接终态（MOTION-07）
  */
 import { select } from 'd3';
-import { createFrame, observeResize, verticalGeometry } from '../../core/frame.js';
+import { createFrame, observeResize, verticalGeometry, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
 import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
@@ -47,7 +47,7 @@ import { groupedBars, singleBar, stackBars } from './layout.js';
 export function CartesianChart(host, cfg) {
   const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
-  let usesContainerHeight = host.clientHeight >= 40;
+  let usesContainerHeight = containerDrivesHeight(host.clientHeight);
 
   const resolved = resolveSeries(series);                 /* 归一化：补默认 type/axis（见 series.js） */
   const keys = resolved.map((r) => r.name);
@@ -507,7 +507,7 @@ export function CartesianChart(host, cfg) {
   build();
   const naturalHostHeight = host.clientHeight;
   const stop = observeResize(host, () => { /* [GRID-03] 默认尺寸建立后，外部改高才切容器适配 */
-    if (!usesContainerHeight && Math.abs(host.clientHeight - naturalHostHeight) > 1) usesContainerHeight = true;
+    if (!usesContainerHeight && containerTookOver(host.clientHeight, naturalHostHeight)) usesContainerHeight = true;
     build();
   });
   return { destroy: () => { stopGrow(); stopHover(); stop(); host.innerHTML = ''; } };
