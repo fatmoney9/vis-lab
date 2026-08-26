@@ -249,12 +249,14 @@ test('TREEMAP-18：业务数据在 L3 归一化为通用 presentation 合同', (
 test('TREEMAP-11/12/13：入口、通用与全局树图是三个独立示例', () => {
   const examples = EXAMPLES.filter((item) => item.chart === 'treemap');
   assert.deepEqual(examples.map(({ id }) => id), ['treemap-entry', 'treemap-local', 'treemap-overall']);
-  assert.deepEqual(examples.map(({ regionHeight }) => regionHeight), [
-    { ths: 160, 'ifind-pc': 160, ainvest: 139 },
-    160,
-    { ths: 320, 'ifind-pc': 320, ainvest: 383 },
-  ], '三个形态的验收高度只留在 L3 示例元数据，不进入主题 token 或 L2 cfg');
-  assert.deepEqual(examples.map(({ compactRegionHeight }) => compactRegionHeight), [160, 160, 160]);
+  /* [TREEMAP-08] 三个形态**都不带高度元数据**：高度恒由宿主容器决定，容器没给就退到
+     三族共用的主题 token --size-chart-region-height。曾有过 regionHeight /
+     compactRegionHeight 两个字段（被删掉的三个高度 token 的迁移落点），
+     在高度模型改成「容器决定」后再无消费方，已一并清除，不留没人读的配置。 */
+  assert.ok(
+    examples.every((e) => e.regionHeight === undefined && e.compactRegionHeight === undefined),
+    '示例不应再携带高度元数据',
+  );
 
   const expected = [
     {
