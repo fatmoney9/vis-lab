@@ -18,6 +18,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 不用：无坐标系，没有网格线；扇区靠 `geometry.js` 算角度与半径 |
+| `image-content` | 不用：扇区当前只展示名称与数值，没有节点图片内容块 |
 | `label` | 用 |
 | `legend` | 用 |
 | `legend-state` | 用 |
@@ -30,4 +31,5 @@
 | `theme` | 用 |
 | `tokens` | 用 |
 | `tooltip` | 用 |
+| `visual-color` | 不用：扇区使用稳定系列色槽，不需要逐数据项强度或有符号语义色 |
 | `watermark` | 用 |

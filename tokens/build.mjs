@@ -19,7 +19,7 @@
  */
 import { readFileSync, writeFileSync, watch } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const THEMES = ['ths', 'ifind-pc', 'ainvest'];
@@ -52,6 +52,43 @@ function assertShape(theme, name, v) {
     return;
   }
   if (typeof v !== 'string' && typeof v !== 'number') fail(`${theme}:${name} 非法叶值类型 ${typeof v}`);
+}
+
+const COLOR_KEYWORDS = new Set(['currentcolor', 'none', 'transparent']);
+const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const RGB_COLOR = /^(rgba?)\(([^)]+)\)$/i;
+
+function validColor(value) {
+  if (typeof value !== 'string') return false;
+  if (ALIAS.test(value) || HEX_COLOR.test(value) || COLOR_KEYWORDS.has(value.toLowerCase())) return true;
+  const match = value.match(RGB_COLOR);
+  if (!match) return false;
+  const parts = match[2].split(',').map((part) => Number(part.trim()));
+  const expected = match[1].toLowerCase() === 'rgba' ? 4 : 3;
+  return parts.length === expected
+    && parts.every(Number.isFinite)
+    && parts.slice(0, 3).every((channel) => channel >= 0 && channel <= 255)
+    && (expected === 3 || (parts[3] >= 0 && parts[3] <= 1));
+}
+
+/* 值域校验：构建器不仅保证合同形状，也拦截浏览器会静默忽略的非法视觉值。 */
+export function assertTokenDomain(theme, name, value, tokens) {
+  if (value !== null && typeof value === 'object') {
+    for (const child of Object.values(value)) assertTokenDomain(theme, name, child, tokens);
+    return;
+  }
+  const alias = typeof value === 'string' ? value.match(ALIAS)?.[1] : null;
+  if (alias && tokens) return assertTokenDomain(theme, name, tokens[alias], tokens);
+  if (name.startsWith('opacity-')) {
+    if (alias) return;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number < 0 || number > 1) {
+      fail(`${theme}:${name} 透明度必须是 0..1 的有限数，实为 ${value}`);
+    }
+  }
+  if (name.startsWith('color-') && !validColor(value)) {
+    fail(`${theme}:${name} 不是受支持的 CSS 颜色（hex / rgb(a) / 颜色关键字 / token 别名）：${value}`);
+  }
 }
 
 /* 别名校验：目标存在（悬空）+ 无直接/间接循环（a→b→a） */
@@ -143,6 +180,22 @@ function build() {
   for (const t of THEMES) {
     for (const [name, v] of Object.entries(data[t])) assertShape(t, name, v);
     assertAliases(t, data[t]);
+    for (const [name, v] of Object.entries(data[t])) assertTokenDomain(t, name, v, data[t]);
+  }
+
+  const palette = JSON.parse(readFileSync(join(DIR, 'palette.json'), 'utf8'));
+  for (const theme of THEMES) {
+    const profile = palette?.[theme];
+    assertTokenDomain('palette', `color-${theme}-single-default`, profile?.['single-default']);
+    for (const ramp of ['bar-multi', 'line-multi', 'pie-multi']) {
+      if (!(ramp in (profile ?? {}))) continue;
+      if (!Array.isArray(profile[ramp]) || profile[ramp].length === 0) {
+        fail(`palette:${theme}.${ramp} 必须是非空颜色数组`);
+      }
+      for (const [index, color] of profile[ramp].entries()) {
+        assertTokenDomain('palette', `color-${theme}-${ramp}-${index + 1}`, color);
+      }
+    }
   }
 
   const css = [HEADER, ...THEMES.map((t) => themeBlocks(t, data[t]))].join('\n\n') + '\n';
@@ -163,15 +216,17 @@ const runOnce = () => {
   }
 };
 
-if (process.argv.includes('--watch')) {
-  runOnce();
-  console.log(`👀 watching tokens/*.json …（Ctrl-C 退出）`);
-  let timer;
-  watch(DIR, (_evt, file) => {
-    if (!file || !file.endsWith('.json')) return; /* 只认源 JSON；写 tokens.css 不回环 */
-    clearTimeout(timer);
-    timer = setTimeout(runOnce, 100); /* 编辑器保存常触发多次事件，去抖 */
-  });
-} else if (!runOnce()) {
-  process.exit(1); /* 一次性模式：校验/生成失败退出码 1，供 CI / git 钩子拦截 */
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  if (process.argv.includes('--watch')) {
+    runOnce();
+    console.log(`👀 watching tokens/*.json …（Ctrl-C 退出）`);
+    let timer;
+    watch(DIR, (_evt, file) => {
+      if (!file || !file.endsWith('.json')) return; /* 只认源 JSON；写 tokens.css 不回环 */
+      clearTimeout(timer);
+      timer = setTimeout(runOnce, 100); /* 编辑器保存常触发多次事件，去抖 */
+    });
+  } else if (!runOnce()) {
+    process.exit(1); /* 一次性模式：校验/生成失败退出码 1，供 CI / git 钩子拦截 */
+  }
 }

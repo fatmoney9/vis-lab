@@ -14,12 +14,14 @@
 import { CartesianChart } from '../charts/charts/cartesian/index.js';
 import { PieChart } from '../charts/charts/pie/index.js';
 import { SankeyChart } from '../charts/charts/sankey/index.js';
+import { TreemapChart } from '../charts/charts/treemap/index.js';
 import { buildConfig } from './examples.js';
 
 export const CHARTS = {
   cartesian: CartesianChart,
   pie: PieChart, /* 饼 + 环（variant 旋钮分形态，见 specs/pie.md） */
   sankey: SankeyChart,
+  treemap: TreemapChart,
 };
 
 /*
@@ -30,6 +32,16 @@ export const CHARTS = {
 export function mountExample(host, example, state) {
   const Chart = CHARTS[example.chart];
   if (!Chart) throw new Error(`registry：示例「${example.id}」声明的图表类型 ${example.chart} 未登记`);
+  /* [TREEMAP-08] 示例给的是**容器**高度：图表按容器填充（与 cartesian / pie 同一模型），
+     不给就退到主题 token。此处直接设 host 的高度，不再向组件注入私有 CSS 属性——
+     那会是一条绕过组件 API 的 L3→L2 通道。 */
+  host.style.removeProperty('height');
+  const regionHeight = state?.compact ? example.compactRegionHeight : example.regionHeight;
+  if (regionHeight) {
+    const theme = host.closest('[data-theme]')?.dataset.theme ?? 'ths';
+    const height = typeof regionHeight === 'number' ? regionHeight : regionHeight[theme];
+    if (Number.isFinite(height) && height > 0) host.style.height = `${height}px`;
+  }
   const cfg = buildConfig(example, state);
   return { instance: Chart(host, cfg), cfg };
 }

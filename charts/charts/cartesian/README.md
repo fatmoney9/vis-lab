@@ -16,6 +16,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 用 |
+| `image-content` | 不用：轴图当前只展示文字型系列，没有节点图片内容块 |
 | `label` | 用 |
 | `legend` | 用 |
 | `legend-state` | 用 |
@@ -28,4 +29,5 @@
 | `theme` | 用 |
 | `tokens` | 用 |
 | `tooltip` | 用 |
+| `visual-color` | 不用：轴图颜色按系列分配，不需要逐数据项强度或有符号语义色 |
 | `watermark` | 用 |

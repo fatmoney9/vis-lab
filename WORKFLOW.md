@@ -192,10 +192,11 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-08-13，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
-**三个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+截至 2026-08-21，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+**四个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
-与 `SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）、
+、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
+与 `TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）、
 共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`（桑基另有独立面，见第七节例外），
 已发布到 GitHub Pages，以及**十项提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试、
 分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明；2026-08-19 扩至九项、

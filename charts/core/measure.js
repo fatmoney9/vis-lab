@@ -2,7 +2,7 @@
  * L1 · 渲染级文本测量（全库唯一测量源，[AXIS-08]）。
  * 临时挂一棵隐藏 SVG，用**真实类名**走真实 CSS 级联量宽——tabular-nums 等
  * Canvas measureText 表达不了的字体特性全部包含，无估算误差。
- * 轴标签（axis.js）与数据标签（label.js）共用本模块，杜绝第二份测量实现。
+ * 轴标签（axis.js）、数据标签（label.js）与矩形树图文字拟合共用本模块，杜绝第二份测量实现。
  *
  * 本模块**零 import**（不碰 d3）：使它可被 node 直接加载，且不给消费方引入依赖。
  */
@@ -65,4 +65,29 @@ export function measureInk(host, texts, className) {
     const m = ctx.measureText(String(t));
     return { ascent: m.actualBoundingBoxAscent, descent: m.actualBoundingBoxDescent };
   });
+}
+
+/*
+ * [TREEMAP-05] 需要反复测量同一类文字时复用单个隐藏 SVG，避免每次字号拟合都重建 DOM。
+ * 字号边界仍由图表 token 提供；本构件只负责按传入字号返回真实渲染宽度。
+ */
+export function createTextMeasurer(host, className) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:visible';
+  const el = document.createElementNS(SVG_NS, 'text');
+  el.setAttribute('class', className);
+  svg.appendChild(el);
+  host.appendChild(svg);
+
+  return {
+    measure(value, fontSize) {
+      el.textContent = String(value);
+      el.style.fontSize = Number.isFinite(fontSize) && fontSize > 0 ? `${fontSize}px` : '';
+      const width = el.getComputedTextLength();
+      return Number.isFinite(width) && width >= 0 ? width : 0;
+    },
+    destroy() {
+      svg.remove();
+    },
+  };
 }
