@@ -21,7 +21,7 @@
 |---|---|---|---|
 | GRID-01 | 横向网格线：`color-visualization-divider`，0 轴走 `color-visualization-divider-deep`，线宽 `size-grid-line`。**是否加深随主题**——iFinD-PC / Ainvest 加深（`#87879C` / `#858585`）；**THS 不加深**：该 token 别名回 `{color-visualization-divider}`，0 轴与其余网格线同色。分化只在 token 值上，`grid.js` 与 CSS 不含主题分支（0 轴仍单独挂 `.dv-grid-baseline` 类，改回加深只需改 token） | `core/grid.js` → `renderGrid()`；`tokens/*.json` → `color-visualization-divider-deep` | ✅ |
 | GRID-02 | X 轴分割线（纵线）默认不显示，特例经 `showXSplit` 显式开启 | 同上 | ✅ |
-| GRID-03 | **默认图表高度包络 + 容器自适应**：调用方未提供明确高度时，Y 方向图表高度取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）。`inside` 的口径是最顶部轴线到最底部轴线；`outside` 的口径是最顶部 Y 标签外缘到最底部 Y 标签外缘（两端标签以轴线为中心，故轴线间距 = token − 两端半行高）。X 轴标签带、图例、卡片标题和外壳 padding 均不计入该高度。调用方提供明确高度后，SVG 随容器可用高度适配；容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
+| GRID-03 | **默认图表高度包络 + 容器自适应**：调用方未提供明确高度时，Y 方向图表高度取主题 token `size-chart-region-height`（THS 160px、iFinD-PC/Ainvest 200px）。`inside` 的口径是最顶部轴线到最底部轴线；`outside` 的口径是最顶部 Y 标签外缘到最底部 Y 标签外缘（两端标签以轴线为中心，故轴线间距 = token − 两端半行高）。X 轴标签带、图例、卡片标题和外壳 padding 均不计入该高度。调用方提供明确高度后（判据 = `core/frame.js` 的 `containerDrivesHeight()`：容器高 ≥ `CONTAINER_HEIGHT_MIN` 40px；低于它视为容器尚未布局好或已塌陷，仍走 token——跟一个几像素高的容器只会画出不可读的图），SVG 随容器可用高度适配；容器宽/高变化时几何整体重排，分割线数量不变（SCALE-01 不受尺寸影响），X 轴标签碰撞重新判定 | `charts/charts/cartesian/index.js`（默认/容器高度判定）+ `core/frame.js` → `createFrame()` / `observeResize()` | ✅ |
 
 ## Y 轴标签
 

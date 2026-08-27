@@ -136,9 +136,9 @@ AInvest 差异来源为 Figma《AInvest矩形树图规范》节点 `0:232`。审
 
 | key | 处理 | 来源与语义 |
 |---|---|---|
-| `size-treemap-entry-height` | 删除 | 高度是实例容器几何。THS / iFinD 的 160px 与 AInvest 的 139px 均迁到 L3 `regionHeight`；AInvest 外部 18px 标题与 4px 间距不计入图面。 |
-| `size-treemap-local-height` | 删除 | 基线局部图面 160px 迁到 L3 `regionHeight`，用于验收实例；组件运行时优先消费实际容器高度。 |
-| `size-treemap-overall-height` | 删除 | 基线规定整体类型高度自适应。Vis Lab 的 320 / 383px 验收高降为 L3 `regionHeight`；其中 383px 可回溯 Figma 实例，320px 明示为实验室验收值，不再冒充设计 token。 |
+| `size-treemap-entry-height` | 删除 | 高度是实例容器几何，由宿主容器决定；容器没给高时退到三族共用的 `size-chart-region-height`。（曾短暂迁到 L3 `regionHeight`，2026-08-26 一并清除——高度模型改为「容器决定」后它再无消费方。） |
+| `size-treemap-local-height` | 删除 | 同上：组件恒消费实际容器高度，缺高时退到 `size-chart-region-height`。 |
+| `size-treemap-overall-height` | 删除 | 基线规定整体类型高度自适应，故不设 token。原 320 / 383px 验收高曾降为 L3 `regionHeight`，现已一并清除（见上）。 |
 | `size-treemap-gap` / `radius-treemap-canvas` | 保留 | 基线为 2px / 4px；AInvest Figma 图面实例为 1px / 6px，主题差异真实存在。 |
 | `size-treemap-value-font-deviation` | 保留 | 它是公式中的差值，不是最终字号：THS / iFinD 为“名称适配字号 − 2px”；AInvest 原稿没有减小逻辑，故为“名称适配字号 − 0px”。 |
 | `font-size-treemap-entry-label-{name\|value}{-min}` | 保留 | 基线文本入口名称 / 数值固定 12px；AInvest 图片内容名称 28→11px、数值 20→11px。 |

@@ -23,7 +23,7 @@
  *         animation（语义配置）：true 入场扫掠 / false 直接终态；系统「减弱动态效果」下恒终态（MOTION-07）
  */
 import { select, arc } from 'd3';
-import { createFrame, observeResize } from '../../core/frame.js';
+import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
 import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
@@ -69,7 +69,7 @@ export function PieChart(host, cfg) {
     legendSelect = 'multi',
   } = cfg;
   /* [PIE-02] 调用方明确给容器高度时随容器适配；未给时用环形容器 token 作高度包络（口径同 GRID-03）。 */
-  let usesContainerHeight = host.clientHeight >= 40;
+  let usesContainerHeight = containerDrivesHeight(host.clientHeight);
   /* 本组件上一次 build 结束时图表根的高度。它是 observeResize 判断「这次变高是不是我自己弄的」
      的基线——每次 build 末尾刷新，故只有**外部**造成的高度变化才对不上（见下方 observeResize）。 */
   let selfHeight = host.clientHeight;
@@ -671,7 +671,7 @@ export function PieChart(host, cfg) {
        用定值基线就会把这种自变误判成「容器给了新高度」→ 随后 avail 从含绘图区的图表根去减
        → 画布依赖画布 → 逐帧坍缩（实测 140 → 28 → 0）。
        与 selfHeight 比则只有**外部**改高（拖卡片、容器给了显式高度）才对得上，自变天然被排除。 */
-    if (!usesContainerHeight && Math.abs(host.clientHeight - selfHeight) > 1) usesContainerHeight = true;
+    if (!usesContainerHeight && containerTookOver(host.clientHeight, selfHeight)) usesContainerHeight = true;
     build();
   });
   /* destroy 把 host 恢复原样：**方位修饰类必须一并摘掉**——同一个 host 换 legend 重新挂载时，

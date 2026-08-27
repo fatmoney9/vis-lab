@@ -9,7 +9,7 @@
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
-  水印资源重建、语法、单测、分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明共十项，`hooks/pre-commit` 与 CI 调的都是它。
+  水印资源重建、语法、单测，外加分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约等守卫；`hooks/pre-commit` 与 CI 调的都是它。**条数与逐项顺序只看该脚本，文档一律不复述。**
   **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
 - 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
   测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。
@@ -38,7 +38,7 @@
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
-| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高） |
+| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，三族共用，别再抄阈值） |
 | 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderGrid` · `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |

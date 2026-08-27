@@ -581,8 +581,6 @@ export const EXAMPLES = [
     id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
     title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
     description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
-    regionHeight: { ths: 160, 'ifind-pc': 160, ainvest: 139 },
-    compactRegionHeight: 160,
     densityValues: { few: 3, mid: 6, many: 8 },
     densityControl: {
       hint: 'PRD 建议 3–8 个入口模块',
@@ -603,8 +601,6 @@ export const EXAMPLES = [
     id: 'treemap-local', group: '矩形树图', chart: 'treemap',
     title: '通用矩形树图', spec: 'TREEMAP-05 / TREEMAP-08 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 局部类型单屏形态，展示头部重点或二级完整数据，兼顾比例和文字可读性。',
-    regionHeight: 160,
-    compactRegionHeight: 160,
     densityValues: { few: 10, mid: 18, many: 30 },
     densityControl: {
       hint: 'PRD 建议不超过 30 项',
@@ -625,11 +621,6 @@ export const EXAMPLES = [
     id: 'treemap-overall', group: '矩形树图', chart: 'treemap',
     title: '全局矩形树图', spec: 'TREEMAP-12 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 整体类型固定页形态，容纳 30 项以上全量数据，面积严格映射真实占比。',
-    /* [TREEMAP-08] regionHeight = **容器**高度（L3 设在 host 上，图表填满它），
-       不进入 L2 cfg / 主题 token。本族单层展示、容器内无附加带，故容器高即图面高。
-       THS/iFinD 的 320 是实验室验收值；AInvest 383 来自 Figma 全局图面实例。 */
-    regionHeight: { ths: 320, 'ifind-pc': 320, ainvest: 383 },
-    compactRegionHeight: 160,
     densityValues: { few: 32, mid: 42, many: 54 },
     densityControl: {
       hint: 'PRD 建议 30 项以上',

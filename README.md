@@ -17,7 +17,7 @@
 
 ```bash
 python3 -m http.server 8123     # 预览需 HTTP 服务，file:// 打不开（ES Module + fetch）
-sh hooks/check.sh               # 全部质量门禁十项（等价 npm run check）
+sh hooks/check.sh               # 全部质量门禁（等价 npm run check；清单见该脚本）
 node --test "tests/**/*.test.mjs"   # 只跑纯逻辑单测（等价 npm test；引号不能去）
 ```
 

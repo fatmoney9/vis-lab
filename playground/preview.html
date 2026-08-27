@@ -76,7 +76,11 @@
     border-radius: 10px; border: 1px solid var(--shell-border-soft);
     display: flex; flex-direction: column;
     flex: none;
-    min-width: 320px; min-height: 240px;
+    /* 与 index 的 .stage__surface 同口径（320 × 160）：两面的容器下限必须一致，
+       否则同一个图在两面会因「容器最矮多少」不同而显示成不同高度。
+       曾是 240 —— 那让默认 160 高的图（矩形树图）被塞进 177 高的内容区，
+       首帧居中留白、点一下拖动柄才切到 100%，肉眼可见跳一下。 */
+    min-width: 320px; min-height: 160px;
     resize: both; overflow: auto;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     background: var(--card-light-bg);
@@ -388,8 +392,21 @@
   });
 
   /* ── 渲染：当前分类 × 端 × 明暗 → 三卡整体重绘 ──────────────────── */
+  /* 三张卡片建一次、所有示例复用（见上方 cards[t.id]），而 `resize: both` 把宽高写成
+     卡片的**行内样式**、`is-resized` 也留在类上——不清就会把上一个图拖出来的尺寸带到下一个图。
+     只在**换示例**时清：动明暗 / 端 / 数据量等旋钮不该丢掉用户刚拖好的大小。 */
+  let lastCategory = null;
+
   function render() {
     const cat = CATEGORIES.find((c) => c.id === state.category);
+    if (lastCategory !== state.category) {
+      Object.values(cards).forEach((card) => {
+        card.classList.remove('is-resized');
+        card.style.width = '';
+        card.style.height = '';
+      });
+      lastCategory = state.category;
+    }
 
     document.getElementById('cat-title').textContent = cat.title;
     /* 一句话说明；验收口径不在这里，见 specs/*.md 各页的「活 demo」小节 */
