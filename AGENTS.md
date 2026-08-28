@@ -28,7 +28,7 @@
 
 | 我要… | 用 L1 的 | 关键导出 |
 |---|---|---|
-| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
+| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05] / [SANKEY-18]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
@@ -57,11 +57,6 @@
 所以这张表退化不成打勾的表格。照抄现成的：`charts/charts/cartesian/README.md`（19/20 用）·
 `charts/charts/pie/README.md`（12/20 用，八条「不用」同一个根因：无坐标系）。
 
-**已知反例（`SankeyChart`，欠账未清，不要照抄）**：它自带了 `svgTextMeasurer`（重写 `measure.js`）、
-`cubicOut`（重写 `motion.js` 的 `easeOutCubic`）与内联 `matchMedia`（重写 `reducedMotion`）。
-其中测量那条是因为 `measureTexts` 只能按类名量、表达不了 SANKEY-18 的逐节点字号——
-按上一段的判据，那本该是给 `measureTexts` 加可选字号，而不是在 L2 复制一份。见 `specs/sankey.md` 待办。
-
 ## 技术栈
 
 原生 ES Modules、D3 v7（预览页 import map）、SVG、CSS 自定义属性、Node.js token 构建脚本；无打包器。
@@ -74,7 +69,7 @@
 - `demos/` 是两个预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
   `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
-  **唯一已知例外是桑基**：因 SANKEY-23 的 812×375 固定财报外框，另有 `playground/sankey-preview.html`
+  **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
   这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
 - `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。

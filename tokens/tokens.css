@@ -13,6 +13,9 @@
   --color-price-down-gradient-2: rgba(7, 171, 75, 0.75);
   --color-price-down-gradient-3: rgba(7, 171, 75, 0.55);
   --color-price-even-gradient: var(--color-price-even);
+  --color-sankey-income: #FF9500;
+  --color-sankey-expense: #3366FF;
+  --color-sankey-profit: var(--color-price-up);
   --font-family-number: THSJinRongTi;
   --font-family-cn: system-ui,-apple-system,Noto Sans,San Francisco,BlinkMacSystemFont,Helvetica Neue,Helvetica,sans-serif;
   --font-family-en: var(--font-family-cn);
@@ -136,6 +139,7 @@
   --size-slider-handle-border: 0.5px;
   --radius-slider-handle: var(--radius-6);
   --radius-slider-mask: var(--radius-6);
+  --radius-playback-step: var(--radius-4);
   --color-grey-01: #E6E6E6;
   --color-grey-02: #D1D1D1;
   --color-grey-03: #B3B3B3;
@@ -252,6 +256,9 @@
   --color-price-down-gradient-2: var(--color-price-down);
   --color-price-down-gradient-3: var(--color-price-down);
   --color-price-even-gradient: var(--color-price-even);
+  --color-sankey-income: #3366FF;
+  --color-sankey-expense: #07AB4B;
+  --color-sankey-profit: #FF2436;
   --font-family-number: Microsoft YaHei;
   --font-family-cn: Microsoft YaHei;
   --font-family-en: Microsoft YaHei;
@@ -375,6 +382,7 @@
   --size-slider-handle-border: 1px;
   --radius-slider-handle: var(--radius-6);
   --radius-slider-mask: var(--radius-4);
+  --radius-playback-step: var(--radius-4);
   --color-grey-01: #E6E6E6;
   --color-grey-02: #D1D1D1;
   --color-grey-03: #B3B3B3;
@@ -494,6 +502,9 @@
   --color-price-down-gradient-2: #F05045;
   --color-price-down-gradient-3: #981400;
   --color-price-even-gradient: #B8B8B8;
+  --color-sankey-income: #265FFC;
+  --color-sankey-expense: var(--color-price-down);
+  --color-sankey-profit: var(--color-price-up);
   --font-family-number: var(--font-family-en);
   --font-family-cn: var(--font-family-en);
   --font-family-en: Ainvest Sans,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
@@ -617,6 +628,7 @@
   --size-slider-handle-border: 1px;
   --radius-slider-handle: var(--radius-full);
   --radius-slider-mask: var(--radius-2);
+  --radius-playback-step: 18px;
   --color-grey-01: #E6E6E6;
   --color-grey-02: #D1D1D1;
   --color-grey-03: #B3B3B3;

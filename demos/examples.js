@@ -22,13 +22,18 @@
  *   3. 往 EXAMPLES 里加示例，chart 写成新类型键
  * 两个预览面都不用改——它们按 chart 字段查表挂载、按能力声明画旋钮。
  *
- * ⚠️ 唯一破例的是桑基：SANKEY-23 要求 812×375 固定财报外框，三主题卡片网格表达不了，
+ * ⚠️ 唯一破例的是桑基：SANKEY-23 要求 812px 横版财报外框与序列统一高度，三主题卡片网格表达不了，
  * 故另有 playground/sankey-preview.html 独立面，**自带数据、不 import 本模块**（全库唯一脱离
  * 单一示例源的展示面，改桑基示例要两处同步），且两个预览面里另有专属样式与旋钮接线。
  * 没有同类固定外框硬需求的新图型，照上面三步走即可，不要照抄桑基。
  */
 
 import { ainvestCompanyIdentity } from './company-icons.js';
+import {
+  resolveSankeySequenceViewport,
+  withSharedSankeyScale,
+} from '../charts/charts/sankey/model.js';
+import { financialSankeyPresentation } from './sankey-presentation.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
 
@@ -180,13 +185,30 @@ const makeFinancialSankeyQuarter = ({
         negativeSource: 'cost',
       },
       { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
-      { source: 'gross', target: 'operating-profit', value: grossToOperating },
+      {
+        source: 'gross',
+        target: 'operating-profit',
+        value: grossToOperating,
+        negativeSource: 'operating-expense',
+      },
       { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
       { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
       { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
-      { source: 'total-profit', target: 'net-profit', value: netProfit },
+      {
+        source: 'total-profit',
+        target: 'net-profit',
+        value: netProfit,
+        ...(netProfit < 0 && incomeTaxValue > 0
+          ? { negativeSource: 'income-tax' }
+          : {}),
+      },
       { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
-      { source: 'net-profit', target: 'parent-profit', value: netProfit - minorityInterestValue },
+      {
+        source: 'net-profit',
+        target: 'parent-profit',
+        value: netProfit - minorityInterestValue,
+        negativeSource: 'minority-interest',
+      },
       { source: 'net-profit', target: 'minority-interest', value: minorityInterestValue },
     ],
     legendLabels: { income: '收入', expense: '支出', profit: '利润' },
@@ -201,7 +223,7 @@ const FINANCIAL_SANKEY_PERIOD_INPUTS = [
   ['2025 一季报', '25 Q1', [148, 55, 12], 188, 18, -0.8, 0.3, 0.8, 1.1],
   ['2025 半年报', '25 Q2', [162, 61, 14], 205, 20, -0.4, 0.5, 1.2, 1.4],
   ['2025 三季报', '25 Q3', [176, 67, 15], 222, 22, 0.2, 0.4, 1.5, 1.8],
-  ['2025 年报', '25 Q4', [6.1, 2.2, 0.62], 8.960136, 0.261273, -0.056309, 0.000071, -0.080673, 0.009906, '亏损'],
+  ['2025 年报', '25 Q4', [186, 71, 16], 295, 32, -3, 1, 1.7, 2, '亏损'],
   ['2026 一季报', '26 Q1', [190.71, 72.68, 16.46], 243.8, 24.4, -1.11, 0.015083, 0.945083, 1.73],
   ['2026 半年报', '26 Q2', [205, 78, 18], 260, 26, -0.4, 0.6, 1.4, 2.1],
   ['2026 三季报', '26 Q3', [218, 84, 20], 276, 28, 0.6, 0.9, 1.9, 2.5],
@@ -232,14 +254,21 @@ export const financialSankeyPeriods = () => {
     minorityInterest,
     statusLabel,
   }));
-  const scaleMax = Math.max(...periods.map((period) => period.links
-    .filter((link) => link.target === 'revenue')
-    .reduce((sum, link) => sum + link.value, 0)));
-
-  return periods.map((period) => ({ ...period, scaleMax }));
+  return withSharedSankeyScale(periods);
 };
 
 export const financialSankey = () => financialSankeyPeriods()[0];
+
+const financialSankeyPlayback = () => {
+  const periods = financialSankeyPeriods();
+  return {
+    periods,
+    viewport: Object.fromEntries(['pc', 'mobile'].map((platform) => [
+      platform,
+      resolveSankeySequenceViewport(periods, platform),
+    ])),
+  };
+};
 
 /* AInvest 演示数据在 L3 适配为 Treemap 的通用 presentation 合同；charts/ 不认识这些业务字段。 */
 const AINVEST_TICKERS = [
@@ -574,7 +603,9 @@ export const EXAMPLES = [
     summary: '15 节点 · 14 条流向 · 8 期',
     preferredWidth: 812,
     logicNote: '节点只接收业务角色、阶段与有符号流量；节点宽高、列距、最小可见粗细和主题语义色均由 Sankey token 解析。',
-    playback: { periods: financialSankeyPeriods() },
+    presentation: financialSankeyPresentation,
+    summaryByTheme: { ainvest: '15 nodes · 14 flows · 8 periods' },
+    playback: financialSankeyPlayback(),
     cfg: () => financialSankey(),
   },
   {
@@ -757,21 +788,24 @@ export const capabilitiesOf = (example) => {
 /*
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
- *   state = { density='few', platform='pc', zoom, area, dataLabel, axisTitle, animation,
+ *   state = { density='few', theme='ths', platform='pc', zoom, area, dataLabel, axisTitle, animation,
  *             legend, labelLayout, labelAlign, treemapColor } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
- * 主题与明暗不进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 + behavior 解析。
+ * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
+ * behavior 解析。theme 在这里仅允许驱动示例声明的 L3 presentation 文案映射。
  */
 export function buildConfig(example, state = {}) {
   const {
-    density = defaultDensityOf(example), platform = 'pc', zoom = false, area = false,
+    density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
     treemapColor = 'intensity',
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
-  const cfg = { ...example.cfg(densityOptions[density] ?? densityOptions.few), platform };
+  const sourceCfg = example.cfg(densityOptions[density] ?? densityOptions.few);
+  const presentedCfg = example.presentation?.(sourceCfg, { theme }) ?? sourceCfg;
+  const cfg = { ...presentedCfg, platform };
 
   if (caps.zoom && zoom) cfg.zoom = { ...INITIAL_ZOOM };
   /* [AXISTITLE-01/03] 默认不显示；旋钮打开才注入文案（示例自带的 axisTitle 优先，可给更贴切的措辞）。

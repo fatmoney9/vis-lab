@@ -73,38 +73,12 @@ export function fitSankeyValueFontSize(
   return Math.floor(low * 100) / 100;
 }
 
-/*
- * [SANKEY-15] 标题只占固定宽度；测量函数由渲染层按当前主题字体提供。
- */
-export function truncateSankeyTitle(value, maxWidth, measure) {
-  const title = String(value);
-  if (!(maxWidth > 0) || measure(title) <= maxWidth) return title;
-
-  const ellipsis = '…';
-  if (measure(ellipsis) > maxWidth) return '';
-
-  const characters = Array.from(title);
-  let low = 0;
-  let high = characters.length;
-  while (low < high) {
-    const middle = Math.ceil((low + high) / 2);
-    const candidate = `${characters.slice(0, middle).join('')}${ellipsis}`;
-    if (measure(candidate) <= maxWidth) low = middle;
-    else high = middle - 1;
-  }
-  return `${characters.slice(0, low).join('')}${ellipsis}`;
-}
-
 export function resolveSankeyCanvasHeight(hostHeight, geometry) {
   const availableHeight = Number(hostHeight) - geometry['legend-reserved-height'];
   const requestedHeight = Number.isFinite(availableHeight) && availableHeight > 0
     ? availableHeight
     : geometry['canvas-recommended-height'];
-  const maximumHeight = geometry['canvas-max-height'];
-  const constrainedHeight = Number.isFinite(maximumHeight)
-    ? Math.min(requestedHeight, maximumHeight)
-    : requestedHeight;
-  return Math.max(geometry['canvas-min-height'], constrainedHeight);
+  return Math.max(geometry['canvas-min-height'], requestedHeight);
 }
 
 /*
@@ -274,6 +248,33 @@ export function assertSankeyConfig(cfg) {
     link.baseLink = link.source.outgoing.find(
       (candidate) => candidate !== link && candidate.target === link.negativeSource,
     );
+    if (link.source.outgoing.length !== 2) {
+      fail(
+        `链接「${link.source.name} → ${link.target.name}」的 negativeSource `
+        + '只适用于同一来源拆成“基础分支 + 差额分支”的成对关系',
+      );
+    }
+    const pairedSourceValue = link.baseLink.value + link.value;
+    const tolerance = Math.max(
+      1e-6,
+      Math.max(link.baseLink.magnitude, link.magnitude) * Number.EPSILON * 128,
+    );
+    if (!(link.baseLink.value > 0)) {
+      fail(
+        `链接「${link.source.name} → ${link.target.name}」的 negativeSource `
+        + '必须对应正值基础分支',
+      );
+    }
+    /*
+     * [SANKEY-25] P = B + D：
+     * P >= 0 时，B 的超额段回流 D；P < 0 时，P 与 B 共同汇入 D。
+     */
+    link.pairedSourceValue = Math.abs(pairedSourceValue) <= tolerance
+      ? 0
+      : pairedSourceValue;
+    link.negativeDifferenceMode = link.pairedSourceValue >= 0
+      ? 'base-excess'
+      : 'deficit-merge';
     link.source.hasNegativeDifference = true;
     link.target.isNegativeDifferenceResult = true;
   });
@@ -318,9 +319,60 @@ function barycenter(node, direction, fallback) {
   return sum / weight;
 }
 
+function nodeOccupiedHeight(node) {
+  return node.occupiedBottomOffset - node.occupiedTopOffset;
+}
+
 function columnHeight(nodes, gap) {
-  return nodes.reduce((sum, node) => sum + node.height, 0)
+  return nodes.reduce((sum, node) => sum + nodeOccupiedHeight(node), 0)
     + Math.max(0, nodes.length - 1) * gap;
+}
+
+/* [SANKEY-18/22] 排布边界包含节点矩形与两行文字，字号取本次最终值。 */
+function assignLabelEnvelopes(nodes, geometry, labelMetricsById) {
+  const nodeHeights = nodes.map((node) => node.height);
+  const minimumNodeHeight = Math.min(...nodeHeights);
+  const maximumNodeHeight = Math.max(...nodeHeights);
+
+  nodes.forEach((node) => {
+    const metrics = labelMetricsById?.get(node.id);
+    const titleFontSize = metrics?.titleFontSize ?? resolveSankeyLabelFontSize(
+      node.height,
+      minimumNodeHeight,
+      maximumNodeHeight,
+      geometry['label-title-font-size-min'],
+      geometry['label-title-font-size-max'],
+    );
+    const valueFontSize = metrics?.valueFontSize ?? resolveSankeyLabelFontSize(
+      node.height,
+      minimumNodeHeight,
+      maximumNodeHeight,
+      geometry['label-value-font-size-min'],
+      geometry['label-value-font-size-max'],
+    );
+    const labelTopOffset = node.height / 2
+      - geometry['label-gap']
+      - titleFontSize;
+    const labelBottomOffset = labelTopOffset
+      + titleFontSize
+      + valueFontSize * 1.5;
+
+    node.titleFontSize = titleFontSize;
+    node.valueFontSize = valueFontSize;
+    node.labelTopOffset = labelTopOffset;
+    node.labelBottomOffset = labelBottomOffset;
+    node.occupiedTopOffset = Math.min(0, labelTopOffset);
+    node.occupiedBottomOffset = Math.max(node.height, labelBottomOffset);
+  });
+}
+
+function finalizeLabelEnvelopes(nodes) {
+  nodes.forEach((node) => {
+    node.labelTop = node.y + node.labelTopOffset;
+    node.labelBottom = node.y + node.labelBottomOffset;
+    node.occupiedTop = node.y + node.occupiedTopOffset;
+    node.occupiedBottom = node.y + node.occupiedBottomOffset;
+  });
 }
 
 /* [SANKEY-22] 多节点列随节点数逐级扩展，避免双节点与三节点占用同一范围。 */
@@ -338,8 +390,8 @@ export function resolveSankeyColumnMinimumSpan(nodeCount, geometry) {
 
 function distributedColumnGap(nodes, minimumGap, minimumSpan) {
   if (nodes.length < 2) return minimumGap;
-  const nodeHeight = nodes.reduce((sum, node) => sum + node.height, 0);
-  return Math.max(minimumGap, (minimumSpan - nodeHeight) / (nodes.length - 1));
+  const occupiedHeight = nodes.reduce((sum, node) => sum + nodeOccupiedHeight(node), 0);
+  return Math.max(minimumGap, (minimumSpan - occupiedHeight) / (nodes.length - 1));
 }
 
 function columnIncomingCenter(nodes, fallback) {
@@ -386,34 +438,38 @@ function placeColumn(nodes, centerY, gap, canvasHeight, paddingY, anchoredNode) 
   if (anchorIndex < 0) {
     let cursor = centeredTop;
     nodes.forEach((node) => {
-      node.y = cursor;
-      cursor += node.height + gap;
+      node.y = cursor - node.occupiedTopOffset;
+      cursor += nodeOccupiedHeight(node) + gap;
     });
     return;
   }
 
-  const heightAbove = columnHeight(nodes.slice(0, anchorIndex), gap)
+  const nodesAbove = nodes.slice(0, anchorIndex);
+  const nodesBelow = nodes.slice(anchorIndex + 1);
+  const heightAbove = columnHeight(nodesAbove, gap)
     + (anchorIndex > 0 ? gap : 0);
   let anchorY = centerY - anchoredNode.height / 2;
-  anchorY = Math.max(anchorY, paddingY + heightAbove);
-  const heightBelow = columnHeight(nodes.slice(anchorIndex + 1), gap)
+  anchorY = Math.max(
+    anchorY,
+    paddingY + heightAbove - anchoredNode.occupiedTopOffset,
+  );
+  const heightBelow = columnHeight(nodesBelow, gap)
     + (anchorIndex < nodes.length - 1 ? gap : 0);
   anchorY = Math.min(
     anchorY,
-    canvasHeight - paddingY - anchoredNode.height - heightBelow,
+    canvasHeight - paddingY - anchoredNode.occupiedBottomOffset - heightBelow,
   );
   anchoredNode.y = anchorY;
 
-  let cursor = anchoredNode.y - gap;
+  let cursor = anchoredNode.y + anchoredNode.occupiedTopOffset - gap;
   for (let index = anchorIndex - 1; index >= 0; index -= 1) {
-    cursor -= nodes[index].height;
-    nodes[index].y = cursor;
-    cursor -= gap;
+    nodes[index].y = cursor - nodes[index].occupiedBottomOffset;
+    cursor = nodes[index].y + nodes[index].occupiedTopOffset - gap;
   }
-  cursor = anchoredNode.y + anchoredNode.height + gap;
+  cursor = anchoredNode.y + anchoredNode.occupiedBottomOffset + gap;
   for (let index = anchorIndex + 1; index < nodes.length; index += 1) {
-    nodes[index].y = cursor;
-    cursor += nodes[index].height + gap;
+    nodes[index].y = cursor - nodes[index].occupiedTopOffset;
+    cursor = nodes[index].y + nodes[index].occupiedBottomOffset + gap;
   }
 }
 
@@ -434,19 +490,23 @@ function compareColumnNodes(a, b, fallbackY) {
 }
 
 function skippedNodes(link, columns) {
+  const source = link.visualSource ?? link.source;
+  const target = link.visualTarget ?? link.target;
   return columns
-    .slice(link.source.columnIndex + 1, link.target.columnIndex)
+    .slice(source.columnIndex + 1, target.columnIndex)
     .flat();
 }
 
 function routedPoints(link, columns, gap) {
-  const sourceX = link.source.x + link.source.width;
-  const targetX = link.target.x;
+  const source = link.visualSource ?? link.source;
+  const target = link.visualTarget ?? link.target;
+  const sourceX = source.x + source.width;
+  const targetX = target.x;
   const points = [
     { x: sourceX, y: link.sourceY },
     { x: targetX, y: link.targetY },
   ];
-  if (link.target.columnIndex - link.source.columnIndex <= 1) return points;
+  if (target.columnIndex - source.columnIndex <= 1) return points;
 
   const obstacles = skippedNodes(link, columns);
   if (obstacles.length === 0) return points;
@@ -456,8 +516,8 @@ function routedPoints(link, columns, gap) {
     - gap
     - Math.max(link.sourceThickness, link.targetThickness);
   const bottomRoute = Math.max(...obstacles.map((node) => node.y + node.height)) + gap;
-  const sourceCenter = link.source.y + link.source.height / 2;
-  const targetCenter = link.target.y + link.target.height / 2;
+  const sourceCenter = source.y + source.height / 2;
+  const targetCenter = target.y + target.height / 2;
   const routesBelow = targetCenter >= sourceCenter;
   const routeY = routesBelow ? bottomRoute : topRoute;
   link.route = routesBelow ? 'below' : 'above';
@@ -509,27 +569,44 @@ function ribbonPath(link, tension, columns, gap) {
   return commands.join(' ');
 }
 
-/* [SANKEY-25] 亏损差额从兄弟成本节点的超额段回弯到同列结果节点。 */
-function differenceRibbonPath(link, gap) {
+/*
+ * [SANKEY-25] 同源兄弟节点承接差额时一律走左侧回折：
+ * - 父值非负：基础节点的超额段从左侧回流到负差额节点；
+ * - 父值已负：同层正值节点从左侧回折，补足下一层负差额。
+ *
+ * 回折边与普通流线一样使用目标色填充面。U 形转向会反转截面朝向，因此
+ * 外边界连接 source 上缘与 target 下缘，内边界连接 target 上缘与 source
+ * 下缘；两条边界不交叉，转弯处的径向宽度近似保持为流量对应宽度。
+ */
+function constantWidthReturnPath(link, gap) {
   const source = link.visualSource;
-  const target = link.target;
+  const target = link.visualTarget;
   const sourceX = source.x;
   const targetX = target.x;
-  const controlX = Math.min(sourceX, targetX) - gap;
   const sourceY = Math.max(source.y, source.y + source.height - link.sourceThickness);
   const targetY = link.targetY;
-  const sourceThickness = link.sourceThickness;
-  const targetThickness = link.targetThickness;
+  const returnThickness = (link.sourceThickness + link.targetThickness) / 2;
+  const sourceBottom = sourceY + link.sourceThickness;
+  const targetBottom = targetY + link.targetThickness;
+  const innerReturnX = sourceX - gap;
+  const outerReturnX = innerReturnX - returnThickness;
+  const returnX = (innerReturnX + outerReturnX) / 2;
 
   link.sourceY = sourceY;
-  link.route = 'difference';
-  link.routeX = controlX;
+  link.route = 'left-return';
+  link.routeX = returnX;
+  link.routeY = (sourceY + sourceBottom + targetY + targetBottom) / 4;
+  link.returnThickness = returnThickness;
+  link.returnOuterX = outerReturnX;
+  link.returnInnerX = innerReturnX;
+  link.isConstantWidthReturn = true;
   return [
     `M${sourceX},${sourceY}`,
-    `C${controlX},${sourceY} ${controlX},${targetY} ${targetX},${targetY}`,
-    `L${targetX},${targetY + targetThickness}`,
-    `C${controlX},${targetY + targetThickness} `
-      + `${controlX},${sourceY + sourceThickness} ${sourceX},${sourceY + sourceThickness}`,
+    `C${outerReturnX},${sourceY} ${outerReturnX},${targetBottom} `
+      + `${targetX},${targetBottom}`,
+    `L${targetX},${targetY}`,
+    `C${innerReturnX},${targetY} ${innerReturnX},${sourceBottom} `
+      + `${sourceX},${sourceBottom}`,
     'Z',
   ].join(' ');
 }
@@ -596,11 +673,24 @@ export function layoutSankey(cfg, bounds, style) {
   });
   graph.links.forEach((link) => {
     if (!link.isNegativeDifference) return;
-    link.baseLink.sourceThickness = Math.min(
-      link.baseLink.sourceThickness,
-      link.source.height,
-    );
+    const pairedMagnitude = Math.abs(link.pairedSourceValue);
+    const pairedProportionalThickness = pairedMagnitude * scale;
+    const pairedThickness = pairedMagnitude === 0
+      ? zeroFlowSize
+      : Math.max(edgeMinThickness, pairedProportionalThickness);
+    if (link.negativeDifferenceMode === 'base-excess') {
+      link.baseLink.sourceThickness = pairedThickness;
+      /* P 以原宽进入 B；B 左侧余下的 abs(D) 留给等宽回折带。 */
+      link.baseLink.targetThickness = pairedThickness;
+    } else {
+      link.sourceThickness = pairedThickness;
+      link.targetThickness = pairedThickness;
+    }
+    link.baseLink.pairedSourceValue = link.pairedSourceValue;
+    link.baseLink.pairedProportionalThickness = pairedProportionalThickness;
   });
+
+  assignLabelEnvelopes(graph.nodes, geometry, bounds.labelMetricsById);
 
   const columns = graph.stageValues.map(() => []);
   graph.nodes.forEach((node) => columns[node.columnIndex].push(node));
@@ -621,13 +711,17 @@ export function layoutSankey(cfg, bounds, style) {
     const column = columns[columnIndex];
     const gap = columnGaps[columnIndex];
     const anchorIndex = column.indexOf(anchoredNode);
-    const above = columnHeight(column.slice(0, anchorIndex), gap)
+    const above = anchoredNode.height / 2
+      - anchoredNode.occupiedTopOffset
+      + columnHeight(column.slice(0, anchorIndex), gap)
       + (anchorIndex > 0 ? gap : 0);
-    const below = columnHeight(column.slice(anchorIndex + 1), gap)
+    const below = anchoredNode.occupiedBottomOffset
+      - anchoredNode.height / 2
+      + columnHeight(column.slice(anchorIndex + 1), gap)
       + (anchorIndex < column.length - 1 ? gap : 0);
     requiredHeight = Math.max(
       requiredHeight,
-      (anchoredNode.height / 2 + Math.max(above, below)) * 2 + paddingY * 2,
+      Math.max(above, below) * 2 + paddingY * 2,
     );
   });
 
@@ -673,16 +767,35 @@ export function layoutSankey(cfg, bounds, style) {
       columnAnchor,
     );
   });
+  finalizeLabelEnvelopes(graph.nodes);
 
   graph.nodes.forEach((node) => {
     node.visualIncoming = [];
     node.visualOutgoing = [];
   });
   graph.links.forEach((link) => {
-    link.visualSource = link.value < 0 && link.negativeSource
-      ? link.negativeSource
-      : link.source;
+    link.visualSource = link.source;
     link.visualTarget = link.target;
+    link.visualValue = link.value;
+  });
+  graph.links.forEach((link) => {
+    if (!link.isNegativeDifference) return;
+    if (link.negativeDifferenceMode === 'base-excess') {
+      link.visualSource = link.negativeSource;
+      return;
+    }
+
+    /*
+     * P < 0：P 的绝对值全部流向差额结果；基础正值 B 作为同层缺口来源。
+     * 逻辑 source/target 不改写，只改变视觉端点与视觉边值。
+     */
+    link.visualValue = link.pairedSourceValue;
+    link.baseLink.visualSource = link.negativeSource;
+    link.baseLink.visualTarget = link.target;
+    link.baseLink.visualValue = -link.baseLink.value;
+    link.baseLink.isDeficitContribution = true;
+  });
+  graph.links.forEach((link) => {
     link.visualSource.visualOutgoing.push(link);
     link.visualTarget.visualIncoming.push(link);
   });
@@ -693,7 +806,8 @@ export function layoutSankey(cfg, bounds, style) {
         - (b.visualSource.y + b.visualSource.height / 2),
     );
     const outgoing = [...node.visualOutgoing].sort(
-      (a, b) => (a.target.y + a.target.height / 2) - (b.target.y + b.target.height / 2),
+      (a, b) => (a.visualTarget.y + a.visualTarget.height / 2)
+        - (b.visualTarget.y + b.visualTarget.height / 2),
     );
     const incomingHeight = incoming.reduce(
       (sum, link) => sum + link.targetThickness,
@@ -714,17 +828,26 @@ export function layoutSankey(cfg, bounds, style) {
       outgoingOffset += link.sourceThickness;
     });
   });
+  graph.links.forEach((link) => {
+    if (link.negativeDifferenceMode !== 'base-excess') return;
+    /* 基础主带占 B 左侧上段，超额回折带从余下的下段起笔。 */
+    link.baseLink.targetY = link.negativeSource.y;
+  });
 
   graph.links.forEach((link) => {
-    link.color = link.target.color;
-    const isNegativeDifference = link.isNegativeDifference;
-    link.path = isNegativeDifference
-      ? differenceRibbonPath(link, nodeGap)
+    link.semanticRole = link.visualTarget.semanticRole;
+    link.color = link.visualTarget.color;
+    const usesLeftReturnPath = link.negativeDifferenceMode === 'base-excess'
+      || link.isDeficitContribution;
+    link.path = usesLeftReturnPath
+      ? constantWidthReturnPath(link, nodeGap)
       : ribbonPath(link, geometry['curve-tension'], columns, nodeGap);
-    link.labelX = isNegativeDifference
-      ? link.routeX
-      : (link.source.x + link.source.width + link.target.x) / 2;
-    link.labelY = isNegativeDifference
+    link.labelX = usesLeftReturnPath
+      ? (link.visualSource.columnIndex === link.visualTarget.columnIndex
+        ? link.routeX
+        : (link.visualSource.x + link.visualTarget.x) / 2)
+      : (link.visualSource.x + link.visualSource.width + link.visualTarget.x) / 2;
+    link.labelY = usesLeftReturnPath
       ? (link.sourceY + link.targetY) / 2
         + (link.sourceThickness + link.targetThickness) / 4
       : (link.route

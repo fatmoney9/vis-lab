@@ -68,7 +68,7 @@ export function measureInk(host, texts, className) {
 }
 
 /*
- * [TREEMAP-05] 需要反复测量同一类文字时复用单个隐藏 SVG，避免每次字号拟合都重建 DOM。
+ * [TREEMAP-05][SANKEY-18] 需要反复测量同一类文字时复用单个隐藏 SVG，避免每次字号拟合都重建 DOM。
  * 字号边界仍由图表 token 提供；本构件只负责按传入字号返回真实渲染宽度。
  */
 export function createTextMeasurer(host, className) {

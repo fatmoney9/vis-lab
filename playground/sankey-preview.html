@@ -6,10 +6,10 @@
   <title>SankeyChart · 独立预览</title>
   <link rel="stylesheet" href="../tokens/tokens.css" />
   <link rel="stylesheet" href="../charts/styles.css" />
-  <link rel="stylesheet" href="../charts/charts/sankey/styles.css" />
+  <link rel="stylesheet" href="../demos/sankey-playback.css" />
   <style>
     /* 与 cartesian-preview.html 保持一致：这里只放 Playground 外壳样式，
-       桑基图生产样式仍由 charts/charts/sankey/styles.css 提供。 */
+       桑基图生产样式由 charts/styles.css 的 .dv-sankey 命名空间提供。 */
     * { box-sizing: border-box; }
 
     html,
@@ -57,12 +57,6 @@
       line-height: var(--line-height-super-small);
     }
 
-    .sankey-preview__list {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: var(--spacing-24);
-    }
-
     .sankey-preview__section {
       display: grid;
       grid-template-columns: minmax(0, 1fr);
@@ -98,6 +92,7 @@
       border: var(--size-grid-line) solid var(--color-visualization-divider);
       border-radius: var(--radius-10);
       color: var(--color-text-primary);
+      font-family: var(--font-family-cn);
     }
 
     .sankey-preview__card-head {
@@ -129,10 +124,14 @@
 
     .sankey-preview__complex-layout {
       --sankey-demo-frame-width: 812px;
-      --sankey-demo-frame-height: 375px;
       --sankey-demo-header-height: 44px;
       --sankey-demo-chart-height: 243px;
-      --sankey-demo-playback-height: 88px;
+      --sankey-playback-height: 88px;
+      --sankey-demo-frame-height: calc(
+        var(--sankey-demo-header-height)
+        + var(--sankey-demo-chart-height)
+        + var(--sankey-playback-height)
+      );
       display: grid;
       grid-template-columns: minmax(0, var(--sankey-demo-frame-width)) calc(var(--spacing-24) * 12);
       gap: var(--spacing-24);
@@ -144,7 +143,7 @@
       grid-template-rows:
         var(--sankey-demo-header-height)
         var(--sankey-demo-chart-height)
-        var(--sankey-demo-playback-height);
+        var(--sankey-playback-height);
       width: min(100%, var(--sankey-demo-frame-width));
       max-width: var(--sankey-demo-frame-width);
       height: var(--sankey-demo-frame-height);
@@ -174,292 +173,13 @@
       display: none;
     }
 
-    .sankey-playback {
-      display: grid;
-      grid-template-rows: calc(var(--spacing-20) + var(--spacing-16)) calc(var(--spacing-20) + var(--spacing-8));
-      gap: var(--spacing-8);
-      box-sizing: border-box;
-      width: 100%;
-      height: var(--sankey-demo-playback-height);
-      min-width: 0;
-      min-height: var(--sankey-demo-playback-height);
-      padding: var(--spacing-4) var(--spacing-0) var(--spacing-12);
+    /* 播放区视觉与 DOM 模板统一由 demos/sankey-playback.* 提供。 */
+    /* [SANKEY-28] Ainvest playback: PC Figma Uv36h0PXzZG7ZhuHBHQ3qz / 110:2941
+       经产品确认复用于移动端；只覆盖播放区，不改变桑基视口或图形计算。 */
+    .sankey-preview__complex-card[data-theme="ainvest"] .sankey-preview__complex-layout {
+      --sankey-playback-height: 110px;
     }
 
-    .sankey-playback[hidden] {
-      display: none;
-    }
-
-    .sankey-playback__timeline {
-      position: relative;
-      height: calc(var(--spacing-20) + var(--spacing-16));
-    }
-
-    .sankey-playback__timeline::before {
-      position: absolute;
-      z-index: 0;
-      top: var(--spacing-8);
-      right: 0;
-      left: 0;
-      height: var(--spacing-8);
-      border-radius: var(--radius-2);
-      background: var(--color-background-weak);
-      content: '';
-    }
-
-    .sankey-playback__range {
-      position: absolute;
-      z-index: 2;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: var(--size-slider-height);
-      margin: var(--spacing-0);
-      appearance: none;
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .sankey-playback__range::-webkit-slider-runnable-track {
-      height: var(--spacing-8);
-      background: transparent;
-    }
-
-    .sankey-playback__range::-webkit-slider-thumb {
-      width: var(--size-slider-height);
-      height: var(--size-slider-height);
-      margin-top: calc((var(--size-slider-height) - var(--spacing-8)) / -2);
-      appearance: none;
-      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
-      border-radius: var(--radius-slider-handle);
-      background-color: var(--color-datazoom-handle);
-      background-image:
-        url('../assets/sankey/slider-grip-line.svg'),
-        url('../assets/sankey/slider-grip-line.svg'),
-        url('../assets/sankey/slider-grip-line.svg');
-      background-position: 7px center, 12px center, 16px center;
-      background-repeat: no-repeat;
-      background-size: 1.5px 9.5px;
-      box-shadow: var(--shadow-datazoom-handle);
-    }
-
-    .sankey-playback__range::-moz-range-track {
-      height: var(--spacing-8);
-      border: 0;
-      background: transparent;
-    }
-
-    .sankey-playback__range::-moz-range-thumb {
-      width: var(--size-slider-height);
-      height: var(--size-slider-height);
-      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
-      border-radius: var(--radius-slider-handle);
-      background-color: var(--color-datazoom-handle);
-      background-image:
-        url('../assets/sankey/slider-grip-line.svg'),
-        url('../assets/sankey/slider-grip-line.svg'),
-        url('../assets/sankey/slider-grip-line.svg');
-      background-position: 7px center, 12px center, 16px center;
-      background-repeat: no-repeat;
-      background-size: 1.5px 9.5px;
-      box-shadow: var(--shadow-datazoom-handle);
-    }
-
-    .sankey-playback__range:focus-visible {
-      outline: none;
-    }
-
-    .sankey-playback__range:focus-visible::-webkit-slider-thumb,
-    .sankey-playback__range:focus-visible::-moz-range-thumb {
-      outline: var(--size-grid-line) solid var(--color-text-secondary);
-      outline-offset: var(--spacing-2);
-    }
-
-    .sankey-playback__ticks {
-      position: absolute;
-      z-index: 1;
-      inset: 0;
-    }
-
-    .sankey-playback__tick {
-      position: absolute;
-      top: 0;
-      display: grid;
-      justify-items: center;
-      align-items: end;
-      height: calc(var(--spacing-20) + var(--spacing-16));
-      min-width: 0;
-      padding: var(--spacing-24) var(--spacing-0) var(--spacing-0);
-      border: 0;
-      background: transparent;
-      color: var(--color-text-secondary);
-      font-family: var(--font-family-number);
-      font-size: var(--font-size-xxs);
-      font-weight: var(--font-weight-medium);
-      line-height: var(--line-height-super-small);
-      white-space: nowrap;
-      cursor: pointer;
-      transform: translateX(-50%);
-    }
-
-    .sankey-playback__tick:nth-child(1) { left: 0; }
-    .sankey-playback__tick:nth-child(2) { left: 14.2857%; }
-    .sankey-playback__tick:nth-child(3) { left: 28.5714%; }
-    .sankey-playback__tick:nth-child(4) { left: 42.8571%; }
-    .sankey-playback__tick:nth-child(5) { left: 57.1429%; }
-    .sankey-playback__tick:nth-child(6) { left: 71.4286%; }
-    .sankey-playback__tick:nth-child(7) { left: 85.7143%; }
-    .sankey-playback__tick:nth-child(8) { left: 100%; }
-
-    .sankey-playback__tick::before {
-      position: absolute;
-      top: var(--spacing-10);
-      left: 50%;
-      width: 1px;
-      height: var(--spacing-4);
-      background: var(--color-grey-03);
-      content: '';
-      transform: translateX(-50%);
-    }
-
-    .sankey-playback__tick:first-child {
-      justify-items: start;
-      transform: none;
-    }
-
-    .sankey-playback__tick:first-child::before {
-      left: 0;
-      transform: none;
-    }
-
-    .sankey-playback__tick:last-child {
-      justify-items: end;
-      transform: translateX(-100%);
-    }
-
-    .sankey-playback__tick:last-child::before {
-      right: 0;
-      left: auto;
-      transform: none;
-    }
-
-    .sankey-playback__tick.is-current {
-      color: var(--color-text-primary);
-      font-weight: var(--font-weight-medium);
-    }
-
-    .sankey-playback__tick-label--compact {
-      display: none;
-    }
-
-    .sankey-playback__controls,
-    .sankey-playback__steps {
-      display: flex;
-      align-items: center;
-    }
-
-    .sankey-playback__controls {
-      justify-content: space-between;
-      gap: var(--spacing-8);
-    }
-
-    .sankey-playback__primary {
-      display: inline-grid;
-      flex: none;
-      width: calc(var(--spacing-20) + var(--spacing-8));
-      height: calc(var(--spacing-20) + var(--spacing-8));
-      place-items: center;
-      padding: var(--spacing-0);
-      border: 0;
-      border-radius: 50%;
-      background: var(--color-price-up);
-      cursor: pointer;
-    }
-
-    .sankey-playback__play-icon {
-      display: block;
-      width: 8.37px;
-      height: 9.49px;
-      transform: translateX(0.5px);
-    }
-
-    .sankey-playback__pause-icon {
-      display: none;
-      grid-template-columns: repeat(2, var(--spacing-2));
-      gap: var(--spacing-2);
-      height: var(--spacing-10);
-    }
-
-    .sankey-playback__pause-icon::before,
-    .sankey-playback__pause-icon::after {
-      border-radius: var(--radius-1);
-      background: var(--color-text-inverse);
-      content: '';
-    }
-
-    .sankey-playback__primary.is-playing .sankey-playback__play-icon {
-      display: none;
-    }
-
-    .sankey-playback__primary.is-playing .sankey-playback__pause-icon {
-      display: grid;
-    }
-
-    .sankey-playback__period {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-
-    .sankey-playback__steps {
-      gap: var(--spacing-8);
-      margin-left: auto;
-    }
-
-    .sankey-playback__step {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-2);
-      width: calc(var(--spacing-24) * 3);
-      height: calc(var(--spacing-20) + var(--spacing-8));
-      padding: var(--spacing-0) var(--spacing-6);
-      border: 0;
-      border-radius: var(--radius-4);
-      background: var(--color-background-weak);
-      color: var(--color-text-primary);
-      font-family: var(--font-family-cn);
-      font-size: var(--font-size-small);
-      font-weight: var(--font-weight-medium);
-      line-height: var(--line-height-small);
-      cursor: pointer;
-    }
-
-    .sankey-playback__step:hover:not(:disabled) {
-      background: var(--color-visualization-highlight-block);
-    }
-
-    .sankey-playback__period-arrow {
-      flex: none;
-      width: var(--spacing-16);
-      height: var(--spacing-16);
-      background: currentColor;
-      -webkit-mask: url('../assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
-      mask: url('../assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
-    }
-
-    .sankey-playback__period-arrow--prev {
-      transform: scaleX(-1);
-    }
-
-    .sankey-playback__step:disabled {
-      color: var(--color-text-primary);
-      cursor: default;
-      opacity: 0.5;
-    }
 
     .sankey-preview__complex-card[data-mode="dark"] {
       background: var(--color-grey-01);
@@ -577,6 +297,41 @@
       border-top: var(--size-grid-line) solid var(--color-visualization-divider);
     }
 
+    /* PC 不复用移动端横版验收外框：图表按推荐总高完整展开，配置移到下方。 */
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__complex-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__complex-content {
+      grid-template-rows:
+        var(--sankey-demo-header-height)
+        auto
+        var(--sankey-playback-height);
+      width: 100%;
+      max-width: none;
+      height: auto;
+      overflow: visible;
+    }
+
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__complex-host {
+      height: auto;
+      min-height: 424px;
+      overflow-y: visible;
+    }
+
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__config {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      padding-top: var(--spacing-24);
+      padding-left: var(--spacing-0);
+      border-top: var(--size-grid-line) solid var(--color-visualization-divider);
+      border-left: var(--spacing-0);
+    }
+
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__config-head,
+    .sankey-preview__complex-card[data-platform="pc"] .sankey-preview__config-summary {
+      grid-column: 1 / -1;
+    }
+
     @media (max-width: 900px) {
       .sankey-preview__complex-layout {
         grid-template-columns: minmax(0, 1fr);
@@ -610,14 +365,6 @@
         flex-direction: column;
       }
 
-      .sankey-playback__tick-label--full {
-        display: none;
-      }
-
-      .sankey-playback__tick-label--compact {
-        display: inline;
-      }
-
       .sankey-preview__config {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -632,18 +379,10 @@
       <p>收入、支出、利润决定颜色；数值符号参与财务恒等式，终止分支停在真实阶段。</p>
     </header>
 
-    <section class="sankey-preview__section" aria-labelledby="basic-title">
-      <header class="sankey-preview__section-head">
-        <h2 class="sankey-preview__section-title" id="basic-title">基础样式</h2>
-        <p class="sankey-preview__section-description">相同数据在三套业务主题下的默认 PC 浅色表现。</p>
-      </header>
-      <div class="sankey-preview__list" id="preview-list"></div>
-    </section>
-
     <section class="sankey-preview__section" aria-labelledby="complex-title">
       <header class="sankey-preview__section-head">
         <h2 class="sankey-preview__section-title" id="complex-title">财报收支拆解</h2>
-        <p class="sankey-preview__section-description">盈利与亏损共用同一拓扑：负值保留方向与角色，只用绝对值计算节点高度和边宽。</p>
+        <p class="sankey-preview__section-description">播放轴覆盖完整财报序列及亏损期间；负值保留方向与角色，只用绝对值计算节点高度和边宽。</p>
       </header>
 
       <article
@@ -660,49 +399,7 @@
               <span class="sankey-preview__card-meta" id="complex-meta">THS · 移动端 · Light</span>
             </header>
             <div class="sankey-preview__host sankey-preview__complex-host" id="complex-host"></div>
-            <div class="sankey-playback" id="complex-playback" aria-label="季度数据播放轴">
-              <div class="sankey-playback__timeline">
-                <input
-                  class="sankey-playback__range"
-                  id="complex-playback-range"
-                  type="range"
-                  min="0"
-                  max="7"
-                  step="1"
-                  value="0"
-                  aria-label="季度进度"
-                />
-                <div class="sankey-playback__ticks" id="complex-playback-ticks"></div>
-              </div>
-              <div class="sankey-playback__controls">
-                <button
-                  class="sankey-playback__primary"
-                  id="complex-playback-toggle"
-                  type="button"
-                  aria-label="播放季度变化"
-                  title="播放"
-                >
-                  <img
-                    class="sankey-playback__play-icon"
-                    src="../assets/sankey/play.svg"
-                    alt=""
-                    aria-hidden="true"
-                  />
-                  <span class="sankey-playback__pause-icon" aria-hidden="true"></span>
-                </button>
-                <output class="sankey-playback__period" id="complex-playback-period">2025 一季报</output>
-                <div class="sankey-playback__steps">
-                  <button class="sankey-playback__step" id="complex-playback-prev" type="button">
-                    <span class="sankey-playback__period-arrow sankey-playback__period-arrow--prev" aria-hidden="true"></span>
-                    <span>上一期</span>
-                  </button>
-                  <button class="sankey-playback__step" id="complex-playback-next" type="button">
-                    <span>下一期</span>
-                    <span class="sankey-playback__period-arrow" aria-hidden="true"></span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <div id="complex-playback-mount"></div>
           </div>
 
           <aside class="sankey-preview__config" aria-labelledby="config-title">
@@ -712,20 +409,6 @@
             </header>
 
             <fieldset class="sankey-preview__config-fieldset">
-              <legend class="sankey-preview__config-legend">业绩状态</legend>
-              <div class="sankey-preview__options sankey-preview__options--two">
-                <label class="sankey-preview__option">
-                  <input type="radio" name="complex-scenario" value="profit" checked />
-                  <span class="sankey-preview__option-label">盈利</span>
-                </label>
-                <label class="sankey-preview__option">
-                  <input type="radio" name="complex-scenario" value="loss" />
-                  <span class="sankey-preview__option-label">亏损</span>
-                </label>
-              </div>
-            </fieldset>
-
-            <fieldset class="sankey-preview__config-fieldset">
               <legend class="sankey-preview__config-legend">主题</legend>
               <div class="sankey-preview__options">
                 <label class="sankey-preview__option">
@@ -733,8 +416,8 @@
                   <span class="sankey-preview__option-label">THS</span>
                 </label>
                 <label class="sankey-preview__option">
-                  <input type="radio" name="complex-theme" value="ifind-pc" />
-                  <span class="sankey-preview__option-label">iFinD PC</span>
+                  <input type="radio" name="complex-theme" value="ifind" />
+                  <span class="sankey-preview__option-label">iFinD</span>
                 </label>
                 <label class="sankey-preview__option">
                   <input type="radio" name="complex-theme" value="ainvest" />
@@ -774,7 +457,7 @@
             <div class="sankey-preview__config-summary" aria-live="polite">
               <span id="complex-summary-count">15 个节点 · 14 条流向</span>
               <span id="complex-summary-rule">终止分支按实际阶段收口，主利润链继续向右</span>
-              <span id="complex-summary-size">812×375px · 桑基图区高 243px</span>
+              <span id="complex-summary-size">序列统一高度计算中</span>
             </div>
           </aside>
         </div>
@@ -787,45 +470,28 @@
   </script>
   <script type="module">
     import { SankeyChart } from '../charts/charts/sankey/index.js';
+    import {
+      resolveSankeySequenceViewport,
+      withSharedSankeyScale,
+    } from '../charts/charts/sankey/model.js';
+    import {
+      financialSankeyPresentation,
+      sankeyPlaybackCopy,
+    } from '../demos/sankey-presentation.js';
+    import {
+      sankeyPlaybackMarkup,
+      sankeyPlaybackRangeTheme,
+      sankeyPlaybackTicksMarkup,
+    } from '../demos/sankey-playback.js';
 
     const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });
     const income = (id, name, extra = {}) => node(id, name, 'income', extra);
     const expense = (id, name, extra = {}) => node(id, name, 'expense', extra);
     const profit = (id, name, extra = {}) => node(id, name, 'profit', extra);
     const yi = (value) => value * 1e8;
-    const wan = (value) => value * 1e4;
     const LEGEND_LABELS = { income: '收入', expense: '支出', profit: '利润' };
 
-    const DATA = {
-      nodes: [
-        income('consumer', '消费电子', { stage: 0 }),
-        income('automotive', '汽车电子', { stage: 0 }),
-        income('industrial', '工业控制', { stage: 0 }),
-        income('revenue', '营业收入', { stage: 1 }),
-        expense('cost', '营业成本', { stage: 2, order: 0 }),
-        profit('gross', '毛利润', { stage: 2, order: 1 }),
-        expense('research', '研发费用', { stage: 3, order: 0 }),
-        expense('management', '管理费用', { stage: 3, order: 1 }),
-        profit('operating', '营业利润', { stage: 3, order: 2 }),
-        profit('net', '净利润', { stage: 4, order: 0 }),
-        expense('tax', '所得税', { stage: 4, order: 1 }),
-      ],
-      links: [
-        { source: 'consumer', target: 'revenue', value: 450 },
-        { source: 'automotive', target: 'revenue', value: 300 },
-        { source: 'industrial', target: 'revenue', value: 250 },
-        { source: 'revenue', target: 'cost', value: 450 },
-        { source: 'revenue', target: 'gross', value: 550 },
-        { source: 'gross', target: 'research', value: 150 },
-        { source: 'gross', target: 'management', value: 100 },
-        { source: 'gross', target: 'operating', value: 300 },
-        { source: 'operating', target: 'net', value: 250 },
-        { source: 'operating', target: 'tax', value: 50 },
-      ],
-      legendLabels: LEGEND_LABELS,
-    };
-
-    const PROFIT_NODES = [
+    const PERIOD_NODES = [
         income('domestic', '国内政企业务', { stage: 0, order: 0 }),
         income('other-business', '其他业务', { stage: 0, order: 1 }),
         income('international', '国际业务', { stage: 0, order: 2 }),
@@ -843,7 +509,7 @@
         expense('minority-interest', '少数股东权益', { stage: 6, order: 1 }),
     ];
 
-    const makeProfitQuarter = ({
+    const makeQuarter = ({
       period,
       shortPeriod,
       sources,
@@ -870,24 +536,40 @@
       const minorityInterestValue = yi(minorityInterest);
 
       return {
-        nodes: PROFIT_NODES,
+        nodes: PERIOD_NODES,
         links: [
           { source: 'domestic', target: 'revenue', value: domestic },
           { source: 'other-business', target: 'revenue', value: otherBusiness },
           { source: 'international', target: 'revenue', value: international },
           { source: 'revenue', target: 'cost', value: costValue },
-          { source: 'revenue', target: 'gross', value: gross },
+          {
+            source: 'revenue',
+            target: 'gross',
+            value: gross,
+            negativeSource: 'cost',
+          },
           { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
-          { source: 'gross', target: 'operating-profit', value: grossToOperating },
+          {
+            source: 'gross',
+            target: 'operating-profit',
+            value: grossToOperating,
+            negativeSource: 'operating-expense',
+          },
           { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
           { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
           { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
-          { source: 'total-profit', target: 'net-profit', value: netProfit },
+          {
+            source: 'total-profit',
+            target: 'net-profit',
+            value: netProfit,
+            negativeSource: 'income-tax',
+          },
           { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
           {
             source: 'net-profit',
             target: 'parent-profit',
             value: netProfit - minorityInterestValue,
+            negativeSource: 'minority-interest',
           },
           {
             source: 'net-profit',
@@ -902,7 +584,7 @@
       };
     };
 
-    const QUARTER_DATA = [
+    const QUARTER_DATA = withSharedSankeyScale([
       ['2025 一季报', '25 Q1', [148, 55, 12], 188, 18, -0.8, 0.3, 0.8, 1.1],
       ['2025 半年报', '25 Q2', [162, 61, 14], 205, 20, -0.4, 0.5, 1.2, 1.4],
       ['2025 三季报', '25 Q3', [176, 67, 15], 222, 22, 0.2, 0.4, 1.5, 1.8],
@@ -922,7 +604,7 @@
       incomeTax,
       minorityInterest,
       statusLabel,
-    ]) => makeProfitQuarter({
+    ]) => makeQuarter({
       period,
       shortPeriod,
       sources,
@@ -933,74 +615,38 @@
       incomeTax,
       minorityInterest,
       statusLabel,
-    }));
-
-    const PROFIT_DATA = QUARTER_DATA[0];
-
-    const LOSS_DATA = {
-      nodes: [
-        income('revenue', '营业收入', { stage: 0 }),
-        expense('cost', '营业成本', { stage: 1, order: 0 }),
-        profit('gross', '毛利', { stage: 1, order: 1 }),
-        income('other-operating', '其他经营收益', { stage: 1, order: 2 }),
-        expense('operating-expense', '费用及营业税', { stage: 2, order: 0 }),
-        profit('operating-profit', '营业利润', { stage: 2, order: 1 }),
-        income('non-operating', '营业外净收入', { stage: 2, order: 2 }),
-        profit('total-profit', '利润总额', { stage: 3 }),
-        profit('net-profit', '净利润', { stage: 4, order: 0 }),
-        expense('income-tax', '所得税费用', { stage: 4, order: 1 }),
-        profit('parent-profit', '归母净利润', { stage: 5 }),
-      ],
-      links: [
-        { source: 'revenue', target: 'cost', value: yi(8.960136) },
-        { source: 'revenue', target: 'gross', value: wan(-401.36) },
-        { source: 'gross', target: 'operating-expense', value: wan(2612.73) },
-        { source: 'gross', target: 'operating-profit', value: wan(-3014.09) },
-        { source: 'other-operating', target: 'operating-profit', value: wan(-563.09) },
-        { source: 'operating-profit', target: 'total-profit', value: wan(-3577.18) },
-        { source: 'non-operating', target: 'total-profit', value: 7100 },
-        { source: 'total-profit', target: 'net-profit', value: wan(-2769.74) },
-        { source: 'total-profit', target: 'income-tax', value: wan(-806.73) },
-        { source: 'net-profit', target: 'parent-profit', value: wan(-2769.74) },
-      ],
-      legendLabels: LEGEND_LABELS,
-      period: '2024 一季报',
-      statusLabel: '亏损',
-    };
+    })));
 
     const THEMES = [
       { id: 'ths', name: 'THS' },
-      { id: 'ifind-pc', name: 'iFinD PC' },
+      { id: 'ifind', name: 'iFinD' },
       { id: 'ainvest', name: 'Ainvest' },
     ];
 
-    const list = document.getElementById('preview-list');
+    const SEQUENCE_VIEWPORTS = Object.fromEntries(['pc', 'mobile'].map((platform) => [
+      platform,
+      resolveSankeySequenceViewport(QUARTER_DATA, platform),
+    ]));
+    const complexLayout = document.querySelector('.sankey-preview__complex-layout');
+    const applySequenceViewport = (platform) => {
+      complexLayout.style.setProperty(
+        '--sankey-demo-chart-height',
+        `${SEQUENCE_VIEWPORTS[platform].totalHeight}px`,
+      );
+    };
+    applySequenceViewport('mobile');
 
-    THEMES.forEach((theme) => {
-      const card = document.createElement('section');
-      card.className = 'sankey-preview__card';
-      card.dataset.theme = theme.id;
-      card.dataset.platform = 'pc';
-      card.dataset.mode = 'light';
-      card.innerHTML = `
-        <header class="sankey-preview__card-head">
-          <h2 class="sankey-preview__card-title">${theme.name}</h2>
-          <span class="sankey-preview__card-meta">PC · Light · 10 条流向</span>
-        </header>
-        <div class="sankey-preview__host"></div>
-      `;
-      list.appendChild(card);
-      SankeyChart(card.querySelector('.sankey-preview__host'), {
-        ...DATA,
-        platform: 'pc',
-      });
+    document.getElementById('complex-playback-mount').outerHTML = sankeyPlaybackMarkup({
+      periods: QUARTER_DATA,
+      copy: sankeyPlaybackCopy({ theme: 'ths' }),
+      playIconSrc: '../assets/sankey/play.svg',
+      idPrefix: 'complex-playback',
     });
 
     const complexCard = document.getElementById('complex-card');
     const complexCardTitle = document.getElementById('complex-card-title');
     const complexMeta = document.getElementById('complex-meta');
     const configDescription = document.getElementById('config-description');
-    const platformFieldset = document.getElementById('complex-platform-fieldset');
     const complexSummaryCount = document.getElementById('complex-summary-count');
     const complexSummaryRule = document.getElementById('complex-summary-rule');
     const complexSummarySize = document.getElementById('complex-summary-size');
@@ -1011,24 +657,31 @@
     const complexPlaybackPeriod = document.getElementById('complex-playback-period');
     const complexPlaybackPrev = document.getElementById('complex-playback-prev');
     const complexPlaybackNext = document.getElementById('complex-playback-next');
+    const complexPlaybackPrevLabel = document.getElementById('complex-playback-prev-label');
+    const complexPlaybackNextLabel = document.getElementById('complex-playback-next-label');
     const complexHost = document.getElementById('complex-host');
     complexHost.addEventListener('dv:sankey-layout', (event) => {
       const { recommendedHeight, renderedHeight, renderedWidth } = event.detail;
-      complexSummarySize.textContent = [
-        `推荐高 ${Math.round(recommendedHeight)}px`,
-        `当前 ${Math.round(renderedHeight)}px`,
-        `绘图区宽 ${Math.round(renderedWidth)}px`,
-      ].join(' · ');
+      complexSummarySize.textContent = complexCard.dataset.theme === 'ainvest'
+        ? [
+          `Recommended ${Math.round(recommendedHeight)}px`,
+          `Current ${Math.round(renderedHeight)}px`,
+          `Plot width ${Math.round(renderedWidth)}px`,
+        ].join(' · ')
+        : [
+          `推荐高 ${Math.round(recommendedHeight)}px`,
+          `当前 ${Math.round(renderedHeight)}px`,
+          `绘图区宽 ${Math.round(renderedWidth)}px`,
+        ].join(' · ');
     });
     const complexChart = SankeyChart(complexHost, {
-      ...PROFIT_DATA,
+      ...QUARTER_DATA[0],
       platform: 'mobile',
     });
     let periodPosition = 0;
     let isPlaying = false;
     let transitionTargetIndex = null;
     const complexState = {
-      scenario: 'profit',
       theme: 'ths',
       platform: 'mobile',
       mode: 'light',
@@ -1038,39 +691,35 @@
     const modeNames = { light: 'Light', dark: 'Dark' };
 
     const clampPeriod = (value) => Math.max(0, Math.min(QUARTER_DATA.length - 1, value));
-    const compactPeriodLabel = (period) => {
-      const label = period.replace(/^\d{4}\s*/, '');
-      return label === '年报' ? label : label.replace(/报$/, '');
+    const displayQuarter = (quarter) => financialSankeyPresentation(quarter, {
+      theme: complexState.theme,
+    });
+    const renderPlaybackTicks = () => {
+      const displayedPeriods = QUARTER_DATA.map(displayQuarter);
+      complexPlaybackTicks.innerHTML = sankeyPlaybackTicksMarkup(
+        displayedPeriods,
+        Math.round(clampPeriod(periodPosition)),
+      );
     };
-
-    complexPlaybackTicks.innerHTML = QUARTER_DATA.map((quarter, index) => `
-      <button
-        class="sankey-playback__tick"
-        type="button"
-        data-period-index="${index}"
-        aria-label="${quarter.period}"
-      >
-        <span class="sankey-playback__tick-label--full">${quarter.period}</span>
-        <span class="sankey-playback__tick-label--compact">
-          ${compactPeriodLabel(quarter.period)}
-        </span>
-      </button>
-    `).join('');
 
     const renderPlaybackState = () => {
       const displayQuarterIndex = Math.round(clampPeriod(periodPosition));
       const progress = displayQuarterIndex / (QUARTER_DATA.length - 1) * 100;
-      const displayPeriod = QUARTER_DATA[displayQuarterIndex].period;
-      const displayStatus = QUARTER_DATA[displayQuarterIndex].statusLabel;
+      const displayedQuarter = displayQuarter(QUARTER_DATA[displayQuarterIndex]);
+      const copy = sankeyPlaybackCopy({ theme: complexState.theme });
       complexPlaybackRange.value = `${displayQuarterIndex}`;
       complexPlaybackRange.style.setProperty('--playback-progress', `${progress}%`);
-      complexPlaybackPeriod.value = displayPeriod;
+      complexPlaybackPeriod.value = displayedQuarter.period;
+      complexPlayback.setAttribute('aria-label', copy.timeline);
+      complexPlaybackRange.setAttribute('aria-label', copy.progress);
       complexPlaybackToggle.classList.toggle('is-playing', isPlaying);
       complexPlaybackToggle.setAttribute(
         'aria-label',
-        isPlaying ? '暂停季度变化' : '播放季度变化',
+        isPlaying ? copy.pause : copy.play,
       );
-      complexPlaybackToggle.title = isPlaying ? '暂停' : '播放';
+      complexPlaybackToggle.title = isPlaying ? copy.pauseTitle : copy.playTitle;
+      complexPlaybackPrevLabel.textContent = copy.previous;
+      complexPlaybackNextLabel.textContent = copy.next;
       complexPlaybackPrev.disabled = displayQuarterIndex <= 0;
       complexPlaybackNext.disabled = displayQuarterIndex >= QUARTER_DATA.length - 1;
       complexPlaybackTicks.querySelectorAll('[data-period-index]').forEach((tick) => {
@@ -1079,9 +728,7 @@
           Number(tick.dataset.periodIndex) === displayQuarterIndex,
         );
       });
-      if (complexState.scenario === 'profit') {
-        complexCardTitle.textContent = `${displayPeriod} · ${displayStatus}`;
-      }
+      complexCardTitle.textContent = `${displayedQuarter.period} · ${displayedQuarter.statusLabel}`;
     };
 
     const stopPlayback = () => {
@@ -1096,7 +743,7 @@
       periodPosition = target;
       renderPlaybackState();
       const completed = await complexChart.update({
-        ...QUARTER_DATA[target],
+        ...displayQuarter(QUARTER_DATA[target]),
         platform: complexState.platform,
       }, {
         animate,
@@ -1109,7 +756,6 @@
     };
 
     const playPeriods = async () => {
-      if (complexState.scenario !== 'profit') return;
       if (isPlaying) {
         stopPlayback();
         return;
@@ -1137,32 +783,42 @@
     };
 
     const updateComplexPreview = () => {
-      const scenario = complexState.scenario === 'profit'
-        ? QUARTER_DATA[Math.round(clampPeriod(periodPosition))]
-        : LOSS_DATA;
-      const isIfindPc = complexState.theme === 'ifind-pc';
-      if (isIfindPc && complexState.platform !== 'pc') {
-        complexState.platform = 'pc';
-        document.querySelector('input[name="complex-platform"][value="pc"]').checked = true;
-      }
-      platformFieldset.hidden = isIfindPc;
-      configDescription.textContent = isIfindPc
-        ? 'iFinD PC 仅支持 PC；iFinD 移动端直接使用 THS 主题。'
-        : '选择后即时更新图表。';
-      complexCard.dataset.theme = complexState.theme;
+      const scenario = displayQuarter(QUARTER_DATA[Math.round(clampPeriod(periodPosition))]);
+      const isAinvest = complexState.theme === 'ainvest';
+      const copy = sankeyPlaybackCopy({ theme: complexState.theme });
+      const tokenTheme = complexState.theme === 'ifind' ? 'ifind-pc' : complexState.theme;
+      const playbackTokenTheme = sankeyPlaybackRangeTheme(tokenTheme);
+      applySequenceViewport(complexState.platform);
+      configDescription.textContent = isAinvest
+        ? 'Ainvest · English labels use the theme font; fitting rules remain unchanged.'
+        : complexState.theme === 'ifind'
+          ? complexState.platform === 'pc'
+            ? 'iFinD · PC 使用 PC 静态图规范，播放滑块复用 THS 样式。'
+            : 'iFinD · 移动端按移动端平台布局，播放滑块复用 THS 样式。'
+          : '选择后即时更新图表。';
+      complexCard.dataset.theme = tokenTheme;
       complexCard.dataset.platform = complexState.platform;
       complexCard.dataset.mode = complexState.mode;
-      complexPlayback.hidden = complexState.scenario !== 'profit';
+      complexPlaybackRange.dataset.theme = playbackTokenTheme;
+      complexPlaybackRange.dataset.platform = complexState.platform;
+      complexPlaybackRange.dataset.mode = complexState.mode;
       complexCardTitle.textContent = `${scenario.period} · ${scenario.statusLabel}`;
       complexMeta.textContent = [
         themeNames[complexState.theme],
-        platformNames[complexState.platform],
+        isAinvest ? (complexState.platform === 'pc' ? 'PC' : copy.mobile) : platformNames[complexState.platform],
         modeNames[complexState.mode],
       ].join(' · ');
-      complexSummaryCount.textContent = `${scenario.nodes.length} 个节点 · ${scenario.links.length} 条流向`;
-      complexSummaryRule.textContent = complexState.scenario === 'loss'
-        ? '负值不反转流向；角色色保持不变，负数文字使用正文色'
-        : '终止分支按实际阶段收口，主利润链继续向右';
+      complexSummaryCount.textContent = isAinvest
+        ? `${scenario.nodes.length} nodes · ${scenario.links.length} flows`
+        : `${scenario.nodes.length} 个节点 · ${scenario.links.length} 条流向`;
+      complexSummaryRule.textContent = isAinvest
+        ? scenario.statusLabel === 'Loss'
+          ? 'Negative values keep their direction and semantic role colors'
+          : 'Terminal branches stop at their actual stage'
+        : scenario.statusLabel === '亏损'
+          ? '负值不反转流向；角色色保持不变，负数文字使用正文色'
+          : '终止分支按实际阶段收口，主利润链继续向右';
+      renderPlaybackTicks();
       complexChart.update({
         ...scenario,
         platform: complexState.platform,
@@ -1200,6 +856,7 @@
         updateComplexPreview();
       });
     });
+    renderPlaybackTicks();
     renderPlaybackState();
   </script>
 </body>
