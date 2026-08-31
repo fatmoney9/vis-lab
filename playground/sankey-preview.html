@@ -661,7 +661,19 @@
     const complexPlaybackNextLabel = document.getElementById('complex-playback-next-label');
     const complexHost = document.getElementById('complex-host');
     complexHost.addEventListener('dv:sankey-layout', (event) => {
-      const { recommendedHeight, renderedHeight, renderedWidth } = event.detail;
+      const {
+        legendReservedHeight,
+        recommendedHeight,
+        renderedHeight,
+        renderedWidth,
+      } = event.detail;
+      const viewport = SEQUENCE_VIEWPORTS[complexCard.dataset.platform];
+      if (viewport && Number.isFinite(legendReservedHeight)) {
+        complexLayout.style.setProperty(
+          '--sankey-demo-chart-height',
+          `${viewport.canvasHeight + legendReservedHeight}px`,
+        );
+      }
       complexSummarySize.textContent = complexCard.dataset.theme === 'ainvest'
         ? [
           `Recommended ${Math.round(recommendedHeight)}px`,
@@ -788,7 +800,6 @@
       const copy = sankeyPlaybackCopy({ theme: complexState.theme });
       const tokenTheme = complexState.theme === 'ifind' ? 'ifind-pc' : complexState.theme;
       const playbackTokenTheme = sankeyPlaybackRangeTheme(tokenTheme);
-      applySequenceViewport(complexState.platform);
       configDescription.textContent = isAinvest
         ? 'Ainvest · English labels use the theme font; fitting rules remain unchanged.'
         : complexState.theme === 'ifind'
@@ -799,6 +810,7 @@
       complexCard.dataset.theme = tokenTheme;
       complexCard.dataset.platform = complexState.platform;
       complexCard.dataset.mode = complexState.mode;
+      applySequenceViewport(complexState.platform);
       complexPlaybackRange.dataset.theme = playbackTokenTheme;
       complexPlaybackRange.dataset.platform = complexState.platform;
       complexPlaybackRange.dataset.mode = complexState.mode;

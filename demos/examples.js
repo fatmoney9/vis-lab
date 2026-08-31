@@ -198,9 +198,7 @@ const makeFinancialSankeyQuarter = ({
         source: 'total-profit',
         target: 'net-profit',
         value: netProfit,
-        ...(netProfit < 0 && incomeTaxValue > 0
-          ? { negativeSource: 'income-tax' }
-          : {}),
+        negativeSource: 'income-tax',
       },
       { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
       {

@@ -15,6 +15,8 @@ import {
   resolveSankeyColumnMinimumSpan,
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
+  resolveSankeyLegendReservedHeight,
+  resolveSankeyVisualLinkValues,
 } from '../charts/charts/sankey/layout.js';
 import {
   hasSameSankeyTopology,
@@ -217,6 +219,14 @@ test('SANKEY-18：config 固定标题 10–12px、数值 11–14px 的适配范�
 
 test('Sankey 样式：并入全局入口且不再保留图型私有样式文件', () => {
   assert.match(SANKEY_CSS, /\.dv-sankey\s*\{/);
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey \.dv-tooltip__label\s*\{[^}]*white-space:\s*nowrap/s,
+  );
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey \.dv-tooltip__row\s*\{[^}]*align-items:\s*center/s,
+  );
   assert.equal(
     existsSync(new URL('../charts/charts/sankey/styles.css', import.meta.url)),
     false,
@@ -663,6 +673,14 @@ test('SANKEY-23：单图按容器自然展开，不再限制移动端最大高�
   assert.ok(graph.requiredWidth > 400);
 });
 
+test('SANKEY-23：图例以 40px 兜底，仅真实高度更大时扩容', () => {
+  assert.equal(resolveSankeyLegendReservedHeight(32, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyLegendReservedHeight(40, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyLegendReservedHeight(48, MOBILE_STYLE.geometry), 48);
+  assert.equal(resolveSankeyLegendReservedHeight(0, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyCanvasHeight(280, MOBILE_STYLE.geometry, 48), 232);
+});
+
 test('SANKEY-23：播放序列统一采用最大所需高度并向上对齐 4px 网格', () => {
   const compact = structuredClone(CONFIG);
   const dense = structuredClone(MULTI_STAGE_CONFIG);
@@ -736,6 +754,23 @@ test('SANKEY-24：拓扑变化时拒绝季度插值', () => {
     () => interpolateSankeyConfig(CONFIG, changed, 0.5),
     /拓扑保持一致/,
   );
+});
+
+test('SANKEY-24/25：negativeSource 属于播放拓扑且在插值期间保持稳定', () => {
+  const from = structuredClone(LOSS_CONFIG);
+  const to = structuredClone(LOSS_CONFIG);
+  const difference = to.links.find((link) => link.target === 'gross');
+  difference.value = Math.abs(difference.value);
+
+  assert.equal(hasSameSankeyTopology(from, to), true);
+  assert.equal(
+    interpolateSankeyConfig(from, to, 0.5)
+      .links.find((link) => link.target === 'gross').negativeSource,
+    'cost',
+  );
+
+  delete difference.negativeSource;
+  assert.equal(hasSameSankeyTopology(from, to), false);
 });
 
 test('SANKEY-06：终止节点停在实际阶段，不强制补齐到最右列', () => {
@@ -1073,6 +1108,7 @@ test('SANKEY-25：净利润与归母净利润继续逐层执行 P = B + D', () =
       },
     ],
   }, { width: 960, height: 480 }, STYLE);
+  const visualValues = resolveSankeyVisualLinkValues(graph);
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
   const netLink = graph.links.find((link) => link.target.id === 'net');
   const parentLink = graph.links.find((link) => link.target.id === 'parent');
@@ -1089,6 +1125,10 @@ test('SANKEY-25：净利润与归母净利润继续逐层执行 P = B + D', () =
   assert.equal(taxContribution.visualTarget.id, 'net');
   assert.equal(minorityContribution.visualSource.id, 'minority');
   assert.equal(minorityContribution.visualTarget.id, 'parent');
+  assert.equal(visualValues.get(netLink.index), -56);
+  assert.equal(visualValues.get(taxContribution.index), -1.7);
+  assert.equal(visualValues.get(parentLink.index), -57.7);
+  assert.equal(visualValues.get(minorityContribution.index), -2);
 });
 
 test('SANKEY-25：盈利时差额仍从营业收入分出，跨过零值才切换视觉来源', () => {

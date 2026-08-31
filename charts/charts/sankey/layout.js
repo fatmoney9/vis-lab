@@ -73,8 +73,20 @@ export function fitSankeyValueFontSize(
   return Math.floor(low * 100) / 100;
 }
 
-export function resolveSankeyCanvasHeight(hostHeight, geometry) {
-  const availableHeight = Number(hostHeight) - geometry['legend-reserved-height'];
+export function resolveSankeyLegendReservedHeight(measuredHeight, geometry) {
+  const fallback = geometry['legend-reserved-height'];
+  const measured = Number(measuredHeight);
+  return Number.isFinite(measured) && measured > 0
+    ? Math.max(fallback, Math.ceil(measured))
+    : fallback;
+}
+
+export function resolveSankeyCanvasHeight(
+  hostHeight,
+  geometry,
+  legendReservedHeight = geometry['legend-reserved-height'],
+) {
+  const availableHeight = Number(hostHeight) - legendReservedHeight;
   const requestedHeight = Number.isFinite(availableHeight) && availableHeight > 0
     ? availableHeight
     : geometry['canvas-recommended-height'];
@@ -306,6 +318,20 @@ export function assertSankeyConfig(cfg) {
     stageValues,
     maxStage: stageValues.at(-1),
   };
+}
+
+/*
+ * [SANKEY-09/25] 统一解析视觉重路由后的流量，同时供边几何与标签使用；
+ * 原始会计链接值不改写。输入必须是 assertSankeyConfig() 的结果。
+ */
+export function resolveSankeyVisualLinkValues(graph) {
+  const values = new Map(graph.links.map((link) => [link.index, link.value]));
+  graph.links.forEach((link) => {
+    if (link.negativeDifferenceMode !== 'deficit-merge') return;
+    values.set(link.index, link.pairedSourceValue);
+    values.set(link.baseLink.index, -link.baseLink.value);
+  });
+  return values;
 }
 
 function barycenter(node, direction, fallback) {
@@ -773,10 +799,11 @@ export function layoutSankey(cfg, bounds, style) {
     node.visualIncoming = [];
     node.visualOutgoing = [];
   });
+  const visualValueByLinkIndex = resolveSankeyVisualLinkValues(graph);
   graph.links.forEach((link) => {
     link.visualSource = link.source;
     link.visualTarget = link.target;
-    link.visualValue = link.value;
+    link.visualValue = visualValueByLinkIndex.get(link.index);
   });
   graph.links.forEach((link) => {
     if (!link.isNegativeDifference) return;
@@ -789,10 +816,8 @@ export function layoutSankey(cfg, bounds, style) {
      * P < 0：P 的绝对值全部流向差额结果；基础正值 B 作为同层缺口来源。
      * 逻辑 source/target 不改写，只改变视觉端点与视觉边值。
      */
-    link.visualValue = link.pairedSourceValue;
     link.baseLink.visualSource = link.negativeSource;
     link.baseLink.visualTarget = link.target;
-    link.baseLink.visualValue = -link.baseLink.value;
     link.baseLink.isDeficitContribution = true;
   });
   graph.links.forEach((link) => {

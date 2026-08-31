@@ -142,16 +142,8 @@ test('SANKEY-24/26：主站桑基八期同拓扑，并共享最大主轴比例�
     assert.equal(period.links.length, 14);
     assert.equal(grossLink.negativeSource, 'cost');
     assert.equal(operatingLink.negativeSource, 'operating-expense');
-    if (netLink.value < 0) {
-      const taxLink = period.links.find((link) => link.target === 'income-tax');
-      assert.equal(
-        netLink.negativeSource,
-        taxLink.value > 0 ? 'income-tax' : undefined,
-      );
-    }
-    if (parentLink.value < 0) {
-      assert.equal(parentLink.negativeSource, 'minority-interest');
-    }
+    assert.equal(netLink.negativeSource, 'income-tax');
+    assert.equal(parentLink.negativeSource, 'minority-interest');
     assert.equal(hasSameSankeyTopology(periods[0], period), true);
     assert.doesNotThrow(() => assertSankeyConfig(period));
   });

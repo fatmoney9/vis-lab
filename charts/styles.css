@@ -663,6 +663,21 @@
   display: none;
 }
 
+/* [SANKEY-20] 节点看板必须在一行完整展示名称与值；突破通用 160px 上限，
+   但固定定位的气泡仍限制在视口两侧各 24px 的安全区内。 */
+.dv-sankey .dv-tooltip {
+  max-width: calc(100vw - var(--spacing-24) - var(--spacing-24));
+}
+
+.dv-sankey .dv-tooltip__row {
+  align-items: center;
+}
+
+.dv-sankey .dv-tooltip__label {
+  flex: none;
+  white-space: nowrap;
+}
+
 .dv-sankey .dv-tooltip__value {
   color: var(--dv-sankey-tooltip-value-color);
   font-family: var(--font-family-number);

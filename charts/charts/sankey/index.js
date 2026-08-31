@@ -27,6 +27,8 @@ import {
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
   resolveSankeyCanvasHeight,
+  resolveSankeyLegendReservedHeight,
+  resolveSankeyVisualLinkValues,
 } from './layout.js';
 
 const LEGEND_ROLES = [
@@ -86,23 +88,57 @@ export function SankeyChart(host, initialConfig) {
     const tooltipHideDelay = Number.isFinite(configuredHideDelay)
       ? configuredHideDelay
       : 2000;
-    const recommendedHeight = style.geometry['canvas-recommended-height']
-      + style.geometry['legend-reserved-height'];
-    /* [SANKEY-23] 单图自然展开；播放序列的统一视口由 L2 预计算后交给 L3 外框。 */
-    root
-      .style('min-height', `${recommendedHeight}px`)
-      .style('height', null)
-      .style('max-height', null)
-      .style('overflow-y', null);
+
     const rect = host.getBoundingClientRect();
     if (rect.width < 1) {
       resizeFrame = requestAnimationFrame(build);
       return;
     }
 
+    /* [SANKEY-14/23] 先渲染静态图例再量真实高度；40px 只是跨主题最低预留。 */
+    const activeRoles = new Set(
+      (Array.isArray(config?.nodes) ? config.nodes : []).map((node) => node?.role),
+    );
+    const legendLabels = config.legendLabels ?? {};
+    renderLegend(
+      legendHost.node(),
+      LEGEND_ROLES
+        .filter((item) => activeRoles.has(item.key))
+        .map((item) => ({
+          key: item.key,
+          label: legendLabels[item.key] ?? item.fallback,
+          type: 'bar',
+          colorVar: `--color-sankey-${item.key}`,
+        })),
+      { marker: behavior['legend-marker'] },
+    );
+    legendHost
+      .select('.dv-legend')
+      .attr('role', 'list')
+      .attr('aria-label', '桑基图颜色图例');
+    legendHost
+      .selectAll('.dv-legend-item')
+      .attr('role', 'listitem');
+    const legendReservedHeight = resolveSankeyLegendReservedHeight(
+      legendHost.node().getBoundingClientRect().height,
+      style.geometry,
+    );
+    const recommendedHeight = style.geometry['canvas-recommended-height']
+      + legendReservedHeight;
+    /* [SANKEY-23] 单图自然展开；播放序列的统一视口由 L2 预计算后交给 L3 外框。 */
+    root
+      .style('min-height', `${recommendedHeight}px`)
+      .style('height', null)
+      .style('max-height', null)
+      .style('overflow-y', null);
+
     const chartBounds = {
       width: rect.width,
-      height: resolveSankeyCanvasHeight(rect.height, style.geometry),
+      height: resolveSankeyCanvasHeight(
+        rect.height,
+        style.geometry,
+        legendReservedHeight,
+      ),
     };
     const titleWidth = style.geometry['label-title-width'];
     const preliminaryGraph = layoutSankey(
@@ -223,35 +259,12 @@ export function SankeyChart(host, initialConfig) {
     root
       .style(
         'min-height',
-        `${graph.height + style.geometry['legend-reserved-height']}px`,
+        `${graph.height + legendReservedHeight}px`,
       )
       .style('--dv-sankey-render-width', `${graph.width}px`)
       .style('--dv-sankey-render-height', `${graph.height}px`)
       .style('--dv-sankey-edge-opacity', style.geometry['edge-opacity'])
       .style('--dv-sankey-edge-highlight-opacity', style.geometry['edge-highlight-opacity']);
-
-    /* [SANKEY-14] 每个实际使用的语义色只生成一个静态图例项。 */
-    const activeRoles = new Set(graph.nodes.map((node) => node.semanticRole));
-    const legendLabels = config.legendLabels ?? {};
-    renderLegend(
-      legendHost.node(),
-      LEGEND_ROLES
-        .filter((item) => activeRoles.has(item.key))
-        .map((item) => ({
-          key: item.key,
-          label: legendLabels[item.key] ?? item.fallback,
-          type: 'bar',
-          colorVar: `--color-sankey-${item.key}`,
-        })),
-      { marker: behavior['legend-marker'] },
-    );
-    legendHost
-      .select('.dv-legend')
-      .attr('role', 'list')
-      .attr('aria-label', '桑基图颜色图例');
-    legendHost
-      .selectAll('.dv-legend-item')
-      .attr('role', 'listitem');
 
     svg
       .attr('viewBox', `0 0 ${graph.width} ${graph.height}`)
@@ -538,8 +551,9 @@ export function SankeyChart(host, initialConfig) {
 
     const layoutDetail = {
       recommendedHeight,
-      renderedHeight: graph.height + style.geometry['legend-reserved-height'],
-      requiredHeight: graph.requiredHeight + style.geometry['legend-reserved-height'],
+      legendReservedHeight,
+      renderedHeight: graph.height + legendReservedHeight,
+      requiredHeight: graph.requiredHeight + legendReservedHeight,
       renderedWidth: graph.width,
       requiredWidth: graph.requiredWidth,
     };
@@ -582,9 +596,7 @@ export function SankeyChart(host, initialConfig) {
       displayValueByNodeId = new Map(
         nextGraph.nodes.map((node) => [node.id, node.value]),
       );
-      displayValueByLinkIndex = new Map(
-        nextGraph.links.map((link) => [link.index, link.value]),
-      );
+      displayValueByLinkIndex = resolveSankeyVisualLinkValues(nextGraph);
       options.onProgress?.(0, 0);
       build();
 

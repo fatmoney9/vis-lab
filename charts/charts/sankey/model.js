@@ -56,6 +56,9 @@ const referenceKey = (reference) => {
 
 const nodeKey = (node) => String(node?.id ?? node?.name ?? '');
 const linkKey = (link) => `${referenceKey(link?.source)}\u2192${referenceKey(link?.target)}`;
+const linkTopologyKey = (link) => (
+  `${linkKey(link)}|negativeSource:${referenceKey(link?.negativeSource)}`
+);
 
 export function hasSameSankeyTopology(fromConfig, toConfig) {
   if (!Array.isArray(fromConfig?.nodes) || !Array.isArray(toConfig?.nodes)) return false;
@@ -67,8 +70,12 @@ export function hasSameSankeyTopology(fromConfig, toConfig) {
     return false;
   }
 
-  const fromLinks = new Set(fromConfig.links.map(linkKey));
-  const toLinks = new Set(toConfig.links.map(linkKey));
+  /*
+   * [SANKEY-24/25] negativeSource 是视觉路由拓扑，不是只在亏损期临时出现的状态。
+   * 元数据不同即立即切换，避免插值首帧把左侧回折带误画成普通正向边。
+   */
+  const fromLinks = new Set(fromConfig.links.map(linkTopologyKey));
+  const toLinks = new Set(toConfig.links.map(linkTopologyKey));
   return fromLinks.size === toLinks.size && [...fromLinks].every((key) => toLinks.has(key));
 }
 
@@ -125,14 +132,14 @@ export function interpolateSankeyConfig(fromConfig, toConfig, progress) {
 
   const ratio = clamp01(progress);
   const fromValues = new Map(
-    fromConfig.links.map((link) => [linkKey(link), Number(link.value)]),
+    fromConfig.links.map((link) => [linkTopologyKey(link), Number(link.value)]),
   );
 
   return {
     ...toConfig,
     nodes: toConfig.nodes.map((node) => ({ ...node })),
     links: toConfig.links.map((link) => {
-      const fromValue = fromValues.get(linkKey(link));
+      const fromValue = fromValues.get(linkTopologyKey(link));
       const toValue = Number(link.value);
       return {
         ...link,

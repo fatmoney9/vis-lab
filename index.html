@@ -829,7 +829,21 @@
         </aside>
       </div>`;
 
-      const { instance } = mountChart(main.querySelector('.stage .chart-host'), activeExample(example));
+      const stageHost = main.querySelector('.stage .chart-host');
+      const playbackViewport = hasPlayback
+        ? example.playback?.viewport?.[state.platform]
+        : null;
+      if (playbackViewport) {
+        stageHost.addEventListener('dv:sankey-layout', (event) => {
+          const legendHeight = Number(event.detail?.legendReservedHeight);
+          if (!Number.isFinite(legendHeight) || legendHeight <= 0) return;
+          stageHost.closest('.chart-playback-layout')?.style.setProperty(
+            '--chart-playback-chart-height',
+            `${playbackViewport.canvasHeight + legendHeight}px`,
+          );
+        });
+      }
+      const { instance } = mountChart(stageHost, activeExample(example));
       if (hasPlayback) chartCleanups.push(mountPlayback(main.querySelector('.stage__surface'), example, instance));
       /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
          host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。
