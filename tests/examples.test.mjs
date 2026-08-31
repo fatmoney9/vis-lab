@@ -13,7 +13,7 @@ import {
   financialSankeyPeriods,
   treemapHierarchy,
 } from '../demos/examples.js';
-import { hasSameSankeyTopology } from '../charts/charts/sankey/playback.js';
+import { hasSameSankeyTopology } from '../charts/charts/sankey/model.js';
 import { assertSankeyConfig } from '../charts/charts/sankey/layout.js';
 
 /*
@@ -92,6 +92,21 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
   assert.equal(cfg.links.length, 14);
 });
 
+test('SANKEY-27：共享示例仅在 Ainvest 主题输出英文财报文案', () => {
+  const sankey = EXAMPLES.find((example) => example.id === 'sankey-financial');
+  const ths = buildConfig(sankey, { theme: 'ths' });
+  const ainvest = buildConfig(sankey, { theme: 'ainvest' });
+
+  assert.equal(ths.nodes.find((node) => node.id === 'revenue').name, '营业收入');
+  assert.equal(ainvest.nodes.find((node) => node.id === 'revenue').name, 'Revenue');
+  assert.deepEqual(ainvest.legendLabels, { income: 'Income', expense: 'Expense', profit: 'Profit' });
+  assert.deepEqual(
+    ainvest.nodes.map((node) => node.id),
+    ths.nodes.map((node) => node.id),
+  );
+  assert.deepEqual(ainvest.links, ths.links);
+});
+
 test('TOOLTIP-12：Y 向指示默认关，只有开才落进 cfg', () => {
   const cartesian = EXAMPLES.filter((example) => capabilitiesOf(example).yIndicator);
   assert.ok(cartesian.length, '应有直角坐标系示例声明 yIndicator 能力');
@@ -105,7 +120,7 @@ test('TOOLTIP-12：Y 向指示默认关，只有开才落进 cfg', () => {
   assert.equal(buildConfig(sankey, { yIndicator: true }).yIndicator, undefined);
 });
 
-test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一个亏损季度', () => {
+test('SANKEY-24/26：主站桑基八期同拓扑，并共享最大主轴比例尺', () => {
   const sankey = EXAMPLES.find((example) => example.id === 'sankey-financial');
   const periods = financialSankeyPeriods();
 
@@ -120,9 +135,15 @@ test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一�
   assert.equal(periods[0].scaleMax, sharedScaleMax);
   periods.forEach((period) => {
     const grossLink = period.links.find((link) => link.target === 'gross');
+    const operatingLink = period.links.find((link) => link.target === 'operating-profit');
+    const netLink = period.links.find((link) => link.target === 'net-profit');
+    const parentLink = period.links.find((link) => link.target === 'parent-profit');
     assert.equal(period.nodes.length, 15);
     assert.equal(period.links.length, 14);
     assert.equal(grossLink.negativeSource, 'cost');
+    assert.equal(operatingLink.negativeSource, 'operating-expense');
+    assert.equal(netLink.negativeSource, 'income-tax');
+    assert.equal(parentLink.negativeSource, 'minority-interest');
     assert.equal(hasSameSankeyTopology(periods[0], period), true);
     assert.doesNotThrow(() => assertSankeyConfig(period));
   });
@@ -133,10 +154,27 @@ test('SANKEY-24：主站桑基示例携带八期同拓扑数据，且包含一�
   const businessIncome = lossPeriod.links
     .filter((link) => link.target === 'revenue')
     .reduce((sum, link) => sum + link.value, 0);
-  assert.equal(businessIncome, 8.92e8);
+  assert.equal(businessIncome, 273e8);
   assert.equal(revenue.value, businessIncome);
-  assert.ok(revenue.magnitude / Math.abs(revenue.value) < 1.02,
-    '亏损期毛利绝对值不应让营业收入节点明显大于前方业务收入');
+  assert.equal(revenue.magnitude, Math.abs(revenue.value));
+  assert.equal(lossPeriod.links.find((link) => link.target === 'cost').value, 295e8);
+  assert.equal(lossPeriod.links.find((link) => link.target === 'gross').value, -22e8);
+  assert.equal(
+    lossPeriod.links.find((link) => link.target === 'operating-expense').value,
+    32e8,
+  );
+  assert.equal(
+    lossPeriod.links.find((link) => link.target === 'operating-profit').value,
+    -54e8,
+  );
+  assert.equal(lossPeriod.links.find((link) => link.target === 'total-profit').value, -57e8);
+  assert.equal(lossPeriod.links.find((link) => link.target === 'net-profit').value, -57.7e8);
+  assert.equal(lossPeriod.links.find((link) => link.target === 'parent-profit').value, -59.7e8);
+  assert.equal(
+    sankey.playback.viewport.mobile.totalHeight,
+    sankey.playback.viewport.mobile.canvasHeight + 40,
+  );
+  assert.equal(sankey.playback.viewport.mobile.canvasHeight % 4, 0);
 });
 
 test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）', () => {

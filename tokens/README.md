@@ -9,14 +9,17 @@
 - `ainvest.json`：Ainvest 主题的完整值 token；
 - `behavior.json`：需要参与几何计算或逻辑分支的主题形态与行为配置；
 - `palette.json`：系列色板（`bar-multi` / `line-multi` / `pie-multi` / `single-default` 等），由取色器
-  `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；
-- `sankey.json`：**桑基专属**几何、数字字体链、播放时长与三主题语义色。它不参与 `build.mjs`
-  构建，由 `charts/charts/sankey/style.js` 运行时直接 fetch 并自校验——是本目录唯一一条
-  不走「JSON → tokens.css → CSS 变量」链路的通道。其中的语义色计划迁入各主题文件（届时可用
-  `{color-price-up}` 一类别名，见 `specs/sankey.md` 待办）；几何与播放参数是图表常量，仍留本文件；
-- `ths.json` / `ifind-pc.json` / `ainvest.json` 的 Treemap 分节保存变体高度、主题差异、布局阈值与
-  透明度阶梯；通用字体、间距、圆角、反白文字和涨跌色直接复用前置公共 token；
-- `build.mjs` → `tokens.css`：构建脚本与其生成物。`tokens.css` **是生成文件，不要手改**。
+  `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；`build.mjs` 只校验其颜色值域，
+  不输出为 CSS 变量；
+- 桑基业务语义色使用三份主题文件中的 `color-sankey-income` / `expense` / `profit`，与其他
+  主题值一起参与 key 合同、值域校验和 CSS 生成；桑基专属几何与播放配置属于 L2，保存在
+  `charts/charts/sankey/config.js`，不混入 design token；
+- `ths.json` / `ifind-pc.json` / `ainvest.json` 的 Treemap 分节只保存主题间距 / 圆角、字号范围、
+  图片范围，以及“数值优先字号 = 名称适配字号 − 差值”里的差值。三个形态的图面高度均由容器或
+  L3 验收实例提供，不属于主题 token；五档透明度和完整涨跌
+  梯度色是 L1 共享视觉能力，放在公共分节；业务分档阈值由调用方配置，不是 token；
+- `build.mjs` → `tokens.css`：构建脚本与其生成物；同时校验 `palette.json` 的颜色值域。
+  `tokens.css` **是生成文件，不要手改**。
 
 ## 值 Token
 
@@ -57,6 +60,8 @@ radius-full = 50%
 ```
 
 组件应优先使用语义 token，并由语义 token 引用基础阶梯，例如 `radius-tooltip: "{radius-4}"`。这样可以保留组件语义，同时避免重复维护相同的圆角字面量。
+
+`radius-full` 只用于宽高相等的圆形图元；可变宽按钮若使用百分比圆角会形成椭圆。播放区 Previous / Next 使用语义 token `radius-playback-step`：THS / iFinD-PC 回落 `radius-4`，Ainvest 按 36px 控件高度取固定 `18px`，形成两端半圆、中段直边。
 
 ## 间距阶梯
 

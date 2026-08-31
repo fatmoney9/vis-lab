@@ -11,11 +11,12 @@
       "系列色板未纳入，待色板组方案定稿",
       "spacing-legend-container 原表复合值「上下 4 · 左右 0」已拆为 -v-top / -v-bottom / -h；下间距定 12（图例与 grid 的间距，frame 不另垫）",
       "size-donut-container 原表 160×160 为正方形，记单值",
+      "桑基收入 / 支出 / 利润色来源见 specs/sankey.md SANKEY-11；原规范未给暗色差异，当前平值有意覆盖 light / dark",
       "「行高规则 > 字号」等非数值规则不属于 token，见规范文档"
     ]
   },
 
-  "$section-01": "涨跌与平盘语义色",
+  "$section-01": "涨跌、平盘与桑基业务语义色",
   "color-price-up": "#FF2436",
   "color-price-down": "#07AB4B",
   "color-price-even": { "light": "rgba(0, 0, 0, 0.84)", "dark": "rgba(255, 255, 255, 0.84)" },
@@ -26,6 +27,9 @@
   "color-price-down-gradient-2": "rgba(7, 171, 75, 0.75)",
   "color-price-down-gradient-3": "rgba(7, 171, 75, 0.55)",
   "color-price-even-gradient": "{color-price-even}",
+  "color-sankey-income": "#FF9500",
+  "color-sankey-expense": "#3366FF",
+  "color-sankey-profit": "{color-price-up}",
 
   "$section-02": "字体家族",
   "font-family-number": "THSJinRongTi",
@@ -174,6 +178,7 @@
   "size-slider-handle-border": "0.5px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-6}",
+  "radius-playback-step": "{radius-4}",
 
   "$section-14": "中性灰阶",
   "color-grey-01": { "light": "#E6E6E6", "dark": "#292929" },

@@ -10,8 +10,7 @@
  * 反过来真正的行为回归它未必抓得到。CSS 规则是否生效属于视觉回归的职责，
  * 用正则在样式表里找字符串只是看起来在测。
  *
- * 读 .json 是允许的——token 合同那类是**数据**不是实现，用 fs 直读还能绕开
- * style.js 顶层 fetch 在 node 下加载不了的问题（见 tests/sankey.test.mjs 对 tokens/sankey.json 的校验）。
+ * 读 .json 是允许的——token 合同那类是**数据**不是实现；源码配置应直接导入其公开导出并断言行为。
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';

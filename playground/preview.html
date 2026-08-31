@@ -145,7 +145,6 @@
 </style>
 <link rel="stylesheet" href="../tokens/tokens.css" />
 <link rel="stylesheet" href="../charts/styles.css" />
-<link rel="stylesheet" href="../charts/charts/sankey/styles.css" />
 </head>
 <body>
 <div class="app">
@@ -458,6 +457,7 @@
       /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
          两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
       chartInstances[t.id] = mountExample(host, cat, {
+        theme: t.id,
         density: state.density,
         treemapColor: state.treemapColor,
         platform: state.platform,

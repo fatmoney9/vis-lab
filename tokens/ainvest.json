@@ -11,11 +11,12 @@
       "系列色板未纳入，待色板组方案定稿",
       "涨跌语义与 A 股主题相反：绿涨红跌（值已按此录入，语义见规范文档）",
       "spacing-legend-container 原表「上下 16(app) / 12(web) · 左右 0」已拆为 -v（端分叉）/ -h",
+      "桑基收入 / 支出 / 利润色来源见 specs/sankey.md SANKEY-11；原规范未给暗色差异，当前平值有意覆盖 light / dark",
       "size-donut-container 原表 160×160 为正方形，记单值"
     ]
   },
 
-  "$section-01": "涨跌与平盘语义色",
+  "$section-01": "涨跌、平盘与桑基业务语义色",
   "color-price-up": "#00B53C",
   "color-price-down": "#FF381A",
   "color-price-even": { "light": "#000000", "dark": "#ffffff" },
@@ -26,6 +27,9 @@
   "color-price-down-gradient-2": { "light": "#F05045", "dark": "#991A12" },
   "color-price-down-gradient-3": { "light": "#981400", "dark": "#E03838" },
   "color-price-even-gradient": { "light": "#B8B8B8", "dark": "#333333" },
+  "color-sankey-income": "#265FFC",
+  "color-sankey-expense": "{color-price-down}",
+  "color-sankey-profit": "{color-price-up}",
 
   "$section-02": "字体家族",
   "font-family-number": "{font-family-en}",
@@ -180,6 +184,7 @@
   "size-slider-handle-border": "1px",
   "radius-slider-handle": "{radius-full}",
   "radius-slider-mask": "{radius-2}",
+  "radius-playback-step": "18px",
 
   "$section-14": "中性灰阶",
   "color-grey-01": { "light": "#E6E6E6", "dark": "#292929" },

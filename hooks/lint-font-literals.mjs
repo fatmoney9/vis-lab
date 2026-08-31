@@ -19,12 +19,11 @@
  *      交给 Canvas 量墨迹）。本条 2026-08-20 由「出现即违规」收窄至此——
  *      原措辞把读也拦了，等于逼人绕开唯一正确的取值方式。
  *   ③ 字体名只许出现在三个主题文件 tokens/{ths,ifind-pc,ainvest}.json。
- *      其余 token 文件（sankey / behavior / palette）出现 font-family 类的键即违规。
- *      理由不是「那些文件一律不分主题」（tokens/sankey.json 的**颜色**就是按
- *      base/ths/ifind-pc/ainvest 分块的），而是**只有那三个主题文件进 token 合同**——
+ *      其余配置文件（behavior / palette / 图表 L2 配置）出现 font-family 类的键即违规。
+ *      理由是**只有那三个主题文件进 token 合同**——
  *      tokens/build.mjs 校验它们键集一致、分叉完整并生成 CSS 变量；写在别处的字体
- *      既不受合同保护，也不保证有对应的主题分叉。sankey.json 的 typography 块正是
- *      这种情况：扁平一条、三主题共用，于是 iFinD / Ainvest 也在用 THS 的字体。
+ *      既不受合同保护，也不保证有对应的主题分叉。Sankey 曾有过私有 typography 块，
+ *      已在 SANKEY-19 清欠并迁回全局 `font-family-number`；其业务色也已迁入主题合同。
  *
  * 后果与颜色一致：写死的字体不随主题、不随品牌改版而变，且**不会报错**，
  * 只是在别的主题下和页面其余部分对不上。静默漂移正是守卫存在的理由。
@@ -35,13 +34,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-/* 已知欠账：三处同属一个 bug（SANKEY-19 的桑基专属字体链绕开主题通道）。
-   清掉时三处会一起消失；**新文件一律不得加进本列表**。 */
-const DEBT = new Set([
-  'charts/charts/sankey/styles.css',
-  'charts/charts/sankey/index.js',
-  'tokens/sankey.json',
-]);
+/* 已知欠账：清掉一条就删一行；**新文件一律不得加进本列表**。 */
+const DEBT = new Set();
 
 /* 字体名的唯一合法出处 */
 const THEME_FILES = new Set(['ths.json', 'ifind-pc.json', 'ainvest.json']);

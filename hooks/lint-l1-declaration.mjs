@@ -22,7 +22,7 @@ import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 /* 已知欠账：清掉一条就删一行；**新图型一律不得加进本列表**。 */
-const DEBT = new Set(['sankey']);
+const DEBT = new Set();
 
 const L2_ROOT = 'charts/charts';
 const L1_ROOT = 'charts/core';

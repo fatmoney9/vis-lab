@@ -34,8 +34,8 @@ done
 #      1 - (1 - x) ** 3               → core/motion.js  easeOutCubic（[MOTION-03]）
 #    换个写法抄同一个算法（纯语义重复）本守卫查不出，靠 AGENTS.md「L1 能力索引」+ review 兜。
 #
-#    已知欠账：清掉一条就删一行；**新文件一律不得加进本列表**。
-DEBT="charts/charts/sankey/index.js charts/charts/sankey/playback.js"
+#    当前没有已知欠账；**新文件一律不得加进本列表**。
+DEBT=""
 REWRITE_RE="getComputedTextLength|matchMedia|1 - \(1 - [A-Za-z0-9_.]+\) \*\* 3"
 
 for f in $(find charts/charts -name '*.js' 2>/dev/null); do

@@ -84,14 +84,16 @@ export function dropCollisions(boxes, minGap = 0) {
 }
 
 /*
- * [PIE-16] 省略号截断（当前唯一消费者：饼环外侧标签的**名称段**）。
+ * [PIE-16][SANKEY-15] 省略号截断（饼环外侧名称段与桑基节点标题共用）。
  *
  * 与 dropOversized 的关系：**同一个问题的两种处置，按图型二选一、不叠加**。
  * 档②（压在色块上）仍走「放不下就不放」——那里溢出的字会落到画布底色上直接看不见；
- * 饼环外侧档改走本函数——标签带是专门为它留的空间，截短仍可读，整条丢反而丢掉一个扇区的身份。
+ * 饼环外侧档与桑基标题槽改走本函数——两者都有专门预留的标签空间，截短仍可读，
+ * 整条丢弃反而会丢掉图元身份。
  *
  *   entries = [{ text, maxWidth }]   maxWidth 缺省 = 不限，原样返回
- *   measure = (texts[]) => widths[]  **一次量一批**的测量函数（由调用方绑定类名与宿主）
+ *   measure = (texts[], sourceEntries[]) => widths[]  **一次量一批**的测量函数；第二参让调用方
+ *             在同批内按 entry 携带的字号等信息测量，忽略它仍保持原有单 class 用法
  * → [{ text, width, truncated }]，text 为 null 表示连最短形态都放不下、调用方应整条丢弃
  *
  * ⚠️ **测量必须按轮批量、不能逐条二分**：measureTexts 是「一次插入 N 个节点、一次 layout 读全部」，
@@ -105,7 +107,7 @@ const ELLIPSIS = '…';
 const MIN_KEPT_CHARS = 1;
 
 export function truncateBatch(entries, measure) {
-  const full = measure(entries.map((e) => e.text));
+  const full = measure(entries.map((e) => e.text), entries);
   const out = entries.map((e, i) => ({ text: e.text, width: full[i], truncated: false }));
 
   /* 只把真正超宽的送进二分；没超的第一轮就定案，多数情况下一轮结束 */
@@ -113,7 +115,16 @@ export function truncateBatch(entries, measure) {
   entries.forEach((e, i) => {
     if (e.maxWidth == null || full[i] <= e.maxWidth) return;
     const chars = Array.from(String(e.text));
-    pending.push({ i, chars, lo: MIN_KEPT_CHARS, hi: chars.length - 1, maxWidth: e.maxWidth, best: null, bestW: 0 });
+    pending.push({
+      i,
+      entry: e,
+      chars,
+      lo: MIN_KEPT_CHARS,
+      hi: chars.length - 1,
+      maxWidth: e.maxWidth,
+      best: null,
+      bestW: 0,
+    });
     out[i] = { text: null, width: 0, truncated: true };   /* 先按「放不下」置位，二分成功再覆盖 */
   });
 
@@ -121,7 +132,7 @@ export function truncateBatch(entries, measure) {
   while (pending.length) {
     const mids = pending.map((p) => Math.floor((p.lo + p.hi) / 2));
     const cands = pending.map((p, k) => p.chars.slice(0, mids[k]).join('') + ELLIPSIS);
-    const w = measure(cands);
+    const w = measure(cands, pending.map((p) => p.entry));
     const next = [];
     pending.forEach((p, k) => {
       if (w[k] <= p.maxWidth) { p.best = cands[k]; p.bestW = w[k]; p.lo = mids[k] + 1; }

@@ -6,7 +6,7 @@
   <title>Vis Lab · 可视化组件库</title>
   <link rel="stylesheet" href="./tokens/tokens.css" />
   <link rel="stylesheet" href="./charts/styles.css" />
-  <link rel="stylesheet" href="./charts/charts/sankey/styles.css" />
+  <link rel="stylesheet" href="./demos/sankey-playback.css" />
   <style>
     :root {
       color-scheme: light;
@@ -299,16 +299,15 @@
     .stage__surface[data-playback="true"] { display: block; }
     .chart-playback-layout {
       --chart-playback-chart-height: 243px;
-      --chart-playback-height: 88px;
-      --chart-playback-timeline-height: calc(var(--spacing-20) + var(--spacing-16));
-      --chart-playback-control-height: calc(var(--spacing-20) + var(--spacing-8));
-      --chart-playback-label-gap: var(--spacing-8);
-      --chart-playback-label-max-width: calc(var(--spacing-24) * 4);
+      --sankey-playback-height: 88px;
+      --sankey-playback-timeline-height: calc(var(--spacing-20) + var(--spacing-16));
+      --sankey-playback-control-height: calc(var(--spacing-20) + var(--spacing-8));
+      --sankey-playback-label-gap: var(--spacing-8);
+      --sankey-playback-label-max-width: calc(var(--spacing-24) * 4);
       display: grid;
-      grid-template-rows: var(--chart-playback-chart-height) var(--chart-playback-height);
+      grid-template-rows: var(--chart-playback-chart-height) var(--sankey-playback-height);
       width: 100%;
       min-width: 0;
-      container: chart-playback / inline-size;
     }
     .chart-playback-layout > .chart-host {
       min-width: 0;
@@ -321,207 +320,15 @@
     }
     .chart-playback-layout > .chart-host::-webkit-scrollbar { display: none; }
     .stage__surface[data-playback="true"].is-resized .chart-playback-layout {
-      grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--chart-playback-height);
+      grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--sankey-playback-height);
       height: 100%;
     }
-    .chart-playback {
-      display: grid;
-      grid-template-rows: var(--chart-playback-timeline-height) var(--chart-playback-control-height);
-      gap: var(--spacing-8);
-      box-sizing: border-box;
-      width: 100%;
-      height: var(--chart-playback-height);
-      min-width: 0;
-      padding: var(--spacing-4) 0 var(--spacing-12);
+    .stage__surface[data-theme="ainvest"] .chart-playback-layout {
+      --sankey-playback-height: 110px;
+      --sankey-playback-timeline-height: 46px;
+      --sankey-playback-control-height: 36px;
     }
-    .chart-playback__timeline { position: relative; height: var(--chart-playback-timeline-height); }
-    .chart-playback__timeline::before {
-      position: absolute;
-      z-index: 0;
-      top: var(--spacing-8);
-      right: 0;
-      left: 0;
-      height: var(--spacing-8);
-      border-radius: var(--radius-2);
-      background: var(--color-background-weak);
-      content: '';
-    }
-    .chart-playback__range {
-      position: absolute;
-      z-index: 2;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: var(--size-slider-height);
-      margin: 0;
-      appearance: none;
-      background: transparent;
-      cursor: pointer;
-    }
-    .chart-playback__range::-webkit-slider-runnable-track { height: var(--spacing-8); background: transparent; }
-    .chart-playback__range::-webkit-slider-thumb {
-      width: var(--size-slider-height);
-      height: var(--size-slider-height);
-      margin-top: calc((var(--size-slider-height) - var(--spacing-8)) / -2);
-      appearance: none;
-      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
-      border-radius: var(--radius-slider-handle);
-      background-color: var(--color-datazoom-handle);
-      background-image:
-        url('./assets/sankey/slider-grip-line.svg'),
-        url('./assets/sankey/slider-grip-line.svg'),
-        url('./assets/sankey/slider-grip-line.svg');
-      background-position: 7px center, 12px center, 16px center;
-      background-repeat: no-repeat;
-      background-size: 1.5px 9.5px;
-      box-shadow: var(--shadow-datazoom-handle);
-    }
-    .chart-playback__range::-moz-range-track { height: var(--spacing-8); border: 0; background: transparent; }
-    .chart-playback__range::-moz-range-thumb {
-      width: var(--size-slider-height);
-      height: var(--size-slider-height);
-      border: var(--size-slider-handle-border) solid var(--color-datazoom-handle-border);
-      border-radius: var(--radius-slider-handle);
-      background-color: var(--color-datazoom-handle);
-      background-image:
-        url('./assets/sankey/slider-grip-line.svg'),
-        url('./assets/sankey/slider-grip-line.svg'),
-        url('./assets/sankey/slider-grip-line.svg');
-      background-position: 7px center, 12px center, 16px center;
-      background-repeat: no-repeat;
-      background-size: 1.5px 9.5px;
-      box-shadow: var(--shadow-datazoom-handle);
-    }
-    .chart-playback__range:focus-visible { outline: none; }
-    .chart-playback__range:focus-visible::-webkit-slider-thumb,
-    .chart-playback__range:focus-visible::-moz-range-thumb {
-      outline: var(--size-grid-line) solid var(--color-text-secondary);
-      outline-offset: var(--spacing-2);
-    }
-    .chart-playback__ticks { position: absolute; z-index: 1; inset: 0; }
-    .chart-playback__tick {
-      position: absolute;
-      top: 0;
-      display: grid;
-      justify-items: center;
-      align-items: end;
-      height: var(--chart-playback-timeline-height);
-      min-width: 0;
-      padding: var(--spacing-24) 0 0;
-      border: 0;
-      background: transparent;
-      color: var(--color-text-secondary);
-      font-family: var(--font-family-number);
-      font-size: var(--font-size-xxs);
-      font-weight: var(--font-weight-medium);
-      line-height: var(--line-height-super-small);
-      white-space: nowrap;
-      cursor: pointer;
-      transform: translateX(-50%);
-    }
-    .chart-playback__tick::before {
-      position: absolute;
-      top: var(--spacing-10);
-      left: 50%;
-      width: var(--size-grid-line);
-      height: var(--spacing-4);
-      background: var(--color-grey-03);
-      content: '';
-      transform: translateX(-50%);
-    }
-    .chart-playback__tick:first-child { justify-items: start; transform: none; }
-    .chart-playback__tick:first-child::before { left: 0; transform: none; }
-    .chart-playback__tick:last-child { justify-items: end; transform: translateX(-100%); }
-    .chart-playback__tick:last-child::before { right: 0; left: auto; transform: none; }
-    .chart-playback__tick.is-current { color: var(--color-text-primary); }
-    .chart-playback__tick-label {
-      display: block;
-      width: clamp(
-        0px,
-        calc(100cqi / var(--chart-playback-interval-count) - var(--chart-playback-label-gap)),
-        var(--chart-playback-label-max-width)
-      );
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .chart-playback__tick:first-child .chart-playback__tick-label,
-    .chart-playback__tick:last-child .chart-playback__tick-label {
-      width: clamp(
-        0px,
-        calc((100cqi / var(--chart-playback-interval-count) - var(--chart-playback-label-gap)) / 2),
-        var(--chart-playback-label-max-width)
-      );
-    }
-    .chart-playback__tick-label--compact { display: none; }
-    .chart-playback__controls,
-    .chart-playback__steps { display: flex; align-items: center; }
-    .chart-playback__controls { justify-content: space-between; gap: var(--spacing-8); }
-    .chart-playback__primary {
-      display: inline-grid;
-      flex: none;
-      width: var(--chart-playback-control-height);
-      height: var(--chart-playback-control-height);
-      place-items: center;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: var(--color-price-up);
-      cursor: pointer;
-    }
-    .chart-playback__play-icon { display: block; width: 8.37px; height: 9.49px; transform: translateX(.5px); }
-    .chart-playback__pause-icon { display: none; grid-template-columns: repeat(2, var(--spacing-2)); gap: var(--spacing-2); height: var(--spacing-10); }
-    .chart-playback__pause-icon::before,
-    .chart-playback__pause-icon::after {
-      border-radius: var(--radius-1);
-      background: var(--color-text-inverse);
-      content: '';
-    }
-    .chart-playback__primary.is-playing .chart-playback__play-icon { display: none; }
-    .chart-playback__primary.is-playing .chart-playback__pause-icon { display: grid; }
-    .chart-playback__period {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-    .chart-playback__steps { gap: var(--spacing-8); margin-left: auto; }
-    .chart-playback__step {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-2);
-      width: calc(var(--spacing-24) * 3);
-      height: var(--chart-playback-control-height);
-      padding: 0 var(--spacing-6);
-      border: 0;
-      border-radius: var(--radius-4);
-      background: var(--color-background-weak);
-      color: var(--color-text-primary);
-      font-family: var(--font-family-cn);
-      font-size: var(--font-size-small);
-      font-weight: var(--font-weight-medium);
-      line-height: var(--line-height-small);
-      cursor: pointer;
-    }
-    .chart-playback__step:hover:not(:disabled) { background: var(--color-visualization-highlight-block); }
-    .chart-playback__arrow {
-      flex: none;
-      width: var(--spacing-16);
-      height: var(--spacing-16);
-      background: currentColor;
-      -webkit-mask: url('./assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
-      mask: url('./assets/sankey/period-arrow-prev.svg') center / contain no-repeat;
-    }
-    .chart-playback__arrow--prev { transform: scaleX(-1); }
-    .chart-playback__step:disabled { cursor: default; opacity: .5; }
-    @container chart-playback (max-width: 600px) {
-      .chart-playback__tick-label--full { display: none; }
-      .chart-playback__tick-label--compact { display: block; }
-    }
+    /* 播放区视觉与 DOM 模板统一由 demos/sankey-playback.* 提供。 */
     .logic-card { margin-top: 20px; padding: 16px; border: 1px solid var(--shell-divider); border-radius: 8px; background: var(--shell-panel); }
     .logic-card h2 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
     .logic-card p { margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
@@ -625,6 +432,11 @@
   <script type="module">
     import { mountExample } from './demos/registry.js';
     import { examplesFor, familiesFor, suggestedLegend, THEMES, DENSITY, capabilitiesOf, defaultDensityOf, densityControlOf, densityOptionsOf, describeConfig } from './demos/examples.js';
+    import { sankeyPlaybackCopy } from './demos/sankey-presentation.js';
+    import {
+      sankeyPlaybackMarkup as sharedSankeyPlaybackMarkup,
+      sankeyPlaybackRangeTheme,
+    } from './demos/sankey-playback.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -736,7 +548,7 @@
       main.querySelectorAll('.example-card').forEach((card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
-          density: defaultDensityOf(example), platform: 'pc', area: false, zoom: false, axisTitle: false,
+          density: defaultDensityOf(example), theme: 'ths', platform: 'pc', area: false, zoom: false, axisTitle: false,
           animation: true, compact: true,
         });
       });
@@ -753,7 +565,9 @@
       return MOBILE_RESOLUTIONS.find((item) => item.id === id) || MOBILE_RESOLUTIONS[0];
     }
 
-    const playbackPeriodsOf = (example) => example.playback?.periods ?? [];
+    const playbackPeriodsOf = (example) => (example.playback?.periods ?? []).map((period) => (
+      example.presentation?.(period, { theme: state.theme }) ?? period
+    ));
 
     function clampPeriodIndex(example, index = state.periodIndex) {
       const periods = playbackPeriodsOf(example);
@@ -764,61 +578,26 @@
       const periods = playbackPeriodsOf(example);
       if (!periods.length) return example;
       const period = periods[clampPeriodIndex(example)];
-      return { ...example, cfg: () => period };
+      return { ...example, presentation: undefined, cfg: () => period };
     }
 
     function playbackMarkup(example) {
       const periods = playbackPeriodsOf(example);
       if (!periods.length) return '<div class="chart-host"></div>';
+      const copy = sankeyPlaybackCopy({ theme: state.theme });
       const currentIndex = clampPeriodIndex(example);
-      const lastIndex = periods.length - 1;
-      const ticks = periods.map((period, index) => `
-        <button
-          class="chart-playback__tick${index === currentIndex ? ' is-current' : ''}"
-          type="button"
-          data-period-index="${index}"
-          style="left:${lastIndex ? index / lastIndex * 100 : 0}%"
-          aria-label="${period.period}"
-          aria-current="${index === currentIndex ? 'true' : 'false'}"
-          title="${period.period}"
-        >
-          <span class="chart-playback__tick-label chart-playback__tick-label--full">${period.period}</span>
-          <span class="chart-playback__tick-label chart-playback__tick-label--compact">${period.shortPeriod}</span>
-        </button>`).join('');
-
-      return `<div class="chart-playback-layout" style="--chart-playback-interval-count:${Math.max(1, lastIndex)}">
+      const viewport = example.playback?.viewport?.[state.platform];
+      const viewportStyle = viewport
+        ? ` style="--chart-playback-chart-height:${viewport.totalHeight}px"`
+        : '';
+      return `<div class="chart-playback-layout"${viewportStyle}>
         <div class="chart-host"></div>
-        <div class="chart-playback" aria-label="季度数据播放轴">
-          <div class="chart-playback__timeline">
-            <input
-              class="chart-playback__range"
-              type="range"
-              min="0"
-              max="${lastIndex}"
-              step="1"
-              value="${currentIndex}"
-              aria-label="季度进度"
-            />
-            <div class="chart-playback__ticks">${ticks}</div>
-          </div>
-          <div class="chart-playback__controls">
-            <button class="chart-playback__primary" type="button" aria-label="播放季度变化" title="播放">
-              <img class="chart-playback__play-icon" src="./assets/sankey/play.svg" alt="" aria-hidden="true" />
-              <span class="chart-playback__pause-icon" aria-hidden="true"></span>
-            </button>
-            <output class="chart-playback__period" aria-live="polite">${periods[currentIndex].period}</output>
-            <div class="chart-playback__steps">
-              <button class="chart-playback__step chart-playback__step--prev" type="button">
-                <span class="chart-playback__arrow chart-playback__arrow--prev" aria-hidden="true"></span>
-                <span>上一期</span>
-              </button>
-              <button class="chart-playback__step chart-playback__step--next" type="button">
-                <span>下一期</span>
-                <span class="chart-playback__arrow" aria-hidden="true"></span>
-              </button>
-            </div>
-          </div>
-        </div>
+        ${sharedSankeyPlaybackMarkup({
+          periods,
+          currentIndex,
+          copy,
+          playIconSrc: './assets/sankey/play.svg',
+        })}
       </div>`;
     }
 
@@ -838,12 +617,16 @@
 
     function mountPlayback(surface, example, chart) {
       const periods = playbackPeriodsOf(example);
-      const range = surface.querySelector('.chart-playback__range');
-      const ticks = surface.querySelector('.chart-playback__ticks');
-      const toggle = surface.querySelector('.chart-playback__primary');
-      const output = surface.querySelector('.chart-playback__period');
-      const previous = surface.querySelector('.chart-playback__step--prev');
-      const next = surface.querySelector('.chart-playback__step--next');
+      const copy = sankeyPlaybackCopy({ theme: state.theme });
+      const range = surface.querySelector('.sankey-playback__range');
+      const ticks = surface.querySelector('.sankey-playback__ticks');
+      const toggle = surface.querySelector('.sankey-playback__primary');
+      const output = surface.querySelector('.sankey-playback__period');
+      const previous = surface.querySelector('.sankey-playback__step--prev');
+      const next = surface.querySelector('.sankey-playback__step--next');
+      range.dataset.theme = sankeyPlaybackRangeTheme(state.theme);
+      range.dataset.mode = state.mode;
+      range.dataset.platform = state.platform;
       let isPlaying = false;
       let disposed = false;
       let transitionTargetIndex = null;
@@ -858,8 +641,8 @@
         const stagePeriod = main.querySelector('[data-stage-period]');
         if (stagePeriod) stagePeriod.textContent = `${currentPeriod.period} · ${currentPeriod.statusLabel}`;
         toggle.classList.toggle('is-playing', isPlaying);
-        toggle.setAttribute('aria-label', isPlaying ? '暂停季度变化' : '播放季度变化');
-        toggle.title = isPlaying ? '暂停' : '播放';
+        toggle.setAttribute('aria-label', isPlaying ? copy.pause : copy.play);
+        toggle.title = isPlaying ? copy.pauseTitle : copy.playTitle;
         previous.disabled = currentIndex <= 0;
         next.disabled = currentIndex >= periods.length - 1;
         ticks.querySelectorAll('[data-period-index]').forEach((tick) => {
@@ -967,10 +750,12 @@
       const mobileResolution = mobileResolutionOf(state.mobileResolution);
       const hasPlayback = playbackPeriodsOf(example).length > 0;
       const currentPeriod = hasPlayback ? playbackPeriodsOf(example)[state.periodIndex] : null;
+      const playbackCopy = sankeyPlaybackCopy({ theme: state.theme });
       const densityOptions = densityOptionsOf(example);
       const densityControl = densityControlOf(example);
       const densitySummary = example.densitySummary?.[state.density]
         ?? `${densityOptions[state.density]} 类目`;
+      const exampleSummary = example.summaryByTheme?.[state.theme] ?? example.summary;
       /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
       const surfaceVariables = [
         ...(example.preferredWidth ? [`--chart-preferred-width:${example.preferredWidth}px`] : []),
@@ -1001,7 +786,7 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `移动端 ${mobileResolution.label}`} · ${state.mode === 'light' ? '浅色' : '深色'} · ${caps.density ? densitySummary : (example.summary ?? `${DENSITY[state.density]} 类目`)}</span>
+              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${playbackCopy.mobile} ${mobileResolution.label}`} · ${state.mode === 'light' ? playbackCopy.light : playbackCopy.dark} · ${caps.density ? densitySummary : (exampleSummary ?? `${DENSITY[state.density]} 类目`)}</span>
             </div>
             <div class="stage__canvas">
               <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-resolution="${state.mobileResolution}" data-playback="${hasPlayback}"${surfaceStyle}>
@@ -1044,7 +829,21 @@
         </aside>
       </div>`;
 
-      const { instance } = mountChart(main.querySelector('.stage .chart-host'), activeExample(example));
+      const stageHost = main.querySelector('.stage .chart-host');
+      const playbackViewport = hasPlayback
+        ? example.playback?.viewport?.[state.platform]
+        : null;
+      if (playbackViewport) {
+        stageHost.addEventListener('dv:sankey-layout', (event) => {
+          const legendHeight = Number(event.detail?.legendReservedHeight);
+          if (!Number.isFinite(legendHeight) || legendHeight <= 0) return;
+          stageHost.closest('.chart-playback-layout')?.style.setProperty(
+            '--chart-playback-chart-height',
+            `${playbackViewport.canvasHeight + legendHeight}px`,
+          );
+        });
+      }
+      const { instance } = mountChart(stageHost, activeExample(example));
       if (hasPlayback) chartCleanups.push(mountPlayback(main.querySelector('.stage__surface'), example, instance));
       /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
          host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。

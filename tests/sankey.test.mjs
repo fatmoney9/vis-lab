@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { truncateBatch } from '../charts/core/label.js';
+import { easeOutCubic } from '../charts/core/motion.js';
+import {
+  SANKEY_SETTINGS,
+  resolveSankeySettings,
+} from '../charts/charts/sankey/config.js';
 import {
   assertSankeyConfig,
   fitSankeyValueFontSize,
@@ -9,30 +15,55 @@ import {
   resolveSankeyColumnMinimumSpan,
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
-  truncateSankeyTitle,
+  resolveSankeyLegendReservedHeight,
+  resolveSankeyVisualLinkValues,
 } from '../charts/charts/sankey/layout.js';
 import {
+  hasSameSankeyTopology,
+  interpolateSankeyConfig,
   sankeyNodeDashboard,
   sankeyNodeDashboardValueColor,
   sankeyRelatedNeighborhood,
-} from '../charts/charts/sankey/interaction.js';
+  resolveSankeySequenceViewport,
+  withSharedSankeyScale,
+} from '../charts/charts/sankey/model.js';
 import {
-  cubicOut,
-  hasSameSankeyTopology,
-  interpolateSankeyConfig,
-} from '../charts/charts/sankey/playback.js';
-
-const TOKENS = JSON.parse(
-  readFileSync(new URL('../tokens/sankey.json', import.meta.url), 'utf8'),
+  financialSankeyPresentation,
+  sankeyPlaybackCopy,
+} from '../demos/sankey-presentation.js';
+import {
+  sankeyPlaybackMarkup,
+  sankeyPlaybackRangeTheme,
+  sankeyPlaybackTicksMarkup,
+} from '../demos/sankey-playback.js';
+const THEME_TOKENS = Object.fromEntries(
+  ['ths', 'ifind-pc', 'ainvest'].map((theme) => [
+    theme,
+    JSON.parse(readFileSync(new URL(`../tokens/${theme}.json`, import.meta.url), 'utf8')),
+  ]),
+);
+const THEME_BEHAVIOR = JSON.parse(
+  readFileSync(new URL('../tokens/behavior.json', import.meta.url), 'utf8'),
 );
 const SANKEY_CSS = readFileSync(
-  new URL('../charts/charts/sankey/styles.css', import.meta.url),
+  new URL('../charts/styles.css', import.meta.url),
   'utf8',
 );
 const SANKEY_SOURCE = readFileSync(
   new URL('../charts/charts/sankey/index.js', import.meta.url),
   'utf8',
 );
+const SANKEY_PLAYBACK_CSS = readFileSync(
+  new URL('../demos/sankey-playback.css', import.meta.url),
+  'utf8',
+);
+const PREVIEW_SOURCES = [
+  '../index.html',
+  '../playground/preview.html',
+  '../playground/sankey-preview.html',
+].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'));
+const INDEX_SOURCE = PREVIEW_SOURCES[0];
+const SANKEY_PREVIEW_SOURCE = PREVIEW_SOURCES[2];
 
 const STYLE = {
   geometry: {
@@ -47,7 +78,7 @@ const STYLE = {
     'edge-min-thickness': 1,
     'canvas-min-height': 288,
     'canvas-recommended-height': 384,
-    'canvas-max-height': null,
+    'sequence-height-step': 4,
     'canvas-padding-x': 120,
     'canvas-padding-y': 24,
     'label-gap': 8,
@@ -77,7 +108,7 @@ Object.assign(MOBILE_STYLE.geometry, {
   'node-gap': 12,
   'canvas-min-height': 168,
   'canvas-recommended-height': 203,
-  'canvas-max-height': 203,
+  'canvas-padding-x': 84,
 });
 
 const CONFIG = {
@@ -151,11 +182,96 @@ const LOSS_CONFIG = {
       negativeSource: 'cost',
     },
     { source: 'gross', target: 'expense', value: 26127300 },
-    { source: 'gross', target: 'operating', value: -30140900 },
+    {
+      source: 'gross',
+      target: 'operating',
+      value: -30140900,
+      negativeSource: 'expense',
+    },
     { source: 'other', target: 'operating', value: -5630900 },
     { source: 'operating', target: 'total', value: -35771800 },
   ],
 };
+
+test('Sankey 配置：只承载跨主题不变的 L2 几何与播放参数', () => {
+  assert.deepEqual(Object.keys(SANKEY_SETTINGS).sort(), ['geometry', 'motion']);
+  assert.equal(SANKEY_SETTINGS.typography, undefined);
+  assert.equal(SANKEY_SETTINGS.base, undefined);
+  assert.deepEqual(resolveSankeySettings('pc').geometry, STYLE.geometry);
+  assert.deepEqual(resolveSankeySettings('mobile').geometry, MOBILE_STYLE.geometry);
+  assert.deepEqual(resolveSankeySettings('pc').colors, {
+    income: 'var(--color-sankey-income)',
+    expense: 'var(--color-sankey-expense)',
+    profit: 'var(--color-sankey-profit)',
+  });
+});
+
+test('SANKEY-18：config 固定标题 10–12px、数值 11–14px 的适配范围', () => {
+  assert.deepEqual({
+    titleMin: SANKEY_SETTINGS.geometry['label-title-font-size-min'],
+    titleMax: SANKEY_SETTINGS.geometry['label-title-font-size-max'],
+    valueMin: SANKEY_SETTINGS.geometry['label-value-font-size-min'],
+    valueMax: SANKEY_SETTINGS.geometry['label-value-font-size-max'],
+  }, {
+    titleMin: 10, titleMax: 12, valueMin: 11, valueMax: 14,
+  });
+});
+
+test('Sankey 样式：并入全局入口且不再保留图型私有样式文件', () => {
+  assert.match(SANKEY_CSS, /\.dv-sankey\s*\{/);
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey \.dv-tooltip__label\s*\{[^}]*white-space:\s*nowrap/s,
+  );
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey \.dv-tooltip__row\s*\{[^}]*align-items:\s*center/s,
+  );
+  assert.equal(
+    existsSync(new URL('../charts/charts/sankey/styles.css', import.meta.url)),
+    false,
+  );
+});
+
+test('Sankey 样式：三个预览入口都不再重复引用私有 CSS', () => {
+  PREVIEW_SOURCES.forEach((source) => {
+    assert.doesNotMatch(source, /charts\/charts\/sankey\/styles\.css|sankey\/styles\.css/);
+  });
+});
+
+test('Sankey 独立预览：只保留含亏损期间的播放序列，PC 不套移动端裁切框', () => {
+  assert.doesNotMatch(SANKEY_PREVIEW_SOURCE, /基础样式|complex-scenario|LOSS_DATA/);
+  assert.match(SANKEY_PREVIEW_SOURCE, /\['2025 年报',[\s\S]*'亏损'\]/);
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /data-platform="pc"[^}]+sankey-preview__complex-content[\s\S]*max-width: none/,
+  );
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /data-platform="pc"[^}]+sankey-preview__complex-host[\s\S]*min-height: 424px/,
+  );
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /name="complex-theme" value="ifind"/,
+  );
+  assert.doesNotMatch(
+    SANKEY_PREVIEW_SOURCE,
+    /name="complex-theme" value="ifind-(?:pc|mobile)"/,
+  );
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /complexState\.theme === 'ifind' \? 'ifind-pc' : complexState\.theme/,
+  );
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /const playbackTokenTheme = sankeyPlaybackRangeTheme\(tokenTheme\);[\s\S]*complexPlaybackRange\.dataset\.theme = playbackTokenTheme/,
+  );
+});
+
+test('SANKEY-18：最终标题与数值分别写入每个节点的实际字号', () => {
+  assert.match(SANKEY_SOURCE, /dv-sankey__node-title[\s\S]*node\.titleFontSize/);
+  assert.match(SANKEY_SOURCE, /dv-sankey__node-value[\s\S]*node\.valueFontSize/);
+});
 
 test('SANKEY-02：拒绝任何 stack 配置', () => {
   assert.throws(
@@ -216,6 +332,25 @@ test('SANKEY-26：时间序列共享最大值比例尺，主轴缩放后仍以�
   );
 });
 
+test('SANKEY-26：季度序列自动取最大主轴，并给所有周期注入同一比例尺', () => {
+  const larger = structuredClone(CONFIG);
+  larger.links.find((link) => link.source === 'source-a').value = 100;
+  larger.links.find((link) => link.source === 'source-b').value = 60;
+  larger.links.find((link) => link.target === 'expense').value = 120;
+  larger.links.find((link) => link.target === 'retained').value = 40;
+
+  const periods = withSharedSankeyScale([CONFIG, larger]);
+  assert.equal(periods[0].scaleMax, 160);
+  assert.equal(periods[1].scaleMax, 160);
+  assert.equal(CONFIG.scaleMax, undefined, '不得反写调用方的周期配置');
+
+  const smallerGraph = layoutSankey(periods[0], { width: 960, height: 480 }, STYLE);
+  const largerGraph = layoutSankey(periods[1], { width: 960, height: 480 }, STYLE);
+  assert.equal(smallerGraph.primary.height, 150);
+  assert.equal(largerGraph.primary.height, 240);
+  assert.equal(smallerGraph.scale, largerGraph.scale);
+});
+
 test('SANKEY-15：全图最宽数值统一标签槽，且不小于 96px', () => {
   assert.equal(resolveSankeyLabelSlot([36, 72, 88], 96), 96);
   assert.equal(resolveSankeyLabelSlot([36, 128, 88], 96), 128);
@@ -245,12 +380,20 @@ test('SANKEY-15：相邻阶段使用固定列距，不随容器宽度或单个�
 });
 
 test('SANKEY-15：超长标题在 96px 内以省略号结束', () => {
-  const measure = (value) => Array.from(value).length * 12;
-  assert.equal(truncateSankeyTitle('营业成本', 96, measure), '营业成本');
-
-  const truncated = truncateSankeyTitle('营业成本及其他长期经营费用', 96, measure);
-  assert.match(truncated, /…$/);
-  assert.ok(measure(truncated) <= 96);
+  const entries = [
+    { text: '营业成本', maxWidth: 96, fontSize: 12 },
+    { text: '营业成本及其他长期经营费用', maxWidth: 96, fontSize: 12 },
+  ];
+  const fitted = truncateBatch(
+    entries,
+    (values, sources) => values.map((value, index) => (
+      Array.from(value).length * sources[index].fontSize
+    )),
+  );
+  assert.equal(fitted[0].text, '营业成本');
+  assert.match(fitted[1].text, /…$/);
+  assert.ok(fitted[1].width <= 96);
+  assert.match(SANKEY_SOURCE, /import \{ truncateBatch \} from '\.\.\/\.\.\/core\/label\.js'/);
 });
 
 test('SANKEY-18：标题与数值字号随分支高度映射到各自上下限', () => {
@@ -270,19 +413,117 @@ test('SANKEY-18：长数值缩至 96px，11px 仍超宽时完整展示', () => {
   assert.ok(measure('123456789', minimum) > 96);
 });
 
-test('SANKEY-19：桑基数值使用 THS → DIN → 等宽字体专属回退链', () => {
+test('SANKEY-19：桑基数值字体复用当前主题的全局数字字体 token', () => {
+  assert.equal(SANKEY_SETTINGS.typography, undefined);
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey__edge-label[\s\S]*font-family: var\(--font-family-number\)/,
+  );
+  assert.match(
+    SANKEY_CSS,
+    /\.dv-sankey__node-value[\s\S]*font-family: var\(--font-family-number\)/,
+  );
+  assert.equal(THEME_TOKENS.ainvest['font-family-cn'], '{font-family-en}');
+  assert.equal(THEME_TOKENS.ainvest['font-family-number'], '{font-family-en}');
+});
+
+test('SANKEY-27：Ainvest 只翻译展示文案，稳定拓扑与适配输入不变', () => {
+  const source = {
+    nodes: [
+      { id: 'revenue', name: '营业收入', role: 'income', stage: 1 },
+      { id: 'gross', name: '毛利', role: 'profit', stage: 2 },
+    ],
+    links: [{ source: 'revenue', target: 'gross', value: -22 }],
+    legendLabels: { income: '收入', expense: '支出', profit: '利润' },
+    period: '2025 年报',
+    shortPeriod: '25 Q4',
+    statusLabel: '亏损',
+  };
+  const presented = financialSankeyPresentation(source, { theme: 'ainvest' });
+
+  assert.deepEqual(presented.nodes.map(({ id, role, stage }) => ({ id, role, stage })), [
+    { id: 'revenue', role: 'income', stage: 1 },
+    { id: 'gross', role: 'profit', stage: 2 },
+  ]);
+  assert.strictEqual(presented.links, source.links);
+  assert.deepEqual(presented.nodes.map(({ name }) => name), ['Revenue', 'Gross Profit']);
+  assert.deepEqual(presented.legendLabels, { income: 'Income', expense: 'Expense', profit: 'Profit' });
+  assert.equal(presented.period, 'FY 2025');
+  assert.equal(presented.timelinePeriod, 'FY ’25');
+  assert.equal(presented.shortPeriod, 'FY');
+  assert.equal(presented.statusLabel, 'Loss');
+  assert.strictEqual(financialSankeyPresentation(source, { theme: 'ths' }), source);
+  assert.equal(sankeyPlaybackCopy({ theme: 'ainvest' }).previous, 'Previous');
+});
+
+test('SANKEY-28：Ainvest 全端复用目标播放区并隐藏自动播放按钮', () => {
+  assert.equal(THEME_BEHAVIOR.ainvest['datazoom-handle'].w, 32);
+  assert.equal(THEME_BEHAVIOR.ainvest['datazoom-handle'].grip.h, 10);
+  assert.match(
+    SANKEY_PREVIEW_SOURCE,
+    /data-theme="ainvest"\] \.sankey-preview__complex-layout \{[\s\S]*--sankey-playback-height: 110px/,
+  );
+  assert.match(
+    INDEX_SOURCE,
+    /data-theme="ainvest"\] \.chart-playback-layout \{[\s\S]*--sankey-playback-height: 110px/,
+  );
+  assert.match(
+    SANKEY_PLAYBACK_CSS,
+    /data-theme='ainvest'\]\) \.sankey-playback__primary \{\s*display: none;/,
+  );
+  assert.match(SANKEY_PLAYBACK_CSS, /font-size: var\(--font-size-super-small\)/);
+  assert.equal(THEME_TOKENS.ths['radius-playback-step'], '{radius-4}');
+  assert.equal(THEME_TOKENS['ifind-pc']['radius-playback-step'], '{radius-4}');
+  assert.equal(THEME_TOKENS.ainvest['radius-playback-step'], '18px');
+  assert.match(SANKEY_PLAYBACK_CSS, /border-radius: var\(--radius-playback-step\)/);
+  assert.match(
+    SANKEY_PLAYBACK_CSS,
+    /data-theme='ainvest'\]\) \.sankey-playback__timeline \{\s*overflow: visible;/,
+  );
+  assert.match(SANKEY_PLAYBACK_CSS, /filter: var\(--shadow-datazoom-handle\)/);
+  assert.doesNotMatch(SANKEY_PLAYBACK_CSS, /box-shadow: var\(--shadow-datazoom-handle\)/);
+  assert.match(SANKEY_PLAYBACK_CSS, /ainvest-period-arrow-prev\.svg/);
+  assert.match(SANKEY_PLAYBACK_CSS, /ainvest-period-arrow-next\.svg/);
+  assert.match(INDEX_SOURCE, /\.\/demos\/sankey-playback\.css/);
+  assert.match(SANKEY_PREVIEW_SOURCE, /\.\.\/demos\/sankey-playback\.css/);
+  assert.doesNotMatch(INDEX_SOURCE, /\.chart-playback__/);
   assert.equal(
-    TOKENS.typography['number-font-family'],
-    "'THS Money font',THSJinRongTi,'DIN Alternate',ui-monospace,monospace",
+    existsSync(new URL('../assets/sankey/ainvest-period-arrow-prev.svg', import.meta.url)),
+    true,
   );
-  assert.match(
-    SANKEY_CSS,
-    /\.dv-sankey__edge-label[\s\S]*font-family: var\(--dv-sankey-number-font-family\)/,
+  assert.equal(
+    existsSync(new URL('../assets/sankey/ainvest-period-arrow-next.svg', import.meta.url)),
+    true,
   );
-  assert.match(
-    SANKEY_CSS,
-    /\.dv-sankey__node-value[\s\S]*font-family: var\(--dv-sankey-number-font-family\)/,
-  );
+});
+
+test('SANKEY-24/28：两个 L3 入口复用同一份播放区 DOM 与动态刻度模板', () => {
+  const periods = [
+    { period: '2025 一季报', timelinePeriod: '2025 一季报', shortPeriod: '一季' },
+    { period: '2025 半年报', timelinePeriod: '2025 半年报', shortPeriod: '半年' },
+  ];
+  const copy = sankeyPlaybackCopy({ theme: 'ths' });
+  const ticks = sankeyPlaybackTicksMarkup(periods, 1);
+  const markup = sankeyPlaybackMarkup({
+    periods,
+    currentIndex: 1,
+    copy,
+    playIconSrc: '../assets/sankey/play.svg',
+    idPrefix: 'test-playback',
+  });
+
+  assert.match(ticks, /style="left:100%"/);
+  assert.match(ticks, /class="sankey-playback__tick is-current"/);
+  assert.match(markup, /id="test-playback-range"/);
+  assert.match(markup, /--sankey-playback-interval-count:1/);
+  assert.match(markup, /2025 半年报/);
+});
+
+test('SANKEY-29：iFinD 全端播放滑块复用 THS token 作用域', () => {
+  assert.equal(sankeyPlaybackRangeTheme('ifind'), 'ths');
+  assert.equal(sankeyPlaybackRangeTheme('ifind-pc'), 'ths');
+  assert.equal(sankeyPlaybackRangeTheme('ths'), 'ths');
+  assert.equal(sankeyPlaybackRangeTheme('ainvest'), 'ainvest');
 });
 
 test('SANKEY-20：节点看板为单行项目名与有符号值', () => {
@@ -301,7 +542,7 @@ test('SANKEY-20：节点看板为单行项目名与有符号值', () => {
       key: 'node-gross-profit',
       label: '毛利润',
       type: 'bar',
-      colorVar: '--dv-sankey-profit-color',
+      colorVar: '--color-sankey-profit',
       value: '-401.36万',
     }],
   });
@@ -311,11 +552,11 @@ test('SANKEY-20：节点看板为单行项目名与有符号值', () => {
   );
   assert.equal(
     sankeyNodeDashboardValueColor({ ...node, value: 4013600 }),
-    'var(--dv-sankey-profit-color)',
+    'var(--color-sankey-profit)',
   );
   assert.equal(
     sankeyNodeDashboardValueColor({ ...node, displayValue: 4013600 }),
-    'var(--dv-sankey-profit-color)',
+    'var(--color-sankey-profit)',
   );
   assert.match(
     SANKEY_CSS,
@@ -323,7 +564,7 @@ test('SANKEY-20：节点看板为单行项目名与有符号值', () => {
   );
   assert.match(
     SANKEY_CSS,
-    /\.dv-sankey \.dv-tooltip__value[\s\S]*color: var\(--dv-sankey-tooltip-value-color\)[\s\S]*font-family: var\(--dv-sankey-number-font-family\)/,
+    /\.dv-sankey \.dv-tooltip__value[\s\S]*color: var\(--dv-sankey-tooltip-value-color\)[\s\S]*font-family: var\(--font-family-number\)/,
   );
   assert.match(
     SANKEY_CSS,
@@ -404,14 +645,15 @@ test('SANKEY-22：同列纵向范围随节点数和端侧主节点尺寸变化',
   const graph = layoutSankey(MULTI_STAGE_CONFIG, { width: 960, height: 640 }, STYLE);
   const finalColumn = graph.columns.at(-1);
   const finalGap = finalColumn[1].y - (finalColumn[0].y + finalColumn[0].height);
-  const finalSpan = finalColumn.at(-1).y + finalColumn.at(-1).height - finalColumn[0].y;
+  const finalOccupiedGap = finalColumn[1].occupiedTop - finalColumn[0].occupiedBottom;
+  const finalOccupiedSpan = finalColumn.at(-1).occupiedBottom - finalColumn[0].occupiedTop;
 
   assert.ok(finalGap >= STYLE.geometry['node-gap']);
-  assert.ok(Math.abs(finalGap - graph.columnGaps.at(-1)) < 1e-9);
-  assert.ok(finalSpan >= resolveSankeyColumnMinimumSpan(2, STYLE.geometry));
+  assert.ok(Math.abs(finalOccupiedGap - graph.columnGaps.at(-1)) < 1e-9);
+  assert.ok(finalOccupiedSpan >= resolveSankeyColumnMinimumSpan(2, STYLE.geometry));
 });
 
-test('SANKEY-23：PC 自适应高度，移动端限制为 243px 可视总高', () => {
+test('SANKEY-23：单图按容器自然展开，不再限制移动端最大高度', () => {
   assert.equal(resolveSankeyCanvasHeight(0, STYLE.geometry), 384);
   assert.equal(resolveSankeyCanvasHeight(328, STYLE.geometry), 288);
   assert.equal(resolveSankeyCanvasHeight(424, STYLE.geometry), 384);
@@ -419,7 +661,7 @@ test('SANKEY-23：PC 自适应高度，移动端限制为 243px 可视总高', (
   assert.equal(resolveSankeyCanvasHeight(0, MOBILE_STYLE.geometry), 203);
   assert.equal(resolveSankeyCanvasHeight(208, MOBILE_STYLE.geometry), 168);
   assert.equal(resolveSankeyCanvasHeight(243, MOBILE_STYLE.geometry), 203);
-  assert.equal(resolveSankeyCanvasHeight(640, MOBILE_STYLE.geometry), 203);
+  assert.equal(resolveSankeyCanvasHeight(640, MOBILE_STYLE.geometry), 600);
 
   const graph = layoutSankey(
     MULTI_STAGE_CONFIG,
@@ -431,6 +673,42 @@ test('SANKEY-23：PC 自适应高度，移动端限制为 243px 可视总高', (
   assert.ok(graph.requiredWidth > 400);
 });
 
+test('SANKEY-23：图例以 40px 兜底，仅真实高度更大时扩容', () => {
+  assert.equal(resolveSankeyLegendReservedHeight(32, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyLegendReservedHeight(40, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyLegendReservedHeight(48, MOBILE_STYLE.geometry), 48);
+  assert.equal(resolveSankeyLegendReservedHeight(0, MOBILE_STYLE.geometry), 40);
+  assert.equal(resolveSankeyCanvasHeight(280, MOBILE_STYLE.geometry, 48), 232);
+});
+
+test('SANKEY-23：播放序列统一采用最大所需高度并向上对齐 4px 网格', () => {
+  const compact = structuredClone(CONFIG);
+  const dense = structuredClone(MULTI_STAGE_CONFIG);
+  const periods = withSharedSankeyScale([compact, dense]);
+  const viewport = resolveSankeySequenceViewport(periods, 'mobile');
+  const required = Math.max(...periods.map((period) => layoutSankey(
+    period,
+    {
+      width: 1,
+      height: MOBILE_STYLE.geometry['canvas-min-height'],
+      labelSlotWidth: MOBILE_STYLE.geometry['label-title-width'],
+    },
+    MOBILE_STYLE,
+  ).requiredHeight));
+
+  assert.equal(viewport.requiredCanvasHeight, required);
+  if (required > MOBILE_STYLE.geometry['canvas-recommended-height']) {
+    assert.equal(viewport.canvasHeight % MOBILE_STYLE.geometry['sequence-height-step'], 0);
+  } else {
+    assert.equal(viewport.canvasHeight, MOBILE_STYLE.geometry['canvas-recommended-height']);
+  }
+  assert.ok(viewport.canvasHeight >= required);
+  assert.equal(
+    viewport.totalHeight,
+    viewport.canvasHeight + MOBILE_STYLE.geometry['legend-reserved-height'],
+  );
+});
+
 test('SANKEY-24：同拓扑季度数据平滑插值且中间帧保持守恒', () => {
   const next = structuredClone(CONFIG);
   next.links.find((link) => link.source === 'source-a').value = 80;
@@ -439,17 +717,17 @@ test('SANKEY-24：同拓扑季度数据平滑插值且中间帧保持守恒', ()
   next.links.find((link) => link.target === 'retained').value = 30;
 
   assert.equal(hasSameSankeyTopology(CONFIG, next), true);
-  assert.equal(cubicOut(0), 0);
-  assert.equal(cubicOut(1), 1);
-  assert.ok(cubicOut(0.5) > 0.5);
+  assert.equal(easeOutCubic(0), 0);
+  assert.equal(easeOutCubic(1), 1);
+  assert.ok(easeOutCubic(0.5) > 0.5);
 
   const middle = interpolateSankeyConfig(CONFIG, next, 0.5);
   assert.equal(middle.links.find((link) => link.source === 'source-a').value, 70);
   assert.equal(middle.links.find((link) => link.target === 'expense').value, 80);
   assert.doesNotThrow(() => assertSankeyConfig(middle));
-  assert.equal(TOKENS.motion['playback-label-lead-duration'], 120);
-  assert.equal(TOKENS.motion['playback-duration'], 720);
-  assert.equal(TOKENS.motion['playback-easing'], 'cubic-out');
+  assert.equal(SANKEY_SETTINGS.motion['playback-label-lead-duration'], 120);
+  assert.equal(SANKEY_SETTINGS.motion['playback-duration'], 720);
+  assert.equal(SANKEY_SETTINGS.motion['playback-easing'], 'cubic-out');
   assert.match(SANKEY_SOURCE, /displayValueByNodeId/);
   assert.match(SANKEY_SOURCE, /onProgress\?\.\(easedProgress, linearProgress\)/);
 
@@ -476,6 +754,23 @@ test('SANKEY-24：拓扑变化时拒绝季度插值', () => {
     () => interpolateSankeyConfig(CONFIG, changed, 0.5),
     /拓扑保持一致/,
   );
+});
+
+test('SANKEY-24/25：negativeSource 属于播放拓扑且在插值期间保持稳定', () => {
+  const from = structuredClone(LOSS_CONFIG);
+  const to = structuredClone(LOSS_CONFIG);
+  const difference = to.links.find((link) => link.target === 'gross');
+  difference.value = Math.abs(difference.value);
+
+  assert.equal(hasSameSankeyTopology(from, to), true);
+  assert.equal(
+    interpolateSankeyConfig(from, to, 0.5)
+      .links.find((link) => link.target === 'gross').negativeSource,
+    'cost',
+  );
+
+  delete difference.negativeSource;
+  assert.equal(hasSameSankeyTopology(from, to), false);
 });
 
 test('SANKEY-06：终止节点停在实际阶段，不强制补齐到最右列', () => {
@@ -520,20 +815,30 @@ test('SANKEY-11：每个节点必须声明收入、支出或利润角色', () =>
 });
 
 test('SANKEY-11：THS 与 Ainvest 使用各自三种业务语义色', () => {
-  assert.deepEqual(TOKENS.ths, {
-    income: '#FF9500',
-    expense: '#3366FF',
-    profit: '#FF2436',
+  assert.deepEqual({
+    income: THEME_TOKENS.ths['color-sankey-income'],
+    expense: THEME_TOKENS.ths['color-sankey-expense'],
+    profit: THEME_TOKENS.ths['color-sankey-profit'],
+  }, {
+    income: '#FF9500', expense: '#3366FF', profit: '{color-price-up}',
   });
-  assert.deepEqual(TOKENS.ainvest, {
-    income: '#265FFC',
-    expense: '#FF381A',
-    profit: '#00B53C',
+  assert.deepEqual({
+    income: THEME_TOKENS.ainvest['color-sankey-income'],
+    expense: THEME_TOKENS.ainvest['color-sankey-expense'],
+    profit: THEME_TOKENS.ainvest['color-sankey-profit'],
+  }, {
+    income: '#265FFC', expense: '{color-price-down}', profit: '{color-price-up}',
   });
 });
 
-test('SANKEY-11：iFinD-PC 完整继承 base 三色', () => {
-  assert.deepEqual(TOKENS['ifind-pc'], TOKENS.base);
+test('SANKEY-11：iFinD-PC 声明完整三色', () => {
+  assert.deepEqual({
+    income: THEME_TOKENS['ifind-pc']['color-sankey-income'],
+    expense: THEME_TOKENS['ifind-pc']['color-sankey-expense'],
+    profit: THEME_TOKENS['ifind-pc']['color-sankey-profit'],
+  }, {
+    income: '#3366FF', expense: '#07AB4B', profit: '#FF2436',
+  });
 });
 
 test('SANKEY-08/13：边宽与节点高共用比例尺，边色取目标节点色', () => {
@@ -612,14 +917,29 @@ test('SANKEY-13/16/25：毛利亏损从营业成本超额段引出，逻辑值�
   assert.equal(lossLink.source.id, 'revenue');
   assert.equal(lossLink.visualSource.id, 'cost');
   assert.equal(lossLink.visualSource.columnIndex, lossLink.target.columnIndex);
-  assert.equal(lossLink.route, 'difference');
+  assert.equal(lossLink.route, 'left-return');
   assert.match(lossLink.path, new RegExp(`^M${byId.get('cost').x},`));
+  assert.ok(lossLink.routeX < byId.get('cost').x);
   assert.equal(graph.primary, revenue);
   assert.ok(Math.abs(cost.height / revenue.height - cost.value / revenue.value) < 1e-12);
   assert.ok(Math.abs(cost.height - revenue.height - lossLink.thickness) < 1e-12);
   assert.equal(costLink.sourceThickness, revenue.height);
-  assert.equal(costLink.targetThickness, cost.height);
+  assert.equal(costLink.targetThickness, revenue.height);
+  assert.equal(costLink.targetY, cost.y);
+  assert.equal(costLink.pairedSourceValue, revenue.value);
   assert.equal(gross.height, lossLink.targetThickness);
+  assert.equal(lossLink.isConstantWidthReturn, true);
+  assert.equal(lossLink.returnThickness, lossLink.sourceThickness);
+  assert.equal(lossLink.sourceY, cost.y + revenue.height);
+  assert.equal(lossLink.color, gross.color);
+  assert.ok(lossLink.returnOuterX < lossLink.returnInnerX);
+  assert.ok(lossLink.returnInnerX < cost.x);
+  assert.ok(
+    Math.abs(
+      lossLink.returnInnerX - lossLink.returnOuterX - lossLink.returnThickness,
+    ) < 1e-12,
+  );
+  assert.match(lossLink.path, / Z$/);
   assert.ok(related.nodes.has(byId.get('cost')));
   assert.ok(!related.nodes.has(byId.get('revenue')));
 
@@ -633,6 +953,182 @@ test('SANKEY-13/16/25：毛利亏损从营业成本超额段引出，逻辑值�
   );
   assert.equal(mobileLoss.thickness, STYLE.geometry['edge-min-thickness']);
   assert.ok(mobileLoss.thickness > mobileLoss.proportionalThickness);
+});
+
+test('SANKEY-25：同源负差额遵循 P = B + D，样图数值形成等宽超额段', () => {
+  const sample = structuredClone(LOSS_CONFIG);
+  sample.links.find((link) => link.target === 'cost').value = 196.89;
+  sample.links.find((link) => link.target === 'gross').value = -67.71;
+  sample.links.find((link) => link.source === 'gross' && link.target === 'expense').value = 34.56;
+  sample.links.find((link) => link.source === 'gross' && link.target === 'operating').value = -102.27;
+  sample.links.find((link) => link.source === 'other').value = -2.23;
+  sample.links.find((link) => link.source === 'operating').value = -104.5;
+
+  const graph = layoutSankey(sample, { width: 960, height: 480 }, STYLE);
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const baseLink = graph.links.find((link) => link.target.id === 'cost');
+  const differenceLink = graph.links.find((link) => link.target.id === 'gross');
+  const revenue = byId.get('revenue');
+  const cost = byId.get('cost');
+  const gross = byId.get('gross');
+
+  assert.ok(Math.abs(revenue.value - 129.18) < 1e-12);
+  assert.ok(Math.abs(cost.value - 196.89) < 1e-12);
+  assert.ok(Math.abs(gross.value - -67.71) < 1e-12);
+  assert.ok(Math.abs(baseLink.pairedSourceValue - revenue.value) < 1e-12);
+  assert.ok(Math.abs(baseLink.sourceThickness - revenue.height) < 1e-12);
+  assert.ok(Math.abs(baseLink.targetThickness - revenue.height) < 1e-12);
+  assert.ok(Math.abs(baseLink.targetY - cost.y) < 1e-12);
+  assert.ok(Math.abs(cost.height - revenue.height - gross.height) < 1e-12);
+  assert.ok(Math.abs(differenceLink.sourceThickness - gross.height) < 1e-12);
+  assert.ok(Math.abs(differenceLink.returnThickness - gross.height) < 1e-12);
+});
+
+test('SANKEY-25：上一层负值不足时，由同层正值分支补足下一层亏损', () => {
+  const sample = structuredClone(LOSS_CONFIG);
+  sample.links.find((link) => link.target === 'cost').value = 295;
+  sample.links.find((link) => link.target === 'gross').value = -22;
+  sample.links.find((link) => link.source === 'gross' && link.target === 'expense').value = 32;
+  sample.links.find((link) => link.source === 'gross' && link.target === 'operating').value = -54;
+  sample.links.find((link) => link.source === 'other').value = -3;
+  sample.links.find((link) => link.source === 'operating').value = -57;
+
+  const graph = layoutSankey(sample, { width: 960, height: 480 }, STYLE);
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const expenseLink = graph.links.find(
+    (link) => link.source.id === 'gross' && link.target.id === 'expense',
+  );
+  const costLink = graph.links.find(
+    (link) => link.source.id === 'revenue' && link.target.id === 'cost',
+  );
+  const grossDifference = graph.links.find(
+    (link) => link.source.id === 'revenue' && link.target.id === 'gross',
+  );
+  const operatingDifference = graph.links.find(
+    (link) => link.source.id === 'gross' && link.target.id === 'operating',
+  );
+  const operating = byId.get('operating');
+  const visualIncomingHeight = operating.visualIncoming.reduce(
+    (sum, link) => sum + link.targetThickness,
+    0,
+  );
+
+  assert.equal(byId.get('revenue').value, 273);
+  assert.equal(byId.get('cost').value, 295);
+  assert.equal(byId.get('gross').value, -22);
+  assert.equal(byId.get('expense').value, 32);
+  assert.equal(operating.value, -57);
+  assert.equal(operatingDifference.value, -54);
+  assert.equal(operatingDifference.pairedSourceValue, -22);
+  assert.equal(operatingDifference.negativeDifferenceMode, 'deficit-merge');
+  assert.equal(operatingDifference.visualSource.id, 'gross');
+  assert.equal(operatingDifference.visualTarget.id, 'operating');
+  assert.equal(operatingDifference.sourceThickness, byId.get('gross').height);
+  assert.equal(operatingDifference.targetThickness, byId.get('gross').height);
+  assert.notEqual(operatingDifference.route, 'left-return');
+  assert.equal(costLink.sourceThickness, byId.get('revenue').height);
+  assert.equal(costLink.targetThickness, byId.get('revenue').height);
+  assert.equal(costLink.targetY, byId.get('cost').y);
+  assert.ok(
+    Math.abs(
+      byId.get('cost').height
+        - byId.get('revenue').height
+        - byId.get('gross').height,
+    ) < 1e-12,
+  );
+  assert.equal(grossDifference.visualSource.id, 'cost');
+  assert.equal(grossDifference.visualTarget.id, 'gross');
+  assert.equal(grossDifference.route, 'left-return');
+  assert.equal(grossDifference.isConstantWidthReturn, true);
+  assert.equal(grossDifference.returnThickness, grossDifference.sourceThickness);
+  assert.equal(grossDifference.color, byId.get('gross').color);
+  assert.ok(grossDifference.returnOuterX < grossDifference.returnInnerX);
+  assert.ok(
+    Math.abs(
+      grossDifference.returnInnerX
+        - grossDifference.returnOuterX
+        - grossDifference.returnThickness,
+    ) < 1e-12,
+  );
+  assert.ok(grossDifference.routeX < byId.get('cost').x);
+  assert.match(
+    grossDifference.path,
+    new RegExp(`^M${byId.get('cost').x},`),
+  );
+  assert.equal(expenseLink.source.id, 'gross', '逻辑守恒关系不改写');
+  assert.equal(expenseLink.target.id, 'expense', '逻辑守恒关系不改写');
+  assert.equal(expenseLink.visualSource.id, 'expense');
+  assert.equal(expenseLink.visualTarget.id, 'operating');
+  assert.equal(expenseLink.sourceThickness, byId.get('expense').height);
+  assert.equal(expenseLink.targetThickness, byId.get('expense').height);
+  assert.equal(expenseLink.color, operating.color);
+  assert.equal(expenseLink.isDeficitContribution, true);
+  assert.equal(expenseLink.route, 'left-return');
+  assert.equal(expenseLink.isConstantWidthReturn, true);
+  assert.equal(expenseLink.returnThickness, expenseLink.sourceThickness);
+  assert.ok(expenseLink.returnOuterX < expenseLink.returnInnerX);
+  assert.ok(
+    Math.abs(
+      expenseLink.returnInnerX
+        - expenseLink.returnOuterX
+        - expenseLink.returnThickness,
+    ) < 1e-12,
+  );
+  assert.ok(expenseLink.routeX < byId.get('expense').x);
+  assert.ok(Math.abs(visualIncomingHeight - operating.height) < 1e-12);
+  assert.match(
+    operatingDifference.path,
+    new RegExp(`^M${byId.get('gross').x + byId.get('gross').width},`),
+  );
+  assert.match(
+    expenseLink.path,
+    new RegExp(`^M${byId.get('expense').x},`),
+  );
+});
+
+test('SANKEY-25：净利润与归母净利润继续逐层执行 P = B + D', () => {
+  const graph = layoutSankey({
+    nodes: [
+      { id: 'total', name: '利润总额', role: 'profit', stage: 0 },
+      { id: 'tax', name: '所得税费用', role: 'expense', stage: 1, order: 1 },
+      { id: 'net', name: '净利润', role: 'profit', stage: 1, order: 0 },
+      { id: 'minority', name: '少数股东权益', role: 'expense', stage: 2, order: 1 },
+      { id: 'parent', name: '归母净利润', role: 'profit', stage: 2, order: 0 },
+    ],
+    links: [
+      { source: 'total', target: 'tax', value: 1.7 },
+      {
+        source: 'total', target: 'net', value: -57.7,
+        negativeSource: 'tax',
+      },
+      { source: 'net', target: 'minority', value: 2 },
+      {
+        source: 'net', target: 'parent', value: -59.7,
+        negativeSource: 'minority',
+      },
+    ],
+  }, { width: 960, height: 480 }, STYLE);
+  const visualValues = resolveSankeyVisualLinkValues(graph);
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const netLink = graph.links.find((link) => link.target.id === 'net');
+  const parentLink = graph.links.find((link) => link.target.id === 'parent');
+  const taxContribution = graph.links.find((link) => link.target.id === 'tax');
+  const minorityContribution = graph.links.find((link) => link.target.id === 'minority');
+
+  assert.ok(Math.abs(byId.get('total').value - -56) < 1e-12);
+  assert.ok(Math.abs(byId.get('net').value - -57.7) < 1e-12);
+  assert.ok(Math.abs(byId.get('parent').value - -59.7) < 1e-12);
+  assert.equal(byId.get('net').magnitude, 57.7);
+  assert.equal(netLink.negativeDifferenceMode, 'deficit-merge');
+  assert.equal(parentLink.negativeDifferenceMode, 'deficit-merge');
+  assert.equal(taxContribution.visualSource.id, 'tax');
+  assert.equal(taxContribution.visualTarget.id, 'net');
+  assert.equal(minorityContribution.visualSource.id, 'minority');
+  assert.equal(minorityContribution.visualTarget.id, 'parent');
+  assert.equal(visualValues.get(netLink.index), -56);
+  assert.equal(visualValues.get(taxContribution.index), -1.7);
+  assert.equal(visualValues.get(parentLink.index), -57.7);
+  assert.equal(visualValues.get(minorityContribution.index), -2);
 });
 
 test('SANKEY-25：盈利时差额仍从营业收入分出，跨过零值才切换视觉来源', () => {
@@ -659,7 +1155,7 @@ test('SANKEY-25：盈利时差额仍从营业收入分出，跨过零值才切�
 
   assert.equal(profitLink.value, 4013600);
   assert.equal(profitLink.visualSource.id, 'revenue');
-  assert.notEqual(profitLink.route, 'difference');
+  assert.notEqual(profitLink.route, 'left-return');
   assert.ok(profitLink.visualSource.x < profitLink.target.x);
   assert.equal(beforeZero.visualSource.id, 'revenue');
   assert.equal(afterZero.visualSource.id, 'cost');
@@ -683,8 +1179,12 @@ test('SANKEY-13/16/25：差额结果节点按自身负值定高，其余节点�
   assert.equal(gross.value, -4013600);
   assert.equal(gross.magnitude, Math.abs(gross.value));
   assert.equal(operating.value, -35771800);
-  assert.equal(operating.magnitude, 30140900 + 5630900);
+  assert.equal(operating.magnitude, Math.abs(operating.value));
   assert.equal(gross.height, Math.abs(gross.value) * graph.scale);
+  assert.ok(Math.abs(
+    operating.visualIncoming.reduce((sum, link) => sum + link.targetThickness, 0)
+      - operating.height,
+  ) < 1e-12);
 });
 
 test('SANKEY-06：显式 stage 必须保持流向单调向右', () => {
@@ -729,6 +1229,23 @@ test('SANKEY-12：超过 30 个节点仍完整渲染，并通过扩高画布保�
       const previous = graph.columns.at(-1)[index];
       const actualGap = node.y - (previous.y + previous.height);
       assert.ok(actualGap + 1e-9 >= graph.nodeGap);
-      assert.ok(Math.abs(actualGap - graph.columnGaps.at(-1)) < 1e-9);
+      const occupiedGap = node.occupiedTop - previous.occupiedBottom;
+      assert.ok(occupiedGap + 1e-9 >= graph.nodeGap);
+      assert.ok(Math.abs(occupiedGap - graph.columnGaps.at(-1)) < 1e-9);
     });
+});
+
+test('SANKEY-22：同列按节点与两行文字联合占位盒保持最小上下间距', () => {
+  const graph = layoutSankey(LOSS_CONFIG, { width: 960, height: 288 }, STYLE);
+
+  graph.columns.forEach((column, columnIndex) => {
+    column.slice(1).forEach((node, index) => {
+      const previous = column[index];
+      const occupiedGap = node.occupiedTop - previous.occupiedBottom;
+      assert.ok(
+        occupiedGap + 1e-9 >= graph.nodeGap,
+        `第 ${columnIndex + 1} 列的文字联合占位间距不足`,
+      );
+    });
+  });
 });

@@ -3,21 +3,23 @@
  * 只接收节点、流向与端语义；颜色、节点宽度、间距、透明度和曲率均由规范数据决定。
  */
 import { pointer, select } from 'd3';
+import { observeResize } from '../../core/frame.js';
 import { makeFormatter } from '../../core/format.js';
+import { truncateBatch } from '../../core/label.js';
 import { renderLegend } from '../../core/legend.js';
+import { createTextMeasurer } from '../../core/measure.js';
+import { easeOutCubic, reducedMotion } from '../../core/motion.js';
 import { resolveBehavior } from '../../core/theme.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { tokenNum } from '../../core/tokens.js';
+import { resolveSankeySettings } from './config.js';
 import {
   sankeyNodeDashboard,
   sankeyNodeDashboardValueColor,
   sankeyRelatedNeighborhood,
-} from './interaction.js';
-import {
-  cubicOut,
   hasSameSankeyTopology,
   interpolateSankeyConfig,
-} from './playback.js';
+} from './model.js';
 import {
   assertSankeyConfig,
   fitSankeyValueFontSize,
@@ -25,54 +27,15 @@ import {
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
   resolveSankeyCanvasHeight,
-  truncateSankeyTitle,
+  resolveSankeyLegendReservedHeight,
+  resolveSankeyVisualLinkValues,
 } from './layout.js';
-import { resolveSankeyStyle } from './style.js';
 
 const LEGEND_ROLES = [
   { key: 'income', fallback: '收入' },
   { key: 'expense', fallback: '支出' },
   { key: 'profit', fallback: '利润' },
 ];
-
-function svgTextMeasurer(svgNode, childClass, fallbackFontSize) {
-  const textNode = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  const spanNode = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-  textNode.setAttribute('class', 'dv-sankey__node-label');
-  textNode.setAttribute('visibility', 'hidden');
-  spanNode.setAttribute('class', childClass);
-  textNode.append(spanNode);
-  svgNode.append(textNode);
-
-  const estimate = (value, fontSize) => Array.from(String(value)).reduce(
-    (width, character) => (
-      width + (character.codePointAt(0) > 0xff ? fontSize : fontSize * 0.62)
-    ),
-    0,
-  );
-
-  return {
-    measure(value, fontSize = fallbackFontSize) {
-      const safeFontSize = Number.isFinite(fontSize) && fontSize > 0
-        ? fontSize
-        : fallbackFontSize;
-      spanNode.textContent = String(value);
-      spanNode.style.fontSize = `${safeFontSize}px`;
-      if (typeof spanNode.getComputedTextLength === 'function') {
-        try {
-          const measured = spanNode.getComputedTextLength();
-          if (Number.isFinite(measured) && measured > 0) return measured;
-        } catch {
-          /* 非可视 DOM 环境使用同字体尺寸的保守估算。 */
-        }
-      }
-      return estimate(value, safeFontSize);
-    },
-    destroy() {
-      textNode.remove();
-    },
-  };
-}
 
 export function SankeyChart(host, initialConfig) {
   let config = initialConfig;
@@ -118,35 +81,64 @@ export function SankeyChart(host, initialConfig) {
       throw new TypeError("SankeyChart：platform 仅支持 'pc' 或 'mobile'");
     }
 
-    const style = resolveSankeyStyle(host, platform);
+    const style = resolveSankeySettings(platform);
     const behavior = resolveBehavior(host, platform);
     const format = makeFormatter(behavior['number-format']);
     const configuredHideDelay = tokenNum(host, '--tooltip-hide-delay');
     const tooltipHideDelay = Number.isFinite(configuredHideDelay)
       ? configuredHideDelay
       : 2000;
-    const recommendedHeight = style.geometry['canvas-recommended-height']
-      + style.geometry['legend-reserved-height'];
-    const maximumCanvasHeight = style.geometry['canvas-max-height'];
-    const hasMaximumHeight = Number.isFinite(maximumCanvasHeight);
-    const maximumHeight = hasMaximumHeight
-      ? maximumCanvasHeight + style.geometry['legend-reserved-height']
-      : null;
-    /* [SANKEY-23] 移动端限制可视高度；密集数据保留完整 SVG 并在组件内滚动。 */
-    root
-      .style('min-height', `${recommendedHeight}px`)
-      .style('height', maximumHeight === null ? null : `${maximumHeight}px`)
-      .style('max-height', maximumHeight === null ? null : `${maximumHeight}px`)
-      .style('overflow-y', maximumHeight === null ? null : 'auto');
+
     const rect = host.getBoundingClientRect();
     if (rect.width < 1) {
       resizeFrame = requestAnimationFrame(build);
       return;
     }
 
+    /* [SANKEY-14/23] 先渲染静态图例再量真实高度；40px 只是跨主题最低预留。 */
+    const activeRoles = new Set(
+      (Array.isArray(config?.nodes) ? config.nodes : []).map((node) => node?.role),
+    );
+    const legendLabels = config.legendLabels ?? {};
+    renderLegend(
+      legendHost.node(),
+      LEGEND_ROLES
+        .filter((item) => activeRoles.has(item.key))
+        .map((item) => ({
+          key: item.key,
+          label: legendLabels[item.key] ?? item.fallback,
+          type: 'bar',
+          colorVar: `--color-sankey-${item.key}`,
+        })),
+      { marker: behavior['legend-marker'] },
+    );
+    legendHost
+      .select('.dv-legend')
+      .attr('role', 'list')
+      .attr('aria-label', '桑基图颜色图例');
+    legendHost
+      .selectAll('.dv-legend-item')
+      .attr('role', 'listitem');
+    const legendReservedHeight = resolveSankeyLegendReservedHeight(
+      legendHost.node().getBoundingClientRect().height,
+      style.geometry,
+    );
+    const recommendedHeight = style.geometry['canvas-recommended-height']
+      + legendReservedHeight;
+    /* [SANKEY-23] 单图自然展开；播放序列的统一视口由 L2 预计算后交给 L3 外框。 */
+    root
+      .style('min-height', `${recommendedHeight}px`)
+      .style('height', null)
+      .style('max-height', null)
+      .style('overflow-y', null);
+
     const chartBounds = {
       width: rect.width,
-      height: resolveSankeyCanvasHeight(rect.height, style.geometry),
+      height: resolveSankeyCanvasHeight(
+        rect.height,
+        style.geometry,
+        legendReservedHeight,
+      ),
     };
     const titleWidth = style.geometry['label-title-width'];
     const preliminaryGraph = layoutSankey(
@@ -157,15 +149,13 @@ export function SankeyChart(host, initialConfig) {
     const nodeHeights = preliminaryGraph.nodes.map((node) => node.height);
     const minimumNodeHeight = Math.min(...nodeHeights);
     const maximumNodeHeight = Math.max(...nodeHeights);
-    const titleMeasurer = svgTextMeasurer(
+    const titleMeasurer = createTextMeasurer(
       svg.node(),
-      'dv-sankey__node-title',
-      style.geometry['label-title-font-size-max'],
+      'dv-sankey__node-label dv-sankey__node-title',
     );
-    const valueMeasurer = svgTextMeasurer(
+    const valueMeasurer = createTextMeasurer(
       svg.node(),
-      'dv-sankey__node-value',
-      style.geometry['label-value-font-size-max'],
+      'dv-sankey__node-label dv-sankey__node-value',
     );
     const displayTitleById = new Map();
     const displayTitleWidthById = new Map();
@@ -173,6 +163,7 @@ export function SankeyChart(host, initialConfig) {
     const titleFontSizeById = new Map();
     const valueFontSizeById = new Map();
     const valueWidthById = new Map();
+    const labelMetricsById = new Map();
     let labelSlotWidth;
     try {
       preliminaryGraph.nodes.forEach((node) => {
@@ -203,16 +194,31 @@ export function SankeyChart(host, initialConfig) {
         formattedValueById.set(node.id, formattedValue);
         titleFontSizeById.set(node.id, titleFontSize);
         valueFontSizeById.set(node.id, valueFontSize);
+        labelMetricsById.set(node.id, { titleFontSize, valueFontSize });
         valueWidthById.set(node.id, valueMeasurer.measure(formattedValue, valueFontSize));
-        const displayTitle = truncateSankeyTitle(
-          node.name,
-          titleWidth,
-          (value) => titleMeasurer.measure(value, titleFontSize),
-        );
-        displayTitleById.set(node.id, displayTitle);
+      });
+
+      const titleEntries = preliminaryGraph.nodes.map((node) => ({
+        id: node.id,
+        text: node.name,
+        maxWidth: titleWidth,
+        fontSize: titleFontSizeById.get(node.id),
+      }));
+      const fittedTitles = truncateBatch(
+        titleEntries,
+        (values, entries) => values.map((value, index) => (
+          titleMeasurer.measure(value, entries[index].fontSize)
+        )),
+      );
+      fittedTitles.forEach((result, index) => {
+        const entry = titleEntries[index];
+        const displayTitle = result.text ?? '…';
+        displayTitleById.set(entry.id, displayTitle);
         displayTitleWidthById.set(
-          node.id,
-          titleMeasurer.measure(displayTitle, titleFontSize),
+          entry.id,
+          result.text == null
+            ? titleMeasurer.measure(displayTitle, entry.fontSize)
+            : result.width,
         );
       });
       labelSlotWidth = resolveSankeyLabelSlot(
@@ -230,6 +236,7 @@ export function SankeyChart(host, initialConfig) {
       {
         ...chartBounds,
         labelSlotWidth,
+        labelMetricsById,
       },
       style,
     );
@@ -237,15 +244,13 @@ export function SankeyChart(host, initialConfig) {
       node.displayValue = displayValueByNodeId?.get(node.id) ?? node.value;
       node.displayTitle = displayTitleById.get(node.id);
       node.formattedValue = formattedValueById.get(node.id);
-      node.titleFontSize = titleFontSizeById.get(node.id);
-      node.valueFontSize = valueFontSizeById.get(node.id);
       node.labelHitWidth = Math.max(
         displayTitleWidthById.get(node.id),
         valueWidthById.get(node.id),
       );
     });
     graph.links.forEach((link) => {
-      link.displayValue = displayValueByLinkIndex?.get(link.index) ?? link.value;
+      link.displayValue = displayValueByLinkIndex?.get(link.index) ?? link.visualValue;
     });
     const showEdgeLabels = config.showEdgeLabels !== false
       && platform !== 'mobile'
@@ -254,41 +259,12 @@ export function SankeyChart(host, initialConfig) {
     root
       .style(
         'min-height',
-        `${hasMaximumHeight
-          ? recommendedHeight
-          : graph.height + style.geometry['legend-reserved-height']}px`,
+        `${graph.height + legendReservedHeight}px`,
       )
       .style('--dv-sankey-render-width', `${graph.width}px`)
       .style('--dv-sankey-render-height', `${graph.height}px`)
       .style('--dv-sankey-edge-opacity', style.geometry['edge-opacity'])
-      .style('--dv-sankey-edge-highlight-opacity', style.geometry['edge-highlight-opacity'])
-      .style('--dv-sankey-number-font-family', style.typography['number-font-family'])
-      .style('--dv-sankey-income-color', style.colors.income)
-      .style('--dv-sankey-expense-color', style.colors.expense)
-      .style('--dv-sankey-profit-color', style.colors.profit);
-
-    /* [SANKEY-14] 每个实际使用的语义色只生成一个静态图例项。 */
-    const activeRoles = new Set(graph.nodes.map((node) => node.semanticRole));
-    const legendLabels = config.legendLabels ?? {};
-    renderLegend(
-      legendHost.node(),
-      LEGEND_ROLES
-        .filter((item) => activeRoles.has(item.key))
-        .map((item) => ({
-          key: item.key,
-          label: legendLabels[item.key] ?? item.fallback,
-          type: 'bar',
-          colorVar: `--dv-sankey-${item.key}-color`,
-        })),
-      { marker: behavior['legend-marker'] },
-    );
-    legendHost
-      .select('.dv-legend')
-      .attr('role', 'list')
-      .attr('aria-label', '桑基图颜色图例');
-    legendHost
-      .selectAll('.dv-legend-item')
-      .attr('role', 'listitem');
+      .style('--dv-sankey-edge-highlight-opacity', style.geometry['edge-highlight-opacity']);
 
     svg
       .attr('viewBox', `0 0 ${graph.width} ${graph.height}`)
@@ -309,7 +285,8 @@ export function SankeyChart(host, initialConfig) {
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
       .attr('aria-label', (link) => (
-        `${(link.visualSource ?? link.source).name}流向${link.target.name}，`
+        `${(link.visualSource ?? link.source).name}`
+        + `流向${(link.visualTarget ?? link.target).name}，`
         + `数值${format(link.displayValue)}`
       ))
       .style('--dv-sankey-color', (link) => link.color);
@@ -389,10 +366,10 @@ export function SankeyChart(host, initialConfig) {
           : nodeLabelX(node)
       ))
       .attr('y', (node) => (
-        node.y + node.height / 2 - style.geometry['label-gap'] - node.titleFontSize
+        node.labelTop
       ))
       .attr('width', (node) => node.labelHitWidth)
-      .attr('height', (node) => node.titleFontSize + node.valueFontSize * 1.5);
+      .attr('height', (node) => node.labelBottom - node.labelTop);
 
     const resetHighlight = () => {
       edgeGroups.classed('is-active', false).classed('is-dimmed', false);
@@ -411,13 +388,14 @@ export function SankeyChart(host, initialConfig) {
     };
     const highlightEdge = (_, link) => {
       const source = link.visualSource ?? link.source;
+      const target = link.visualTarget ?? link.target;
       edgeGroups
         .classed('is-active', (item) => item === link)
         .classed('is-dimmed', (item) => item !== link);
       nodeGroups
-        .classed('is-active', (item) => item === source || item === link.target)
-        .classed('is-dimmed', (item) => item !== source && item !== link.target);
-      nodeLabels.classed('is-dimmed', (item) => item !== source && item !== link.target);
+        .classed('is-active', (item) => item === source || item === target)
+        .classed('is-dimmed', (item) => item !== source && item !== target);
+      nodeLabels.classed('is-dimmed', (item) => item !== source && item !== target);
     };
 
     const placeTooltip = (point) => {
@@ -573,11 +551,9 @@ export function SankeyChart(host, initialConfig) {
 
     const layoutDetail = {
       recommendedHeight,
-      renderedHeight: hasMaximumHeight
-        ? Math.min(graph.height, maximumCanvasHeight)
-          + style.geometry['legend-reserved-height']
-        : graph.height + style.geometry['legend-reserved-height'],
-      requiredHeight: graph.requiredHeight + style.geometry['legend-reserved-height'],
+      legendReservedHeight,
+      renderedHeight: graph.height + legendReservedHeight,
+      requiredHeight: graph.requiredHeight + legendReservedHeight,
       renderedWidth: graph.width,
       requiredWidth: graph.requiredWidth,
     };
@@ -590,11 +566,7 @@ export function SankeyChart(host, initialConfig) {
     host.dispatchEvent(new CustomEvent('dv:sankey-layout', { detail: layoutDetail }));
   }
 
-  const observer = new ResizeObserver(() => {
-    cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(build);
-  });
-  observer.observe(host);
+  const stopResize = observeResize(host, build);
   build();
 
   return {
@@ -604,7 +576,7 @@ export function SankeyChart(host, initialConfig) {
       pinnedLinkIndex = null;
       const shouldAnimate = options.animate === true
         && hasSameSankeyTopology(config, nextConfig)
-        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        && !reducedMotion(window);
       if (!shouldAnimate) {
         config = nextConfig;
         displayValueByNodeId = null;
@@ -617,16 +589,14 @@ export function SankeyChart(host, initialConfig) {
       const fromConfig = config;
       const platform = nextConfig.platform ?? 'pc';
       const nextGraph = assertSankeyConfig(nextConfig);
-      const motion = resolveSankeyStyle(host, platform).motion;
+      const motion = resolveSankeySettings(platform).motion;
       const duration = motion['playback-duration'];
       const labelLeadDuration = motion['playback-label-lead-duration'];
       const startedAt = performance.now() + labelLeadDuration;
       displayValueByNodeId = new Map(
         nextGraph.nodes.map((node) => [node.id, node.value]),
       );
-      displayValueByLinkIndex = new Map(
-        nextGraph.links.map((link) => [link.index, link.value]),
-      );
+      displayValueByLinkIndex = resolveSankeyVisualLinkValues(nextGraph);
       options.onProgress?.(0, 0);
       build();
 
@@ -638,7 +608,7 @@ export function SankeyChart(host, initialConfig) {
             return;
           }
           const linearProgress = Math.min(1, (now - startedAt) / duration);
-          const easedProgress = cubicOut(linearProgress);
+          const easedProgress = easeOutCubic(linearProgress);
           config = interpolateSankeyConfig(fromConfig, nextConfig, easedProgress);
           if (linearProgress === 1) {
             config = nextConfig;
@@ -667,7 +637,7 @@ export function SankeyChart(host, initialConfig) {
       cancelMotion();
       cancelAnimationFrame(resizeFrame);
       clearTooltipHide();
-      observer.disconnect();
+      stopResize();
       root.remove();
     },
   };

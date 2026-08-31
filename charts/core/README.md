@@ -13,16 +13,16 @@
 
 | 文件 | 职责 | 权威规范 |
 |---|---|---|
-| `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用）。另导出 **`containerDrivesHeight()` / `containerTookOver()`**——「容器高够不够用」与「这次变高是不是外部造成的」两条判据，**全库唯一出处**（曾三族各写一份、treemap 用 `> 0` 而另两族 `>= 40`）；基线由调用方给，那里有个逐帧坍缩的坑，见模块注释。另导出 `verticalGeometry()`：上下留白与绘图区高度的**纯计算**，与刻度无关故可在算刻度前先问出来（LABEL-10 的呼吸位需要它），`createFrame` 内部也调它、公式只此一份 | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08）、data-label.md（LABEL-10） |
+| `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`observeResize` 供各图型统一复用；`xBand:false` 即无轴画布，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用）。另导出 **`containerDrivesHeight()` / `containerTookOver()`**——「容器高够不够用」与「这次变高是不是外部造成的」两条判据，**全库唯一出处**（曾三族各写一份、treemap 用 `> 0` 而另两族 `>= 40`）；基线由调用方给，那里有个逐帧坍缩的坑，见模块注释。另导出 `verticalGeometry()`：上下留白与绘图区高度的**纯计算**，与刻度无关故可在算刻度前先问出来（LABEL-10 的呼吸位需要它），`createFrame` 内部也调它、公式只此一份 | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08）、data-label.md（LABEL-10）、sankey.md（SANKEY-23） |
 | `split.js` | **刻度三件套的纯数学**（min/max/interval、0 恒落线、占比最大化、双轴共享分割线）。零依赖，故可被 node 加载、有单测 | axes.md（SCALE-01/03/04） |
 | `scale.js` | 值 → 像素的比例尺（`linearY` / `bandX`，依赖 d3）。**刻度数学不在这里**——见 `split.js`，拆开只为可测 | axes.md（SCALE-02） |
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞 | axes.md（AXIS-01..08） |
 | `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |
-| `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 批量量宽，`createTextMeasurer` 支持反复拟合字号；两者走隐藏 SVG + 真实类名。`measureInk` 量**墨迹上下边**，走 Canvas（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08）、treemap.md（TREEMAP-05） |
+| `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 批量量宽，`createTextMeasurer` 支持反复拟合字号；两者走隐藏 SVG + 真实类名。`measureInk` 量**墨迹上下边**，走 Canvas（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08）、treemap.md（TREEMAP-05）、sankey.md（SANKEY-18） |
 | `mark.js` | 柱 / 线 / 数据点的图元渲染（返回逐帧重绘闭包供生长动效驱动） | bar.md、line.md、motion.md |
-| `motion.js` | 缓动曲线与逐帧生长循环（零 DOM，rAF / 时钟可注入） | motion.md（MOTION-01..07） |
-| `label.js` | 数据标签渲染、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤（`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列） | data-label.md（LABEL-01..09） |
+| `motion.js` | 缓动曲线、减弱动效判断与逐帧生长循环（零 DOM，rAF / 时钟可注入）；桑基季度播放复用曲线与减弱动效判断，保留专属暂停时序 | motion.md（MOTION-01..07）、sankey.md（SANKEY-24） |
+| `label.js` | 数据标签渲染、批量省略、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤。`truncateBatch` 的测量回调可同时收到源条目，支持桑基同批标题按各自字号测量；`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列 | data-label.md（LABEL-01..09）、pie.md（PIE-16）、sankey.md（SANKEY-15） |
 | `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列） | legend.md（LEGEND-01/10/11） |
 | `legend-state.js` | 图例点击的状态迁移：`applyToggle`（筛，改 hidden）/ `applyFocus`（强调，改 selected）。**与 legend.js 分开只为一件事**——那边 import d3，住在里面就一行测不了 | legend.md（LEGEND-06/12/14） |
 | `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（气泡标题可带实体图标，详情行可隐藏 marker；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md |
