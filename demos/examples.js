@@ -23,8 +23,9 @@
  * 两个预览面都不用改——它们按 chart 字段查表挂载、按能力声明画旋钮。
  *
  * ⚠️ 唯一破例的是桑基：SANKEY-23 要求 812px 横版财报外框与序列统一高度，三主题卡片网格表达不了，
- * 故另有 playground/sankey-preview.html 独立面，**自带数据、不 import 本模块**（全库唯一脱离
- * 单一示例源的展示面，改桑基示例要两处同步），且两个预览面里另有专属样式与旋钮接线。
+ * 故另有 playground/sankey-preview.html 独立面，**自带节点与季度输入、不 import 本模块**
+ * （全库唯一脱离单一示例源的展示面，改桑基示例仍要两处同步）；关键 P = B + D 公式复用
+ * demos/sankey-financial.js，两个预览面里另有专属样式与旋钮接线。
  * 没有同类固定外框硬需求的新图型，照上面三步走即可，不要照抄桑基。
  */
 
@@ -33,6 +34,7 @@ import {
   resolveSankeySequenceViewport,
   withSharedSankeyScale,
 } from '../charts/charts/sankey/model.js';
+import { buildFinancialDifferencePair } from './sankey-financial.js';
 import { financialSankeyPresentation } from './sankey-presentation.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
@@ -117,7 +119,7 @@ export const skewItems = (n) => Array.from({ length: n }, (_, i) => ({
   value: i === 0 ? 98000 : Math.max(1, Math.round(60 / i)),
 }));
 
-/* 财报收支拆解：季度间保持同一拓扑；有符号流量保持会计守恒，负值只表达贡献方向。 */
+/* 当前演示八期保持同一拓扑；有符号流量保持会计守恒，负值只表达贡献方向。 */
 const yi = (value) => value * 1e8;
 const sankeyNode = (id, name, role, stage, order = 0) => ({
   id,
@@ -126,7 +128,6 @@ const sankeyNode = (id, name, role, stage, order = 0) => ({
   stage,
   order,
 });
-
 const FINANCIAL_SANKEY_NODES = [
   sankeyNode('domestic', '国内政企业务', 'income', 0, 0),
   sankeyNode('other-business', '其他业务', 'income', 0, 1),
@@ -145,7 +146,7 @@ const FINANCIAL_SANKEY_NODES = [
   sankeyNode('minority-interest', '少数股东权益', 'expense', 6, 1),
 ];
 
-const makeFinancialSankeyQuarter = ({
+export const makeFinancialSankeyQuarter = ({
   period,
   shortPeriod,
   sources,
@@ -160,16 +161,44 @@ const makeFinancialSankeyQuarter = ({
   const [domestic, otherBusiness, international] = sources.map(yi);
   const revenue = domestic + otherBusiness + international;
   const costValue = yi(cost);
-  const gross = revenue - costValue;
+  const grossPair = buildFinancialDifferencePair({
+    parent: 'revenue',
+    base: 'cost',
+    difference: 'gross',
+    parentValue: revenue,
+    baseValue: costValue,
+  });
+  const gross = grossPair.differenceValue;
   const operatingExpenseValue = yi(operatingExpense);
-  const grossToOperating = gross - operatingExpenseValue;
+  const operatingPair = buildFinancialDifferencePair({
+    parent: 'gross',
+    base: 'operating-expense',
+    difference: 'operating-profit',
+    parentValue: gross,
+    baseValue: operatingExpenseValue,
+  });
+  const grossToOperating = operatingPair.differenceValue;
   const otherOperatingValue = yi(otherOperating);
   const operatingProfit = grossToOperating + otherOperatingValue;
   const nonOperatingValue = yi(nonOperating);
   const totalProfit = operatingProfit + nonOperatingValue;
   const incomeTaxValue = yi(incomeTax);
-  const netProfit = totalProfit - incomeTaxValue;
+  const netProfitPair = buildFinancialDifferencePair({
+    parent: 'total-profit',
+    base: 'income-tax',
+    difference: 'net-profit',
+    parentValue: totalProfit,
+    baseValue: incomeTaxValue,
+  });
+  const netProfit = netProfitPair.differenceValue;
   const minorityInterestValue = yi(minorityInterest);
+  const parentProfitPair = buildFinancialDifferencePair({
+    parent: 'net-profit',
+    base: 'minority-interest',
+    difference: 'parent-profit',
+    parentValue: netProfit,
+    baseValue: minorityInterestValue,
+  });
 
   return {
     nodes: FINANCIAL_SANKEY_NODES.map((node) => ({ ...node })),
@@ -177,37 +206,17 @@ const makeFinancialSankeyQuarter = ({
       { source: 'domestic', target: 'revenue', value: domestic },
       { source: 'other-business', target: 'revenue', value: otherBusiness },
       { source: 'international', target: 'revenue', value: international },
-      { source: 'revenue', target: 'cost', value: costValue },
-      {
-        source: 'revenue',
-        target: 'gross',
-        value: gross,
-        negativeSource: 'cost',
-      },
-      { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
-      {
-        source: 'gross',
-        target: 'operating-profit',
-        value: grossToOperating,
-        negativeSource: 'operating-expense',
-      },
+      grossPair.baseLink,
+      grossPair.differenceLink,
+      operatingPair.baseLink,
+      operatingPair.differenceLink,
       { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
       { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
       { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
-      {
-        source: 'total-profit',
-        target: 'net-profit',
-        value: netProfit,
-        negativeSource: 'income-tax',
-      },
-      { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
-      {
-        source: 'net-profit',
-        target: 'parent-profit',
-        value: netProfit - minorityInterestValue,
-        negativeSource: 'minority-interest',
-      },
-      { source: 'net-profit', target: 'minority-interest', value: minorityInterestValue },
+      netProfitPair.differenceLink,
+      netProfitPair.baseLink,
+      parentProfitPair.differenceLink,
+      parentProfitPair.baseLink,
     ],
     legendLabels: { income: '收入', expense: '支出', profit: '利润' },
     period,

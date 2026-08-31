@@ -15,9 +15,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-/* 已知欠账：清掉一条就删一行；**新文件一律不得加进本列表**。 */
-const DEBT = new Set(['tests/sankey.test.mjs']);
-
 const walk = (dir, acc = []) => {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry);
@@ -54,19 +51,11 @@ for (const file of walk('tests')) {
 
 let failed = false;
 for (const [file, lines] of offenders) {
-  if (DEBT.has(file)) continue;
   console.error(
     `✗ [测试卫生] ${file} 把源码 / 样式当文本读来断言（第 ${lines.join('、')} 行）——`
     + '请改为断言可观察行为，见 TESTING.md 第三节',
   );
   failed = true;
-}
-/* 欠账清掉后要记得从列表里删——否则这份列表自己会变成过期副本 */
-for (const file of DEBT) {
-  if (!offenders.has(file)) {
-    console.error(`✗ [测试卫生] ${file} 已不再断言源码文本，请从 hooks/lint-test-hygiene.mjs 的 DEBT 里删除`);
-    failed = true;
-  }
 }
 
 if (failed) process.exit(1);

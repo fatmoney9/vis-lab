@@ -479,10 +479,13 @@
       sankeyPlaybackCopy,
     } from '../demos/sankey-presentation.js';
     import {
+      applySankeyPlaybackViewport,
+      runSankeyPlaybackUpdate,
       sankeyPlaybackMarkup,
       sankeyPlaybackRangeTheme,
       sankeyPlaybackTicksMarkup,
     } from '../demos/sankey-playback.js';
+    import { buildFinancialDifferencePair } from '../demos/sankey-financial.js';
 
     const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });
     const income = (id, name, extra = {}) => node(id, name, 'income', extra);
@@ -524,16 +527,44 @@
       const [domestic, otherBusiness, international] = sources.map(yi);
       const revenue = domestic + otherBusiness + international;
       const costValue = yi(cost);
-      const gross = revenue - costValue;
+      const grossPair = buildFinancialDifferencePair({
+        parent: 'revenue',
+        base: 'cost',
+        difference: 'gross',
+        parentValue: revenue,
+        baseValue: costValue,
+      });
+      const gross = grossPair.differenceValue;
       const operatingExpenseValue = yi(operatingExpense);
-      const grossToOperating = gross - operatingExpenseValue;
+      const operatingPair = buildFinancialDifferencePair({
+        parent: 'gross',
+        base: 'operating-expense',
+        difference: 'operating-profit',
+        parentValue: gross,
+        baseValue: operatingExpenseValue,
+      });
+      const grossToOperating = operatingPair.differenceValue;
       const otherOperatingValue = yi(otherOperating);
       const operatingProfit = grossToOperating + otherOperatingValue;
       const nonOperatingValue = yi(nonOperating);
       const totalProfit = operatingProfit + nonOperatingValue;
       const incomeTaxValue = yi(incomeTax);
-      const netProfit = totalProfit - incomeTaxValue;
+      const netProfitPair = buildFinancialDifferencePair({
+        parent: 'total-profit',
+        base: 'income-tax',
+        difference: 'net-profit',
+        parentValue: totalProfit,
+        baseValue: incomeTaxValue,
+      });
+      const netProfit = netProfitPair.differenceValue;
       const minorityInterestValue = yi(minorityInterest);
+      const parentProfitPair = buildFinancialDifferencePair({
+        parent: 'net-profit',
+        base: 'minority-interest',
+        difference: 'parent-profit',
+        parentValue: netProfit,
+        baseValue: minorityInterestValue,
+      });
 
       return {
         nodes: PERIOD_NODES,
@@ -541,41 +572,17 @@
           { source: 'domestic', target: 'revenue', value: domestic },
           { source: 'other-business', target: 'revenue', value: otherBusiness },
           { source: 'international', target: 'revenue', value: international },
-          { source: 'revenue', target: 'cost', value: costValue },
-          {
-            source: 'revenue',
-            target: 'gross',
-            value: gross,
-            negativeSource: 'cost',
-          },
-          { source: 'gross', target: 'operating-expense', value: operatingExpenseValue },
-          {
-            source: 'gross',
-            target: 'operating-profit',
-            value: grossToOperating,
-            negativeSource: 'operating-expense',
-          },
+          grossPair.baseLink,
+          grossPair.differenceLink,
+          operatingPair.baseLink,
+          operatingPair.differenceLink,
           { source: 'other-operating', target: 'operating-profit', value: otherOperatingValue },
           { source: 'operating-profit', target: 'total-profit', value: operatingProfit },
           { source: 'non-operating', target: 'total-profit', value: nonOperatingValue },
-          {
-            source: 'total-profit',
-            target: 'net-profit',
-            value: netProfit,
-            negativeSource: 'income-tax',
-          },
-          { source: 'total-profit', target: 'income-tax', value: incomeTaxValue },
-          {
-            source: 'net-profit',
-            target: 'parent-profit',
-            value: netProfit - minorityInterestValue,
-            negativeSource: 'minority-interest',
-          },
-          {
-            source: 'net-profit',
-            target: 'minority-interest',
-            value: minorityInterestValue,
-          },
+          netProfitPair.differenceLink,
+          netProfitPair.baseLink,
+          parentProfitPair.differenceLink,
+          parentProfitPair.baseLink,
         ],
         legendLabels: LEGEND_LABELS,
         period,
@@ -623,15 +630,18 @@
       { id: 'ainvest', name: 'Ainvest' },
     ];
 
+    const complexCard = document.getElementById('complex-card');
     const SEQUENCE_VIEWPORTS = Object.fromEntries(['pc', 'mobile'].map((platform) => [
       platform,
       resolveSankeySequenceViewport(QUARTER_DATA, platform),
     ]));
     const complexLayout = document.querySelector('.sankey-preview__complex-layout');
     const applySequenceViewport = (platform) => {
-      complexLayout.style.setProperty(
+      applySankeyPlaybackViewport(
+        complexLayout,
+        complexCard,
+        SEQUENCE_VIEWPORTS[platform],
         '--sankey-demo-chart-height',
-        `${SEQUENCE_VIEWPORTS[platform].totalHeight}px`,
       );
     };
     applySequenceViewport('mobile');
@@ -643,7 +653,6 @@
       idPrefix: 'complex-playback',
     });
 
-    const complexCard = document.getElementById('complex-card');
     const complexCardTitle = document.getElementById('complex-card-title');
     const complexMeta = document.getElementById('complex-meta');
     const configDescription = document.getElementById('config-description');
@@ -750,16 +759,28 @@
     };
 
     const goToPeriod = async (targetIndex, animate = true) => {
+      const previousPosition = periodPosition;
       const target = Math.round(clampPeriod(targetIndex));
       transitionTargetIndex = target;
       periodPosition = target;
       renderPlaybackState();
-      const completed = await complexChart.update({
-        ...displayQuarter(QUARTER_DATA[target]),
-        platform: complexState.platform,
-      }, {
-        animate,
-      });
+      const completed = await runSankeyPlaybackUpdate(
+        () => complexChart.update({
+          ...displayQuarter(QUARTER_DATA[target]),
+          platform: complexState.platform,
+        }, {
+          animate,
+        }),
+        {
+          onError: (error) => console.error('桑基独立预览播放更新失败', error),
+          onFailure: () => {
+            periodPosition = previousPosition;
+            transitionTargetIndex = null;
+            isPlaying = false;
+            renderPlaybackState();
+          },
+        },
+      );
       if (completed) {
         transitionTargetIndex = null;
         renderPlaybackState();
@@ -774,24 +795,25 @@
       }
       isPlaying = true;
       renderPlaybackState();
-      if (transitionTargetIndex !== null) {
-        const completed = await goToPeriod(transitionTargetIndex, true);
-        if (!completed || !isPlaying) {
-          isPlaying = false;
-          renderPlaybackState();
-          return;
+      try {
+        if (transitionTargetIndex !== null) {
+          const completed = await goToPeriod(transitionTargetIndex, true);
+          if (!completed || !isPlaying) return;
         }
+        if (periodPosition >= QUARTER_DATA.length - 1) {
+          await goToPeriod(0, false);
+        }
+        while (isPlaying && periodPosition < QUARTER_DATA.length - 1) {
+          const completed = await goToPeriod(periodPosition + 1, true);
+          if (!completed || !isPlaying) break;
+          await new Promise((resolve) => setTimeout(resolve, 120));
+        }
+      } catch (error) {
+        console.error('桑基独立预览播放流程失败', error);
+      } finally {
+        isPlaying = false;
+        renderPlaybackState();
       }
-      if (periodPosition >= QUARTER_DATA.length - 1) {
-        await goToPeriod(0, false);
-      }
-      while (isPlaying && periodPosition < QUARTER_DATA.length - 1) {
-        const completed = await goToPeriod(periodPosition + 1, true);
-        if (!completed || !isPlaying) break;
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
-      isPlaying = false;
-      renderPlaybackState();
     };
 
     const updateComplexPreview = () => {
@@ -831,32 +853,38 @@
           ? '负值不反转流向；角色色保持不变，负数文字使用正文色'
           : '终止分支按实际阶段收口，主利润链继续向右';
       renderPlaybackTicks();
-      complexChart.update({
-        ...scenario,
-        platform: complexState.platform,
-      });
+      void runSankeyPlaybackUpdate(
+        () => complexChart.update({
+          ...scenario,
+          platform: complexState.platform,
+        }),
+        {
+          onError: (error) => console.error('桑基独立预览配置更新失败', error),
+          onFailure: renderPlaybackState,
+        },
+      );
       renderPlaybackState();
     };
 
-    complexPlaybackToggle.addEventListener('click', playPeriods);
+    complexPlaybackToggle.addEventListener('click', () => { void playPeriods(); });
     complexPlaybackRange.addEventListener('input', () => {
       const requestedPosition = Math.round(clampPeriod(Number(complexPlaybackRange.value)));
       stopPlayback();
-      goToPeriod(requestedPosition);
+      void goToPeriod(requestedPosition);
     });
     complexPlaybackPrev.addEventListener('click', () => {
       stopPlayback();
-      goToPeriod(Math.max(0, periodPosition - 1));
+      void goToPeriod(Math.max(0, periodPosition - 1));
     });
     complexPlaybackNext.addEventListener('click', () => {
       stopPlayback();
-      goToPeriod(Math.min(QUARTER_DATA.length - 1, periodPosition + 1));
+      void goToPeriod(Math.min(QUARTER_DATA.length - 1, periodPosition + 1));
     });
     complexPlaybackTicks.addEventListener('click', (event) => {
       const tick = event.target.closest('[data-period-index]');
       if (!tick) return;
       stopPlayback();
-      goToPeriod(Number(tick.dataset.periodIndex));
+      void goToPeriod(Number(tick.dataset.periodIndex));
     });
 
     document.querySelectorAll('input[name^="complex-"]').forEach((input) => {
