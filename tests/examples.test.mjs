@@ -170,10 +170,8 @@ test('SANKEY-24/26：主站桑基八期同拓扑，并共享最大主轴比例�
   assert.equal(lossPeriod.links.find((link) => link.target === 'total-profit').value, -57e8);
   assert.equal(lossPeriod.links.find((link) => link.target === 'net-profit').value, -57.7e8);
   assert.equal(lossPeriod.links.find((link) => link.target === 'parent-profit').value, -59.7e8);
-  assert.equal(
-    sankey.playback.viewport.mobile.totalHeight,
-    sankey.playback.viewport.mobile.canvasHeight + 40,
-  );
+  assert.equal(sankey.playback.viewport.mobile.legendFallbackHeight, 40);
+  assert.equal('totalHeight' in sankey.playback.viewport.mobile, false);
   assert.equal(sankey.playback.viewport.mobile.canvasHeight % 4, 0);
 });
 

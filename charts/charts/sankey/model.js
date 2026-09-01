@@ -71,8 +71,9 @@ export function hasSameSankeyTopology(fromConfig, toConfig) {
   }
 
   /*
-   * [SANKEY-24/25] negativeSource 是视觉路由拓扑，不是只在亏损期临时出现的状态。
-   * 元数据不同即立即切换，避免插值首帧把左侧回折带误画成普通正向边。
+   * [SANKEY-24/25] B > 0 时，negativeSource 是跨 D 正负稳定的视觉路由拓扑，
+   * 不是只在亏损期临时出现的状态；B 跨越到非正值时 L3 会移除该元数据，
+   * 这里据此判为拓扑变化并立即切换，避免插值首帧误画路由。
    */
   const fromLinks = new Set(fromConfig.links.map(linkTopologyKey));
   const toLinks = new Set(toConfig.links.map(linkTopologyKey));
@@ -96,7 +97,8 @@ export function withSharedSankeyScale(periods) {
 
 /*
  * [SANKEY-23] 播放序列共用一份纵向视口：先取各期完整布局所需高度的最大值，
- * 超过端侧推荐高时再向上对齐 4px 布局网格。L3 只消费结果设置外框，不复制布局公式。
+ * 超过端侧推荐高时再向上对齐 4px 布局网格。L2 同时给出跨主题最低图例兜底，
+ * L3 再按当前主题 token 求真实图例占位；两层都不复制画布布局公式。
  */
 export function resolveSankeySequenceViewport(periods, platform = 'mobile') {
   if (!Array.isArray(periods) || periods.length === 0) {
@@ -120,7 +122,7 @@ export function resolveSankeySequenceViewport(periods, platform = 'mobile') {
 
   return {
     canvasHeight,
-    totalHeight: canvasHeight + geometry['legend-reserved-height'],
+    legendFallbackHeight: geometry['legend-reserved-height'],
     requiredCanvasHeight,
   };
 }

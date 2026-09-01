@@ -434,6 +434,8 @@
     import { examplesFor, familiesFor, suggestedLegend, THEMES, DENSITY, capabilitiesOf, defaultDensityOf, densityControlOf, densityOptionsOf, describeConfig } from './demos/examples.js';
     import { sankeyPlaybackCopy } from './demos/sankey-presentation.js';
     import {
+      applySankeyPlaybackViewport,
+      runSankeyPlaybackUpdate,
       sankeyPlaybackMarkup as sharedSankeyPlaybackMarkup,
       sankeyPlaybackRangeTheme,
     } from './demos/sankey-playback.js';
@@ -586,11 +588,7 @@
       if (!periods.length) return '<div class="chart-host"></div>';
       const copy = sankeyPlaybackCopy({ theme: state.theme });
       const currentIndex = clampPeriodIndex(example);
-      const viewport = example.playback?.viewport?.[state.platform];
-      const viewportStyle = viewport
-        ? ` style="--chart-playback-chart-height:${viewport.totalHeight}px"`
-        : '';
-      return `<div class="chart-playback-layout"${viewportStyle}>
+      return `<div class="chart-playback-layout">
         <div class="chart-host"></div>
         ${sharedSankeyPlaybackMarkup({
           periods,
@@ -662,14 +660,26 @@
 
       const goToPeriod = async (targetIndex, animate = true) => {
         if (disposed) return false;
+        const previousIndex = state.periodIndex;
         const target = clampPeriodIndex(example, targetIndex);
         transitionTargetIndex = target;
         state.periodIndex = target;
         renderPlaybackState();
-        const completed = await chart.update({
-          ...periods[target],
-          platform: state.platform,
-        }, { animate });
+        const completed = await runSankeyPlaybackUpdate(
+          () => chart.update({
+            ...periods[target],
+            platform: state.platform,
+          }, { animate }),
+          {
+            onError: (error) => console.error('主站桑基图播放更新失败', error),
+            onFailure: () => {
+              state.periodIndex = previousIndex;
+              transitionTargetIndex = null;
+              isPlaying = false;
+              renderPlaybackState();
+            },
+          },
+        );
         if (disposed) return false;
         if (completed) {
           transitionTargetIndex = null;
@@ -685,22 +695,23 @@
         }
         isPlaying = true;
         renderPlaybackState();
-        if (transitionTargetIndex !== null) {
-          const completed = await goToPeriod(transitionTargetIndex, true);
-          if (!completed || !isPlaying || disposed) {
-            isPlaying = false;
-            renderPlaybackState();
-            return;
+        try {
+          if (transitionTargetIndex !== null) {
+            const completed = await goToPeriod(transitionTargetIndex, true);
+            if (!completed || !isPlaying || disposed) return;
           }
+          if (state.periodIndex >= periods.length - 1) await goToPeriod(0, false);
+          while (!disposed && isPlaying && state.periodIndex < periods.length - 1) {
+            const completed = await goToPeriod(state.periodIndex + 1, true);
+            if (!completed || !isPlaying || disposed) break;
+            await new Promise((resolve) => setTimeout(resolve, 120));
+          }
+        } catch (error) {
+          console.error('主站桑基图播放流程失败', error);
+        } finally {
+          isPlaying = false;
+          renderPlaybackState();
         }
-        if (state.periodIndex >= periods.length - 1) await goToPeriod(0, false);
-        while (!disposed && isPlaying && state.periodIndex < periods.length - 1) {
-          const completed = await goToPeriod(state.periodIndex + 1, true);
-          if (!completed || !isPlaying || disposed) break;
-          await new Promise((resolve) => setTimeout(resolve, 120));
-        }
-        isPlaying = false;
-        renderPlaybackState();
       };
 
       const onToggle = () => { void playPeriods(); };
@@ -829,11 +840,18 @@
         </aside>
       </div>`;
 
-      const stageHost = main.querySelector('.stage .chart-host');
+      const surface = main.querySelector('.stage__surface');
+      const stageHost = surface.querySelector('.chart-host');
       const playbackViewport = hasPlayback
         ? example.playback?.viewport?.[state.platform]
         : null;
       if (playbackViewport) {
+        applySankeyPlaybackViewport(
+          stageHost.closest('.chart-playback-layout'),
+          surface,
+          playbackViewport,
+          '--chart-playback-chart-height',
+        );
         stageHost.addEventListener('dv:sankey-layout', (event) => {
           const legendHeight = Number(event.detail?.legendReservedHeight);
           if (!Number.isFinite(legendHeight) || legendHeight <= 0) return;
@@ -848,7 +866,6 @@
       /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
          host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。
          判定用右下 18px 热区：resize 手柄本身不派发独立事件，只能靠这个位置推断。 */
-      const surface = main.querySelector('.stage__surface');
       surface.addEventListener('pointerdown', (event) => {
         const rect = surface.getBoundingClientRect();
         if (rect.right - event.clientX <= 18 && rect.bottom - event.clientY <= 18) surface.classList.add('is-resized');
