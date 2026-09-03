@@ -6,9 +6,11 @@ import {
   EXAMPLES,
   buildConfig,
   capabilitiesOf,
+  defaultDensityCountOf,
   defaultDensityOf,
   densityControlOf,
   densityOptionsOf,
+  densitySliderOf,
   describeConfig,
   financialSankeyPeriods,
   treemapHierarchy,
@@ -84,6 +86,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     /* [TOOLTIP-12] 桑基无 Y 轴，没有「这个高度相当于多少」可言，故恒 false。 */
     yIndicator: false,
     treemapColor: false,
+    axisValue: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
@@ -187,9 +190,17 @@ test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）',
  * 给无轴图误开一个轴相关能力，面上会冒出一个点了没反应的旋钮、cfg 里会多一个组件不认识的字段——
  * 两者都不报错，故在这里拦。
  */
-test('PIE-05/PIE-08/TREEMAP-08：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
-  const axisless = EXAMPLES.filter((e) => ['pie', 'treemap'].includes(e.chart));
+/* ⚠️ **这是全库唯一一处硬编码图表类型清单**（其余判定都按 cfg 形态或能力声明走）。
+   接入新的无坐标系图型时必须加进来——**漏了不会报错**，守卫只是静悄悄地不覆盖它。 */
+const AXISLESS_CHARTS = ['pie', 'treemap', 'radar'];
+
+test('PIE-05/PIE-08/TREEMAP-08/RADAR-07：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
+  const axisless = EXAMPLES.filter((e) => AXISLESS_CHARTS.includes(e.chart));
   assert.ok(axisless.length > 0, 'EXAMPLES 里应至少有一个无坐标系示例，否则本守卫形同虚设');
+  /* 名单里的每一类都得真有示例，否则「加了类型键但忘了加示例」会让这一类静默失覆盖 */
+  for (const chart of AXISLESS_CHARTS) {
+    assert.ok(axisless.some((e) => e.chart === chart), `无坐标系名单里的 ${chart} 在 EXAMPLES 里没有示例`);
+  }
   for (const e of axisless) {
     const caps = capabilitiesOf(e);
     assert.equal(caps.zoom, false, `示例「${e.id}」是无类目轴的图，不该声明缩放轴能力`);
@@ -229,6 +240,7 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     legendSelect: false,
     yIndicator: false,
     treemapColor: true,
+    axisValue: false,
   });
 });
 
@@ -422,6 +434,58 @@ test('PIE-01：饼环示例的 cfg 是 { items:[{name,value}] } 形状', () => {
       assert.equal(typeof it.name, 'string', `示例「${e.id}」的扇区缺 name`);
       assert.ok('value' in it, `示例「${e.id}」的扇区缺 value`);
     }
+  }
+});
+
+/*
+ * 数据量有两条并存的通道：三档预设 id（playground 两个面）与连续档数字（主站滑杆）。
+ * 本组守卫防的是「滑杆能拉到组件拒收的区间」——那不是画少一点，而是**当场抛错**：
+ * RadarChart 在 dimensions < 3 时直接 throw（RADAR-01「少于此构不成面积」）。
+ * 夹取写在 buildConfig 里而不是各面自己夹，所以只在这里测一次就覆盖所有面。
+ */
+test('RADAR-01：连续档的上下限落在组件收得下的区间内，滑杆拉到两端都不抛', () => {
+  for (const example of EXAMPLES) {
+    if (!capabilitiesOf(example).density) continue;
+    const { min, max, unit } = densitySliderOf(example);
+    assert.ok(min >= 1 && max >= min, `示例「${example.id}」的连续档区间不合法`);
+    assert.ok(unit.length > 0, `示例「${example.id}」缺数据量单位`);
+
+    for (const value of [min, max]) {
+      const cfg = buildConfig(example, { density: value });
+      /* 雷达是唯一有硬下限的族：轴数即维度数，低于 3 组件抛错、高于 6 无更多维度名 */
+      if (example.chart === 'radar') {
+        assert.ok(cfg.dimensions.length >= 3, `示例「${example.id}」在 ${value} 档跌破维度下限`);
+        assert.equal(cfg.dimensions.length, cfg.series[0].data.length, '维度与数据长度须一致');
+      }
+    }
+  }
+});
+
+test('连续档越界即夹取：低于下限取下限、高于上限取上限，不静默截断也不抛', () => {
+  const radar = EXAMPLES.find((e) => e.id === 'radar-basic');
+  const { min, max } = densitySliderOf(radar);
+  assert.deepEqual([min, max], [3, 6], '雷达连续档应收窄到 3–6');
+  assert.equal(buildConfig(radar, { density: 1 }).dimensions.length, min);
+  assert.equal(buildConfig(radar, { density: 99 }).dimensions.length, max);
+
+  const bar = EXAMPLES.find((e) => e.id === 'basic');
+  assert.equal(buildConfig(bar, { density: 0 }).categories.length, 1, '缺省下限为 1');
+  assert.equal(buildConfig(bar, { density: 999 }).categories.length, 50, '缺省上限为 50');
+});
+
+test('两条通道同源：档位 id 与它对应的数字装配出同一份 cfg', () => {
+  for (const example of EXAMPLES) {
+    if (!capabilitiesOf(example).density) continue;
+    const values = densityOptionsOf(example);
+    for (const id of ['few', 'mid', 'many']) {
+      assert.deepEqual(
+        buildConfig(example, { density: values[id] }),
+        buildConfig(example, { density: id }),
+        `示例「${example.id}」的 ${id} 档在两条通道下装配结果不一致`,
+      );
+    }
+    /* 滑杆初值必须等于该示例预设默认档的数值，否则同一个示例在两种面上首屏不同 */
+    assert.equal(defaultDensityCountOf(example), values[defaultDensityOf(example)]);
   }
 });
 

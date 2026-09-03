@@ -13,6 +13,7 @@
  */
 import { CartesianChart } from '../charts/charts/cartesian/index.js';
 import { PieChart } from '../charts/charts/pie/index.js';
+import { RadarChart } from '../charts/charts/radar/index.js';
 import { SankeyChart } from '../charts/charts/sankey/index.js';
 import { TreemapChart } from '../charts/charts/treemap/index.js';
 import { buildConfig } from './examples.js';
@@ -20,6 +21,7 @@ import { buildConfig } from './examples.js';
 export const CHARTS = {
   cartesian: CartesianChart,
   pie: PieChart, /* 饼 + 环（variant 旋钮分形态，见 specs/pie.md） */
+  radar: RadarChart, /* 网格形状 / 闭合形状分示例，不分组件（见 specs/radar.md） */
   sankey: SankeyChart,
   treemap: TreemapChart,
 };

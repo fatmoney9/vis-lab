@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>雷达图预览 · 三形态 × 三主题（specs/radar.md）</title>
+<style>
+  /* 本文件只做「预览外壳」的样式；图表内部一切颜色 / 字号 / 间距仍走 tokens.css。
+     ⚠️ 与 playground/preview.html 的关系：那是**全图型**的开发验收面，雷达三条示例在那里
+     是三个并列分类、一次只能看一个。本页是雷达专用的**对照面**——把三种形态 × 三主题
+     一次铺开，改一版 token 或几何能一眼看到九张图同时怎么变。
+     两者共用同一份示例数据源（demos/examples.js），故不存在桑基独立面那种「改示例要改两处」
+     的漂移代价，见 AGENTS.md 对桑基例外的说明。 */
+  :root {
+    --shell-bg: #f4f5f7;
+    --shell-panel: #ffffff;
+    --shell-border: rgba(0, 0, 0, 0.08);
+    --shell-border-soft: rgba(0, 0, 0, 0.05);
+    --shell-text: rgba(0, 0, 0, 0.86);
+    --shell-text-2: rgba(0, 0, 0, 0.56);
+    --shell-text-3: rgba(0, 0, 0, 0.38);
+    --shell-accent: #3366ff;
+    --shell-accent-weak: rgba(51, 102, 255, 0.1);
+    --card-light-bg: #ffffff;
+    --card-dark-bg: #1a1b1e;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--shell-bg); color: var(--shell-text);
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+    padding: 14px 24px; background: var(--shell-panel);
+    border-bottom: 1px solid var(--shell-border);
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+  .brand b { font-size: 14px; letter-spacing: .2px; }
+  .brand span { font-size: 12px; color: var(--shell-text-3); }
+
+  .field { display: flex; align-items: center; gap: 8px; }
+  .field > label { font-size: 12px; color: var(--shell-text-2); white-space: nowrap; }
+  .seg { display: inline-flex; background: rgba(0,0,0,.04); border-radius: 7px; padding: 2px; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    font: inherit; font-size: 12px; color: var(--shell-text-2);
+    padding: 5px 11px; border-radius: 5px; white-space: nowrap;
+  }
+  .seg button.is-active { background: var(--shell-panel); color: var(--shell-text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  .grid { padding: 20px 24px 48px; display: flex; flex-direction: column; gap: 26px; }
+
+  .row-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .row-head b { font-size: 13px; }
+  .row-head .spec { font-size: 11px; color: var(--shell-accent); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .row-head .desc { font-size: 12px; color: var(--shell-text-3); }
+
+  /* ⚠️ `align-items: start` 不能省：grid 默认 stretch 会把卡片拉到整行最高，卡片就比内容高了。
+     那样点一下右下角手柄（切到 `.is-resized .chart-host { height:100% }`）时，组件会突然拿到
+     一个比它自己画出来的更大的高度，**图当场跳一下**。让卡片按内容定高，auto 与 100% 解析出的
+     是同一个数，切换就不可见。preview.html 用 `.theme-card { flex: none }` 达到同样效果。 */
+  .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+
+  /* 容器下限与 playground/preview.html 的 .theme-card、index.html 的 .stage__surface 同口径
+     （320 × 160）：同一张图在任何一面都不该因「容器最矮多少」不同而显示成不同高度。 */
+  .theme-card {
+    border-radius: 10px; border: 1px solid var(--shell-border-soft);
+    display: flex; flex-direction: column;
+    min-width: 320px; min-height: 160px;
+    resize: both; overflow: auto;
+    background: var(--card-light-bg);
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    transition: background .18s;
+  }
+  .theme-card[data-mode="dark"] { background: var(--card-dark-bg); border-color: rgba(255,255,255,.08); }
+
+  .card-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--shell-border-soft);
+    font-size: 12px; color: var(--shell-text-2);
+  }
+  .theme-card[data-mode="dark"] .card-head { border-color: rgba(255,255,255,.08); color: rgba(255,255,255,.55); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .card-head .meta { margin-left: auto; font-size: 11px; color: var(--shell-text-3); }
+
+  .chart-mount { padding: 14px; flex: 1; min-height: 0; }
+  .chart-host { height: auto; }
+  .theme-card.is-resized .chart-host { height: 100%; }
+
+  .hint { padding: 0 24px 28px; font-size: 12px; color: var(--shell-text-3); line-height: 1.7; max-width: 900px; }
+  .hint code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(0,0,0,.05); padding: 1px 5px; border-radius: 4px; }
+</style>
+<link rel="stylesheet" href="../tokens/tokens.css" />
+<link rel="stylesheet" href="../charts/styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand"><b>雷达图预览</b><span>三形态 × 三主题 · specs/radar.md</span></div>
+
+    <div class="field">
+      <label>维度数</label>
+      <div class="seg" id="seg-density">
+        <button data-value="few">3 轴</button>
+        <button data-value="mid" class="is-active">5 轴</button>
+        <button data-value="many">6 轴</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>轴标签数值</label>
+      <div class="seg" id="seg-axis-value">
+        <button data-value="off" class="is-active">关</button>
+        <button data-value="on">开</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>图例点击</label>
+      <div class="seg" id="seg-legend-select">
+        <button data-value="multi" class="is-active">多选</button>
+        <button data-value="single">单选</button>
+        <button data-value="focus">强调</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>端</label>
+      <div class="seg" id="seg-platform">
+        <button data-value="pc" class="is-active">PC</button>
+        <button data-value="mobile">移动</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>明暗</label>
+      <div class="seg" id="seg-mode">
+        <button data-value="light" class="is-active">浅色</button>
+        <button data-value="dark">深色</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>动效</label>
+      <div class="seg" id="seg-animation">
+        <button data-value="on" class="is-active">开</button>
+        <button data-value="off">关</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="hint">
+    每格右下角可拖拽改尺寸（<code>resize: both</code>），用来验 RADAR-09 的半径 clamp：
+    容器变大时半径封顶在 <code>--size-radar-radius</code>，变小时收缩到默认半径的 50% 后不再缩、宁可溢出。
+    hover 扇形出高亮与气泡（气泡列该维度各系列的值）；点多边形钉住该系列（气泡改列该系列各维度的值），再点取消。
+    <br />
+    示例数据与配置装配全部来自 <code>demos/examples.js</code>，与 <code>index.html</code>、
+    <code>playground/preview.html</code> 同一份——本页只负责「怎么摆」，加示例仍然只改 <code>demos/</code>。
+  </p>
+
+<script type="importmap">
+  { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+</script>
+<script type="module">
+  import { mountExample } from '../demos/registry.js';
+  import { examplesFor, THEMES, densityControlOf } from '../demos/examples.js';
+
+  /* 只挑雷达族的示例——**按 chart 字段筛，不写死 id**：将来 demos/ 里加第四条雷达示例
+     （比如评级形态 RADAR-15 落地时），本页自动多出一行，不用改这里。 */
+  const EXAMPLES = examplesFor('playground').filter((e) => e.chart === 'radar');
+
+  const state = { density: 'mid', axisValue: 'off', legendSelect: 'multi', platform: 'pc', mode: 'light', animation: 'on' };
+  const instances = new Map();
+
+  const grid = document.getElementById('grid');
+  grid.innerHTML = EXAMPLES.map((e) => `
+    <section>
+      <div class="row-head">
+        <b>${e.title}</b>
+        <span class="spec">${e.spec}</span>
+        <span class="desc">${e.description}</span>
+      </div>
+      <div class="row">
+        ${THEMES.map((t) => `
+          <div class="theme-card" data-theme="${t.id}" data-example="${e.id}">
+            <div class="card-head">
+              <span class="dot" style="background:${t.dot}"></span>
+              <span>${t.label}</span>
+              <span class="meta" data-meta></span>
+            </div>
+            <div class="chart-mount"><div class="chart-host"></div></div>
+          </div>`).join('')}
+      </div>
+    </section>`).join('');
+
+  /* ⚠️ 光有 `.is-resized .chart-host { height:100% }` 这条 CSS 不够——**得有人给卡片加上这个类**，
+     否则 .chart-host 恒为 height:auto，组件永远拿不到容器高度、拖了也不缩（本页最初就漏了这一步）。
+     判据同 preview.html：pointerdown 落在右下角 18px 见方的拖拽柄范围内才算「用户要改尺寸」。
+     本页九张卡片一次全建、无「换示例」动作，故不必像 preview.html 那样在切分类时清理残留尺寸。 */
+  for (const card of grid.querySelectorAll('.theme-card')) {
+    card.addEventListener('pointerdown', (event) => {
+      const rect = card.getBoundingClientRect();
+      if (rect.right - event.clientX <= 18 && rect.bottom - event.clientY <= 18) card.classList.add('is-resized');
+    });
+  }
+
+  function render() {
+    /* 每轮先销毁旧实例：组件的 destroy 会摘掉自己挂的类与 --dv-series-* 私有属性，
+       不销毁就重挂会让两套状态叠在同一个 host 上（同 preview.html 的做法）。 */
+    instances.forEach((inst) => inst?.destroy?.());
+    instances.clear();
+
+    for (const card of grid.querySelectorAll('.theme-card')) {
+      const example = EXAMPLES.find((e) => e.id === card.dataset.example);
+      card.dataset.mode = state.mode;
+      card.dataset.platform = state.platform;
+
+      const host = card.querySelector('.chart-host');
+      host.innerHTML = '';
+      /* 配置装配走 demos/ 的共享 buildConfig（铁律 3：面不自己拼配置）——
+         本页传的是**旋钮状态**，cfg 长什么样由 demos/examples.js 一处说了算。 */
+      const { instance, cfg } = mountExample(host, example, {
+        density: state.density,
+        platform: state.platform,
+        axisValue: state.axisValue === 'on',
+        legendSelect: state.legendSelect,
+        animation: state.animation === 'on',
+      });
+      instances.set(card, instance);
+
+      const control = densityControlOf(example);
+      const label = control.options.find((o) => o.id === state.density)?.label ?? state.density;
+      card.querySelector('[data-meta]').textContent =
+        `${label} · ${cfg.max != null ? `量程 0–${cfg.max}` : '自动量程'} · ${cfg.gridShape ?? 'circle'} / ${cfg.shape ?? 'straight'}`;
+    }
+  }
+
+  for (const seg of document.querySelectorAll('.seg')) {
+    seg.addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      const key = seg.id.replace(/^seg-/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      state[key] = button.dataset.value;
+      seg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === button));
+      render();
+    });
+  }
+
+  render();
+</script>
+</body>
+</html>

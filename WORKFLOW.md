@@ -35,25 +35,34 @@
 | **L0 · Design tokens** | 主题值 JSON、行为配置与系列色板；构建生成 CSS 变量 | `tokens/` |
 | **L1 · 共享构件** | 跨图表复用的渲染与计算单元：轴、网格、图例、tooltip、比例尺、格式化等 | `charts/core/` |
 | **L2 · 图表组件** | 把 L1 构件按固定方式拼好，只暴露数据 + 语义配置；图表专属计算留在组件内部 | `charts/charts/` |
-| **L3 · 规范与预览** | 条目化规范 + 活 demo；两个预览面共享同一份示例数据源 | `specs/` + `demos/` + `index.html` + `playground/` |
+| **L3 · 规范与预览** | 条目化规范 + 活 demo；各预览面共享同一份示例数据源 | `specs/` + `demos/` + `index.html` + `playground/` |
 
 **粒度判断标准（机械执行，计算逻辑与可见构件同样适用）：**
 - 两种以上图表都要遵守的规范 → 沉到 L1（例：刻度算法，柱状图和折线图共用同一份）
 - 只属于一种图表的逻辑 → 留在该 L2 组件内部
 - 不为"将来可能用到"提前抽象
 
-**L3 的两个预览面（同源不同展示）：**
+**L3 的预览面（同源不同展示）：**
 
 | 面 | 位置 | 职责 |
 |---|---|---|
-| **对外站点** | `index.html` | 画廊 + 详情页、单主题切换；GitHub Pages 发布的就是它 |
+| **对外站点** | `index.html` | 画廊 + 详情页、单主题切换；GitHub Pages 发布的就是它。详情页左栏常驻示例列表（或 ←/→ 换图），旋钮跨示例保持，**同一主题横着比几张图**看这里；同一张图比三主题看下一行 |
 | **开发验收** | `playground/preview.html` | 三主题横向并排、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
+| **图型对照面**（可选） | `playground/<图型>-preview.html` | 单个图型的多形态 × 三主题同屏铺开。当前有 `radar-preview.html`；**它 import 共享示例源**，只负责「怎么摆」。桑基的 `sankey-preview.html` 是**另一回事**——那个自带数据，见第七节 |
 
 **示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 主题/密度档位 + 配置装配），
-`demos/registry.js` 登记「图表类型 → L2 组件」。两面 import 同一份、各自决定怎么展示，
+`demos/registry.js` 登记「图表类型 → L2 组件」。各面 import 同一份、各自决定怎么展示，
 故加示例只加一处、不会漂移；示例用 `surfaces` 字段声明进哪个面（缺省两面都进），
 用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（饼 / 环 / 横向条形…）的步骤写在
-`demos/examples.js` 文件头——两个面本身都不用改。
+`demos/examples.js` 文件头——预览面本身都不用改。
+
+⚠️ **数据量有两条并存的通道，都由 `buildConfig` 收口**：三档预设 id（`densityValues` +
+`densityControlOf`，playground 两个面用，要的是可复现的固定场景）与连续档数字
+（`densityRange` + `densitySliderOf`，对外站点的滑杆用）。`buildConfig` 的 `density`
+同时认 id 和数字，**越界夹取也在那里做**——不要在面里自己夹。
+给示例定 `densityRange` 时有两条硬约束：① 下限是**组件的技术下限**不是建议（雷达低于 3 维
+`RadarChart` 直接抛错）；② 上限必须盖过本示例最大的预设档，否则滑杆够不到三档面看得到的
+形态，成了静默分叉。两条都有守卫（`tests/examples.test.mjs`）。
 
 **依赖链全景：**
 
@@ -110,7 +119,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
   `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `AXISTITLE-` 轴标题 ·
   `DATAZOOM-` 缩放轴 · `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
   `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印 ·
-  图型专属：`BAR-` 柱系 · `LINE-` 折线 · `PIE-` 饼环
+  图型专属：`BAR-` 柱系 · `LINE-` 折线 · `PIE-` 饼环 · `RADAR-` 雷达
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
 ---
@@ -173,8 +182,10 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 4. 写 demo（只传数据），嵌入规范页
 5. 亮/暗两种外观下目检，确认 token 链路贯通
 
-**L1 成本的两个实测点**：`PieChart` 动了 L1 四个文件六处（明细见第八节），`SankeyChart` 则
-**`charts/core/` 一个文件未动**——前者付掉了「为轴图设的隐含假设」那笔账，后者因此免单。
+**L1 成本的三个实测点**：`PieChart` 动了 L1 四个文件六处（明细见第八节），`SankeyChart` 与
+`RadarChart` 则**`charts/core/` 一个文件未动**——饼环付掉了「为轴图设的隐含假设」那笔账，
+后两者因此免单。雷达是最新一例：它是第二个无坐标系图型，饼环当年收回 L1 的那几处
+（`frame` 下限可关、`tooltip.place()` 不收容器尺寸、`label.dropCollisions` 泛化）直接受用。
 
 **桑基的 L3 例外**（截至 2026-08-13 唯一一例，接新图型前先读）：上面第 4 步的常态是「只改 `demos/`」，
 但桑基另加了 `playground/sankey-preview.html` 独立面，并在 `index.html` / `playground/preview.html` 里
@@ -185,6 +196,11 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 是全库唯一脱离单一示例源的展示面，改示例时需要两处同步；SANKEY-25 的 P = B + D 业务公式
 统一复用 `demos/sankey-financial.js`，避免两份数据生成器产生不同会计关系。新图型若无类似的固定外框硬需求，
 不要照抄这条路径。
+
+**要另开对照面时照雷达、不要照桑基**：`playground/radar-preview.html` 把雷达三形态 × 三主题
+九张图同屏铺开（改一版 token 或几何能一眼看到全部影响），但它**import `demos/examples.js`**、
+只负责「怎么摆」，故加示例仍然只改 `demos/`，不存在桑基那种两处同步的漂移代价。
+判据很简单：**独立面可以另起，但示例源不许另起**。
 
 ### 从现有产品反抽参数（需要时）
 
@@ -197,15 +213,24 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 ## 八、当前状态与后续里程碑
 
 截至 2026-08-21，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
-**四个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+**五个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
-与 `TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）、
-共享同一份示例数据源（`demos/`）的两个预览面——对外站点 `index.html` 与开发验收面 `playground/`（桑基另有独立面，见第七节例外），
+、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
+与 `RadarChart`（多指标对比图，角度均分 · 值→半径 · 固定量程可选 · 扇形热区与单系列钉住，见 `specs/radar.md` RADAR-01..17）、
+共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
 外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）。
 **这里有意不写条数**——条数曾在 5 份文档 8 处各写一份，漂过两次（八→九那轮漏了 README 与本文件）。
 完整且唯一的清单在 `hooks/check.sh`，完整测试流程见 `TESTING.md`。
+
+**第三个实测点（`RadarChart`，2026-08-31）：L1 一个文件未改**，与 `SankeyChart` 同侧、和 `PieChart` 相反。
+原因很具体——饼环当年已经替**所有无坐标系图**把账付掉了（`frame` 的两个下限可显式关闭、
+`tooltip.place()` 删掉容器尺寸参数、`label.dropCollisions` 泛化成 `{start,size}`），雷达接入时直接受益。
+两处本来最像要改 L1 的地方也都免了：`scale.js` 的 `linearY(split, R, 0)` 拿来就是「值 → 半径」
+（函数名带 Y 但数学是通用的），`split.js` 的 `niceSplit(0, max, {lineCount})` 拿来就是网格环分段。
+**`behavior.json` 同样一个键未加**——网格形状与闭合形状在 Figma 里 AInvest 自己就同时提供两种，
+说明它们是图表配置不是品牌分叉（判据同 LEGEND-10，也是 `legend-select` 放错通道那次的教训）。
 
 **接一个新图型要动多少 L1——`PieChart` 给出了实测答案**：除自身的 L2 目录与规范页外，L1 动了**四个文件、六处**，
 且全部是「把既有构件参数化 / 把说不清的约定收回 L1」而非新造抽象：

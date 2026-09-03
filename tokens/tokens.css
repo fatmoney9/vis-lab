@@ -215,6 +215,21 @@
   --font-weight-treemap-name: var(--font-weight-regular);
   --size-treemap-content-image-max: 64px;
   --size-treemap-content-image-min: 12px;
+  --size-radar-container: 200px;
+  --size-radar-radius: 80px;
+  --size-radar-label-band: 56px;
+  --size-radar-label-gap: var(--spacing-4);
+  --size-radar-grid-line: var(--size-grid-line);
+  --size-radar-area-stroke: var(--size-grid-line);
+  --size-radar-point: var(--size-line-point);
+  --color-radar-grid: var(--color-visualization-divider);
+  --color-radar-grid-fill: var(--color-background-weak);
+  --opacity-radar-area: 0.1;
+  --opacity-radar-area-dim: 0.24;
+  --font-size-radar-label-name: var(--font-size-extra-small);
+  --line-height-radar-label-name: var(--line-height-small);
+  --font-size-radar-label-value: var(--font-size-extra-small);
+  --line-height-radar-label-value: var(--line-height-small);
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -458,6 +473,21 @@
   --font-weight-treemap-name: var(--font-weight-regular);
   --size-treemap-content-image-max: 64px;
   --size-treemap-content-image-min: 12px;
+  --size-radar-container: 200px;
+  --size-radar-radius: 80px;
+  --size-radar-label-band: 56px;
+  --size-radar-label-gap: var(--spacing-4);
+  --size-radar-grid-line: var(--size-grid-line);
+  --size-radar-area-stroke: var(--size-grid-line);
+  --size-radar-point: var(--size-line-point);
+  --color-radar-grid: var(--color-visualization-divider);
+  --color-radar-grid-fill: var(--color-background-weak);
+  --opacity-radar-area: 0.1;
+  --opacity-radar-area-dim: 0.24;
+  --font-size-radar-label-name: var(--font-size-extra-small);
+  --line-height-radar-label-name: var(--line-height-small);
+  --font-size-radar-label-value: var(--font-size-extra-small);
+  --line-height-radar-label-value: var(--line-height-small);
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -704,6 +734,21 @@
   --font-weight-treemap-name: var(--font-weight-bold);
   --size-treemap-content-image-max: 64px;
   --size-treemap-content-image-min: 12px;
+  --size-radar-container: 220px;
+  --size-radar-radius: 90px;
+  --size-radar-label-band: 56px;
+  --size-radar-label-gap: var(--spacing-4);
+  --size-radar-grid-line: var(--size-grid-line);
+  --size-radar-area-stroke: var(--size-grid-line);
+  --size-radar-point: var(--size-line-point);
+  --color-radar-grid: var(--color-visualization-divider);
+  --color-radar-grid-fill: var(--color-background-weak);
+  --opacity-radar-area: 0.1;
+  --opacity-radar-area-dim: 0.24;
+  --font-size-radar-label-name: var(--font-size-extra-small);
+  --line-height-radar-label-name: var(--line-height-small);
+  --font-size-radar-label-value: var(--font-size-extra-small);
+  --line-height-radar-label-value: var(--line-height-small);
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

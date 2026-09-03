@@ -281,5 +281,22 @@
   "font-size-treemap-overall-label-value-min": "{font-size-super-small}",
   "font-weight-treemap-name": "{font-weight-bold}",
   "size-treemap-content-image-max": "64px",
-  "size-treemap-content-image-min": "12px"
+  "size-treemap-content-image-min": "12px",
+
+  "$section-25": "雷达图 Radar",
+  "size-radar-container": "220px",
+  "size-radar-radius": "90px",
+  "size-radar-label-band": "56px",
+  "size-radar-label-gap": "{spacing-4}",
+  "size-radar-grid-line": "{size-grid-line}",
+  "size-radar-area-stroke": "{size-grid-line}",
+  "size-radar-point": "{size-line-point}",
+  "color-radar-grid": "{color-visualization-divider}",
+  "color-radar-grid-fill": "{color-background-weak}",
+  "opacity-radar-area": 0.1,
+  "opacity-radar-area-dim": 0.24,
+  "font-size-radar-label-name": "{font-size-extra-small}",
+  "line-height-radar-label-name": "{line-height-small}",
+  "font-size-radar-label-value": "{font-size-extra-small}",
+  "line-height-radar-label-value": "{line-height-small}"
 }
