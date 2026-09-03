@@ -486,21 +486,33 @@
     .switch input { position: absolute; width: 0; height: 0; opacity: 0; }
     /* 数据量滑杆：走过的一段填主色、剩下的留浅灰，填充比例由 --fill 逐帧更新。
        没有轨道底色以外的装饰——同滚动条那条口径，控件不该在版面上留常驻色块。 */
+    /* ⚠️ 轨道画在 ::track 上、input 自身透明：这样元素高度可以放大到 26px 当**命中区**，
+       而轨道仍是细的 8px。把渐变直接铺在 input 上的话，元素多高轨道就多粗，
+       想要大手柄就只能连轨道一起变胖，或者留一条 8px 高的细缝去点——两头不讨好。 */
     .slider {
       -webkit-appearance: none; appearance: none;
-      width: 100%; height: 4px; margin: 14px 0 2px;
-      border-radius: var(--r-pill); outline: 0; cursor: pointer;
+      width: 100%; height: 26px; margin: 10px 0 0;
+      background: transparent; outline: 0; cursor: pointer;
+    }
+    .slider::-webkit-slider-runnable-track {
+      height: 8px; border-radius: var(--r-pill);
+      background: linear-gradient(to right,
+        var(--shell-brand) 0 var(--fill, 0%), var(--shell-weak) var(--fill, 0%) 100%);
+    }
+    .slider::-moz-range-track {
+      height: 8px; border-radius: var(--r-pill);
       background: linear-gradient(to right,
         var(--shell-brand) 0 var(--fill, 0%), var(--shell-weak) var(--fill, 0%) 100%);
     }
     .slider::-webkit-slider-thumb {
       -webkit-appearance: none; appearance: none;
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+      width: 24px; height: 24px; border-radius: 50%;
+      margin-top: -8px;   /* (轨道 8 − 手柄 24) / 2，把手柄压回轨道中线 */
+      background: #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .32);
     }
     .slider::-moz-range-thumb {
-      width: 18px; height: 18px; border: 0; border-radius: 50%;
-      background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .3);
+      width: 24px; height: 24px; border: 0; border-radius: 50%;
+      background: #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .32);
     }
     .slider__value {
       flex: none; padding: 3px 10px; border-radius: var(--r-pill);
