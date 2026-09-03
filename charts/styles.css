@@ -710,3 +710,117 @@
   stroke-width: var(--size-grid-line);
   vector-effect: non-scaling-stroke;
 }
+
+/* ── 雷达图 Radar（specs/radar.md）────────────────────────────────────────────
+   本族无坐标轴、无直角网格：网格是同心环 / 正多边形，指示是扇形高亮。
+   颜色、字号、粗细一律走 token（拼接铁律 1，源码禁色值与字体字面量）。 */
+
+/* [RADAR-08] 图例在图表上方（默认上下布局、居上左对齐）；绘图区吸满剩余高度。
+   [RADAR-09] `--dv-radar-min-h` 由 L2 按「触底半径的画布 + 图例 + 间距」算出——低于它，
+   顶部轴标签会叠进图例。缺省 0 = 组件还没画完时不施加约束，免得首帧撑出一个假高度。 */
+.dv-chart--radar {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--dv-radar-min-h, 0);
+}
+
+.dv-chart--radar > .dv-chart__legend { flex: none; }
+
+.dv-chart--radar > .dv-chart__plot {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* [RADAR-03] 网格环线：只描边不填充。填充交给下面的环带，两者分开是有原因的——
+   给环线本身上 fill 会填成**整圆**，内圈盖住外圈、颜色一路铺到圆心。 */
+.dv-radar-ring {
+  fill: none;
+  stroke: var(--color-radar-grid);
+  stroke-width: var(--size-radar-grid-line);
+  vector-effect: non-scaling-stroke;
+}
+
+/* [RADAR-03] 间隔填充的**环带**：外轮廓 + 内轮廓两条子路径 + evenodd 挖空 = 真正的圆环。
+   一环一色，最外圈不填（保持页面底色）。只做视觉、不参与命中。 */
+.dv-radar-band {
+  fill: var(--color-radar-grid-fill);
+  stroke: none;
+  pointer-events: none;
+}
+
+/* [RADAR-02] 径向轴：自圆心到最外圈，与网格线同一套视觉权重 */
+.dv-radar-axis {
+  stroke: var(--color-radar-grid);
+  stroke-width: var(--size-radar-grid-line);
+  vector-effect: non-scaling-stroke;
+}
+
+/* [RADAR-06] 多边形：描边恒本色，填充默认 10%；钉住态换成本色实填（基线 8.2 / 8.3）。
+   --dv-radar-color 由 L2 逐系列写在元素上，指向该系列的固定色槽。
+   ⚠️ **面与线分属两层**（面全在下、线全在上，见 radar/index.js），故两边各自取色——
+   面不再是系列 <g> 的后代，继承不到那份 currentColor。 */
+.dv-radar-series,
+.dv-radar-area { color: var(--dv-radar-color); }
+
+.dv-radar-area {
+  fill: currentColor;
+  fill-opacity: var(--opacity-radar-area);
+  stroke: none;
+  pointer-events: none;
+}
+
+.dv-radar-area--pinned { fill-opacity: 1; }
+
+.dv-radar-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-radar-area-stroke);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* [RADAR-05] 数据圆点：曲线档由 L2 直接不渲染（基线 8.4「曲线展示时默认隐藏圆点」），
+   故这里只管直线档的样式，不用 display 去藏——藏起来的节点仍在 DOM 里徒增命中面。 */
+.dv-radar-point {
+  r: calc(var(--size-radar-point) / 2);
+  fill: currentColor;
+  pointer-events: none;
+}
+
+/* [RADAR-11] 整组可点：钉住该系列 */
+.dv-radar-series { cursor: pointer; }
+
+/* [RADAR-07] 轴标签两段。名称段是**非数字文本**，故不复用 .dv-data-label 那套
+   （那套的隐含前提是「内容是数字」：medium 字重 + 数字字体 + tabular-nums，见 PIE-15 的坑）。 */
+.dv-radar-label-name,
+.dv-radar-label-value {
+  pointer-events: none;
+}
+
+.dv-radar-label-name {
+  fill: var(--color-text-primary);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-radar-label-name);
+}
+
+.dv-radar-label-value {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-radar-label-value);
+  font-variant-numeric: tabular-nums;
+}
+
+/* [RADAR-10] 扇形热区：默认透明、只做命中；命中时叠共享高亮块色（不压暗其余扇区） */
+.dv-radar-sector {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.dv-radar-sector.is-active { fill: var(--color-visualization-highlight-block); }
+
+.dv-radar-sector:focus { outline: none; }
+
+.dv-radar-sector:focus-visible { fill: var(--color-visualization-highlight-block); }

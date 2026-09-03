@@ -34,7 +34,10 @@ export function renderDataZoom(g, frame, opts) {
     align = 'center', handle, sliderH, showShadow = true, showLabel = false, onChange,
   } = opts;
   const N = categories.length;
-  if (N < 2 || frame.navH <= 0) return; /* 单类目无可缩放；无缩放带不画 */
+  /* [DATAZOOM-08] **开了就画，哪怕只有一个类目**：此时窗口恒等于全域、拖动是无操作，
+     但控件必须在——开关说「开」而轴不见了，读起来是功能坏了，不是「没什么可缩放」。
+     下界只挡 N === 0：那时 step = tW/0 = Infinity、clampI 回落到 -1，几何直接算成 NaN。 */
+  if (N < 1 || frame.navH <= 0) return;
 
   const host = frame.host;
   const { left, right } = frame.grid;

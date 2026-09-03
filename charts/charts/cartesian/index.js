@@ -85,7 +85,8 @@ export function CartesianChart(host, cfg) {
   const wm = b['watermark'];           /* [WATERMARK-01..05] 水印品牌 logo（三主题恒有，见 behavior.json） */
   const dzHandleH = dzHandle.shape === 'circle' ? dzHandle.w : dzHandle.h;
   const N = categories.length;
-  const zoomOn = !!zoom && N >= 2;
+  /* [DATAZOOM-08] 单类目照样开：navH 要照常预留，否则 L1 想画也没有落脚的带 */
+  const zoomOn = !!zoom && N >= 1;
   let win = { i0: 0, i1: Math.max(0, N - 1) };
   if (zoomOn && zoom !== true) {
     const s = Math.max(0, Math.min(1, zoom.start ?? 0));

@@ -1,23 +1,35 @@
 # Playground · 开发验收面
 
 三主题横向并排的开发预览，用于规范验收和视觉目检。与根目录 `index.html`（对外站点）
-是**同源不同展示**的两个面：示例定义共用 `demos/examples.js` 一份，本目录只决定「怎么展示」。
+是**同源不同展示**的两个主面：示例定义共用 `demos/examples.js` 一份，本目录只决定「怎么展示」。
 
 - 入口：<http://localhost:8123/playground/preview.html>（需 HTTP 服务，见根 [README](../README.md)）
 - 加示例 / 接新图表类型改 `demos/`，不改本目录——步骤见 `demos/examples.js` 文件头
 - 分层与目录边界见 [WORKFLOW.md](../WORKFLOW.md)，本页不复述
 
-本目录还有第二个入口 <http://localhost:8123/playground/sankey-preview.html>（`SankeyChart · 独立预览`）：
+本目录还有两个专项入口，**性质不同、别混为一谈**：
+
+### <http://localhost:8123/playground/radar-preview.html>（`RadarChart · 对照面`）
+
+雷达三形态（圆形+直线 / 圆形+曲线 / 多边形）× 三主题九张图**同屏铺开**，改一版 token 或几何
+能一眼看到全部影响；`preview.html` 里这三条是并列分类，一次只能看一个。
+✅ 它**import `demos/examples.js`**、只负责「怎么摆」，且按 `chart === 'radar'` 筛示例而非写死 id，
+故加示例仍然只改 `demos/`，**没有两处同步的代价**。要为某个图型另开对照面，照这个、不要照下面那个。
+
+### <http://localhost:8123/playground/sankey-preview.html>（`SankeyChart · 独立预览`）
+
 SANKEY-23 要求 812px 横版财报验收框，并按播放序列的最大所需高度建立统一视口；三主题并排卡片网格表达不了，故单开一面。
 ⚠️ 它**自带数据、不 import `demos/examples.js`**，是全库唯一脱离单一示例源的展示面——改桑基示例要两处同步。
-这是上面第二条的**唯一例外**，理由与代价见 [WORKFLOW.md](../WORKFLOW.md) 第七节。
+这是「加示例只改 `demos/`」的**唯一例外**（雷达对照面不算——它 import 共享示例源），
+理由与代价见 [WORKFLOW.md](../WORKFLOW.md) 第七节。
 
 ## 与对外站点的差异
 
 | | 本页 | `index.html` |
 |---|---|---|
-| 主题 | 三主题横向并排对比 | 单主题下拉切换 |
-| 旋钮 | 全套（含 `dataLabel` 等验收用开关） | 同一套，按 `CHART_CAPABILITIES` 显隐 |
+| 主题 | 三主题横向并排对比 | 单主题一键切换（左栏常驻示例列表，换图不重置旋钮） |
+| 旋钮 | 全套（含 `dataLabel` 等验收用开关） | 同一套，按 `CHART_CAPABILITIES` 显隐；**数据量除外**——见下一行 |
+| 数据量 | **三档预设**（少量/中量/大量，`densityValues`）：要的是可复现的固定场景，便于截图对比与回归 | **连续滑杆**（`densityRange`，逐一取值）：要的是随手拉到任意一档看形变。两条通道都由 `buildConfig` 收口、共用同一份示例定义，见 [WORKFLOW.md](../WORKFLOW.md) 第四节 |
 | 尺寸 | 卡片可拖拽 resize（`320×160` 下限）；**换示例时重置**拖出来的尺寸，动旋钮则保留 | 同样可拖拽、**同一下限**（`.stage__surface`）；详情页每次进入本就是新建，天然重置 |
 | 示例 | `surfaces` 含 `playground` 的全部 | `surfaces` 含 `index` 的部分 |
 
@@ -34,6 +46,12 @@ inside 为顶/底轴线间距，outside 为顶/底 Y 标签外缘间距，**不�
 故切换对齐档或改数据量时**环的大小和位置一动不动**，变的只是文字在固定带内的排布——这是 PIE-13 的验收点。
 **半径与环宽按主题分化**：THS / iFinD-PC `70 / 28`、Ainvest `80 / 32`（比值都是 0.4），
 故三主题横排时 Ainvest 的环明显大一圈，属预期。
+**雷达**读 `size-radar-container`（THS / iFinD-PC 200px、Ainvest 220px），口径按 `RADAR-09`——
+与饼环同一套「半径先按容器定、标签带吃剩下的」，但**横竖分开**：纵向带只装一行轴标签（约 20px，
+开了 `axisValue` 则约 36px），横向带才吃剩余宽度并封顶 `size-radar-label-band`（56px），
+故画布是 `2(R+横向带) × 2(R+纵向带)`、**不是正方形**。半径同样按主题分化（THS / iFinD-PC `80`、
+Ainvest `90`），Ainvest 大一圈亦属预期；容器另有**最小高度**（由组件按「触底画布 + 图例 + 间距」
+算出，`axisValue` 关 160px / 开 192px），低于它顶部轴标签会叠进图例，故到达后改为溢出滚动。
 
 默认尺寸建立后可从卡片右下角双向拖拽，图表随容器宽高重排——用于验收 `GRID-03` 的容器自适应、
 `AXIS-06` 的 X 标签碰撞与 `LABEL-06` 的数据标签碰撞。

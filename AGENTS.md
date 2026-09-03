@@ -66,11 +66,14 @@
 
 - `tokens/` 是主题值、行为和系列色板的权威源；不要手改生成的 `tokens/tokens.css`。
 - `charts/core/` 是 L1 共享构件，`charts/charts/` 是 L2 图表编排，`specs/` 是规则 ID 权威定义。
-- `demos/` 是两个预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
+- `demos/` 是各预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
   `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
   **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
+- **另有 `playground/radar-preview.html`**（雷达专用对照面，三形态 × 三主题同屏）。它与桑基那条**性质不同**：
+  **它 import `demos/examples.js`、只负责「怎么摆」**，故没有「改示例要改两处」的漂移代价，加示例仍然只改 `demos/`。
+  想为某个图型另开对照面时照它、不要照桑基。
   这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
 - `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
@@ -78,7 +81,7 @@
 
 ## 当前状态与下一步
 
-当前有**四个 L2 图表组件**：
+当前有**五个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
@@ -103,5 +106,12 @@
   - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
   - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
 - **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
+
+- **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..17）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用，但通用构件全部原样复用（**L1 一个文件未改**，同 `SankeyChart` 当初）。要点：
+  - **极坐标 ≠ 雷达**：饼环也画在极坐标里，但两者做的是**相反**的事——饼环「值 → 角度、半径恒定」，雷达「角度均分（`360/n`）、值 → 半径」。真正共享的只有 `(角度,半径)→(x,y)` 那个三角公式，故**没有 `core/polar.js`**；极坐标几何在 `radar/geometry.js` 标 `[L2-LOCAL]`。**将来两个下沉点的判断条件写在 `specs/radar.md` 的「分层边界」与 `geometry.js` 文件头**——做仪表盘的人先读那两处，它会命中「下沉点 ②」（绕圆标签锚点 `labelAnchor`），正确做法是提到 L1 两边共用，**不是照抄一份**
+  - **值域上界两条路**（RADAR-04）：给了 `max` 就定死、`[0,max]` 均分；不给才走 `niceSplit`。留这个口子是因为 `niceSplit(0, 5, {lineCount:4})` 会得出 5.4——0–5 评分被画成 0–5.4，且两张图数据不同时量程不同、形状不可比
+  - **n 根轴共用一把标尺**（RADAR-17）：不做逐轴归一化。这是**明确的非目标不是待办**——逐轴各自量程会让图形面积失去意义，且容易靠调量程把形状「调好看」
+  - **hover 热区是扇形不是数据点**（RADAR-10，基线 9.1 的 0728 更新）；气泡恒 `follow`（TOOLTIP-07 无坐标系图特例，L2 定死、不进 behavior.json）。点系列进钉住态（RADAR-11）：一个问「这个维度各系列多少」，一个问「这个系列各维度多少」
+  - 网格形状（圆 / 正多边形）与闭合形状（直线 / 曲线）是**组件 cfg 不是主题分叉**——Figma 里 AInvest 自己就同时提供两种，故 `behavior.json` **一个键未加**；三种形态分成三条独立示例（同 treemap 的入口 / 通用 / 全局）
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

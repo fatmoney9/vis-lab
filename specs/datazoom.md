@@ -15,6 +15,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | DATAZOOM-01 | **宽 = 绘制区宽、与网格 / X 轴对齐**：取 `frame.grid` 左右沿——inside 布局网格铺满画布故 = 容器宽；**outside 不含 Y 标签列宽与其 8px 间距**（`createFrame` 已把它们扣进 `pad`，`grid.width` 天然不含）。**高 = `size-slider-height`**（THS 24 / iFinD 16 / Ainvest 4），非主题分化。缩放带位于 **X 标签带下方**（`frame.navTop`），带高 `navH = 6 + max(轨道高, 手柄高) + 6` 由 L2 预留，上下各留 6px。**绘图 SVG `overflow:visible`**：贴边手柄的居中描边外半 + 投影会溢出无标签侧的视口边，放行渲染进卡片内边距、不被切平 | `core/frame.js` → `createFrame({navH})`（返回 `navTop/navBottom`）；L2 算 `navH`；`.dv-chart__plot > svg { overflow: visible }` | ✅ |
+| DATAZOOM-08 | **开关说「开」，轴就必须在——类目只剩一个也画。**此时窗口恒等于全域（`i0 = i1 = 0`，选区填满整条轨道），拖手柄 / 拖选区 / 点轨道都吸附回同一个窗口、不触发回调，即**控件在、拖动是无操作**。<br>⚠️ 2026-09-03 修正：此前 L1 与 L2 各有一道 `N >= 2` 的守卫，单类目时缩放带**连同预留的 `navH` 一起消失**。理由写作「单类目无可缩放」——但那是**开发者视角**：使用者看到的是自己刚打开的开关没有产生任何东西，读起来是功能坏了。控件的存在与否应当只由开关决定，不由数据多少决定。<br>**唯一的下界是 `N === 0`**：那时 `step = 轨道宽 / 0 = Infinity`、`clampI` 回落到 `-1`，几何整条算成 NaN，是真的画不出而不是不该画 | `core/datazoom.js`（`N < 1` 早退）；`charts/charts/cartesian/index.js`（`zoomOn` 判定与 `navH` 预留） | ✅ |
 
 ## 滑块对齐（DATAZOOM-02）与手柄形态（DATAZOOM-03）
 

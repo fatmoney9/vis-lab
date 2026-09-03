@@ -1,10 +1,11 @@
 /*
  * L3 · 示例数据源（唯一权威）。
  *
- * 两个预览面共享本模块，各自只负责「怎么展示」：
- *   index.html               对外站点：画廊 + 详情页、单主题切换
- *   playground/preview.html  开发验收：三主题横向并排、旋钮更全
- * 示例定义与数据生成函数只有这一份——加示例改一处，两面同时生效，不会漂移。
+ * 各预览面共享本模块，各自只负责「怎么展示」：
+ *   index.html                     对外站点：画廊 + 详情页、单主题切换
+ *   playground/preview.html        开发验收：三主题横向并排、旋钮更全
+ *   playground/radar-preview.html  雷达专用对照面：三形态 × 三主题九张图同屏
+ * 示例定义与数据生成函数只有这一份——加示例改一处，各面同时生效，不会漂移。
  *
  * 本模块**只装数据**：不 import d3、不 import 图表组件、不碰 DOM
  * （组件在 registry.js 里映射，见 WORKFLOW 铁律6：L3 永不直接 import d3）。
@@ -20,7 +21,7 @@
  *   1. 在 registry.js 的 CHARTS 里登记「类型键 → L2 组件」（一行）
  *   2. 在 CHART_CAPABILITIES 里声明该类型支持哪些语义旋钮（决定两面各自显示哪几个开关）
  *   3. 往 EXAMPLES 里加示例，chart 写成新类型键
- * 两个预览面都不用改——它们按 chart 字段查表挂载、按能力声明画旋钮。
+ * 预览面都不用改——它们按 chart 字段查表挂载、按能力声明画旋钮。
  *
  * ⚠️ 唯一破例的是桑基：SANKEY-23 要求 812px 横版财报外框与序列统一高度，三主题卡片网格表达不了，
  * 故另有 playground/sankey-preview.html 独立面，**自带节点与季度输入、不 import 本模块**
@@ -73,6 +74,54 @@ export const lineWave = (n) => {
 /* 副轴增速（%）：小数量级、与柱不同量纲 */
 export const growth = (n) => Array.from({ length: n }, (_, i) => Math.round(12 + 9 * Math.sin(i * 0.5)));
 
+/* ── 雷达图（specs/radar.md）────────────────────────────────────
+   维度名取自基线文档 7.2 的财务指标示例；英文一套对齐 AInvest Figma 实例。
+   **密度旋钮在本族 = 维度数**，三档 3 / 5 / 6 正好压住基线 1.2 的两端建议
+   （「并列维度应大于 2」「建议小于 6」）。3 轴档是轴标签八向定位最容易崩的一档。 */
+const RADAR_DIM_CN = ['盈利能力', '资产质量', '偿债能力', '现金流', '运营能力', '成长性'];
+const RADAR_DIM_EN = ['Performance', 'Safety', 'Momentum', 'Funds flow', 'Basics', 'Sentiment'];
+
+export const radarDims = (n, lang = 'cn') => (lang === 'en' ? RADAR_DIM_EN : RADAR_DIM_CN).slice(0, n);
+
+/* [RADAR-04] 固定量程：评分类雷达的常态。不固定的话 niceSplit 会把 0–5 抬成 0–5.4，
+   且两张图数据不同时量程不同、形状不可比——而横向对比正是雷达图存在的理由。 */
+const RADAR_FIXED_MAX = 5;
+
+/* [RADAR-03] 网格环数。配 0–5 量程恰好每环 1 分，刻度读数与环一一对应。 */
+const RADAR_SEGMENTS = 5;
+
+/* 各系列在 6 个维度上的得分（固定表、无随机数与当前时间，保证截图可复现）。
+   [RADAR-17] 全部维度已归到同一把 0–5 标尺，故面积可读、可横向比。 */
+const RADAR_SCORES = {
+  cn: [
+    { name: '本期得分', data: [3.5, 4.8, 2.2, 2.0, 1.2, 2.6] },
+    { name: '去年同期', data: [2.8, 3.9, 2.9, 3.1, 2.4, 1.8] },
+  ],
+  en: [
+    { name: 'SPY', data: [1.9, 2.9, 3.0, 3.4, 1.6, 2.5] },
+    { name: 'QQQ', data: [2.4, 2.6, 3.6, 2.7, 2.1, 3.2] },
+    { name: 'DIA', data: [2.2, 2.8, 2.4, 3.9, 1.9, 2.0] },
+  ],
+};
+
+export const radarSeries = (n, lang = 'cn') =>
+  RADAR_SCORES[lang].map((s) => ({ name: s.name, data: s.data.slice(0, n) }));
+
+/* 三条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
+const RADAR_DENSITY = {
+  densityValues: { few: 3, mid: 5, many: 6 },
+  /* 连续档的上下限是**技术下限**不是建议：低于 3 维 RadarChart 抛错（RADAR-01
+     「少于此构不成面积」），高于 6 维 radarDims / radarSeries 也只有 6 组数据，
+     再拉只会静默截断、看着像滑杆坏了。 */
+  densityRange: { min: 3, max: 6 },
+  densityUnit: '个维度',
+  densityControl: {
+    hint: '基线建议并列维度大于 2、小于 6',
+    default: 'mid',
+    labels: { few: '3 轴', mid: '5 轴', many: '6 轴' },
+  },
+};
+
 /* 饼 / 环扇区名：8 个业务名循环，超出加序号后缀（多扇区时压图例换行与色板循环） */
 const SLICE_NAMES = ['主营业务', '投资收益', '其他业务', '政府补助', '资产处置', '公允价值变动', '汇兑损益', '营业外收入'];
 
@@ -94,7 +143,7 @@ export const sliceItems = (n) => {
 /* ── 边界与极端情况的数据（playground 专用）────────────────────
    这些不是「好看的示例」，是**把规则推到边界上**的夹具：长名称压截断、极端占比压窄扇区、
    单项压单系列取色、全空压不抛错。放 demos 而不是各写各的一次性页面，理由同 WORKFLOW §三——
-   两个预览面共享同一份数据源，验收用例也就只有一份。 */
+   各预览面共享同一份数据源，验收用例也就只有一份。 */
 
 /* 真实业务里会出现的超长财务科目名（不是「aaaa…」这种假串——假串量出来的宽度不真实） */
 const LONG_NAMES = [
@@ -449,7 +498,7 @@ export const DENSITY_LEVELS = [
   { id: 'many', label: '大量' },
 ];
 
-export const densityOptionsOf = (example) => ({ ...DENSITY, ...(example.densityValues ?? {}) });
+export const densityOptionsOf = (example) => ({ ...DENSITY, ...(example?.densityValues ?? {}) });
 
 export const defaultDensityOf = (example) => example?.densityControl?.default ?? 'few';
 
@@ -464,6 +513,41 @@ export const densityControlOf = (example) => {
       id,
       label: control.labels?.[id] ?? `${label} · ${values[id]}项`,
     })),
+  };
+};
+
+/* ── 连续档：数据量作一根可拖的滑杆 ─────────────────────────────
+   与三档预设**并存**、读同一份示例定义，不是两套数据：playground 两个面要的是
+   「三个可复现的固定场景」（截图对比、回归），主站要的是「随手拉到任意一档看形变」。
+   上下限默认 1–50，示例可各自收窄——**收窄是硬约束不是审美**：
+   雷达低于 3 维 RadarChart 直接抛错（RADAR-01），高于 6 维示例也只有 6 个维度名。 */
+export const DENSITY_RANGE = { min: 1, max: 50 };
+export const densityRangeOf = (example) => ({ ...DENSITY_RANGE, ...(example?.densityRange ?? {}) });
+export const densityUnitOf = (example) => example?.densityUnit ?? '类目';
+
+export const clampDensity = (example, n) => {
+  const { min, max } = densityRangeOf(example);
+  const value = Math.round(Number(n));
+  return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : min;
+};
+
+/* 滑杆初值 = 该示例预设默认档的数值：同一个示例在三档面与滑杆面首屏一致，切面不跳 */
+export const defaultDensityCountOf = (example) =>
+  clampDensity(example, densityOptionsOf(example)[defaultDensityOf(example)]);
+
+/* 连续档控件描述。与 densityControlOf 并列而不是取代它——后者仍是三档面的数据源，
+   两者共用示例自带的 label / hint（那些 hint 多是量程建议，放在滑杆上照样成立）。 */
+export const densitySliderOf = (example) => {
+  const { min, max } = densityRangeOf(example);
+  const control = example?.densityControl ?? {};
+  return {
+    label: control.label ?? '项数',
+    /* 缺省文案不能沿用三档那句「切换少量、中量与大量数据场景」：连续档上没有档位可言 */
+    hint: control.hint ?? '拖动调整数据量',
+    unit: densityUnitOf(example),
+    min,
+    max,
+    value: defaultDensityCountOf(example),
   };
 };
 
@@ -489,6 +573,12 @@ export const CHART_CAPABILITIES = {
      三档语义，前提是图例可点。桑基的图例是静态色卡（renderLegend 不接 onToggle/onHover，
      且标了 role="list"），没有点击可言，故本族不声明——不是漏了。 */
   pie: { animation: true, legend: true, labelLayout: true, labelAlign: true, legendSelect: true },
+  /* [RADAR-07] 雷达无坐标轴、无 Y 轴、无折线：zoom / area / axisTitle / dataLabel 一概不声明
+     （它已进 tests/examples.test.mjs 的 axisless 名单，那是被断言的契约、不是约定）。
+     axisValue 是本族专属：轴标签是否带数值。**与交互无关**——基线 7.2 那条「展示数值时
+     不可交互」已被 AInvest Figma 推翻（三组数据带数值且照常 hover），故它只是个显隐开关。
+     网格形状与闭合形状不做旋钮：它们分成三条独立示例（同 treemap 的入口/通用/全局）。 */
+  radar: { animation: true, legendSelect: true, axisValue: true },
   /* 桑基当前由节点 hover / 点击和季度播放 API 承担交互，不复用坐标轴或饼环旋钮。 */
   sankey: { density: false },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
@@ -620,15 +710,11 @@ export const EXAMPLES = [
     title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
     description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
     densityValues: { few: 3, mid: 6, many: 8 },
+    densityUnit: '个模块',
     densityControl: {
       hint: 'PRD 建议 3–8 个入口模块',
       default: 'mid',
       labels: { few: '3项', mid: '6项', many: '8项' },
-    },
-    densitySummary: {
-      few: '入口型树图 · 3 个模块',
-      mid: '入口型树图 · 6 个模块',
-      many: '入口型树图 · 8 个模块',
     },
     cfg: (count) => ({
       name: '行业入口', root: treemapHierarchy(count), variant: 'entry',
@@ -640,15 +726,11 @@ export const EXAMPLES = [
     title: '通用矩形树图', spec: 'TREEMAP-05 / TREEMAP-08 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 局部类型单屏形态，展示头部重点或二级完整数据，兼顾比例和文字可读性。',
     densityValues: { few: 10, mid: 18, many: 30 },
+    densityUnit: '项',
     densityControl: {
       hint: 'PRD 建议不超过 30 项',
       default: 'mid',
       labels: { few: '10项', mid: '18项', many: '30项' },
-    },
-    densitySummary: {
-      few: '通用树图 · 10 项',
-      mid: '通用树图 · 18 项',
-      many: '通用树图 · 30 项',
     },
     cfg: (count) => ({
       name: '重点行业', root: treemapHierarchy(count), variant: 'local',
@@ -660,19 +742,50 @@ export const EXAMPLES = [
     title: '全局矩形树图', spec: 'TREEMAP-12 / TREEMAP-13', surfaces: BOTH,
     description: '对应 PRD 整体类型固定页形态，容纳 30 项以上全量数据，面积严格映射真实占比。',
     densityValues: { few: 32, mid: 42, many: 54 },
+    /* 上限必须盖过本例最大的预设档（54）：滑杆够不到自己的预设档，
+       就成了「三档面能看到、主站看不到」的静默分叉 */
+    densityRange: { min: 1, max: 60 },
+    densityUnit: '项',
     densityControl: {
       hint: 'PRD 建议 30 项以上',
       default: 'mid',
       labels: { few: '32项', mid: '42项', many: '54项' },
     },
-    densitySummary: {
-      few: '全局树图 · 32 项',
-      mid: '全局树图 · 42 项',
-      many: '全局树图 · 54 项',
-    },
     cfg: (count) => ({
       name: '全市场行业', root: treemapHierarchy(count), variant: 'overall',
       labelType: 'twoLineLeftBottom', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
+    }),
+  },
+  {
+    id: 'radar-basic', group: '雷达图', chart: 'radar',
+    title: '基础雷达图', spec: 'RADAR-02 / RADAR-04 / RADAR-07', surfaces: BOTH,
+    description: '圆形网格 + 直线闭合，固定 0–5 量程；多指标综合评分的基线形态。',
+    ...RADAR_DENSITY,
+    cfg: (n) => ({
+      name: '综合财务评分', dimensions: radarDims(n), series: radarSeries(n),
+      max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS,
+    }),
+  },
+  {
+    id: 'radar-curve', group: '雷达图', chart: 'radar',
+    title: '曲线填充雷达图', spec: 'RADAR-05 / RADAR-06 / RADAR-10', surfaces: BOTH,
+    description: 'AInvest 默认形态：闭合曲线 + 面填充，曲线态不出圆点；hover 热区为扇形。',
+    ...RADAR_DENSITY,
+    cfg: (n) => ({
+      name: '指数能力对比', dimensions: radarDims(n, 'en'), series: radarSeries(n, 'en'),
+      max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS, shape: 'curve',
+    }),
+  },
+  {
+    id: 'radar-polygon', group: '雷达图', chart: 'radar',
+    title: '多边形网格雷达图', spec: 'RADAR-03 / RADAR-04', surfaces: BOTH,
+    description: '正多边形网格（基线建议数据项超过 6 个时使用）；不给 max，走自动 nice 上界。',
+    ...RADAR_DENSITY,
+    /* [RADAR-04] **有意不给 max**：与另两条固定量程的示例并排，即可看出自动档会把上界抬到
+       nice 值、两张图量程不同因而形状不可比——那正是留 max 这个口子的理由。 */
+    cfg: (n) => ({
+      name: '综合财务评分', dimensions: radarDims(n), series: radarSeries(n),
+      segments: RADAR_SEGMENTS, gridShape: 'polygon',
     }),
   },
   {
@@ -746,6 +859,7 @@ export const EXAMPLES = [
 export const CHART_FAMILIES = {
   cartesian: '直角坐标图',
   pie: '占比图',
+  radar: '多维对比图',
   sankey: '流向图',
   treemap: '层级占比图',
 };
@@ -788,7 +902,7 @@ export const capabilitiesOf = (example) => {
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
     legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
-    treemapColor: !!caps.treemapColor,
+    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue,
   };
 };
 
@@ -806,11 +920,17 @@ export function buildConfig(example, state = {}) {
     density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
-    treemapColor = 'intensity',
+    treemapColor = 'intensity', axisValue = false,
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
-  const sourceCfg = example.cfg(densityOptions[density] ?? densityOptions.few);
+  /* density 有两种形态：**预设档位 id**（三档面传）或**直接给数**（滑杆面传）。
+     给数时按示例自己的上下限夹一次——越界会让组件抛错（雷达 <3 维即是），
+     夹在这里而不是各面自己夹，是为了「面不自己拼配置」这条不被绕开。 */
+  const count = typeof density === 'number'
+    ? clampDensity(example, density)
+    : (densityOptions[density] ?? densityOptions.few);
+  const sourceCfg = example.cfg(count);
   const presentedCfg = example.presentation?.(sourceCfg, { theme }) ?? sourceCfg;
   const cfg = { ...presentedCfg, platform };
 
@@ -850,6 +970,9 @@ export function buildConfig(example, state = {}) {
   if (caps.yIndicator && yIndicator) cfg.yIndicator = true;
   /* [TREEMAP-17][COLOR-09] 强度是组件默认值；仅切到语义色时显式注入通用颜色策略。 */
   if (caps.treemapColor && treemapColor !== 'intensity') cfg.colorMode = treemapColor;
+  /* [RADAR-07] 轴标签数值：组件默认关，故只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。
+     它不牵动任何交互开关——基线 7.2 的「展示数值时不可交互」已被设计源推翻，见 specs/radar.md。 */
+  if (caps.axisValue && axisValue) cfg.axisValue = true;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;
