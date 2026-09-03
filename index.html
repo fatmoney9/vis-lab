@@ -1073,9 +1073,20 @@
       wireDetail();
     }
 
+    /* 动一个旋钮会把 .detail 整块重建（旋钮之间会互相改显隐与置灰，局部更新反而更难说清），
+       于是两个滚动容器的 scrollTop 双双归零——面板底部那几个旋钮点一下就被弹回顶部，
+       连点两个就得重新滚两次。这里跨重建把位置接回去。
+       ⚠️ 只有 rerenderDetail 该保留：换示例走的是 render()，那时回到顶部才是对的。 */
     function rerenderDetail() {
+      const keep = ['.settings', '.detail__main']
+        .map((sel) => [sel, main.querySelector(sel)?.scrollTop ?? 0]);
       destroyCharts();
       renderDetail();
+      keep.forEach(([sel, top]) => {
+        const el = main.querySelector(sel);
+        /* 重建后内容可能变矮（某个旋钮档位少了一栏），浏览器会自行夹到可滚范围内 */
+        if (el && top) el.scrollTop = top;
+      });
     }
 
     /* 滑杆专用：**只换图表，不重建参数面板**。
