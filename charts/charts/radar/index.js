@@ -117,11 +117,13 @@ export function RadarChart(host, cfg) {
   function applyDim() {
     const emph = hoverKey ?? state.selected;
     const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
-    select(plotHost).selectAll('g.dv-radar-series')
+    /* [RADAR-06] 面与线分属两层（见 build），故弱化要**两层各压一次**：
+       只压 g.dv-radar-series 会让被弱化系列的面仍是满不透明度，线淡了面没淡。 */
+    select(plotHost).selectAll('g.dv-radar-series, path.dv-radar-area')
       .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
     /* [RADAR-06] 钉住的那一组填充本色，其余回默认 10% 档——两档由修饰类切，值仍在 token 里。 */
     select(plotHost).selectAll('path.dv-radar-area')
-      .classed('dv-radar-area--pinned', function () { return this.parentNode.dataset.key === state.selected; });
+      .classed('dv-radar-area--pinned', function () { return this.dataset.key === state.selected; });
   }
 
   function drawLegend() {
@@ -246,17 +248,25 @@ export function RadarChart(host, cfg) {
     });
 
     /* ── [RADAR-05][RADAR-06] 系列闭合形状 ───────────────────────────────────── */
+    /* [RADAR-06] **面与线分两层，面全在下、线全在上**。
+       同一个 <g> 里「面 + 线」逐系列叠的话，后一个系列那层 10% 的面会盖在前一个系列的**线**上，
+       线被冲淡一档；谁被冲淡纯看声明顺序，是个说不出道理的差别。分层后没有任何线会被面压。
+       层内**倒序追加**：声明在前的系列后画、压在最上——「最前面的线层级最高」。
+       两层都用同一个 dataset.key 认领系列，故弱化 / 钉住 / 点击照旧按 key 走。 */
+    const areaLayer = root.append('g').attr('class', 'dv-radar-area-layer');
     const seriesLayer = root.append('g').attr('class', 'dv-radar-series-layer');
     /* [RADAR-05] 曲线档用闭合基数样条；直线档用闭合折线。**曲线档默认隐藏圆点**（基线 8.4）。 */
     const curved = shape === 'curve';
     const pathOf = line().x((p) => p.x).y((p) => p.y).curve(curved ? curveCardinalClosed : curveLinearClosed);
     const grow = [];
-    visible.forEach((r) => {
+    [...visible].reverse().forEach((r) => {
       const g = seriesLayer.append('g').attr('class', 'dv-radar-series');
       g.node().dataset.key = r.name;
       g.attr('style', `--dv-radar-color: var(${r.colorVar})`);
       const finalPts = seriesPoints(r.data, domain, R, angles);
-      const area = g.append('path').attr('class', 'dv-radar-area');
+      const area = areaLayer.append('path').attr('class', 'dv-radar-area')
+        .attr('style', `--dv-radar-color: var(${r.colorVar})`);
+      area.node().dataset.key = r.name;
       const stroke = g.append('path').attr('class', 'dv-radar-line');
       const dots = curved ? null : g.append('g').attr('class', 'dv-radar-points');
 

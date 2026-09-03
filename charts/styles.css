@@ -759,8 +759,11 @@
 }
 
 /* [RADAR-06] 多边形：描边恒本色，填充默认 10%；钉住态换成本色实填（基线 8.2 / 8.3）。
-   --dv-radar-color 由 L2 逐系列写在 <g> 上，指向该系列的固定色槽。 */
-.dv-radar-series { color: var(--dv-radar-color); }
+   --dv-radar-color 由 L2 逐系列写在元素上，指向该系列的固定色槽。
+   ⚠️ **面与线分属两层**（面全在下、线全在上，见 radar/index.js），故两边各自取色——
+   面不再是系列 <g> 的后代，继承不到那份 currentColor。 */
+.dv-radar-series,
+.dv-radar-area { color: var(--dv-radar-color); }
 
 .dv-radar-area {
   fill: currentColor;
