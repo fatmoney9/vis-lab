@@ -11,54 +11,57 @@
     /* ⚠️ 本文件的 `--shell-*` 只管**外壳**（导航、卡片、面板）。演示区里图表自己的
        颜色 / 字号 / 圆角一律来自 tokens.css 的三套主题，外壳换皮不许波及它们——
        否则这个面就不再能用来验收主题了。见下面 .stage__surface 那条「不上玻璃」的说明。 */
+    /* ── 外壳风格：ChatGPT ────────────────────────────────────────
+       它和 iOS 那套在三件事上是**相反的**，照搬一半会两不像：
+       ① **不用半透明材质**——侧栏是一块实心浅灰，不是磨砂玻璃；靠**明度差**分区，不靠透视。
+       ② **面板贴边、不浮起**——没有外留白 / 圆角 / 投影；圆角只出现在**内容块**上，容器不圆。
+       ③ **圆角收小一档**——列表项 10、卡片 16，不是 iOS 那种 24/30。
+       主色仍是黑（ChatGPT 的主按钮也是黑），这一条两边一致，故不动。 */
     :root {
       color-scheme: light;
-      /* 主色 = 黑。外壳从「品牌蓝」改为中性黑：这个面是用来看三套主题各自的颜色的，
-         外壳自己带一个蓝会跟 THS/Ainvest 的品牌蓝混在一起抢读。 */
-      --shell-brand: #0a0a0b;
-      --shell-brand-weak: rgba(10, 10, 11, .07);
-      --shell-link: rgba(0, 0, 0, .88);
-      /* 中性色也一并从石板蓝(15,23,42)换成纯黑，整面只剩黑白灰 */
-      --shell-bg: #f2f2f7;              /* iOS 系统分组底色：玻璃层要有东西可透才成立 */
-      --shell-panel: #fff;
+      --shell-brand: #0d0d0d;
+      --shell-brand-weak: rgba(13, 13, 13, .06);
+      --shell-link: #0d0d0d;
+      /* 底色分两层：主内容纯白、侧栏与参数面板浅灰。ChatGPT 的分区全靠这一档明度差，
+         所以这两个值不能都设成白——那样贴边的面板就彻底看不出边界了。 */
+      --shell-bg: #ffffff;
+      --shell-rail: #f9f9f9;            /* 侧栏 / 参数面板底色 */
+      --shell-panel: #ffffff;
       --shell-weak: rgba(0, 0, 0, .05);
-      --shell-divider: rgba(0, 0, 0, .08);
-      --shell-divider-strong: rgba(0, 0, 0, .14);
-      --shell-text: rgba(0, 0, 0, .88);
-      --shell-text-2: rgba(0, 0, 0, .58);
-      --shell-text-3: rgba(0, 0, 0, .40);
-      --shell-text-4: rgba(0, 0, 0, .26);
+      --shell-divider: rgba(0, 0, 0, .07);
+      --shell-divider-strong: rgba(0, 0, 0, .13);
+      --shell-text: #0d0d0d;
+      --shell-text-2: #5d5d5d;
+      --shell-text-3: #8f8f8f;
+      --shell-text-4: #b4b4b4;
       --shell-dark: #1a1b1e;
-      --shell-hover: rgba(0, 0, 0, .05);
+      --shell-hover: rgba(0, 0, 0, .04);
+      --shell-active: rgba(0, 0, 0, .07);   /* 选中项的浅灰底：比 hover 深一档、不用黑块 */
       --shell-click: rgba(0, 0, 0, .1);
-      --shell-shadow: 0 2px 8px rgba(0, 0, 0, .06);
-      --shell-chart-shadow: 0 10px 30px rgba(0, 0, 0, .09);
+      --shell-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+      --shell-chart-shadow: 0 2px 10px rgba(0, 0, 0, .06);
 
-      /* ── Liquid Glass 材质（iOS 26 起的半透明层，26→27 的两处修订都在这里） ──
-         ① 暗边：27 给玻璃元素加了一圈更实的深色描边，解决 26 上「玻璃边界看不清」的投诉；
-         ② 高光：内侧顶边一道更亮的高光，模拟玻璃厚度的镜面反射。
-         两者缺一就会糊成「一块半透明色块」，那是 26 被诟病的样子。 */
-      --glass-bg: rgba(255, 255, 255, .72);
-      --glass-blur: saturate(180%) blur(24px);
-      --glass-edge: rgba(0, 0, 0, .10);
-      --glass-lift: 0 8px 32px rgba(0, 0, 0, .08), inset 0 1px 0 rgba(255, 255, 255, .85);
+      /* ── 圆角刻度 ──────────────────────────────────────────────
+         仍然只给一把刻度、各处只准引用（同一层级圆角必须相同），但整体比 iOS 那版小一档：
+         ChatGPT 的圆角克制，大圆角只留给输入框那类胶囊。 */
+      --r-xs: 6px;    /* 内嵌小块：指示器、代码块内 */
+      --r-sm: 10px;   /* 行级可点元素：导航项、分段项 */
+      --r-md: 12px;   /* 内容块：代码块、演示外壳 */
+      --r-lg: 16px;   /* 卡片 */
+      --r-xl: 16px;   /* 最外层容器——与卡片同档，不再单独放大 */
+      --r-pill: 999px;/* 胶囊：搜索框、按钮、标签 */
 
-      /* ── 统一圆角刻度 ────────────────────────────────────────────
-         iOS 27 把「全系统同一个圆角」当成一条硬规矩（macOS 27 起所有窗口圆角一致）。
-         所以这里给一把刻度、各处只准引用，不再散落 2/4/8 三个魔数——
-         同一层级的东西圆角必须相同，这是这套风格看起来「整」的唯一原因。 */
-      --r-xs: 10px;   /* 内嵌小块：色条、指示器 */
-      --r-sm: 14px;   /* 行级可点元素：导航项 */
-      --r-md: 18px;   /* 内容块：代码块、预览区 */
-      --r-lg: 24px;   /* 卡片、浮层面板 */
-      --r-xl: 30px;   /* 最外层容器：演示台 */
-      --r-pill: 999px;/* 胶囊：分段控件、搜索框、按钮、标签 */
+      /* 本页**最小字号 12px**：11 及以下在 1x 屏与中文字形上已经开始糊，
+         而这是一份要被逐像素比对的规范面，说明文字读不清等于没有。
+         新增样式时不要往下破这个底，需要更弱就调字色（--shell-text-3/4），不要调字号。
+         ⚠️ 落到底的地方**一律引用本变量、不写 12px 字面量**：写死的话这条底就成了一句
+         没人执行的注释，改底也要满文件找。现在改这一个值，所有最小字同时跟着走。 */
+      --font-min: 12px;
 
-      --topbar-h: 64px;
-      --sidebar-w: 236px;
-      --settings-w: 316px;
+      --topbar-h: 56px;
+      --sidebar-w: 260px;
+      --settings-w: 320px;
       --content-max: 1280px;
-      --float-gap: 12px;   /* 浮层面板与视口的留白 */
     }
 
     * { box-sizing: border-box; }
@@ -102,7 +105,7 @@
     button { color: inherit; }
     a { color: inherit; text-decoration: none; }
 
-    /* 顶栏是贴边的玻璃条：内容从它底下滚过去，模糊层才有意义（贴边故不做圆角） */
+    /* 顶栏：实心白 + 一条发丝线。ChatGPT 不做磨砂，分区靠明度与线，不靠透视 */
     .topbar {
       position: fixed;
       inset: 0 0 auto;
@@ -111,11 +114,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 24px;
-      border-bottom: 1px solid var(--glass-edge);
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
+      padding: 0 16px;
+      border-bottom: 1px solid var(--shell-divider);
+      background: var(--shell-panel);
     }
     .brand {
       position: relative;
@@ -136,7 +137,7 @@
     .brand__copy { display: flex; min-width: 0; flex-direction: column; gap: 4px; }
     .brand__name { display: flex; gap: 6px; font-size: 18px; line-height: 22px; font-weight: 600; }
     .brand__name-accent { color: var(--shell-text-3); font-weight: 500; }
-    .brand__sub { color: var(--shell-text-3); font-size: 11px; line-height: 14px; }
+    .brand__sub { color: var(--shell-text-3); font-size: var(--font-min); line-height: 16px; }
     .topnav { align-self: stretch; display: flex; gap: 24px; }
     .topnav__item {
       position: relative;
@@ -160,34 +161,31 @@
     .workspace { min-height: 100vh; padding-top: var(--topbar-h); }
     /* 详情页**保留**左侧导航：藏起来会让「换一张图」只剩面包屑回画廊再点一次这一条路，
        而看规范时最常做的恰恰是同一套旋钮下横着比几张图。窄屏才让位——见 1180px 断点。 */
-    /* 侧栏不再是贴边的一列，而是**浮起来的玻璃面板**（iOS 26 起的 inset sidebar 形态）：
-       四周留 --float-gap，圆角走统一刻度。`--sidebar-w` 仍是主内容让出的轨道宽度，
-       面板自身比它窄两个 gap，故 .main 的 margin-left 不用改。 */
+    /* 侧栏：贴边整列、实心浅灰、无圆角无投影。
+       与主内容的分界**只靠底色差一档**（--shell-rail vs --shell-bg）——
+       ChatGPT 连那条竖分割线都不画，明度差自己就说清楚了。 */
     .sidebar {
       position: fixed;
-      inset: calc(var(--topbar-h) + var(--float-gap)) auto var(--float-gap) var(--float-gap);
+      inset: var(--topbar-h) auto 0 0;
       z-index: 10;
-      width: calc(var(--sidebar-w) - var(--float-gap) * 2);
+      width: var(--sidebar-w);
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid var(--glass-edge);
-      border-radius: var(--r-lg);
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      box-shadow: var(--glass-lift);
+      background: var(--shell-rail);
     }
     .search { padding: 12px 12px 8px; }
-    /* 搜索框走胶囊——iOS 的搜索栏就是这个形状 */
+    /* 搜索框：白底 + 描边的圆角矩形。浅灰侧栏上再放一块浅灰会糊在一起，
+       所以这里反过来用白底把输入区「抬」出来——同 ChatGPT 侧栏里的搜索行。 */
     .search__wrap {
       display: flex;
       align-items: center;
       gap: 8px;
       height: 36px;
-      padding: 0 14px;
-      border-radius: var(--r-pill);
-      background: var(--shell-weak);
+      padding: 0 12px;
+      border: 1px solid var(--shell-divider);
+      border-radius: var(--r-sm);
+      background: var(--shell-panel);
     }
     .search__input {
       min-width: 0;
@@ -207,33 +205,57 @@
       background: transparent;
       color: var(--shell-text-3);
       cursor: pointer;
-      font-size: 11px;
+      font-size: var(--font-min);
     }
     .search__clear.is-visible { display: block; }
-    .category-nav { flex: 1; overflow-y: auto; padding: 0 10px 12px; }
+    /* --nav-icon / --nav-gap 同时决定**分类图标占多宽**与**示例缩进多少**：
+       示例要和分类的文字左沿对齐，那个位置 = 行内边距 + 图标宽 + 图标间距。
+       写成一条公式，改图标尺寸时对齐自动跟上，不用两处手动同步。 */
+    .category-nav { --nav-icon: 16px; --nav-gap: 8px; flex: 1; overflow-y: auto; padding: 0 10px 12px; }
+    /* ── 三级的轻重次序：示例 > 分类 > 族 ────────────────────────────
+       **最常点的那一级必须最重**。此前分类是 14px、全导航最大，比真正的落点（示例 13px）
+       还显眼，且两级共用同一套按钮装饰——二级把三级压住了，正好反了。
+       现在分类降成「可点的小标题」：字更小更浅、**不给底色**，只在 hover 时提字色；
+       行装饰（圆角 + 底色）成为示例独有的记号，扫一眼就知道哪些是能落地的目标。 */
     .nav-item {
       position: relative;
       display: flex;
       width: 100%;
       align-items: center;
       border: 0;
-      border-radius: var(--r-sm);
-      padding: 8px 12px;
+      border-radius: var(--r-xs);
+      padding: 5px 12px;
       background: transparent;
-      color: var(--shell-text-2);
+      gap: var(--nav-gap);
+      color: var(--shell-text-3);
       cursor: pointer;
       text-align: left;
+      /* 与示例同为 14px：**两级不再靠字号区分**，轻重全交给字色（灰 vs 正文色）
+         与行装饰（分类无底色 / 示例有底色）。字号一致时这两样必须保住，
+         否则同号同色的两级会立刻糊成一片。 */
       font-size: 14px;
+      font-weight: 500;
+      transition: color .15s;
     }
-    .nav-item:hover { background: var(--shell-hover); color: var(--shell-text); }
-    /* 分类高亮 = 「画廊正筛这一类」的**按下态**，故用中性灰而非品牌色：品牌色在本导航里
-       被示例的「当前态」占用了，两处都染蓝会让人分不清哪个才是自己正在看的东西。 */
-    .nav-item--active { background: var(--shell-hover); color: var(--shell-text); font-weight: 500; }
-    /* 当前示例所在的分类：不抢高亮，只把字提到正文色，用来回答「我在哪一节」 */
-    .nav-item--current { color: var(--shell-text); font-weight: 500; }
-    /* 三级层次靠**三种不同手段**拉开，不靠字号互相挤：
-       族 = 一条分隔线起新一节 · 分类 = 可点的按钮 · 示例 = 缩进 + 一根竖导轨。
-       只调字号的话三级会糊成一堵灰墙——这正是改之前的样子。 */
+    /* 图标随字色走（currentColor），故选中/当前态不用再单独给图标上色 */
+    .nav-item__icon { flex: none; width: var(--nav-icon); height: var(--nav-icon); }
+    .nav-item:hover { color: var(--shell-text); }
+    /* 画廊正筛这一类 / 当前示例在这一节：都只提字色与字重，**不占用底色**——
+       底色是示例那一级的记号，二级借走就又把两级拉平了。 */
+    .nav-item--active,
+    .nav-item--current { color: var(--shell-text); font-weight: 600; }
+    /* ⚠️「全部示例」不跟着降权：它是跨族入口、和下面的分类不是同一级，
+       仍按「行」来做（与示例同档），否则整个导航就没有一个明确的起点了。 */
+    .category-nav > .nav-item:first-child {
+      border-radius: var(--r-sm);
+      padding: 7px 12px;
+      color: var(--shell-text);
+      font-size: 14px;
+      font-weight: 400;
+      transition: background .15s, color .15s;
+    }
+    .category-nav > .nav-item:first-child:hover { background: var(--shell-hover); }
+    .category-nav > .nav-item--active:first-child { background: var(--shell-active); font-weight: 500; }
     /* 族标题：只作分节说明、不可点——可点的最小单位仍是「分类」，
        族本身要看全部时走顶部的「全部示例」。刻意不做成按钮态，免得像个失效按钮。 */
     /* 导航里**只留这一条线**：「全部示例」是跨族入口，与下面那份按族分好的清单
@@ -243,36 +265,47 @@
 
     /* 族标题：分节靠留白。margin-top 是族与族之间唯一的分隔手段，
        所以它必须明显大于族内「分类 → 示例」的行距，否则层级就塌了。 */
+    /* 族与族之间画线分节。线比留白更硬，代价是把清单切成几段——但这里正是要那个效果：
+       一条线 = 一个 L2 组件的边界，跨过它就是换了一族图表。 */
     .nav-family {
       display: flex; align-items: center;
-      margin-top: 18px;
-      padding: 6px 12px 2px;
+      margin-top: 2px;
+      border-top: 1px solid var(--shell-divider);
+      padding: 16px 12px 10px;   /* 下内边距 = 族标题与第一个分类之间的间距 */
     }
-    /* 第一族紧跟在那条线下面，不需要再叠一段外边距 */
-    .nav-divider + .nav-family { margin-top: 6px; }
-    .nav-family__title { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--shell-text-4); }
+    /* 第一族上方已经有「全部示例」那条线，不再叠第二条 */
+    .nav-divider + .nav-family { margin-top: 4px; border-top: 0; padding-top: 6px; }
+    .nav-family__title { font-size: var(--font-min); font-weight: 600; letter-spacing: .06em; color: var(--shell-text-4); }
     /* 示例本身。分类只是筛画廊，**能一步到位换图的最小单位是示例**，
        所以它必须自己出现在导航里，而不是藏在画廊卡片后面。
        归属改由缩进单独表达——导轨那条竖线撤了：当前项换成实心胶囊之后，
        「我在哪」已经有一个足够强的标记，再加一条线就是两套记号说同一件事。 */
-    .nav-examples { display: flex; flex-direction: column; margin: 0 0 4px; padding-left: 12px; }
+    /* 示例左沿与**分类的文字**对齐（不是与分类的行首对齐）：分类前面多了一枚图标，
+       示例跟着退让出同样的宽度，两级文字才排在同一条竖线上。
+       padding = 图标宽 + 图标间距，示例自身的 12px 行内边距与分类的那份重合。 */
+    /* 下外边距 = **分类与分类之间**的间距。三档间距必须依次拉开，
+       否则层级就只剩缩进在撑：示例之间 0 < 分类之间 14 < 族之间（还叠一条线）。 */
+    .nav-examples {
+      display: flex; flex-direction: column; margin: 2px 0 14px;
+      padding-left: calc(var(--nav-icon) + var(--nav-gap));
+    }
     .nav-example {
       position: relative;
       border-radius: var(--r-sm);
       padding: 7px 12px;
-      color: var(--shell-text-2);
+      color: var(--shell-text);
       text-decoration: none;
-      font-size: 13px;
+      font-size: 14px;
     }
     /* 省略号必须裁在**内层**：`overflow:hidden` 放在外层会把下面那根左色条一起裁掉
        （它画在盒子外的导轨上），于是「当前项」就只剩一块淡蓝底。 */
     .nav-example > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .nav-example:hover { background: var(--shell-hover); color: var(--shell-text); }
-    /* 当前项 = 主色实心胶囊。单色盘里「淡底 + 左色条」两件套既弱又啰嗦，
-       一枚填实的胶囊一眼就能在 20 行里找到，且只用一种记号。 */
+    /* 当前项 = 浅灰圆角块 + 字色提到正文色。ChatGPT 的选中项就是这一档——
+       比 hover 深一级、不反白。整列都是黑白灰时，一块实心黑会重得像个按钮而不是「当前位置」。 */
     .nav-example--active,
-    .nav-example--active:hover { background: var(--shell-brand); color: #fff; font-weight: 500; }
-    .sidebar__hint { padding: 6px 16px 14px; color: var(--shell-text-4); font-size: 11px; line-height: 16px; }
+    .nav-example--active:hover { background: var(--shell-active); color: var(--shell-text); font-weight: 500; }
+    .sidebar__hint { padding: 6px 16px 14px; color: var(--shell-text-4); font-size: var(--font-min); line-height: 16px; }
     .sidebar__hint kbd {
       display: inline-block; min-width: 16px; border: 1px solid var(--shell-divider-strong); border-radius: 5px;
       padding: 0 3px; background: rgba(255, 255, 255, .7); color: var(--shell-text-3);
@@ -295,16 +328,16 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      border: 1px solid var(--glass-edge);
+      border: 1px solid var(--shell-divider);
       border-radius: var(--r-lg);
       background: var(--shell-panel);
       cursor: pointer;
-      /* 内侧顶边高光 = iOS 27 加强的那道镜面反射，卡片因此看着有厚度而不是一张贴纸 */
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
-      transition: border-color .18s, box-shadow .18s, transform .18s;
+      /* ChatGPT 的卡片不上浮也不加投影：hover 只把底色压深一档。
+         位移会让整片网格在指针扫过时此起彼伏，那是「活泼」不是「克制」。 */
+      transition: background .15s, border-color .15s;
     }
-    .example-card:hover { border-color: rgba(0, 0, 0, .16); box-shadow: var(--glass-lift); transform: translateY(-2px); }
-    .example-card:focus-visible { outline: 0; border-color: var(--shell-brand); box-shadow: var(--glass-lift); }
+    .example-card:hover { border-color: var(--shell-divider-strong); background: var(--shell-rail); }
+    .example-card:focus-visible { outline: 2px solid var(--shell-brand); outline-offset: 2px; }
     /* 预览区把图表**竖直居中**。以前只写 min-height:210 就完事，比它矮的图会贴顶——
        饼环自然高只有 2R（THS 140），186 的内容区里下方白 46px，看着就是「整张图偏上」。
        与 .stage__canvas 当初同一个坑，这里补同一条治法。
@@ -330,8 +363,8 @@
     .example-card[data-chart="sankey"] .dv-sankey__svg { width: 100%; height: 185px; }
     .example-card__body { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 18px; }
     .example-card__title { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
-    .example-card__tag { flex: none; color: var(--shell-text-3); font-size: 11px; }
-    .empty-state { min-height: 280px; display: grid; place-items: center; border: 1px solid var(--glass-edge); border-radius: var(--r-lg); background: var(--shell-panel); color: var(--shell-text-2); }
+    .example-card__tag { flex: none; color: var(--shell-text-3); font-size: var(--font-min); }
+    .empty-state { min-height: 280px; display: grid; place-items: center; border: 1px solid var(--shell-divider); border-radius: var(--r-lg); background: var(--shell-panel); color: var(--shell-text-2); }
 
     .detail { min-height: calc(100vh - var(--topbar-h)); display: grid; grid-template-columns: minmax(0, 1fr) var(--settings-w); }
     .detail__main { min-width: 0; padding: 24px; overflow: auto; }
@@ -345,12 +378,12 @@
     .detail-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
     .detail-title-row h1 { margin: 0 0 8px; font-size: 20px; line-height: 24px; }
     .detail-title-row p { max-width: 720px; margin: 0; color: var(--shell-text-2); font-size: 13px; line-height: 18px; }
-    .spec-chip { flex: none; padding: 5px 11px; border-radius: var(--r-pill); background: var(--shell-brand-weak); color: var(--shell-brand); font-size: 11px; font-weight: 500; }
+    .spec-chip { flex: none; padding: 5px 10px; border-radius: var(--r-xs); background: var(--shell-brand-weak); color: var(--shell-brand); font-size: var(--font-min); font-weight: 500; }
     /* --stage-bar-h 同时喂给抬头的高度和台面的底部留白，两者不会各改各的走散 */
-    .stage { --stage-bar-h: 44px; overflow: hidden; border: 1px solid var(--glass-edge); border-radius: var(--r-xl); background: var(--shell-panel); }
+    .stage { --stage-bar-h: 44px; overflow: hidden; border: 1px solid var(--shell-divider); border-radius: var(--r-xl); background: var(--shell-panel); }
     .stage__bar { min-height: var(--stage-bar-h); display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 20px; }
     .stage__theme { flex: none; font-size: 13px; font-weight: 500; }
-    .stage__meta { min-width: 0; overflow: hidden; color: var(--shell-text-3); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .stage__meta { min-width: 0; overflow: hidden; color: var(--shell-text-3); font-size: var(--font-min); text-overflow: ellipsis; white-space: nowrap; }
     .stage__period { color: var(--shell-text-2); font-weight: var(--font-weight-medium); }
     /* 演示区把外壳**两个方向都居中**。以前外壳写死 420px 高、正好撑满这块，
        看不出没做垂直居中；改成「高度由图表撑开」后矮图（如饼环只有 2R）就会贴顶。
@@ -382,7 +415,7 @@
       padding: 16px;
       overflow: auto;
       resize: both;
-      border: 1px solid var(--glass-edge);
+      border: 1px solid var(--shell-divider);
       /* 圆角刻意比外壳低两档（外层演示台 --r-xl、卡片 --r-lg）：这一块代表的是
          **产品里真实的图表容器**，不是外壳自己的装饰，跟着外壳做大圆角会让人误以为
          组件自带这么大的圆角。外壳越圆，它越要收着。 */
@@ -444,19 +477,14 @@
     }
     /* 播放区视觉与 DOM 模板统一由 demos/sankey-playback.* 提供。 */
 
-    /* 参数面板与侧栏同形态：浮起来的玻璃面板，同一档圆角——iOS 27 的规矩是同层级同圆角 */
+    /* 参数面板与侧栏同形态：贴边、实心浅灰、无圆角无投影，只用一条左发丝线收边 */
     .settings {
       position: sticky;
-      top: calc(var(--topbar-h) + var(--float-gap));
-      height: calc(100vh - var(--topbar-h) - var(--float-gap) * 2);
-      margin: var(--float-gap) var(--float-gap) var(--float-gap) 0;
+      top: var(--topbar-h);
+      height: calc(100vh - var(--topbar-h));
       overflow-y: auto;
-      border: 1px solid var(--glass-edge);
-      border-radius: var(--r-lg);
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      box-shadow: var(--glass-lift);
+      border-left: 1px solid var(--shell-divider);
+      background: var(--shell-rail);
     }
     /* 页签底下不通栏画线：选中态已有指示条，那条线只是又一次说「上面和下面是两块」 */
     .tab { padding-bottom: 4px; }
@@ -474,11 +502,11 @@
     .field__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
     .field__copy { min-width: 0; }
     .field__label { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 14px; font-weight: 500; }
-    .field__hint { display: block; margin-top: 4px; color: var(--shell-text-3); font-size: 11px; line-height: 14px; }
-    .select { width: 128px; min-width: 0; border: 1px solid var(--shell-divider-strong); border-radius: var(--r-pill); padding: 8px 14px; outline: 0; background: var(--shell-panel); color: var(--shell-text); font-size: 13px; }
-    .segment { display: flex; margin-top: 8px; padding: 3px; border-radius: var(--r-pill); background: var(--shell-weak); }
-    .segment__item { flex: 1; border: 0; border-radius: var(--r-pill); padding: 7px 8px; background: transparent; color: var(--shell-text-2); cursor: pointer; font-size: 13px; transition: background .18s, color .18s; }
-    .segment__item--active { background: var(--shell-panel); color: var(--shell-text); font-weight: 500; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+    .field__hint { display: block; margin-top: 4px; color: var(--shell-text-3); font-size: var(--font-min); line-height: 16px; }
+    .select { width: 128px; min-width: 0; border: 1px solid var(--shell-divider-strong); border-radius: var(--r-sm); padding: 8px 12px; outline: 0; background: var(--shell-panel); color: var(--shell-text); font-size: 13px; }
+    .segment { display: flex; margin-top: 8px; padding: 3px; border-radius: var(--r-sm); background: var(--shell-weak); }
+    .segment__item { flex: 1; border: 0; border-radius: var(--r-xs); padding: 7px 8px; background: transparent; color: var(--shell-text-2); cursor: pointer; font-size: 13px; transition: background .15s, color .15s; }
+    .segment__item--active { background: var(--shell-panel); color: var(--shell-text); font-weight: 500; box-shadow: 0 1px 2px rgba(0, 0, 0, .1); }
     /* 当前不生效的分段：置灰但**保留在原位**，让「哪一档才有它」看得见 */
     .segment--disabled { opacity: .45; }
     .segment--disabled .segment__item { cursor: not-allowed; }
@@ -515,11 +543,11 @@
       background: #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .32);
     }
     .slider__value {
-      flex: none; padding: 3px 10px; border-radius: var(--r-pill);
+      flex: none; padding: 3px 10px; border-radius: var(--r-xs);
       background: var(--shell-weak); color: var(--shell-text);
-      font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+      font-size: var(--font-min); font-weight: 500; font-variant-numeric: tabular-nums;
     }
-    .slider__ends { display: flex; justify-content: space-between; color: var(--shell-text-4); font-size: 11px; }
+    .slider__ends { display: flex; justify-content: space-between; color: var(--shell-text-4); font-size: var(--font-min); }
 
     .switch__track { position: absolute; inset: 0; border-radius: var(--r-pill); background: var(--shell-divider-strong); cursor: pointer; transition: background .16s; }
     .switch__knob { position: absolute; top: 2.5px; left: 2.5px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: var(--shell-shadow); transition: left .16s; }
@@ -531,7 +559,7 @@
     .button { width: 100%; margin-top: 16px; border: 0; border-radius: var(--r-pill); padding: 11px; background: var(--shell-brand); color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity .18s; }
     .button:hover { opacity: .85; }
 
-    /* 详情页三栏（导航 236 + 舞台 + 参数 316）在窄屏挤不下：演示外壳自己就有 320px 下限，
+    /* 详情页三栏（导航 260 + 舞台 + 参数 320）在窄屏挤不下：演示外壳自己就有 320px 下限，
        低于这个宽度左栏先让位，回到「面包屑 + 键盘 ←/→」的老路径，键盘那条任何宽度都还在。 */
     @media (max-width: 1180px) {
       .workspace--detail .sidebar { display: none; }
@@ -544,11 +572,9 @@
     }
     @media (max-width: 640px) {
       .topbar { padding: 0 16px; }
-      /* 手机上侧栏退回贴边横条：浮层的 inset / 圆角 / 阴影都要显式收掉，
-         否则一个「浮起来的面板」被拍平成静态流后会留下悬空的圆角与投影。 */
       .sidebar {
-        position: static; inset: auto; width: auto; margin: 0;
-        border: 0; border-bottom: 1px solid var(--glass-edge); border-radius: 0; box-shadow: none;
+        position: static; inset: auto; width: auto;
+        border-bottom: 1px solid var(--shell-divider);
       }
       .sidebar__hint { display: none; }
       .search { padding-top: 12px; }
@@ -559,8 +585,8 @@
       .main { margin-left: 0; }
       .detail { grid-template-columns: 1fr; }
       .settings {
-        position: static; height: auto; margin: 0;
-        border: 0; border-top: 1px solid var(--glass-edge); border-radius: 0; box-shadow: none;
+        position: static; height: auto;
+        border-left: 0; border-top: 1px solid var(--shell-divider);
       }
       .page-head { align-items: flex-start; flex-direction: column; margin-bottom: 24px; }
       .detail__main { padding: 16px; }
@@ -679,15 +705,49 @@
       return matchedExamples().filter((example) => state.group === ALL || example.group === state.group);
     }
 
+    /* 分类图标：**按分类名取、取不到回落到族的图表类型**。
+       只按名字取的话，改一个分类名图标就静默消失；回落到 chart 后最差也只是同族共用一枚，
+       不会开天窗。图标一律 currentColor + fill:none，跟着字色走，不自带颜色。 */
+    const ICON = (d, extra = '') =>
+      `<svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+        stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}${extra}</svg>`;
+    const NAV_ICONS = {
+      /* 柱：三根不等高的竖条 */
+      '柱状图': ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
+      /* 堆叠：一根竖条被分成三段 */
+      '堆叠图': ICON('<rect x="4" y="3" width="8" height="10" rx="1"/><path d="M4 6.5h8M4 9.5h8"/>'),
+      /* 折线：一条折线 */
+      '折线图': ICON('<path d="M2.5 11l3.5-4 3 2.5L13.5 4"/>'),
+      /* 组合：两根柱 + 一条线 */
+      '组合图': ICON('<path d="M3.5 13V8.5M12.5 13V6"/><path d="M2.5 5.5l4 2 3-2.5 4 1.5"/>'),
+      /* 桑基：左右两侧节点 + 中间流带 */
+      '桑基图': ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
+      /* 树图：一个矩形被切成大小不等的块 */
+      '矩形树图': ICON('<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M8.5 3v10M8.5 8h5"/>'),
+      /* 雷达：正五边形 + 中心辐条 */
+      '雷达图': ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/><path d="M8 2.5v5.4M8 7.9l5.2-1.6M8 7.9l-5.2-1.6M8 7.9l3.2 4.6M8 7.9l-3.2 4.6" stroke-opacity=".45"/>'),
+      /* 饼环：圆 + 一条切分线 */
+      '饼图与环形图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
+      /* 族级回落 */
+      cartesian: ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
+      sankey: ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
+      treemap: ICON('<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M8.5 3v10M8.5 8h5"/>'),
+      radar: ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/>'),
+      pie: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
+      /* 跨族入口：田字格 */
+      __all: ICON('<rect x="2.5" y="2.5" width="5" height="5" rx="1"/><rect x="8.5" y="2.5" width="5" height="5" rx="1"/><rect x="2.5" y="8.5" width="5" height="5" rx="1"/><rect x="8.5" y="8.5" width="5" height="5" rx="1"/>'),
+    };
+
     function renderNavigation() {
       const pool = matchedExamples();
       /* 分类的「选中」只在画廊里有意义（它筛的就是画廊）；进了详情页画廊没在显示，
          再把某个分类标成选中就是假信息——那时改标 --current：只说明当前这张图属于哪一节。 */
-      const item = (group) => {
+      const item = (group, chart) => {
         const active = !state.detail && state.group === group;
         const current = state.detail?.group === group;
+        const icon = NAV_ICONS[group] ?? NAV_ICONS[chart] ?? '';
         return `<button class="nav-item${active ? ' nav-item--active' : ''}${current ? ' nav-item--current' : ''}"
-          type="button" data-group="${group}"><span>${group}</span></button>`;
+          type="button" data-group="${group}">${icon}<span>${group}</span></button>`;
       };
       /* 示例是 <a href="#id">：走的还是既有的 hash 路由，故详情页内点它 = 直接换图，
          不经画廊；旋钮状态留在 state 里不动，换图后主题/明暗/动效原样保持。 */
@@ -695,14 +755,14 @@
         `<a class="nav-example${state.detail?.id === example.id ? ' nav-example--active' : ''}"
           href="#${example.id}" title="${example.title}"><span>${example.title}</span></a>`;
       /* 「全部示例」独立在最上，不归任何一族——它是跨族的入口 */
-      categoryNav.innerHTML = item(ALL) + '<div class="nav-divider"></div>' + FAMILIES.map((family) => {
+      categoryNav.innerHTML = item(ALL, '__all') + '<div class="nav-divider"></div>' + FAMILIES.map((family) => {
         /* 只保留当前命中集里还有示例的分类；整族筛空就整段不出 */
         const hits = family.groups
           .map((g) => [g, pool.filter((e) => e.group === g)])
           .filter(([, items]) => items.length);
         if (!hits.length) return '';
         const groups = hits
-          .map(([g, items]) => item(g) + `<div class="nav-examples">${items.map(leaf).join('')}</div>`)
+          .map(([g, items]) => item(g, family.chart) + `<div class="nav-examples">${items.map(leaf).join('')}</div>`)
           .join('');
         /* 族名恒出：它是「一个 L2 组件 = 一族」这条分层事实的可见处，
            哪怕族内只有一个分类，少了它就看不出雷达和饼是两个组件。 */
