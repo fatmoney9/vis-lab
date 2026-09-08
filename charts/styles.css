@@ -790,6 +790,43 @@
   pointer-events: none;
 }
 
+/* [RADAR-18] 可调节形态：视觉圆与命中区均为 36×36。圆无描边，grey-80 对应现有
+   `color-grey-02` 灰阶、单独以 80% 不透明度呈现；内部箭头保持 100% 实色填充。 */
+.dv-radar-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dv-radar-handle.is-dragging { cursor: grabbing; }
+
+.dv-radar-handle-hit {
+  r: calc(var(--size-radar-handle-hit) / 2);
+  fill: transparent;
+}
+
+.dv-radar-handle-thumb {
+  r: calc(var(--size-radar-handle) / 2);
+  fill: var(--color-radar-handle-background);
+  fill-opacity: var(--opacity-radar-handle);
+  stroke: none;
+}
+
+.dv-radar-handle-grip {
+  fill: var(--color-radar-handle-arrow);
+  stroke: none;
+  pointer-events: none;
+}
+
+/* [RADAR-18] 曲线可调节态的真实数据锚点：位于曲线与手柄内缘的接点。
+   它不是常规系列圆点（RADAR-05 仍隐藏），只用于说明手柄实际控制的曲线位置。 */
+.dv-radar-edit-anchor {
+  r: calc(var(--size-radar-handle-anchor) / 2);
+  fill: var(--color-text-tertiary);
+  pointer-events: none;
+}
+
+.dv-radar-handle:focus { outline: none; }
+
 /* [RADAR-11] 整组可点：钉住该系列 */
 .dv-radar-series { cursor: pointer; }
 

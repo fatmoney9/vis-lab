@@ -13,10 +13,13 @@ import {
   axisAngles,
   radarDomain,
   radarFrame,
+  radarValueAt,
   ringRadii,
   gridPath,
   seriesPoints,
+  snapRadarValue,
   labelAnchor,
+  labelArc,
   sectorAt,
   sectorCorners,
 } from '../charts/charts/radar/geometry.js';
@@ -240,6 +243,28 @@ test('RADAR-07：正左 / 正右用 central 而非 middle（同 TOOLTIP-12 的�
   assert.equal(labelAnchor((TAU * 3) / 4, 64, 4).baseline, 'central');
 });
 
+/* ── [RADAR-14] 可调节态弧形轴标签 ───────────────────────────── */
+
+test('RADAR-14：上半圆顺时针排字，下半圆反向保持正读', () => {
+  const top = labelArc(0, 64, 4, Math.PI / 3, 10);
+  assert.equal(top.reversed, false);
+  assert.equal(top.sweep, 1);
+  assert.ok(top.start.x < top.end.x, '顶部文字应从左向右');
+  assert.ok(near(top.radius, 68), '顺向基线从 R + gap 开始');
+
+  const bottom = labelArc(Math.PI, 64, 4, Math.PI / 3, 10);
+  assert.equal(bottom.reversed, true);
+  assert.equal(bottom.sweep, 0);
+  assert.ok(bottom.start.x < bottom.end.x, '底部反向后仍应从左向右');
+  assert.ok(near(bottom.radius, 78), '反向路径只外移真实墨迹 ascent，文字内缘仍从 R + gap 开始');
+});
+
+test('RADAR-14：弧长就是标签截断上限', () => {
+  const span = Math.PI / 4;
+  const arc = labelArc(0, 80, 4, span, 16);
+  assert.ok(near(arc.length, 84 * span));
+});
+
 /* ── [RADAR-10] 扇形命中 ────────────────────────────────────── */
 
 test('RADAR-10：指针落在某轴正上方时命中该轴的扇形', () => {
@@ -297,4 +322,34 @@ test('RADAR-10：相邻扇区共用同一个边中点，热区之间无缝也无
 
 test('RADAR-10：指针落在圆心时归首轴，不产生 NaN', () => {
   assert.equal(sectorAt({ x: 50, y: 50 }, 50, 50, 6), 0);
+});
+
+/* ── [RADAR-18] 可调节手柄 ───────────────────────────────────── */
+
+test('RADAR-18：拖动值取指针在目标径向轴上的投影，不取到圆心的斜距', () => {
+  const domain = { min: 0, max: 5 };
+  /* 12 点轴：同为 y=-40 时，横向偏出 30px 不应把值从 2 虚增到 2.5 */
+  assert.equal(radarValueAt({ x: 30, y: -40 }, 0, 0, 0, domain, 100), 2);
+  /* 3 点轴：只看 x 投影，竖向偏移不参与 */
+  assert.equal(radarValueAt({ x: 60, y: 80 }, 0, 0, Math.PI / 2, domain, 100), 3);
+});
+
+test('RADAR-18：手柄中心外移一个半径后，反算值扣回偏移、按下不跳值', () => {
+  const domain = { min: 0, max: 5 };
+  /* 真实数据点在 12 点轴 r=60（值 3）；36px 手柄圆心位于 r=78，反算仍须为 3。 */
+  assert.equal(radarValueAt({ x: 0, y: -78 }, 0, 0, 0, domain, 100, 18), 3);
+});
+
+test('RADAR-18：拖动值始终夹在统一量程 [0,max] 内', () => {
+  const domain = { min: 0, max: 5 };
+  assert.equal(radarValueAt({ x: 0, y: -160 }, 0, 0, 0, domain, 100), 5);
+  assert.equal(radarValueAt({ x: 0, y: 40 }, 0, 0, 0, domain, 100), 0);
+  assert.equal(radarValueAt({ x: 0, y: 0 }, 0, 0, 0, domain, 0), 0);
+});
+
+test('RADAR-18：editStep 可选吸附并消除常见小数误差', () => {
+  assert.equal(snapRadarValue(2.26, 5, 0.1), 2.3);
+  assert.equal(snapRadarValue(4.9, 5, 2), 4);
+  assert.equal(snapRadarValue(7, 5, 0.5), 5);
+  assert.equal(snapRadarValue(2.26, 5), 2.26);
 });
