@@ -230,6 +230,12 @@
   --line-height-radar-label-name: var(--line-height-small);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
+  --color-waterfall-connector: var(--color-visualization-divider);
+  --size-waterfall-connector: 1px;
+  --dash-waterfall-connector: 2 2;
+  --opacity-waterfall-delta-fill: 0.2;
+  --size-waterfall-delta-cap: 2px;
+  --size-waterfall-arrow-line: 1px;
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -488,6 +494,12 @@
   --line-height-radar-label-name: var(--line-height-small);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
+  --color-waterfall-connector: var(--color-visualization-divider);
+  --size-waterfall-connector: 1px;
+  --dash-waterfall-connector: 2 2;
+  --opacity-waterfall-delta-fill: 0.2;
+  --size-waterfall-delta-cap: 2px;
+  --size-waterfall-arrow-line: 1px;
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -749,6 +761,12 @@
   --line-height-radar-label-name: var(--line-height-small);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
+  --color-waterfall-connector: var(--color-visualization-divider);
+  --size-waterfall-connector: 1px;
+  --dash-waterfall-connector: 2 2;
+  --opacity-waterfall-delta-fill: 0.2;
+  --size-waterfall-delta-cap: 2px;
+  --size-waterfall-arrow-line: 1px;
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

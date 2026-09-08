@@ -298,5 +298,13 @@
   "font-size-radar-label-name": "{font-size-extra-small}",
   "line-height-radar-label-name": "{line-height-small}",
   "font-size-radar-label-value": "{font-size-extra-small}",
-  "line-height-radar-label-value": "{line-height-small}"
+  "line-height-radar-label-value": "{line-height-small}",
+
+  "$section-26": "瀑布图 Waterfall（Figma node 135:2840）",
+  "color-waterfall-connector": "{color-visualization-divider}",
+  "size-waterfall-connector": "1px",
+  "dash-waterfall-connector": "2 2",
+  "opacity-waterfall-delta-fill": 0.2,
+  "size-waterfall-delta-cap": "2px",
+  "size-waterfall-arrow-line": "1px"
 }

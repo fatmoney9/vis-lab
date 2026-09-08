@@ -152,7 +152,7 @@
   <aside class="pane pane-left">
     <div class="brand">
       <h1>L2 图表预览</h1>
-      <p>CartesianChart · PieChart · SankeyChart —— 只传数据 + 语义配置</p>
+      <p>Cartesian · Pie · Sankey · Treemap · Waterfall —— 只传数据 + 语义配置</p>
     </div>
     <nav class="nav" id="nav"></nav>
   </aside>
@@ -202,6 +202,14 @@
           <button data-value="intensity" class="is-active">程度</button>
           <button data-value="semantic-binned">涨跌（分档）</button>
           <button data-value="semantic-flat">涨跌（不分档）</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>瀑布颜色</b><span>colorMode</span></div>
+        <div class="seg" id="seg-waterfall-color">
+          <button data-value="primary" class="is-active">主色</button>
+          <button data-value="semantic">语义色</button>
         </div>
       </div>
 
@@ -350,7 +358,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -434,6 +442,7 @@
       button.classList.toggle('is-active', button.dataset.value === state.density);
     });
     document.getElementById('seg-treemap-color').closest('.field').hidden = !caps.treemapColor;
+    document.getElementById('seg-waterfall-color').closest('.field').hidden = !caps.waterfallColor;
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
     document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
     document.getElementById('seg-label-align').closest('.field').hidden = !caps.labelAlign;
@@ -469,6 +478,7 @@
         theme: t.id,
         density: state.density,
         treemapColor: state.treemapColor,
+        waterfallColor: state.waterfallColor,
         platform: state.platform,
         zoom: state.zoom === 'on',
         area: state.area === 'on',
@@ -511,6 +521,7 @@
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-treemap-color', 'treemapColor');
+  wireSeg('seg-waterfall-color', 'waterfallColor');
   wireSeg('seg-label', 'label');
   wireSeg('seg-label-layout', 'labelLayout');
   wireSeg('seg-label-align', 'labelAlign');

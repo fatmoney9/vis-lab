@@ -16,6 +16,7 @@ import { PieChart } from '../charts/charts/pie/index.js';
 import { RadarChart } from '../charts/charts/radar/index.js';
 import { SankeyChart } from '../charts/charts/sankey/index.js';
 import { TreemapChart } from '../charts/charts/treemap/index.js';
+import { WaterfallChart } from '../charts/charts/waterfall/index.js';
 import { buildConfig } from './examples.js';
 
 export const CHARTS = {
@@ -24,6 +25,7 @@ export const CHARTS = {
   radar: RadarChart, /* 网格形状 / 闭合形状分示例，不分组件（见 specs/radar.md） */
   sankey: SankeyChart,
   treemap: TreemapChart,
+  waterfall: WaterfallChart,
 };
 
 /*
