@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 待接入 | Playwright |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 待接入 | Playwright |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖） |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换已接入，其余待接入 | Chrome DevTools Protocol（零依赖） |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 
@@ -33,7 +33,12 @@ CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份
 
 ```sh
 node --test "tests/**/*.test.mjs"    # 等价 npm test
+node --experimental-websocket tests/browser/waterfall.browser.mjs # 等价 npm run test:browser
 ```
+
+浏览器合同会自动查找 macOS Chrome 与 Linux Chrome/Chromium；非标准安装位置通过
+`VIS_LAB_CHROME_BIN` 指向可执行文件。它自行启动临时静态服务与隔离浏览器配置，不依赖已运行的 8123 预览。
+该合同依赖 Node 20.10 新增的内置 WebSocket；命令保留显式开关，以兼容尚未默认开启它的 Node 20。
 
 **引号不能去掉**：要让 node 自己展开 `**`，交给 shell 展开只会匹配一层。写成 `tests/*.mjs` 时，
 `tests/` 子目录里的测试文件会被**静默跳过**——不报错、不警告，只是那些用例从此不再执行。
@@ -65,6 +70,7 @@ node --test "tests/**/*.test.mjs"    # 等价 npm test
 - `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
+- `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；不读取源码或 CSS 文本、不手写生产 SVG。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。
@@ -97,11 +103,12 @@ Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单
 
 ## 四、浏览器与视觉测试设计
 
-以下部分是下一阶段的接入标准，当前不能在 PR 中勾选为已自动化。
+以下部分是浏览器层的接入标准。瀑布图已有一组零依赖 Chrome 合同；未列入该合同的图型、状态与
+截图基线仍不能在 PR 中勾选为已自动化。
 
 ### 浏览器夹具
 
-浏览器测试应调用公开的 L2 组件（`CartesianChart` / `PieChart` / `SankeyChart` / `TreemapChart` / `RadarChart`），只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
+浏览器测试应调用公开的 L2 组件（`CartesianChart` / `PieChart` / `SankeyChart` / `TreemapChart` / `RadarChart` / `WaterfallChart`），只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
 L2 临场拼装 L1，也不得加入只为截图好看的样式参数。
 
 建议为每个稳定场景提供固定 ID：
@@ -195,7 +202,7 @@ L2 临场拼装 L1，也不得加入只为截图好看的样式参数。
 ## 七、接入路线
 
 1. 扩充纯逻辑单测：比例尺、双轴和图例选择逻辑在具备稳定 Node 依赖边界后补齐。
-2. 引入 Playwright 浏览器夹具，先做 DOM 与交互断言。
+2. 继续扩展现有零依赖 Chrome 浏览器夹具；需要录制、追踪或跨浏览器时再引入 Playwright。
 3. 在固定浏览器环境建立少量关键视觉基线。
 4. 扩展三主题差异矩阵，并增加失败产物归档。
 5. 增加色板 CVD/对比度、可访问性和性能专项检查。（色值字面量 lint 已于 2026-08-17 接入，

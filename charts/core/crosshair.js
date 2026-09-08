@@ -1,4 +1,6 @@
 import { tokenNum } from './tokens.js';
+import { axisLabelLines, renderAxisLabelLines, xAxisLabelTextLayout } from './axis.js';
+import { measureInk } from './measure.js';
 
 /*
  * L1 · hover 指示线 + 轴标签高亮贴片。权威规范见 specs/tooltip.md。
@@ -7,41 +9,80 @@ import { tokenNum } from './tokens.js';
  */
 
 /*
- * [TOOLTIP-09] X 轴标签高亮贴片：文字与 X 轴标签同基线（y = xBandTop、hanging）、
- * 字样式经 .dv-axis-tag-text 与轴标签同源；背景比文字大一圈——高 = line-height-axis
- * （上下由行高撑）、左右各加 spacing-axis-label-tag-pad-h，圆角 radius-axis-label-tag。
+ * [TOOLTIP-09] X 轴标签高亮贴片：文字直接复用 .dv-axis-label 基础类，
+ * 并经 renderAxisLabelLines 与常态标签同构；
+ * .dv-axis-tag-text 只覆盖高亮字色。label 接字符串或逐行字符串数组，数组保持
+ * 原轴标签的分行。背景比文字大一圈——高 = 行数 × line-height-axis（上下由行高撑）、
+ * 左右各加 spacing-axis-label-tag-pad-h，圆角 radius-axis-label-tag。
+ * 文字直接复用常态轴标签的 y / dominant-baseline / 逐行 dy；交互态只改变背景与字色，
+ * 不允许为了在黑底内视觉居中而平移文字，否则切换状态时标签会跳动。
+ * 背景则以 Canvas actualBoundingBox 测得的真实字形墨迹为中心定位；字体墨迹在行盒中并非天然居中，因此背景可能
+ * 相对 xBandTop 略微上移或下移，但文字坐标始终不变。
  * 水平以类目中心定位、贴 svg 边界 clamp（贴片与文字同步移）。
  * 即使该标签被碰撞策略（AXIS-06）隐藏也照常显示——贴片独立渲染、不查询标签 DOM。
  * 返回贴片上沿 y，供指示线连接（TOOLTIP-08）。
  */
-export function renderAxisTag(layer, frame, { x, label }) {
+/* [AXIS-04][TOOLTIP-09] 贴片高度沿用 X 轴行盒；纵向只让背景围绕真实字形墨迹居中，
+   不移动 xBandTop 上的文字。未取得墨迹测量时回落到旧的 xBandTop 起点。 */
+export function axisTagBox(frame, lineCount, inkMetrics = null) {
+  const lines = Math.max(1, Math.floor(Number(lineCount) || 1));
+  const height = frame.lineH * lines;
+  const measured = Array.isArray(inkMetrics) && inkMetrics.length >= lines
+    ? inkMetrics.slice(0, lines)
+    : null;
+  const bounds = measured?.map((metric, index) => {
+    const ascent = Number(metric?.ascent);
+    const descent = Number(metric?.descent);
+    const hanging = Number(metric?.hanging);
+    if (![ascent, descent, hanging].every(Number.isFinite)) return null;
+    const baseline = frame.xBandTop + index * frame.lineH + hanging;
+    return { top: baseline - ascent, bottom: baseline + descent };
+  });
+  const hasInk = bounds?.every(Boolean);
+  const inkTop = hasInk ? Math.min(...bounds.map((bound) => bound.top)) : 0;
+  const inkBottom = hasInk ? Math.max(...bounds.map((bound) => bound.bottom)) : 0;
+  return {
+    y: hasInk ? (inkTop + inkBottom) / 2 - height / 2 : frame.xBandTop,
+    height,
+  };
+}
+
+export function renderAxisTag(layer, frame, { x, label, lineClass = null }) {
   const pad = tokenNum(frame.host, '--spacing-axis-label-tag-pad-h');
   const radius = tokenNum(frame.host, '--radius-axis-label-tag');
+  const lines = axisLabelLines(label);
 
   const g = layer.selectAll('g.dv-axis-tag').data([0]).join('g').attr('class', 'dv-axis-tag');
   const bg = g.selectAll('rect.dv-axis-tag-bg').data([0]).join('rect').attr('class', 'dv-axis-tag-bg');
-  const text = g.selectAll('text.dv-axis-tag-text').data([0]).join('text')
-    .attr('class', 'dv-axis-tag-text')
-    .attr('dominant-baseline', 'hanging')
-    .attr('text-anchor', 'middle')
-    /* y 必须**在量 getBBox 之前**就位：bbox 的 y 是绝对坐标，未定位时读到的是 0，
-       背景会被摆到画布顶端。横向的 x 不受此累（getComputedTextLength 是纯字宽、与位置无关），
-       故仍留到下面与 bx 一起设。 */
-    .attr('y', frame.xBandTop)
-    .text(label);
+  const textLayout = xAxisLabelTextLayout(frame);
+  const text = g.selectAll('text.dv-axis-tag-text').data([lines]).join('text')
+    .attr('class', 'dv-axis-label dv-axis-tag-text')
+    .attr('y', textLayout.y)
+    .attr('dominant-baseline', textLayout.dominantBaseline)
+    .attr('text-anchor', 'middle');
 
-  const w = text.node().getComputedTextLength() + 2 * pad;
+  renderAxisLabelLines(text, {
+    lines: (content) => content,
+    x: () => 0,
+    lineHeight: textLayout.lineHeight,
+    lineClass,
+  });
+  const spans = text.selectAll('tspan');
+  const spanNodes = spans.nodes();
+
+  const w = Math.max(...spanNodes.map((span) => span.getComputedTextLength())) + 2 * pad;
   const bx = Math.max(0, Math.min(x - w / 2, frame.width - w));
-  /* 背景以**文字实际盒**竖直居中、高 = 行高。**文字位置不动**（仍锚在 xBandTop，与相邻 X 轴标签
-     同基线），移的只是底——高亮的那一个标签因此不会相对邻居跳位。
-     2026-08-20 前这里是 `xBandTop + fontSize / 2 - lineH / 2`，即**拿 fontSize 当文字盒高的替身**。
-     字体的 em 盒是 1.17–1.42 倍 fontSize（随字体而变），THS / iFinD 恰好蒙对，Ainvest 偏上 1.2px。
-     改测 getBBox 后三主题上下留白实测均为 0 偏差，且与 Y 值徽标（TOOLTIP-12）逐像素同构。 */
-  const box = text.node().getBBox();
-  const by = box.y + box.height / 2 - frame.lineH / 2;
-  bg.attr('x', bx).attr('y', by).attr('width', w).attr('height', frame.lineH)
-    .attr('rx', radius).attr('ry', radius);
   text.attr('x', bx + w / 2);
+  spans.attr('x', bx + w / 2);
+  /* getBBox 返回 em 排版盒，不是肉眼可见墨迹；复用 L1 measureInk 后只移动背景。 */
+  const ink = measureInk(frame.host, lines, (_value, index) => [
+    'dv-axis-label',
+    'dv-axis-tag-text',
+    spanNodes[index]?.getAttribute('class'),
+  ].filter(Boolean).join(' '));
+  const { y: by, height } = axisTagBox(frame, lines.length, ink);
+  bg.attr('x', bx).attr('y', by).attr('width', w).attr('height', height)
+    .attr('rx', radius).attr('ry', radius);
   return by;
 }
 
@@ -101,11 +142,11 @@ export function renderYAxisTags(layer, frame, items, opts = {}) {
   const bgs = layer.selectAll('rect.dv-axis-tag-bg').data(items).join('rect')
     .attr('class', 'dv-axis-tag-bg');
   const texts = layer.selectAll('text.dv-axis-tag-text').data(items).join('text')
-    .attr('class', 'dv-axis-tag-text')
+    .attr('class', 'dv-axis-label dv-axis-tag-text')
     /* **`central` 而不是 `middle`**：SVG 的 `middle` 对齐的是「字母基线 + 半个 x-height」，
        而徽标里是数字与汉字、高度远超 x-height，用 middle 会让整体上浮（三主题实测上偏 2.75~3.10px）。
        `central` 才是 em 盒居中。X 贴片（TOOLTIP-09）走的是另一条路——它的文字必须与相邻轴标签同基线，
-       故保持 hanging、改由背景去贴合文字盒；两者最终的上下留白逐像素相同。 */
+       故通过 xAxisLabelTextLayout 与常态标签共同保持 hanging，不做视觉居中位移。 */
     .attr('dominant-baseline', 'central')
     .text((d) => d.label);
 

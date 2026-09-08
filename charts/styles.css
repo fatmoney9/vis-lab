@@ -17,14 +17,17 @@
   stroke-width: var(--size-grid-line);
 }
 
-/* [AXIS-01] 轴标签：字体字号颜色全部走 token；字重按主题分化（--font-weight-axis） */
-.dv-axis-label {
-  fill: var(--color-text-axis);
+/* [AXIS-01][TOOLTIP-09] 常态轴标签与高亮态共用唯一一组字体规则。
+   `.dv-axis-tag-text` 同列是旧模块缓存的向后兼容：即使浏览器先更新 CSS、仍运行只挂状态类的
+   旧 crosshair.js，也不会回退到 SVG 默认 16px。新 DOM 同时挂 .dv-axis-label，结果完全相同。 */
+.dv-axis-label,
+.dv-axis-tag-text {
   font-size: var(--font-size-axis);
   font-weight: var(--font-weight-axis);
   font-family: var(--font-family-number);
   font-variant-numeric: tabular-nums;
 }
+.dv-axis-label { fill: var(--color-text-axis); }
 
 /* [AXISTITLE-05] 轴标题与 Y 轴标签**共用同一套文字样式规则**：§22 的四个 token 逐一别名到
    轴标签同名项（color-text-axis / font-size-axis / line-height-axis / font-weight-axis），
@@ -423,6 +426,85 @@
   --dv-image-content-value-weight: var(--font-weight-data-label);
 }
 
+/* [WATERFALL-03..15] 瀑布图专属结构。几何由 L2 装配；所有颜色、字体、线宽与透明度走 token。 */
+.dv-chart--waterfall { width: 100%; }
+.dv-chart--waterfall > .dv-chart__plot { width: 100%; }
+.dv-waterfall-period {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+}
+.dv-waterfall-connector {
+  fill: none;
+  stroke: var(--color-waterfall-connector);
+  stroke-width: var(--size-waterfall-connector);
+  stroke-dasharray: var(--dash-waterfall-connector);
+}
+.dv-waterfall-bar { fill: currentColor; }
+.dv-waterfall-bar--delta-arrow { fill-opacity: var(--opacity-waterfall-delta-fill); }
+.dv-waterfall-segment-divider {
+  stroke: var(--color-background-layer1);
+  stroke-width: var(--size-waterfall-connector);
+}
+.dv-waterfall-delta-cap {
+  stroke: currentColor;
+  stroke-width: var(--size-waterfall-delta-cap);
+}
+.dv-waterfall-direction-line {
+  stroke: currentColor;
+  stroke-width: var(--size-waterfall-arrow-line);
+  opacity: var(--opacity-waterfall-delta-fill);
+}
+.dv-waterfall-direction-head {
+  fill: currentColor;
+  opacity: var(--opacity-waterfall-delta-fill);
+}
+.dv-waterfall-percent__bg { fill: currentColor; }
+.dv-waterfall-percent__text {
+  fill: var(--color-text-inverse-primary);
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-xxs);
+  font-weight: var(--font-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-value-label {
+  font-size: var(--font-size-extra-small);
+  font-weight: var(--font-weight-medium);
+}
+.dv-waterfall-segment-label {
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-extra-small);
+  pointer-events: none;
+}
+.dv-waterfall-segment-label__name { font-weight: var(--font-weight-regular); }
+.dv-waterfall-segment-label__value {
+  font-family: var(--font-family-number);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-segment-label--solid .dv-waterfall-segment-label__name,
+.dv-waterfall-segment-label--solid .dv-waterfall-segment-label__value {
+  fill: var(--color-text-inverse-primary);
+}
+.dv-waterfall-segment-label--light .dv-waterfall-segment-label__name { fill: var(--color-text-secondary); }
+.dv-waterfall-segment-label--light .dv-waterfall-segment-label__value { fill: var(--color-text-primary); }
+.dv-waterfall-operator {
+  fill: var(--color-text-axis);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-axis);
+  font-weight: var(--font-weight-axis);
+}
+.dv-waterfall-axis-value {
+  font-family: var(--font-family-number);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
 /* [WATERMARK-05] 水印：品牌 logo <image>，颜色/透明度烘焙在 SVG 内、明暗各一份（不走 token 链路）。
    pointer-events:none —— 永不抢鼠标，贴数据之上也不影响 hover/tooltip 命中。 */
 .dv-watermark { pointer-events: none; }
@@ -508,14 +590,26 @@
   margin-top: calc((1.4em - var(--size-legend-marker)) / 2);
   color: var(--dv-series-color, currentColor);
 }
-.dv-tooltip__label { color: var(--color-text-tooltip-series); min-width: 0; }
+.dv-tooltip__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--color-text-tooltip-series);
+  overflow-wrap: anywhere;
+}
 .dv-tooltip__value {
+  flex: none;
   margin-left: auto;
   padding-left: var(--spacing-tooltip-row-gap); /* 两列最小间距 */
   color: var(--color-text-tooltip-value);
   font-weight: var(--font-weight-tooltip-value);
   white-space: nowrap; /* [TOOLTIP-03] 数值永不换行 */
   font-variant-numeric: tabular-nums;
+}
+
+/* [WATERFALL-08] 数值与涨幅合成一个不可换行读数后会突破通用 160px 上限。
+   本族按内容自然扩宽，极端长度以视口两侧安全边距封顶；其他图表仍使用默认 token。 */
+.dv-chart--waterfall .dv-tooltip {
+  max-width: calc(100vw - var(--spacing-24) - var(--spacing-24));
 }
 /* [TOOLTIP-08] X 轴竖指示线：线色/虚实随主题 token（iFinD 虚线 3 3）；线宽与网格线同源 */
 .dv-crosshair-x {
@@ -534,15 +628,9 @@
 /* [TOOLTIP-11] hover 指示 block（纯分组柱）：类目底色带（网格之上、mark 之下），三主题同 token */
 .dv-crosshair-block { fill: var(--color-visualization-highlight-block); }
 
-/* [TOOLTIP-09] X 轴标签高亮贴片：文字样式与轴标签（.dv-axis-label）同源、色走高亮 token */
+/* [TOOLTIP-09] 轴高亮贴片：text 同时挂 .dv-axis-label 复用全部字体规则；状态类只覆盖字色。 */
 .dv-axis-tag-bg { fill: var(--color-visualization-highlight-background-tick); }
-.dv-axis-tag-text {
-  fill: var(--color-text-highlight-tick);
-  font-size: var(--font-size-axis);
-  font-weight: var(--font-weight-axis);
-  font-family: var(--font-family-number);
-  font-variant-numeric: tabular-nums;
-}
+.dv-axis-tag-text { fill: var(--color-text-highlight-tick); }
 
 /* [DATAZOOM-04] 缩放轴 · 轨道/数据阴影/选区：色全走 §13「缩放轴 Axes Navigator」token。
    纯视觉层（背景/数据阴影/提示文本/grip）关指针，交互只由透明热区 + 选区 + 手柄接管。 */
