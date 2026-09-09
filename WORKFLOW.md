@@ -197,7 +197,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 统一复用 `demos/sankey-financial.js`，避免两份数据生成器产生不同会计关系。新图型若无类似的固定外框硬需求，
 不要照抄这条路径。
 
-**要另开对照面时照雷达、不要照桑基**：`playground/radar-preview.html` 把雷达三形态 × 三主题
+**要另开对照面时照雷达、不要照桑基**：`playground/radar-preview.html` 把雷达四形态 × 三主题
 九张图同屏铺开（改一版 token 或几何能一眼看到全部影响），但它**import `demos/examples.js`**、
 只负责「怎么摆」，故加示例仍然只改 `demos/`，不存在桑基那种两处同步的漂移代价。
 判据很简单：**独立面可以另起，但示例源不许另起**。
@@ -217,7 +217,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
-与 `RadarChart`（多指标对比图，角度均分 · 值→半径 · 固定量程可选 · 扇形热区与单系列钉住，见 `specs/radar.md` RADAR-01..17）、
+与 `RadarChart`（多指标对比图，角度均分 · 值→半径 · 固定量程可选 · 扇形热区、单系列钉住与可调节输入，见 `specs/radar.md` RADAR-01..18）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
 外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）。

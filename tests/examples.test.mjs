@@ -87,6 +87,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     yIndicator: false,
     treemapColor: false,
     axisValue: false,
+    radarShape: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
@@ -213,6 +214,25 @@ test('PIE-05/PIE-08/TREEMAP-08/RADAR-07：无坐标系图不得声明轴相关�
   }
 });
 
+test('RADAR-18：可调节示例是单系列，固定统一量程并支持直线 / 曲线', () => {
+  const example = EXAMPLES.find((item) => item.id === 'radar-adjustable');
+  assert.ok(example, 'EXAMPLES 中应注册可调节雷达图示例');
+  const cfg = buildConfig(example, { density: 'mid' });
+  assert.equal(cfg.editable, true);
+  assert.equal(cfg.series.length, 1);
+  assert.equal(cfg.max, 5);
+  assert.equal(cfg.editStep, 0.1);
+  assert.equal(cfg.series[0].data.length, cfg.dimensions.length);
+  assert.equal(capabilitiesOf(example).radarShape, true);
+  assert.equal(capabilitiesOf(example).axisValue, false, '可调节态不提供轴标签数值');
+  assert.equal(buildConfig(example, { density: 'mid', axisValue: true }).axisValue, undefined);
+  assert.equal(cfg.shape, undefined, '直线是组件默认值，不重复写入 cfg');
+  assert.equal(buildConfig(example, { density: 'mid', radarShape: 'curve' }).shape, 'curve');
+  const fixedRadar = EXAMPLES.find((item) => item.id === 'radar-basic');
+  assert.equal(capabilitiesOf(fixedRadar).radarShape, false, '固定形态示例不显示此旋钮');
+  assert.equal(buildConfig(fixedRadar, { radarShape: 'curve' }).shape, undefined);
+});
+
 /* [TREEMAP-06] 数据仍是递归结构，但深层只用于**汇总父节点的值**——无下钻后
    子节点不再是可进入的层级，这条断言守的是「求和口径」而不是「导航层级」。 */
 test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与汇总', () => {
@@ -241,6 +261,7 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     yIndicator: false,
     treemapColor: true,
     axisValue: false,
+    radarShape: false,
   });
 });
 

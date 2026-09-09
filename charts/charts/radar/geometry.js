@@ -1,6 +1,6 @@
 /*
- * radar/geometry.js —— 【轴角均分 + 值→半径 + 网格环 + 绕圆标签锚点 + 扇形命中】
- * [L2-LOCAL] 图表专属，本期有意不下沉 L1（[RADAR-02][RADAR-03][RADAR-04][RADAR-07][RADAR-09][RADAR-10]）
+ * radar/geometry.js —— 【轴角均分 + 值→半径 + 网格环 + 绕圆标签锚点 / 弧线 + 扇形命中】
+ * [L2-LOCAL] 图表专属，本期有意不下沉 L1（[RADAR-02][RADAR-03][RADAR-04][RADAR-07][RADAR-09][RADAR-10][RADAR-14][RADAR-18]）
  *
  * 干什么：把「每根轴指向哪、值该落在多远、网格环画多大、标签摆在哪、指针落在第几个扇形」
  * 算成**纯数据**，交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token、**零 import**——
@@ -9,7 +9,7 @@
  * 角度约定与 pie/geometry.js 同源：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
  * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——见 pointAt()。
  *
- * ── 将来下沉 L1 的两个点（第二个消费方出现时才动，别提前抽象）──────────────
+ * ── 将来下沉 L1 的三个点（满足各自消费方条件时才动，别提前抽象）────────────
  *
  * 下沉点 ①：axisAngles / seriesPoints / ringRadii —— 极坐标骨架
  *   判断条件：出现**第二个**「角度按 360/n 均分、数据映射到半径」的图型。
@@ -17,14 +17,19 @@
  *   不会触发：极坐标柱状图——它的角度方向是一根真正的轴（一根 angleAxis 上排若干类目），
  *             不是均分出来的常量位置；看着像，数学不是一回事。
  *
- * 下沉点 ②：labelAnchor —— 绕圆文字的八向锚点
- *   判断条件：出现**第二个**需要「把文字摆在圆周上、按所在方位决定对齐方式」的图型。
+ * 下沉点 ②：labelAnchor / labelArc —— 绕圆文字的锚点与可读弧线
+ *   判断条件：出现**第二个**需要「把文字摆在圆周上、决定对齐方式或生成可读弧线」的图型。
  *   会触发：**仪表盘**（刻度标签沿弧排布，问题与雷达维度标签完全相同）。
  *   饼环不算：pie 的 labelAnchor 吃的是一个扇区的两个角、只分左右两侧，没有八向逻辑。
- *   ⚠️ 故本函数签名被**刻意限制**为只收 (angle, radius, gap)，不收 dimensions / series / cfg——
- *      命中时是「移动一个纯函数」，不是重写。改签名前先想清楚这件事。
+ *   ⚠️ 故两个函数都只收角度、半径等纯几何参数，不收 dimensions / series / cfg——
+ *      命中时是「移动纯函数」，不是重写。改签名前先想清楚这件事。
  *
- * 两个下沉点互相独立，命中 ② 不代表 ① 也该动。
+ * 下沉点 ③：radarFrame 的标签带「吃剩下的」公式
+ *   判断条件：出现**第三个**需要「图元先占位、标签带吃剩余空间并封顶」的图型。
+ *   现有两个消费方是 pie/geometry.js 的 labelBand 与本族 radarFrame；公式虽同，调用形态不同。
+ *   第三个消费方出现时不要再抄第四份，应连同调用形态一起收进 L1。
+ *
+ * 三个下沉点互相独立，命中 ② 不代表 ① 也该动。
  * gridPath 与 sectorAt **不在下沉候选内**：闭合整环只有雷达要，而 sectorAt 整个算法
  * 建立在「角度均分」这个雷达专属前提上。
  * 完整判据与规范见 specs/radar.md 的「分层边界」。
@@ -154,6 +159,38 @@ export function seriesPoints(values, domain, R, angles) {
 }
 
 /*
+ * [RADAR-18] 指针位置 -> 某一径向轴上的值。
+ *
+ * 拖动手柄不是取「指针到圆心的距离」：那会让指针只要横向偏出去，值也跟着虚增。
+ * 正确口径是把圆心到指针的向量**正交投影**到目标轴，再夹在 [0, R] 内；因此手指不必
+ * 像素级贴着细轴移动，但只有沿轴方向的位移会改变值。
+ *
+ * pointAt() 给出的轴单位向量是 (sin(a), -cos(a))，与指针向量点积就是带符号投影长度。
+ * 返回原始连续值；是否按业务步长吸附由 snapRadarValue() 单独负责。
+ */
+export function radarValueAt(pointer, cx, cy, angle, domain, R, handleOffset = 0) {
+  if (!(R > 0) || !(domain?.max > 0)) return 0;
+  const dx = pointer.x - cx;
+  const dy = pointer.y - cy;
+  /* [RADAR-18] 手柄圆心比真实数据点沿轴向外偏半径 handleOffset；反算值时须扣回，
+     否则在手柄原位按下也会让数值凭空增加一截。 */
+  const projected = dx * Math.sin(angle) - dy * Math.cos(angle) - Math.max(0, handleOffset);
+  return clamp(0, projected / R, 1) * domain.max;
+}
+
+/*
+ * [RADAR-18] 可选步长吸附。step 未给 / 非法时保留连续值；给了则吸附到最近一档，
+ * 再次夹取保证浮点舍入不会越过 max。小数位按 step 推出，只用于消掉 0.30000000000000004。
+ */
+export function snapRadarValue(value, max, step) {
+  const clamped = clamp(0, Number.isFinite(value) ? value : 0, max);
+  if (!(Number.isFinite(step) && step > 0)) return clamped;
+  const decimals = Math.min(12, Math.max(0, String(step).split('.')[1]?.length ?? 0));
+  const snapped = Number((Math.round(clamped / step) * step).toFixed(decimals));
+  return clamp(0, snapped, max);
+}
+
+/*
  * [RADAR-07] 轴标签锚点：沿径向轴外延 gap 后的位置 + **按所在方位定的八向对齐**。
  *
  * ⚠️ **签名是契约的一部分**：只收 (angle, radius, gap)，不收 dimensions / series / cfg。
@@ -177,6 +214,35 @@ export function labelAnchor(angle, radius, gap) {
     y,
     textAnchor: sx > TOL ? 'start' : sx < -TOL ? 'end' : 'middle',
     baseline: cy > TOL ? 'auto' : cy < -TOL ? 'hanging' : 'central',
+  };
+}
+
+/*
+ * [RADAR-14] 可调节雷达的弧形轴标签路径。
+ *
+ * 默认沿顺时针弧排字，基线的外侧正好朝圆外；落在下半圆时反向，避免文字倒置，并按
+ * 真实字形 ascent 外移，让反向路径朝内生长的墨迹仍从 R + gap 之外开始。返回纯几何数据，
+ * index.js 只负责装配 <path> / <textPath>。
+ */
+export function labelArc(angle, radius, gap, span, inkAscent = 0) {
+  const normalized = ((angle % TAU) + TAU) % TAU;
+  const reversed = normalized > Math.PI / 2 && normalized < (Math.PI * 3) / 2;
+  const arcSpan = clamp(0, Number.isFinite(span) ? span : 0, Math.PI - 1e-6);
+  const r = Math.max(0, radius + gap + (reversed ? Math.max(0, inkAscent) : 0));
+  const half = arcSpan / 2;
+  const startAngle = reversed ? angle + half : angle - half;
+  const endAngle = reversed ? angle - half : angle + half;
+  const start = pointAt(startAngle, r);
+  const end = pointAt(endAngle, r);
+  const sweep = reversed ? 0 : 1;
+  return {
+    d: `M${start.x},${start.y}A${r},${r} 0 0 ${sweep} ${end.x},${end.y}`,
+    radius: r,
+    length: r * arcSpan,
+    reversed,
+    start,
+    end,
+    sweep,
   };
 }
 

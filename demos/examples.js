@@ -4,7 +4,7 @@
  * 各预览面共享本模块，各自只负责「怎么展示」：
  *   index.html                     对外站点：画廊 + 详情页、单主题切换
  *   playground/preview.html        开发验收：三主题横向并排、旋钮更全
- *   playground/radar-preview.html  雷达专用对照面：三形态 × 三主题九张图同屏
+ *   playground/radar-preview.html  雷达专用对照面：四形态 × 三主题十二张图同屏
  * 示例定义与数据生成函数只有这一份——加示例改一处，各面同时生效，不会漂移。
  *
  * 本模块**只装数据**：不 import d3、不 import 图表组件、不碰 DOM
@@ -107,7 +107,7 @@ const RADAR_SCORES = {
 export const radarSeries = (n, lang = 'cn') =>
   RADAR_SCORES[lang].map((s) => ({ name: s.name, data: s.data.slice(0, n) }));
 
-/* 三条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
+/* 四条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
 const RADAR_DENSITY = {
   densityValues: { few: 3, mid: 5, many: 6 },
   /* 连续档的上下限是**技术下限**不是建议：低于 3 维 RadarChart 抛错（RADAR-01
@@ -577,8 +577,10 @@ export const CHART_CAPABILITIES = {
      （它已进 tests/examples.test.mjs 的 axisless 名单，那是被断言的契约、不是约定）。
      axisValue 是本族专属：轴标签是否带数值。**与交互无关**——基线 7.2 那条「展示数值时
      不可交互」已被 AInvest Figma 推翻（三组数据带数值且照常 hover），故它只是个显隐开关。
-     网格形状与闭合形状不做旋钮：它们分成三条独立示例（同 treemap 的入口/通用/全局）。 */
-  radar: { animation: true, legendSelect: true, axisValue: true },
+     网格形状与闭合形状通常不做旋钮：它们分成三条独立示例（同 treemap 的入口/通用/全局）。
+     唯一例外是 editable 示例：直线 / 曲线与输入能力正交，需在同一张图上验收拖动，故由
+     capabilitiesOf 再按示例实际配置收窄 radarShape。 */
+  radar: { animation: true, legendSelect: true, axisValue: true, radarShape: true },
   /* 桑基当前由节点 hover / 点击和季度播放 API 承担交互，不复用坐标轴或饼环旋钮。 */
   sankey: { density: false },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
@@ -789,6 +791,18 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'radar-adjustable', group: '雷达图', chart: 'radar',
+    title: '可调节雷达图', spec: 'RADAR-18', surfaces: BOTH,
+    description: '单系列输入形态：支持直线或曲线闭合，维度名沿外围弧排布；拖动轴上手柄或用方向键调值。',
+    ...RADAR_DENSITY,
+    cfg: (n) => ({
+      name: '自定义能力配置', dimensions: radarDims(n),
+      series: [radarSeries(n)[0]],
+      max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS,
+      editable: true, editStep: 0.1,
+    }),
+  },
+  {
     id: 'donut', group: '饼图与环形图', chart: 'pie',
     title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
     description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
@@ -896,13 +910,16 @@ export const supportsArea = (example) => {
 /* 该示例实际可用的旋钮（图表类型能力 ∩ 本示例配置形态） */
 export const capabilitiesOf = (example) => {
   const caps = CHART_CAPABILITIES[example.chart] ?? {};
+  const editableRadar = example.chart === 'radar'
+    && example.cfg(defaultDensityCountOf(example)).editable === true;
   return {
     density: caps.density !== false,
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
     legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
-    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue,
+    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue && !editableRadar,
+    radarShape: !!caps.radarShape && editableRadar,
   };
 };
 
@@ -910,7 +927,7 @@ export const capabilitiesOf = (example) => {
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
  *   state = { density='few', theme='ths', platform='pc', zoom, area, dataLabel, axisTitle, animation,
- *             legend, labelLayout, labelAlign, treemapColor } —— 各项皆可缺省
+ *             legend, labelLayout, labelAlign, treemapColor, radarShape } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
  * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
  * behavior 解析。theme 在这里仅允许驱动示例声明的 L3 presentation 文案映射。
@@ -920,7 +937,7 @@ export function buildConfig(example, state = {}) {
     density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
-    treemapColor = 'intensity', axisValue = false,
+    treemapColor = 'intensity', axisValue = false, radarShape = 'straight',
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
@@ -973,6 +990,9 @@ export function buildConfig(example, state = {}) {
   /* [RADAR-07] 轴标签数值：组件默认关，故只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。
      它不牵动任何交互开关——基线 7.2 的「展示数值时不可交互」已被设计源推翻，见 specs/radar.md。 */
   if (caps.axisValue && axisValue) cfg.axisValue = true;
+  /* [RADAR-18] 仅 editable 示例开放闭合形态切换。straight 是组件默认，不重复写；
+     curve 与手柄共用同一组数据点与编辑链路，只替换闭合插值。 */
+  if (caps.radarShape && radarShape === 'curve') cfg.shape = 'curve';
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;

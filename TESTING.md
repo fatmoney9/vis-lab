@@ -57,7 +57,7 @@ node --test "tests/**/*.test.mjs"    # 等价 npm test
 - `charts/charts/cartesian/layout.js`：分组、单柱、普通堆叠和百分比堆叠；
 - `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计；
 - `charts/core/label.js`：省略号截断（`truncateBatch`——**测量函数经参数注入**，故无需伪造 DOM，同 `motion.js` 注入时钟的做法）：装得下原样返回、超宽截到**最长**可行前缀（不保守多截）、连「1 字 + `…`」都放不下则回落丢弃、一批混合各归各位、**按轮批量测量**（调用次数随轮数而非标签数增长）、按码点切不劈开代理对。
-- `charts/charts/radar/geometry.js`：轴角均分与首轴方位、值域两条路（给 `max` 则定死、否则注入 `niceSplit` 求 nice 上界）、网格环与最少 2 段、画布几何（半径先按容器定、标签带吃剩下的、横竖分开、收缩下限与最小高度）、绕圆标签的八向锚点、多边形扇形热区、扇区命中（含圆心与跨 0 度两处边界）（`axisAngles` / `radarDomain` / `radarFrame` / `ringRadii` / `gridPath` / `seriesPoints` / `labelAnchor` / `sectorAt` / `sectorCorners`）。
+- `charts/charts/radar/geometry.js`：轴角均分与首轴方位、值域两条路（给 `max` 则定死、否则注入 `niceSplit` 求 nice 上界）、网格环与最少 2 段、画布几何（半径先按容器定、标签带吃剩下的、横竖分开、收缩下限与最小高度）、绕圆标签的八向锚点与可读弧线（下半圈反向）、多边形扇形热区、扇区命中（含圆心与跨 0 度两处边界）、可调节手柄的轴向投影与步长吸附（`axisAngles` / `radarDomain` / `radarFrame` / `ringRadii` / `gridPath` / `seriesPoints` / `labelAnchor` / `labelArc` / `sectorAt` / `sectorCorners` / `radarValueAt` / `snapRadarValue`）。
 - `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
 - `charts/core/legend-state.js`：图例点击的状态迁移——`applyToggle` 两档（multi 独立开关 / single 只留一项）+ LEGEND-12「最后一个可见项不可关」（含「全隐不可达」与承接 multi 遗留 hidden 的判据），`applyFocus` 强调档（选中迁移 + 不产生 hidden）。**这些逻辑此前零覆盖**，因为它们原本住在 import d3 的 `legend.js` 里、`node --test` 加载不了；单开一个纯模块正是为此。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
@@ -100,7 +100,7 @@ Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单
 
 ### 浏览器夹具
 
-浏览器测试应调用公开的 L2 组件（`CartesianChart` / `PieChart`），只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
+浏览器测试应调用公开的 L2 组件（`CartesianChart` / `PieChart` / `SankeyChart` / `TreemapChart` / `RadarChart`），只传数据与语义配置。测试夹具不得手写生产 SVG、不得绕过
 L2 临场拼装 L1，也不得加入只为截图好看的样式参数。
 
 建议为每个稳定场景提供固定 ID：
