@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>雷达图预览 · 四形态 × 三主题（specs/radar.md）</title>
+<title>雷达图预览 · 六个典型配置 × 三主题（specs/radar.md）</title>
 <style>
   /* 本文件只做「预览外壳」的样式；图表内部一切颜色 / 字号 / 间距仍走 tokens.css。
-     ⚠️ 与 playground/preview.html 的关系：那是**全图型**的开发验收面，雷达四条示例在那里
-     是四个并列分类、一次只能看一个。本页是雷达专用的**对照面**——把四种形态 × 三主题
-     一次铺开，改一版 token 或几何能一眼看到十二张图同时怎么变。
+     ⚠️ 与 playground/preview.html 的关系：那是**全图型**的开发验收面，雷达示例在那里
+     是三个并列分类、一次只能看一个。本页是雷达专用的**对照面**——把六个典型配置 × 三主题
+     一次铺开，改一版 token 或几何能一眼看到十八张图同时怎么变。
      两者共用同一份示例数据源（demos/examples.js），故不存在桑基独立面那种「改示例要改两处」
      的漂移代价，见 AGENTS.md 对桑基例外的说明。 */
   :root {
@@ -100,7 +100,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand"><b>雷达图预览</b><span>四形态 × 三主题 · specs/radar.md</span></div>
+    <div class="brand"><b>雷达图预览</b><span>六个典型配置 × 三主题 · specs/radar.md</span></div>
 
     <div class="field">
       <label>维度数</label>
@@ -116,6 +116,33 @@
       <div class="seg" id="seg-axis-value">
         <button data-value="off" class="is-active">关</button>
         <button data-value="on">开</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>维度标签排列</label>
+      <!-- 本页六张卡同屏，逐卡高亮无处可放，故把「跟随示例」做成显式一档并作默认：
+           可调节配置照旧默认环绕（RADAR-14），其余照旧横排，回归矩阵开箱即是各自的默认形态。 -->
+      <div class="seg" id="seg-axis-label-layout">
+        <button data-value="auto" class="is-active">跟随示例</button>
+        <button data-value="horizontal">横排</button>
+        <button data-value="arc">环绕</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>分区</label>
+      <div class="seg" id="seg-rating-style">
+        <button data-value="gradient" class="is-active">渐变</button>
+        <button data-value="bands">分段</button>
+      </div>
+    </div>
+
+    <div class="field" hidden>
+      <label>分段数量</label>
+      <div class="seg" id="seg-rating-band-count">
+        <button data-value="5">5 段</button>
+        <button data-value="6" class="is-active">6 段</button>
       </div>
     </div>
 
@@ -169,13 +196,13 @@
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, THEMES, densityControlOf } from '../demos/examples.js';
+  import { examplesFor, THEMES, densityControlOf, radarAxisLabelLayoutOf } from '../demos/examples.js';
 
-  /* 只挑雷达族的示例——**按 chart 字段筛，不写死 id**：将来 demos/ 里加第五条雷达示例
-     （比如评级形态 RADAR-15 落地时），本页自动多出一行，不用改这里。 */
-  const EXAMPLES = examplesFor('playground').filter((e) => e.chart === 'radar');
+  /* 专项面展示的是**典型配置回归矩阵**，不等于对外图表分类。配置仍由 demos/ 单点声明，
+     新增 radar-preview surface 的雷达配置时本页自动多出一行，不写死 id。 */
+  const EXAMPLES = examplesFor('radar-preview').filter((e) => e.chart === 'radar');
 
-  const state = { density: 'mid', axisValue: 'off', legendSelect: 'multi', platform: 'pc', mode: 'light', animation: 'on' };
+  const state = { density: 'mid', axisValue: 'off', axisLabelLayout: 'auto', ratingStyle: 'gradient', ratingBandCount: '6', legendSelect: 'multi', platform: 'pc', mode: 'light', animation: 'on' };
   const instances = new Map();
 
   const grid = document.getElementById('grid');
@@ -211,6 +238,7 @@
   }
 
   function render() {
+    document.getElementById('seg-rating-band-count').closest('.field').hidden = state.ratingStyle !== 'bands';
     /* 每轮先销毁旧实例：组件的 destroy 会摘掉自己挂的类与 --dv-series-* 私有属性，
        不销毁就重挂会让两套状态叠在同一个 host 上（同 preview.html 的做法）。 */
     instances.forEach((inst) => inst?.destroy?.());
@@ -229,6 +257,9 @@
         density: state.density,
         platform: state.platform,
         axisValue: state.axisValue === 'on',
+        axisLabelLayout: state.axisLabelLayout,
+        ratingStyle: state.ratingStyle,
+        ratingBandCount: state.ratingBandCount,
         legendSelect: state.legendSelect,
         animation: state.animation === 'on',
       });
@@ -237,7 +268,7 @@
       const control = densityControlOf(example);
       const label = control.options.find((o) => o.id === state.density)?.label ?? state.density;
       card.querySelector('[data-meta]').textContent =
-        `${label} · ${cfg.max != null ? `量程 0–${cfg.max}` : '自动量程'} · ${cfg.gridShape ?? 'circle'} / ${cfg.shape ?? 'straight'}`;
+        `${label} · ${cfg.max != null ? `量程 0–${cfg.max}` : '自动量程'} · ${radarAxisLabelLayoutOf(example, state.axisLabelLayout)} · ${cfg.variant === 'rating' ? (cfg.ratingStyle ?? 'gradient') : `${cfg.gridShape ?? 'circle'} / ${cfg.shape ?? 'straight'}`}`;
     }
   }
 
@@ -248,6 +279,12 @@
       const key = seg.id.replace(/^seg-/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
       state[key] = button.dataset.value;
       seg.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === button));
+      /* [RADAR-07/14] 环绕只承载维度名，不叠第二条数值弧；切过去时同步关掉数值。 */
+      if (key === 'axisLabelLayout' && state.axisLabelLayout === 'arc') {
+        state.axisValue = 'off';
+        document.querySelectorAll('#seg-axis-value button').forEach((b) =>
+          b.classList.toggle('is-active', b.dataset.value === 'off'));
+      }
       render();
     });
   }

@@ -64,6 +64,11 @@
 `RadarChart` 直接抛错）；② 上限必须盖过本示例最大的预设档，否则滑杆够不到三档面看得到的
 形态，成了静默分叉。两条都有守卫（`tests/examples.test.mjs`）。
 
+另有一类**只属于 index 详情页**的“数据组数”控件：示例用 `indexSeriesRange` 声明范围，`cfg` 的
+第二参数只用于从假数据池选取若干条 `series`；index 在挂载前包装示例并传入该参数。它不是
+`CHART_CAPABILITIES`、不进入 `buildConfig` 或组件 cfg，playground 也不展示。组合图和正负堆叠
+在最小档仍固定保留折线 / 负值系列，避免为了调数量破坏示例原本的图形语义。
+
 **依赖链全景：**
 
 ```
@@ -197,8 +202,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 统一复用 `demos/sankey-financial.js`，避免两份数据生成器产生不同会计关系。新图型若无类似的固定外框硬需求，
 不要照抄这条路径。
 
-**要另开对照面时照雷达、不要照桑基**：`playground/radar-preview.html` 把雷达四形态 × 三主题
-九张图同屏铺开（改一版 token 或几何能一眼看到全部影响），但它**import `demos/examples.js`**、
+**要另开对照面时照雷达、不要照桑基**：`playground/radar-preview.html` 把雷达六个典型配置 × 三主题
+十八张图同屏铺开（改一版 token 或几何能一眼看到全部影响），但它**import `demos/examples.js`**、
 只负责「怎么摆」，故加示例仍然只改 `demos/`，不存在桑基那种两处同步的漂移代价。
 判据很简单：**独立面可以另起，但示例源不许另起**。
 
@@ -212,23 +217,26 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-08-21，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+截至 2026-09-09，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
 **五个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
-与 `RadarChart`（多指标对比图，角度均分 · 值→半径 · 固定量程可选 · 扇形热区、单系列钉住与可调节输入，见 `specs/radar.md` RADAR-01..18）、
+与 `RadarChart`（标准 / 多数据 / 分区三类示例，角度均分 · 值→半径 · 横排 / 环绕标签 · 连续 / 分段背景 · 单系列可调节输入，见 `specs/radar.md` RADAR-01..18）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
 外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）。
 **这里有意不写条数**——条数曾在 5 份文档 8 处各写一份，漂过两次（八→九那轮漏了 README 与本文件）。
 完整且唯一的清单在 `hooks/check.sh`，完整测试流程见 `TESTING.md`。
 
-**第三个实测点（`RadarChart`，2026-08-31）：L1 一个文件未改**，与 `SankeyChart` 同侧、和 `PieChart` 相反。
+**第三个实测点（`RadarChart` 初次接入，2026-08-31）：当时 L1 一个文件未改**，与 `SankeyChart` 同侧、和 `PieChart` 相反。
 原因很具体——饼环当年已经替**所有无坐标系图**把账付掉了（`frame` 的两个下限可显式关闭、
 `tooltip.place()` 删掉容器尺寸参数、`label.dropCollisions` 泛化成 `{start,size}`），雷达接入时直接受益。
 两处本来最像要改 L1 的地方也都免了：`scale.js` 的 `linearY(split, R, 0)` 拿来就是「值 → 半径」
 （函数名带 Y 但数学是通用的），`split.js` 的 `niceSplit(0, max, {lineCount})` 拿来就是网格环分段。
+**2026-09-09 接入分区雷达后，现役状态已不是“L1 零改动”**：`core/visual-color.js` 新增
+`performanceColorRamp()`，把低表现→高表现的六级 token 色阶做成跨图表通用能力；Radar L2 只决定
+连续渐变或离散色带的消费方式。这个后续扩展没有推翻初次接入结论，也没有在 L2 重写取色能力。
 **`behavior.json` 同样一个键未加**——网格形状与闭合形状在 Figma 里 AInvest 自己就同时提供两种，
 说明它们是图表配置不是品牌分叉（判据同 LEGEND-10，也是 `legend-select` 放错通道那次的教训）。
 

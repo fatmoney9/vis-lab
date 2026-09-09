@@ -1,7 +1,41 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { intensityLevels, resolveItemColors } from '../charts/core/visual-color.js';
+import {
+  intensityLevels,
+  performanceColorRamp,
+  resolveItemColors,
+} from '../charts/core/visual-color.js';
+
+test('COLOR-10：表现色阶恒由低到高，任意分段数投影到六级权威 token', () => {
+  assert.deepEqual(performanceColorRamp(), [
+    'var(--color-performance-level-1)',
+    'var(--color-performance-level-2)',
+    'var(--color-performance-level-3)',
+    'var(--color-performance-level-4)',
+    'var(--color-performance-level-5)',
+    'var(--color-performance-level-6)',
+  ]);
+  assert.deepEqual(performanceColorRamp(3), [
+    'var(--color-performance-level-1)',
+    'var(--color-performance-level-3)',
+    'var(--color-performance-level-6)',
+  ]);
+  assert.equal(performanceColorRamp(7).length, 7);
+  /* 正中间那档向下取：五档保住中性黄 level-3，被合并的是本就难分的 level-5 / 6 那对绿。
+     向上取会得到 1/2/4/5/6——离散色带少一个可读台阶，且「0%」这类中性档偏向正面色。 */
+  assert.deepEqual(performanceColorRamp(5), [
+    'var(--color-performance-level-1)',
+    'var(--color-performance-level-2)',
+    'var(--color-performance-level-3)',
+    'var(--color-performance-level-5)',
+    'var(--color-performance-level-6)',
+  ]);
+  assert.deepEqual(performanceColorRamp(2), [
+    'var(--color-performance-level-1)',
+    'var(--color-performance-level-6)',
+  ]);
+});
 
 test('COLOR-09：强度按数值秩分五档，并列值保持同档', () => {
   assert.deepEqual(intensityLevels([10, 20, 30, 40, 50]), [1, 2, 3, 4, 5]);

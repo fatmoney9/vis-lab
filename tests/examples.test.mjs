@@ -12,7 +12,12 @@ import {
   densityOptionsOf,
   densitySliderOf,
   describeConfig,
+  examplesFor,
   financialSankeyPeriods,
+  radarEditableOf,
+  radarGridShapeOf,
+  radarShapeOf,
+  radarAxisLabelLayoutOf,
   treemapHierarchy,
 } from '../demos/examples.js';
 import { hasSameSankeyTopology } from '../charts/charts/sankey/model.js';
@@ -87,7 +92,12 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     yIndicator: false,
     treemapColor: false,
     axisValue: false,
+    radarGridShape: false,
     radarShape: false,
+    ratingStyle: false,
+    ratingBandCount: false,
+    axisLabelLayout: false,
+    radarEditable: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
@@ -214,23 +224,125 @@ test('PIE-05/PIE-08/TREEMAP-08/RADAR-07：无坐标系图不得声明轴相关�
   }
 });
 
-test('RADAR-18：可调节示例是单系列，固定统一量程并支持直线 / 曲线', () => {
+test('RADAR 分类：对外分标准 / 多数据 / 分区，专项面保留六个典型配置', () => {
+  assert.deepEqual(
+    examplesFor('index').filter((item) => item.chart === 'radar').map((item) => item.id),
+    ['radar-basic', 'radar-multi', 'radar-rating'],
+  );
+  assert.deepEqual(
+    examplesFor('radar-preview').filter((item) => item.chart === 'radar').map((item) => item.id),
+    ['radar-basic', 'radar-multi', 'radar-curve', 'radar-polygon', 'radar-rating', 'radar-adjustable'],
+  );
+});
+
+test('RADAR-03/05/18：网格与轮廓可组合，可调节能力只开放给单系列示例', () => {
+  for (const id of ['radar-basic', 'radar-rating']) {
+    const example = EXAMPLES.find((item) => item.id === id);
+    const caps = capabilitiesOf(example);
+    assert.equal(caps.radarGridShape, true);
+    assert.equal(caps.radarShape, true);
+    assert.equal(caps.radarEditable, true);
+    const cfg = buildConfig(example, {
+      density: 'mid', radarGridShape: 'polygon', radarShape: 'curve', radarEditable: 'on',
+    });
+    assert.equal(cfg.gridShape, 'polygon');
+    assert.equal(cfg.shape, 'curve');
+    assert.equal(cfg.editable, true);
+    assert.equal(cfg.series.length, 1, '编辑能力开启后须收敛为单系列');
+    assert.equal(cfg.editStep, 0.1);
+    assert.equal(cfg.series[0].data.length, cfg.dimensions.length);
+  }
+
+  const basic = EXAMPLES.find((item) => item.id === 'radar-basic');
+  const multi = EXAMPLES.find((item) => item.id === 'radar-multi');
+  assert.equal(radarGridShapeOf(basic), 'circle');
+  assert.equal(radarShapeOf(basic), 'straight');
+  assert.equal(radarEditableOf(basic), false);
+  assert.equal(radarEditableOf(basic, 'on'), true);
+  assert.equal(capabilitiesOf(multi).radarEditable, false);
+  assert.equal(radarEditableOf(multi, 'on'), false);
+  const multiCfg = buildConfig(multi, { density: 'mid', radarEditable: 'on' });
+  assert.equal(multiCfg.editable, undefined);
+  assert.equal(multiCfg.series.length, 2);
+  assert.deepEqual(multi.indexSeriesRange, { min: 2, max: 5, default: 2 });
+  assert.equal(multi.cfg(5, 5).series.length, 5);
+  assert.equal(buildConfig(basic, { seriesCount: 5 }).series.length, 1, 'index 控件值不得进入共享配置装配');
+});
+
+test('index 数据组数滑块：合并重复分组柱，并覆盖堆叠、折线、组合与多数据雷达夹具', () => {
+  assert.equal(EXAMPLES.some((item) => item.id === 'grouped6'), false, '重复的六系列分组柱用例应移除');
+  const ranges = {
+    grouped3: [2, 6, 3],
+    stack: [2, 6, 3],
+    stackNeg: [2, 5, 3],
+    percent: [2, 6, 3],
+    'line-multi': [2, 6, 3],
+    'line-stack': [2, 6, 3],
+    combo: [2, 5, 3],
+    'radar-multi': [2, 5, 2],
+  };
+  for (const [id, [min, max, defaultCount]] of Object.entries(ranges)) {
+    const example = EXAMPLES.find((item) => item.id === id);
+    assert.deepEqual(example.indexSeriesRange, { min, max, default: defaultCount });
+    assert.equal(example.cfg(5).series.length, defaultCount, `${id} 默认系列数应保持稳定`);
+    assert.equal(example.cfg(5, min).series.length, min, `${id} 滑块下限未生效`);
+    assert.equal(example.cfg(5, max).series.length, max, `${id} 滑块上限未生效`);
+  }
+
+  const signedStack = EXAMPLES.find((item) => item.id === 'stackNeg').cfg(5, 2);
+  assert.ok(signedStack.series.some((series) => series.data.some((value) => value < 0)), '最小档仍须保留负值系列');
+  const combo = EXAMPLES.find((item) => item.id === 'combo').cfg(5, 2);
+  assert.deepEqual(combo.series.map((series) => series.type), ['bar', 'line'], '最小档仍须保持折柱组合语义');
+  assert.equal(buildConfig(EXAMPLES.find((item) => item.id === 'grouped3'), { seriesCount: 6 }).series.length, 3,
+    '数据组数是 index 包装示例的控件，不应成为 buildConfig / 组件能力');
+});
+
+test('RADAR-18：专项可调节配置仍保留既有回归默认', () => {
   const example = EXAMPLES.find((item) => item.id === 'radar-adjustable');
-  assert.ok(example, 'EXAMPLES 中应注册可调节雷达图示例');
   const cfg = buildConfig(example, { density: 'mid' });
   assert.equal(cfg.editable, true);
   assert.equal(cfg.series.length, 1);
   assert.equal(cfg.max, 5);
   assert.equal(cfg.editStep, 0.1);
-  assert.equal(cfg.series[0].data.length, cfg.dimensions.length);
-  assert.equal(capabilitiesOf(example).radarShape, true);
-  assert.equal(capabilitiesOf(example).axisValue, false, '可调节态不提供轴标签数值');
+  assert.equal(cfg.axisLabelLayout, 'arc');
   assert.equal(buildConfig(example, { density: 'mid', axisValue: true }).axisValue, undefined);
-  assert.equal(cfg.shape, undefined, '直线是组件默认值，不重复写入 cfg');
-  assert.equal(buildConfig(example, { density: 'mid', radarShape: 'curve' }).shape, 'curve');
-  const fixedRadar = EXAMPLES.find((item) => item.id === 'radar-basic');
-  assert.equal(capabilitiesOf(fixedRadar).radarShape, false, '固定形态示例不显示此旋钮');
-  assert.equal(buildConfig(fixedRadar, { radarShape: 'curve' }).shape, undefined);
+});
+
+test('RADAR-07/14：维度轴排列可在横排与环绕间切换，环绕档不装第二行数值', () => {
+  const basic = EXAMPLES.find((item) => item.id === 'radar-basic');
+  const adjustable = EXAMPLES.find((item) => item.id === 'radar-adjustable');
+  assert.equal(capabilitiesOf(basic).axisLabelLayout, true);
+  assert.equal(radarAxisLabelLayoutOf(basic), 'horizontal');
+  assert.equal(radarAxisLabelLayoutOf(adjustable), 'arc');
+  assert.equal(radarAxisLabelLayoutOf(basic, 'auto', 'on'), 'arc');
+  assert.equal(buildConfig(basic).axisLabelLayout, undefined);
+  assert.equal(buildConfig(basic, { axisLabelLayout: 'arc' }).axisLabelLayout, 'arc');
+  assert.equal(buildConfig(adjustable, { axisLabelLayout: 'horizontal' }).axisLabelLayout, 'horizontal');
+  assert.equal(buildConfig(basic, { axisLabelLayout: 'horizontal', axisValue: true }).axisValue, true);
+  assert.equal(buildConfig(basic, { axisLabelLayout: 'arc', axisValue: true }).axisValue, undefined);
+});
+
+test('RADAR-15：分区雷达默认渐变，分段数量同步控制图面与底部说明', () => {
+  const rating = EXAMPLES.find((item) => item.id === 'radar-rating');
+  assert.ok(rating, 'EXAMPLES 中应注册分区雷达图示例');
+  const cfg = buildConfig(rating, { density: 'mid' });
+  assert.equal(cfg.variant, 'rating');
+  assert.equal(cfg.ratingStyle, undefined, '渐变是组件默认，不重复写入 cfg');
+  assert.equal(capabilitiesOf(rating).ratingStyle, true);
+  assert.equal(capabilitiesOf(rating).ratingBandCount, true);
+  const fiveBands = buildConfig(rating, { ratingStyle: 'bands', ratingBandCount: '5' });
+  assert.equal(fiveBands.ratingStyle, 'bands');
+  assert.equal(fiveBands.segments, 5);
+  assert.deepEqual(fiveBands.ratingBandLabels, ['-2%', '-1%', '0%', '+1%', '>+2%']);
+  const sixBands = buildConfig(rating, { ratingStyle: 'bands', ratingBandCount: '6' });
+  assert.equal(sixBands.segments, 6);
+  assert.deepEqual(sixBands.ratingBandLabels, ['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%']);
+
+  const basic = EXAMPLES.find((item) => item.id === 'radar-basic');
+  assert.equal(capabilitiesOf(basic).ratingStyle, false);
+  assert.equal(capabilitiesOf(basic).ratingBandCount, false);
+  assert.equal(buildConfig(basic, { ratingStyle: 'bands', ratingBandCount: '5' }).ratingStyle, undefined);
+  assert.equal(buildConfig(basic, { ratingStyle: 'bands', ratingBandCount: '5' }).ratingBandLabels, undefined);
 });
 
 /* [TREEMAP-06] 数据仍是递归结构，但深层只用于**汇总父节点的值**——无下钻后
@@ -261,7 +373,12 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     yIndicator: false,
     treemapColor: true,
     axisValue: false,
+    radarGridShape: false,
     radarShape: false,
+    ratingStyle: false,
+    ratingBandCount: false,
+    axisLabelLayout: false,
+    radarEditable: false,
   });
 });
 

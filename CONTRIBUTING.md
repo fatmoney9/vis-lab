@@ -18,6 +18,7 @@ python3 -m http.server 8123
 ```
 
 对外站点访问 `http://localhost:8123/`，开发验收面访问 `http://localhost:8123/playground/preview.html`（两面的分工见 [README](README.md)）。
+另有两个**图型专用面**，改到对应图型时须一并打开验收：雷达对照面 `playground/radar-preview.html`（六个典型配置 × 三主题同屏）与桑基独立面 `playground/sankey-preview.html`（自带数据，见 [WORKFLOW](WORKFLOW.md) 第七节）。
 
 ## 领取任务与建分支
 

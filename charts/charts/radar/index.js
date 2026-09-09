@@ -17,17 +17,24 @@
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内）
  *   cfg   { name?, dimensions, series, max?, segments=5, gridShape='circle', shape='straight',
- *           variant='basic', axisValue=false, editable=false, editStep?, onChange?,
+ *           variant='basic', ratingStyle='gradient', ratingRangeLabels?, ratingBandLabels?,
+ *           axisLabelLayout?, axisValue=false,
+ *           editable=false, editStep?, onChange?,
  *           legendSelect='multi', platform='pc', animation=true }
  *         name（可选）：这组数据的名字；本族气泡标题恒为维度名或系列名，故仅作可访问名
  *         dimensions：维度名数组，**≥3**（[RADAR-01]）；顺序即 12 点起顺时针
  *         series：[{ name, data }]，data 与 dimensions 等长
  *         max（语义配置）：径向上界；不给则自动求 nice 上界（[RADAR-04]）
- *         segments（形态语义）：网格环数，默认 5，最少 2
+ *         segments（形态语义）：网格环数，默认 5，最少 2；分段分区时与 ratingBandLabels 档数同步
  *         gridShape（形态语义）：'circle' 同心圆（默认）/ 'polygon' 正多边形（[RADAR-03]）
  *         shape（形态语义）：'straight' 直线闭合（默认）/ 'curve' 曲线闭合、隐点（[RADAR-05]）
- *         variant（形态语义）：'basic' / 'rating'（评级环未实现，[RADAR-15]）
- *         axisValue（语义配置）：轴标签是否带数值；**与交互无关**（[RADAR-07]）
+ *         variant（形态语义）：'basic' / 'rating' 分区雷达（[RADAR-15]）
+ *         ratingStyle（分区语义）：'gradient' 连续渐变（默认）/ 'bands' 离散色带（[RADAR-15]）
+ *         ratingRangeLabels（内容配置）：渐变标尺两端文案，默认 Risk / Excellent
+ *         ratingBandLabels（内容配置）：分段标尺各档阈值文案，默认还原 AInvest 六档
+ *         axisLabelLayout（排列语义）：'horizontal' 横排 / 'arc' 沿外圈环绕；
+ *           缺省时常规雷达横排、editable 环绕（[RADAR-07/14]）
+ *         axisValue（语义配置）：横排轴标签是否带数值；环绕 / editable 时忽略（[RADAR-07/14]）
  *         editable（能力语义）：单系列时沿径向轴拖动 / 键盘调值（[RADAR-18]）
  *         editStep（可选）：拖动与键盘的值吸附步长；不给时拖动连续、键盘按一环递增
  *         onChange（可选）：调值回调，收到维度 / 系列索引、当前值与完整 data 副本
@@ -43,6 +50,7 @@ import { truncateBatch } from '../../core/label.js';
 import { niceSplit } from '../../core/split.js';
 import { linearY } from '../../core/scale.js';
 import { resolveSeriesColors } from '../../core/palette.js';
+import { performanceColorRamp } from '../../core/visual-color.js';
 import { renderLegend } from '../../core/legend.js';
 import { applyToggle, applyFocus } from '../../core/legend-state.js';
 import { renderWatermark } from '../../core/watermark.js';
@@ -64,13 +72,18 @@ const MARKER_TYPE = 'dot';
    tabular-nums），见 specs/pie.md PIE-15 记的同一个坑。两段各有自己的类与 token。 */
 const NAME_CLASS = 'dv-radar-label-name';
 const VALUE_CLASS = 'dv-radar-label-value';
+const DEFAULT_RATING_RANGE_LABELS = ['Risk', 'Excellent'];
+/* Figma 51086:57384 的六档原文；第一档虽与常见区间写法不同，仍按设计源逐字还原。 */
+const DEFAULT_RATING_BAND_LABELS = ['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%'];
 let radarInstanceId = 0;
 
 export function RadarChart(host, cfg) {
   const {
     name, dimensions, series, max, segments = 5,
-    gridShape = 'circle', shape = 'straight', variant = 'basic',
-    axisValue = false, editable = false, editStep, onChange,
+    gridShape = 'circle', shape = 'straight', variant = 'basic', ratingStyle = 'gradient',
+    ratingRangeLabels = DEFAULT_RATING_RANGE_LABELS,
+    ratingBandLabels = DEFAULT_RATING_BAND_LABELS,
+    axisLabelLayout, axisValue = false, editable = false, editStep, onChange,
     legendSelect = 'multi', platform = 'pc', animation = true,
   } = cfg;
 
@@ -78,17 +91,31 @@ export function RadarChart(host, cfg) {
   if (!Array.isArray(dimensions) || dimensions.length < MIN_DIMENSIONS) {
     throw new Error(`RadarChart：维度数须 ≥ ${MIN_DIMENSIONS}（当前 ${dimensions?.length ?? 0}），少于此构不成面积`);
   }
-  /* [RADAR-15] 评级形态的接缝已在 API 上，但本期未实现——认这个字段、明确抛错，
-     而不是假装画出一张 basic 让人以为评级环没生效。 */
-  if (variant === 'rating') throw new Error('RadarChart：variant "rating" 尚未实现（见 specs/radar.md RADAR-15）');
+  if (!['basic', 'rating'].includes(variant)) {
+    throw new Error(`RadarChart：不支持 variant "${variant}"（仅 basic / rating）`);
+  }
+  if (variant === 'rating' && !['gradient', 'bands'].includes(ratingStyle)) {
+    throw new Error(`RadarChart：不支持 ratingStyle "${ratingStyle}"（仅 gradient / bands）`);
+  }
+  if (variant === 'rating' && (!Array.isArray(ratingRangeLabels) || ratingRangeLabels.length !== 2)) {
+    throw new Error('RadarChart：ratingRangeLabels 必须是两个端点文案');
+  }
+  if (variant === 'rating' && (!Array.isArray(ratingBandLabels) || ratingBandLabels.length < 2)) {
+    throw new Error('RadarChart：ratingBandLabels 至少需要两个分区文案');
+  }
+  const resolvedAxisLabelLayout = axisLabelLayout ?? (editable ? 'arc' : 'horizontal');
+  if (!['horizontal', 'arc'].includes(resolvedAxisLabelLayout)) {
+    throw new Error(`RadarChart：不支持 axisLabelLayout "${resolvedAxisLabelLayout}"（仅 horizontal / arc）`);
+  }
   /* [RADAR-18] 可调节态是一份输入控件，不是多系列比较器。多组手柄落在同一根轴时会重叠，
      调用方无法辨认正在改谁；先把边界说死，比静默只编辑第一组可靠。 */
   if (editable && series.length !== 1) {
     throw new Error(`RadarChart：editable 仅支持单系列（当前 ${series.length} 组），多系列手柄会重叠且语义不明`);
   }
-  /* [RADAR-18] 可调节态只显示沿弧排布的维度名；即使调用方遗留 axisValue:true，
-     也不渲染第二行数值、不为它预留高度。当前值由 slider 气泡与 aria-valuenow 承担。 */
-  const showAxisValue = axisValue && !editable;
+  /* [RADAR-07/14/18] 第二行数值只属于横排常规标签；弧形标签不叠第二条弧，editable 的
+     当前值则由 slider 气泡与 aria-valuenow 承担。 */
+  const arcAxisLabels = resolvedAxisLabelLayout === 'arc';
+  const showAxisValue = axisValue && !editable && !arcAxisLabels;
   const instanceId = ++radarInstanceId;
 
   /* [RADAR-09] 调用方明确给容器高度时随容器适配；未给时用主题 token 作高度包络（口径同 PIE-02 / TREEMAP-08）。 */
@@ -124,10 +151,42 @@ export function RadarChart(host, cfg) {
   let hoverKey = null;
 
   host.classList.add('dv-chart', 'dv-chart--radar');
+  if (variant === 'rating') host.classList.add('dv-chart--radar-rating');
   /* [RADAR-08] 图例默认在图表**上方**（基线 3.1 默认上下布局、4.1 图例居上左对齐），
      故 DOM 序 = 阅读序：图例在前、绘图区在后。 */
   const legendHost = select(host).append('div').attr('class', 'dv-chart__legend').node();
   const plotHost = select(host).append('div').attr('class', 'dv-chart__plot').node();
+  /* [RADAR-15] 分区说明是图表内容，不是预览面装饰：放在 plot 之后，DOM 阅读序与视觉序一致。
+     色块与背景同取 performanceColorRamp()，不会再出现「图里一套、图例另一套」。 */
+  const ratingScaleHost = variant === 'rating'
+    ? select(host).append('div').attr('class', 'dv-radar-rating-scale').node()
+    : null;
+  /* [RADAR-15][COLOR-10] 档数只对**离散**档有意义：那里色带、参考环线与底部色块必须同为
+     说明数组的长度。连续档不分档，恒取完整六级——底部那条渐变条由 CSS 直接消费六个
+     level token，SVG 侧跟着 ratingBandLabels 变长变短就会图内一套、说明另一套。 */
+  const ratingColors = ratingStyle === 'bands'
+    ? performanceColorRamp(ratingBandLabels.length)
+    : performanceColorRamp();
+  if (ratingScaleHost) {
+    const scale = select(ratingScaleHost)
+      .style('--dv-radar-rating-level-count', ratingColors.length)
+      .attr('aria-label', ratingStyle === 'gradient'
+        ? `${ratingRangeLabels[0]} – ${ratingRangeLabels[1]}`
+        : ratingBandLabels.join('、'));
+    if (ratingStyle === 'gradient') {
+      scale.append('div').attr('class', 'dv-radar-rating-scale__gradient');
+      const labels = scale.append('div').attr('class', 'dv-radar-rating-scale__range-labels');
+      ratingRangeLabels.forEach((label) => labels.append('span').text(label));
+    } else {
+      const bands = scale.append('div').attr('class', 'dv-radar-rating-scale__bands');
+      ratingBandLabels.forEach((label, i) => {
+        const item = bands.append('div').attr('class', 'dv-radar-rating-scale__item');
+        item.append('span').attr('class', 'dv-radar-rating-scale__swatch')
+          .attr('style', `--dv-radar-rating-color: ${ratingColors[i]}`);
+        item.append('span').attr('class', 'dv-radar-rating-scale__label').text(label);
+      });
+    }
+  }
 
   /* [LEGEND-05][LEGEND-14][RADAR-11] 弱化的**唯一出口**：hover（临时）与钉住（常驻）都收在这里，
      hover 优先——指针停在 B 上时读的就该是 B，松开回落到常驻那个（同 PIE-10 的取舍）。 */
@@ -196,16 +255,6 @@ export function RadarChart(host, cfg) {
     const gapPx = tokenNum(host, '--spacing-chart-region-gap') || 8;
     const legendH = resolved.length > 1 ? legendHost.getBoundingClientRect().height + gapPx : 0;
     const handleSize = editable ? tokenNum(plotHost, '--size-radar-handle') || 36 : 0;
-    /* [RADAR-09] 容器没给高时退到**本族自己的**容器 token（同饼环的 --size-donut-container）。
-       ⚠️ 曾经兜底三族共用的 --size-chart-region-height（160/200），那是错的：扣掉上下标签带后
-       半径被压死在 40/60，`size-radar-radius` 怎么改都不生效——雷达要多大是本族的事，
-       不该由「柱/线/树图共用的区域高」代管。 */
-    const defaultAvailH = tokenNum(plotHost, '--size-radar-container') || 240;
-    const availH = usesContainerHeight ? host.clientHeight - legendH : defaultAvailH;
-    const availW = host.clientWidth || availH;
-
-    /* [RADAR-09] 半径先按容器定、标签带吃剩下的（同饼环 PIE-02/PIE-13），横竖分开。
-       纵向带只需装下一行（开了 axisValue 则两行）标签，与容器无关；横向带才吃剩余宽度。 */
     const gap = tokenNum(plotHost, '--size-radar-label-gap') || 4;
     const handleOffset = handleSize / 2;
     /* [RADAR-18] 数据点落在手柄朝圆心一侧的边缘：手柄中心沿轴外移一个半径。
@@ -213,21 +262,61 @@ export function RadarChart(host, cfg) {
     const nameLineH = tokenNum(plotHost, '--line-height-radar-label-name') || 16;
     const valueLineH = tokenNum(plotHost, '--line-height-radar-label-value') || 16;
     const bandV = gap + nameLineH + (showAxisValue ? valueLineH : 0);
+    const ratingScaleGap = ratingScaleHost
+      ? tokenNum(plotHost, '--spacing-radar-rating-scale-gap') || 24
+      : 0;
+    /* [RADAR-15] 24px 从雷达外轮廓算起；SVG 自身已在圆下方包含 bandV 标签带，
+       因此流式 margin 必须扣掉它，否则视觉距离会变成 24 + bandV。
+       ⚠️ 扣减必须有下限：`axisValue` 开启时 bandV 从 20 涨到 36，直接相减得 −12px，
+       色条被负 margin 拽进标签带、正下方那条轴标签的数值行被压在渐变条上（实测重叠
+       10.4px）。24px 是**距外轮廓的下限**不是定值：标签带比它高时以标签带为准，
+       再按同一个 gap 让开一行——与轮廓到标签的间距同源，不另引入常数。 */
+    const ratingScaleMargin = ratingScaleHost ? Math.max(gap, ratingScaleGap - bandV) : 0;
+    if (ratingScaleHost) {
+      ratingScaleHost.style.setProperty('--dv-radar-rating-scale-margin-top', `${ratingScaleMargin}px`);
+    }
+    const ratingScaleH = ratingScaleHost
+      ? ratingScaleHost.getBoundingClientRect().height + ratingScaleMargin
+      : 0;
+    /* [RADAR-09] 容器没给高时退到**本族自己的**容器 token（同饼环的 --size-donut-container）。
+       ⚠️ 曾经兜底三族共用的 --size-chart-region-height（160/200），那是错的：扣掉上下标签带后
+       半径被压死在 40/60，`size-radar-radius` 怎么改都不生效——雷达要多大是本族的事，
+       不该由「柱/线/树图共用的区域高」代管。 */
+    const defaultAvailH = tokenNum(plotHost, '--size-radar-container') || 240;
+    const availH = usesContainerHeight ? host.clientHeight - legendH - ratingScaleH : defaultAvailH;
+    const availW = host.clientWidth || availH;
+
+    /* [RADAR-09] 半径先按容器定、标签带吃剩下的（同饼环 PIE-02/PIE-13），横竖分开。
+       纵向带只需装下一行（开了 axisValue 则两行）标签，与容器无关；横向带才吃剩余宽度。 */
     const { R, bandH, width, height, minHeight } = radarFrame(availW, availH, {
       maxRadius: tokenNum(plotHost, '--size-radar-radius') || 80,
       maxBandH: tokenNum(plotHost, '--size-radar-label-band') || 56,
       bandV,
     });
+    if (ratingScaleHost) {
+      /* Figma：渐变条与雷达直径同宽；分段档每档固定 36px，既与六层色带一一对应，
+         也保证最长阈值文案不会挤进相邻档而造成上下错位感。 */
+      const bandWidth = tokenNum(plotHost, '--size-radar-rating-scale-band-width') || 36;
+      const scaleWidth = ratingStyle === 'bands'
+        ? bandWidth * ratingColors.length
+        : R * 2;
+      ratingScaleHost.style.setProperty('--dv-radar-rating-scale-width', `${scaleWidth}px`);
+    }
 
     /* [RADAR-01][COLOR-04] 按**可见**系列画，颜色不参与重算（色槽由声明序号定死）。 */
     const visible = resolved.filter((r) => !state.hidden.has(r.name));
     const n = dimensions.length;
     const angles = axisAngles(n);
     const step = (Math.PI * 2) / n;
+    /* [RADAR-15] 分段档的底部说明、彩色环带与参考环线必须是同一档数。
+       直接调用组件时也以说明数组为准，避免 segments 默认 5、说明默认 6 的失配。 */
+    const effectiveSegments = variant === 'rating' && ratingStyle === 'bands'
+      ? ratingBandLabels.length
+      : segments;
     /* [RADAR-04][RADAR-17] 一把标尺贯穿全部维度；niceSplit 经参数注入，几何模块保持零 import。
        [RADAR-18] 可调节态复用首次建立的那把（见 editDomain 的说明），不按编辑结果重算。 */
     const domain = editDomain
-      ?? radarDomain(visible.map((r) => r.data), { max, segments }, niceSplit);
+      ?? radarDomain(visible.map((r) => r.data), { max, segments: effectiveSegments }, niceSplit);
     if (editable) editDomain = domain;
     /* [RADAR-04] 值 → 半径复用 L1 的通用比例尺：linearY(split, R, 0) 即 min→0、max→R。
        函数名带 Y 但数学是通用的，故不在本族另写一份（AGENTS.md「参数化 L1，不要在 L2 另写」）。 */
@@ -262,18 +351,47 @@ export function RadarChart(host, cfg) {
       return `M${poly.map((p) => `${cx + p.x},${cy + p.y}`).join('L')}Z`;
     };
 
+    /* [RADAR-15][COLOR-10] 分区雷达只替换网格背景，环线与径向轴仍沿用 RADAR-02/03。
+       连续档以径向渐变从中心风险红过渡到外缘优秀绿；离散档按底部阈值说明的档数均分同一套色阶。
+       色值与档位映射都来自 L1 / token，本族只负责 SVG 装配。 */
+    if (variant === 'rating') {
+      const ratingLayer = gridLayer.append('g').attr('class', 'dv-radar-rating').attr('aria-hidden', 'true');
+      if (ratingStyle === 'gradient') {
+        const gradientId = `dv-radar-rating-gradient-${instanceId}`;
+        const gradient = root.append('defs').append('radialGradient')
+          .attr('id', gradientId).attr('gradientUnits', 'userSpaceOnUse')
+          .attr('cx', cx).attr('cy', cy).attr('r', R);
+        ratingColors.forEach((color, i) => gradient.append('stop')
+          .attr('offset', `${(i / (ratingColors.length - 1)) * 100}%`)
+          .attr('stop-color', color));
+        ratingLayer.append('path').attr('class', 'dv-radar-rating-surface')
+          .attr('d', outline(R)).attr('fill', `url(#${gradientId})`);
+      } else {
+        const ratingRadii = ratingColors.map((_, i) => R * ((i + 1) / ratingColors.length));
+        ratingRadii.forEach((rOuter, i) => {
+          const rInner = i > 0 ? ratingRadii[i - 1] : 0;
+          ratingLayer.append('path').attr('class', 'dv-radar-rating-band')
+            .attr('fill-rule', 'evenodd')
+            .attr('style', `--dv-radar-rating-color: ${ratingColors[i]}`)
+            .attr('d', rInner > 0 ? outline(rOuter) + outline(rInner) : outline(rOuter));
+        });
+      }
+    }
+
     /* [RADAR-03] **间隔填充是「一环一色」的环带，不是整圆**。
        ⚠️ 曾经直接给整圆上 fill：内圈的圆会盖住外圈，填充一路铺到圆心，
        看起来像"中间几环全被涂满"。正确做法是外轮廓 + 内轮廓两条子路径，
        用 fill-rule="evenodd" 把内圈挖空，得到真正的圆环。
        由外向内数第 k 条带，奇数条带上色；**最外圈恒为页面底色**（不填）。 */
-    radii.forEach((rOuter, i) => {
-      if ((radii.length - 1 - i) % 2 !== 1) return;
-      const rInner = i > 0 ? radii[i - 1] : 0;
-      gridLayer.append('path').attr('class', 'dv-radar-band')
-        .attr('fill-rule', 'evenodd')
-        .attr('d', rInner > 0 ? outline(rOuter) + outline(rInner) : outline(rOuter));
-    });
+    if (variant === 'basic') {
+      radii.forEach((rOuter, i) => {
+        if ((radii.length - 1 - i) % 2 !== 1) return;
+        const rInner = i > 0 ? radii[i - 1] : 0;
+        gridLayer.append('path').attr('class', 'dv-radar-band')
+          .attr('fill-rule', 'evenodd')
+          .attr('d', rInner > 0 ? outline(rOuter) + outline(rInner) : outline(rOuter));
+      });
+    }
 
     /* 环线只描边、不填充，画在环带之上 */
     radii.forEach((r) => gridLayer.append('path').attr('class', 'dv-radar-ring').attr('d', outline(r)));
@@ -345,14 +463,14 @@ export function RadarChart(host, cfg) {
       grow.push(draw);
     });
 
-    /* ── [RADAR-07][RADAR-14] 轴标签：常规八向横排；可调节态沿外围圆弧排布 ────── */
+    /* ── [RADAR-07][RADAR-14] 轴标签：横排八向锚定 / 沿外围圆弧环绕 ──────────── */
     const labelLayer = root.append('g').attr('class', 'dv-radar-labels');
     /* [RADAR-07] 标签可用宽：**按画布实际剩余的横向空间算，不按标签带**（见上方画布宽度的说明）。
        正上 / 正下那两根轴的标签以圆心为中线左右摊开，故两侧各有半个画布宽可用。
        「轴标签整体范围不可超出图内区域」（基线 7.2）由这个上限保证。 */
     const sideRoom = bandH - gap;
     const widthFor = (a) => (Math.abs(Math.sin(a)) < 1e-9 ? width / 2 : sideRoom);
-    /* [RADAR-14] 每个标签占相邻轴夹角的 76%，三轴时封顶 60°，既保留轴间断口，也让
+    /* [RADAR-14] 每个环绕标签占相邻轴夹角的 76%，三轴时封顶 60°，既保留轴间断口，也让
        4 字中文标签有可见但不过度的曲率。 */
     const arcSpan = Math.min(step * 0.76, Math.PI / 3);
     /* [RADAR-14] 截断上限 = **这个标签自己那条弧的长度**，不是统一按 R+gap 估一个数。
@@ -360,20 +478,20 @@ export function RadarChart(host, cfg) {
        用统一预算会把下半圆的标签白白截短——实测 R80 / gap4 / 60° / ascent12 时少 12.6px。
        ⚠️ ink 必须量**未截断的原文**：拿截断后的串再量会得到另一个 ascent，于是预算与渲染
        又用上了两套几何——那正是这条要修掉的病。同一个 arcFor(i) 供两处使用，不可能再漂。 */
-    const fullInk = editable ? measureInk(plotHost, dimensions.map(String), NAME_CLASS) : [];
+    const fullInk = arcAxisLabels ? measureInk(plotHost, dimensions.map(String), NAME_CLASS) : [];
     const arcFor = (i) => labelArc(angles[i], R, gap, arcSpan, fullInk[i]?.ascent ?? 0);
     /* [PIE-16 同法] 超宽走 truncateBatch 截断——整条丢弃等于丢掉一个维度的身份。
        measure 的第二参按 entry 传类名，两段字号不同故各量各的（#32 加宽的那个签名）。 */
     const nameRows = dimensions.map((label, i) => ({
-      text: String(label), maxWidth: editable ? arcFor(i).length : widthFor(angles[i]),
+      text: String(label), maxWidth: arcAxisLabels ? arcFor(i).length : widthFor(angles[i]),
     }));
     const names = truncateBatch(nameRows, (texts) => measureTexts(plotHost, texts, NAME_CLASS));
     const valueTextByDimension = [];
-    const labelDefs = editable ? root.append('defs') : null;
+    const labelDefs = arcAxisLabels ? root.append('defs') : null;
     dimensions.forEach((label, i) => {
       const g = labelLayer.append('g').attr('class', 'dv-radar-label');
       const nameText = names[i].text;
-      if (editable) {
+      if (arcAxisLabels) {
         const arc = arcFor(i);   /* 与上面算截断预算的是同一条弧，显示与测量同一几何 */
         const pathId = `dv-radar-label-arc-${instanceId}-${i}`;
         const pathD = `M${cx + arc.start.x},${cy + arc.start.y}A${arc.radius},${arc.radius} 0 0 ${arc.sweep} ${cx + arc.end.x},${cy + arc.end.y}`;
@@ -612,7 +730,7 @@ export function RadarChart(host, cfg) {
        叠进图例（实测容器 158px 时叠 9px）。值由 L2 算、约束由 CSS 表达（同饼环
        `--dv-pie-legend-max-h` 的分工）；容器再被拖小就溢出滚动，不再压缩图元——
        同 PIE-02「看得见但装不下，优于装得下但看不清」。 */
-    host.style.setProperty('--dv-radar-min-h', `${Math.ceil(minHeight + legendH)}px`);
+    host.style.setProperty('--dv-radar-min-h', `${Math.ceil(minHeight + legendH + ratingScaleH)}px`);
 
     selfHeight = host.clientHeight;
 
@@ -648,7 +766,9 @@ export function RadarChart(host, cfg) {
       stopDrag();
       clearTimeout(hideTimer);
       stop();
-      host.classList.remove('dv-chart', 'dv-chart--radar');
+      /* 挂了几个类就摘几个：`dv-chart--radar-rating` 漏摘时，同一 host 上换挂的标准雷达
+         会继续吃 `.dv-chart--radar-rating` 的规则——折线变黑、面积被 fill:none 掐掉。 */
+      host.classList.remove('dv-chart', 'dv-chart--radar', 'dv-chart--radar-rating');
       host.style.removeProperty('--dv-radar-min-h'); /* 同修饰类：残留会影响下一个挂上来的组件 */
       resolved.forEach((r) => host.style.removeProperty(r.colorVar));
       host.innerHTML = '';

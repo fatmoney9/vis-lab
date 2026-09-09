@@ -734,6 +734,82 @@
   justify-content: center;
 }
 
+/* [RADAR-15][COLOR-10] 分区背景与数据图元分层：这里只控制统一可见度，具体色阶由
+   L1 visual-color 返回 token 引用、L2 装成连续径向渐变或离散同心色带。 */
+.dv-radar-rating {
+  opacity: var(--opacity-radar-rating-background);
+  pointer-events: none;
+}
+
+.dv-radar-rating-surface,
+.dv-radar-rating-band {
+  stroke: none;
+  pointer-events: none;
+}
+
+.dv-radar-rating-band { fill: var(--dv-radar-rating-color); }
+
+/* [RADAR-15] Figma 51086:57384：分区说明在雷达图下方。渐变条与图面直径同宽；
+   分段档由 L2 按设计比例扩宽。色块直接消费与背景相同的六级 token，文字是图表内容。 */
+.dv-chart--radar > .dv-radar-rating-scale {
+  flex: none;
+  align-self: center;
+  width: var(--dv-radar-rating-scale-width);
+  margin-top: var(--dv-radar-rating-scale-margin-top);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-en);
+  font-size: var(--font-size-radar-label-name);
+  line-height: var(--line-height-radar-label-name);
+  font-weight: var(--font-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-radar-rating-scale__gradient {
+  width: 100%;
+  height: var(--size-radar-rating-scale-height);
+  /* 50% of the bar height, not CSS 50% of its 180px width (which forms an ellipse). */
+  border-radius: calc(var(--size-radar-rating-scale-height) / 2);
+  background: linear-gradient(
+    90deg,
+    var(--color-performance-level-1) 0%,
+    var(--color-performance-level-2) 20%,
+    var(--color-performance-level-3) 40%,
+    var(--color-performance-level-4) 60%,
+    var(--color-performance-level-5) 80%,
+    var(--color-performance-level-6) 100%
+  );
+}
+
+.dv-radar-rating-scale__range-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-radar-rating-scale-label-gap);
+  margin-top: var(--spacing-radar-rating-scale-label-gap);
+  white-space: nowrap;
+}
+
+.dv-radar-rating-scale__bands {
+  display: grid;
+  grid-template-columns: repeat(var(--dv-radar-rating-level-count), minmax(0, 1fr));
+}
+
+.dv-radar-rating-scale__item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-radar-rating-scale-label-gap);
+}
+
+.dv-radar-rating-scale__swatch {
+  display: block;
+  width: 100%;
+  height: var(--size-radar-rating-scale-height);
+  background: var(--dv-radar-rating-color);
+}
+
+.dv-radar-rating-scale__label { white-space: nowrap; }
+
 /* [RADAR-03] 网格环线：只描边不填充。填充交给下面的环带，两者分开是有原因的——
    给环线本身上 fill 会填成**整圆**，内圈盖住外圈、颜色一路铺到圆心。 */
 .dv-radar-ring {
@@ -765,6 +841,17 @@
 .dv-radar-series,
 .dv-radar-area { color: var(--dv-radar-color); }
 
+/* [RADAR-15] 分区背景已经承担数值色阶，数据轮廓固定用黑色，避免再引入系列色语义。
+   面仍保留系列色的低透明填充；此处只覆盖折线及其直线档数据点。 */
+.dv-chart--radar-rating .dv-radar-series {
+  color: var(--color-radar-rating-line);
+}
+
+/* 分区色带本身就是面积编码；再叠系列面积色会污染色阶，使图内颜色与底部说明失配。 */
+.dv-chart--radar-rating .dv-radar-area {
+  fill: none;
+}
+
 .dv-radar-area {
   fill: currentColor;
   fill-opacity: var(--opacity-radar-area);
@@ -790,8 +877,8 @@
   pointer-events: none;
 }
 
-/* [RADAR-18] 可调节形态：视觉圆与命中区均为 36×36。圆无描边，grey-80 对应现有
-   `color-grey-02` 灰阶、单独以 80% 不透明度呈现；内部箭头保持 100% 实色填充。 */
+/* [RADAR-18] 可调节形态：视觉圆与命中区均为 36×36。标准形态用 grey-80 / 80%；
+   分区形态改用黑色 / 50%，让手柄压在高饱和分区底色上仍保持一致。内部箭头恒 100%。 */
 .dv-radar-handle {
   cursor: grab;
   touch-action: none;
@@ -809,6 +896,11 @@
   fill: var(--color-radar-handle-background);
   fill-opacity: var(--opacity-radar-handle);
   stroke: none;
+}
+
+.dv-chart--radar-rating .dv-radar-handle-thumb {
+  fill: var(--color-radar-rating-handle-background);
+  fill-opacity: var(--opacity-radar-rating-handle);
 }
 
 .dv-radar-handle-grip {
