@@ -4,7 +4,7 @@
  * 各预览面共享本模块，各自只负责「怎么展示」：
  *   index.html                     对外站点：画廊 + 详情页、单主题切换
  *   playground/preview.html        开发验收：三主题横向并排、旋钮更全
- *   playground/radar-preview.html  雷达专用对照面：四形态 × 三主题十二张图同屏
+ *   playground/radar-preview.html  雷达专用对照面：六个典型配置 × 三主题十八张图同屏
  * 示例定义与数据生成函数只有这一份——加示例改一处，各面同时生效，不会漂移。
  *
  * 本模块**只装数据**：不 import d3、不 import 图表组件、不碰 DOM
@@ -61,6 +61,16 @@ export const signedWave = (n) => {
 /* 多系列正值波形：按序相移 */
 export const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, k * 0.9) }));
 
+/* index 详情页的系列数量滑块会把第二个参数传进示例 cfg。这里仅负责从假数据池取数，
+   不是图表能力；preserveLast 用于始终保留组合图折线 / 正负堆叠负值项。 */
+const selectExampleSeries = (series, requested, fallback, preserveLast = false) => {
+  const parsed = Math.round(Number(requested));
+  const count = Math.max(1, Math.min(series.length, Number.isFinite(parsed) ? parsed : fallback));
+  return preserveLast && count < series.length
+    ? [...series.slice(0, count - 1), series.at(-1)]
+    : series.slice(0, count);
+};
+
 /* 负值系列（堆叠含负值用） */
 export const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
 
@@ -90,12 +100,22 @@ const RADAR_FIXED_MAX = 5;
 /* [RADAR-03] 网格环数。配 0–5 量程恰好每环 1 分，刻度读数与环一一对应。 */
 const RADAR_SEGMENTS = 5;
 
+/* [RADAR-15] 分段雷达的两套设计档位。数组长度既是底部说明项数，也会成为雷达内部
+   色带 / 环线数量；两者必须同源，禁止预览面各自拼一份。 */
+export const RADAR_RATING_BAND_LABELS = Object.freeze({
+  5: Object.freeze(['-2%', '-1%', '0%', '+1%', '>+2%']),
+  6: Object.freeze(['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%']),
+});
+
 /* 各系列在 6 个维度上的得分（固定表、无随机数与当前时间，保证截图可复现）。
    [RADAR-17] 全部维度已归到同一把 0–5 标尺，故面积可读、可横向比。 */
 const RADAR_SCORES = {
   cn: [
     { name: '本期得分', data: [3.5, 4.8, 2.2, 2.0, 1.2, 2.6] },
     { name: '去年同期', data: [2.8, 3.9, 2.9, 3.1, 2.4, 1.8] },
+    { name: '行业均值', data: [3.1, 3.3, 3.4, 2.7, 3.0, 2.9] },
+    { name: '同类公司', data: [4.0, 3.1, 2.6, 3.8, 1.8, 3.5] },
+    { name: '目标水平', data: [4.4, 4.2, 3.8, 4.0, 3.6, 4.1] },
   ],
   en: [
     { name: 'SPY', data: [1.9, 2.9, 3.0, 3.4, 1.6, 2.5] },
@@ -107,11 +127,11 @@ const RADAR_SCORES = {
 export const radarSeries = (n, lang = 'cn') =>
   RADAR_SCORES[lang].map((s) => ({ name: s.name, data: s.data.slice(0, n) }));
 
-/* 四条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
+/* 六条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
 const RADAR_DENSITY = {
   densityValues: { few: 3, mid: 5, many: 6 },
   /* 连续档的上下限是**技术下限**不是建议：低于 3 维 RadarChart 抛错（RADAR-01
-     「少于此构不成面积」），高于 6 维 radarDims / radarSeries 也只有 6 组数据，
+     「少于此构不成面积」），高于 6 维时维度名与每条 series 也只有 6 个值，
      再拉只会静默截断、看着像滑杆坏了。 */
   densityRange: { min: 3, max: 6 },
   densityUnit: '个维度',
@@ -577,10 +597,15 @@ export const CHART_CAPABILITIES = {
      （它已进 tests/examples.test.mjs 的 axisless 名单，那是被断言的契约、不是约定）。
      axisValue 是本族专属：轴标签是否带数值。**与交互无关**——基线 7.2 那条「展示数值时
      不可交互」已被 AInvest Figma 推翻（三组数据带数值且照常 hover），故它只是个显隐开关。
-     网格形状与闭合形状通常不做旋钮：它们分成三条独立示例（同 treemap 的入口/通用/全局）。
-     唯一例外是 editable 示例：直线 / 曲线与输入能力正交，需在同一张图上验收拖动，故由
-     capabilitiesOf 再按示例实际配置收窄 radarShape。 */
-  radar: { animation: true, legendSelect: true, axisValue: true, radarShape: true },
+     [RADAR-03/05/07/14/18] 对外示例分标准 / 多数据 / 分区，但组件视觉变体仍只有 basic / rating：
+     多数据是 series 数量不同，不是第三个 variant。网格、闭合轮廓与标签排列都可正交组合；
+     editable 只开放给单系列示例，多系列示例不显示该能力。ratingStyle / ratingBandCount 只在
+     rating 分类下有意义；后者只在分段档显示。 */
+  radar: {
+    animation: true, legendSelect: true, axisValue: true,
+    radarGridShape: true, radarShape: true, ratingStyle: true, ratingBandCount: true,
+    axisLabelLayout: true, radarEditable: true,
+  },
   /* 桑基当前由节点 hover / 点击和季度播放 API 承担交互，不复用坐标轴或饼环旋钮。 */
   sankey: { density: false },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
@@ -603,6 +628,8 @@ export const AXIS_TITLES = { y: '单位：元', y2: '副轴', x: '交易日' };
 /* ── 示例清单 ────────────────────────────────────────────────── */
 
 const BOTH = ['index', 'playground'];
+const RADAR_REGRESSION = ['radar-preview'];
+const RADAR_ALL_SURFACES = [...BOTH, ...RADAR_REGRESSION];
 
 export const EXAMPLES = [
   {
@@ -613,36 +640,48 @@ export const EXAMPLES = [
   },
   {
     id: 'grouped3', group: '柱状图', chart: 'cartesian',
-    title: '三系列分组柱', spec: 'BAR-02', surfaces: BOTH,
-    description: '三系列分组排布，系列颜色固定槽位，隐藏后重新居中。',
-    cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']) }),
-  },
-  {
-    id: 'grouped6', group: '柱状图', chart: 'cartesian',
-    title: '多系列分组柱', spec: 'BAR-02 / COLOR-04', surfaces: BOTH,
-    description: '六系列场景，用于检查色板循环、图例换行与显隐逻辑。',
-    cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']) }),
+    title: '分组柱', spec: 'BAR-02 / COLOR-04', surfaces: BOTH,
+    description: 'index 详情页可在 2–6 个系列间调整数据组数，覆盖分组排布、色板与图例显隐。',
+    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    cfg: (n, seriesCount) => ({
+      categories: seq(n),
+      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+    }),
   },
   {
     id: 'stack', group: '堆叠图', chart: 'cartesian',
     title: '普通堆叠柱', spec: 'BAR-05', surfaces: BOTH,
-    description: '正值逐段累计，段间直角，仅整根堆叠外端保留主题圆角。',
-    cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'normal' }),
+    description: 'index 详情页可调整正值系列数；逐段累计，且仅整根堆叠外端保留主题圆角。',
+    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    cfg: (n, seriesCount) => ({
+      categories: seq(n),
+      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+      stack: 'normal',
+    }),
   },
   {
     id: 'stackNeg', group: '堆叠图', chart: 'cartesian',
     title: '正负堆叠柱', spec: 'BAR-05', surfaces: BOTH,
-    description: '正值向上累计、负值向下累计，分别闭合。',
-    cfg: (n) => ({
+    description: 'index 详情页可调整系列数；正值向上、负值向下累计，最小档仍保留负值项。',
+    indexSeriesRange: { min: 2, max: 5, default: 3 },
+    cfg: (n, seriesCount) => ({
       categories: seq(n), stack: 'normal',
-      series: [...posSeries(n, ['主营利润', '投资收益']), { name: '净亏损项', data: negWave(n) }],
+      series: selectExampleSeries(
+        [...posSeries(n, ['主营利润', '投资收益', '营业外收入', '公允价值变动']), { name: '净亏损项', data: negWave(n) }],
+        seriesCount, 3, true,
+      ),
     }),
   },
   {
     id: 'percent', group: '堆叠图', chart: 'cartesian',
     title: '归一化堆叠柱', spec: 'BAR-06', surfaces: BOTH,
-    description: '每个类目归一到 100%，隐藏系列后占比重新计算。',
-    cfg: (n) => ({ categories: seq(n), series: posSeries(n, ['营业收入', '成本', '利润']), stack: 'percent' }),
+    description: 'index 详情页可调整系列数；每个类目归一到 100%，隐藏系列后占比重新计算。',
+    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    cfg: (n, seriesCount) => ({
+      categories: seq(n),
+      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+      stack: 'percent',
+    }),
   },
   {
     id: 'line', group: '折线图', chart: 'cartesian',
@@ -653,33 +692,44 @@ export const EXAMPLES = [
   {
     id: 'line-multi', group: '折线图', chart: 'cartesian',
     title: '多折线图', spec: 'LINE-01 / COLOR-05', surfaces: BOTH,
-    description: '主线保持标准线宽，其余线使用多折线细线 token。',
-    cfg: (n) => ({
+    description: 'index 详情页可在 2–6 条折线间调整数据组数；主线保持标准线宽，其余线使用细线 token。',
+    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    cfg: (n, seriesCount) => ({
       categories: seq(n),
-      series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
+      series: selectExampleSeries(
+        posSeries(n, ['沪深300', '中证500', '创业板指', '上证50', '科创50', '中证1000']).map((s) => ({ ...s, type: 'line' })),
+        seriesCount, 3,
+      ),
     }),
   },
   {
     id: 'line-stack', group: '折线图', chart: 'cartesian',
     title: '堆叠折线图', spec: 'LINE-01', surfaces: BOTH,
-    description: '折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
-    cfg: (n) => ({
+    description: 'index 详情页可调整系列数；折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
+    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    cfg: (n, seriesCount) => ({
       categories: seq(n), stack: 'normal',
-      series: posSeries(n, ['沪深300', '中证500', '创业板指']).map((s) => ({ ...s, type: 'line' })),
+      series: selectExampleSeries(
+        posSeries(n, ['沪深300', '中证500', '创业板指', '上证50', '科创50', '中证1000']).map((s) => ({ ...s, type: 'line' })),
+        seriesCount, 3,
+      ),
     }),
   },
   {
     id: 'combo', group: '组合图', chart: 'cartesian',
     title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04', surfaces: BOTH,
-    description: '柱走主轴、线走副轴，两轴共享网格并保持 0 轴对齐。',
+    description: 'index 详情页可调整系列数；柱走主轴、线走副轴，最小档仍保留一柱一线。',
     axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
-    cfg: (n) => ({
+    indexSeriesRange: { min: 2, max: 5, default: 3 },
+    cfg: (n, seriesCount) => ({
       categories: seq(n),
-      series: [
+      series: selectExampleSeries([
         { name: '营业收入', data: wave(n), type: 'bar', axis: 'primary' },
         { name: '成本', data: wave(n, 0.9), type: 'bar', axis: 'primary' },
+        { name: '利润', data: wave(n, 1.8), type: 'bar', axis: 'primary' },
+        { name: '现金流', data: wave(n, 2.7), type: 'bar', axis: 'primary' },
         { name: '营收增速', data: growth(n), type: 'line', axis: 'secondary' },
-      ],
+      ], seriesCount, 3, true),
     }),
   },
   {
@@ -760,18 +810,30 @@ export const EXAMPLES = [
   },
   {
     id: 'radar-basic', group: '雷达图', chart: 'radar',
-    title: '基础雷达图', spec: 'RADAR-02 / RADAR-04 / RADAR-07', surfaces: BOTH,
-    description: '圆形网格 + 直线闭合，固定 0–5 量程；多指标综合评分的基线形态。',
+    title: '标准雷达图', spec: 'RADAR-02 / RADAR-04 / RADAR-07', surfaces: RADAR_ALL_SURFACES,
+    description: '单数据的基线形态；可组合网格、轮廓、标签排列与可调节能力。',
     ...RADAR_DENSITY,
     cfg: (n) => ({
-      name: '综合财务评分', dimensions: radarDims(n), series: radarSeries(n),
+      name: '综合财务评分', dimensions: radarDims(n), series: [radarSeries(n)[0]],
+      max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS,
+    }),
+  },
+  {
+    id: 'radar-multi', group: '雷达图', chart: 'radar',
+    title: '多数据雷达图', spec: 'RADAR-04 / RADAR-08 / RADAR-10', surfaces: RADAR_ALL_SURFACES,
+    description: '多系列在同一组维度与量程中对比；保持只读，不提供可调节能力。',
+    ...RADAR_DENSITY,
+    indexSeriesRange: { min: 2, max: 5, default: 2 },
+    cfg: (n, seriesCount) => ({
+      name: '同期能力对比', dimensions: radarDims(n),
+      series: selectExampleSeries(radarSeries(n), seriesCount, 2),
       max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS,
     }),
   },
   {
     id: 'radar-curve', group: '雷达图', chart: 'radar',
-    title: '曲线填充雷达图', spec: 'RADAR-05 / RADAR-06 / RADAR-10', surfaces: BOTH,
-    description: 'AInvest 默认形态：闭合曲线 + 面填充，曲线态不出圆点；hover 热区为扇形。',
+    title: '曲线轮廓配置', spec: 'RADAR-05 / RADAR-06 / RADAR-10', surfaces: RADAR_REGRESSION,
+    description: '专项回归配置：闭合曲线 + 面填充，曲线态不出圆点；hover 热区为扇形。',
     ...RADAR_DENSITY,
     cfg: (n) => ({
       name: '指数能力对比', dimensions: radarDims(n, 'en'), series: radarSeries(n, 'en'),
@@ -780,26 +842,36 @@ export const EXAMPLES = [
   },
   {
     id: 'radar-polygon', group: '雷达图', chart: 'radar',
-    title: '多边形网格雷达图', spec: 'RADAR-03 / RADAR-04', surfaces: BOTH,
-    description: '正多边形网格（基线建议数据项超过 6 个时使用）；不给 max，走自动 nice 上界。',
+    title: '多边形网格配置', spec: 'RADAR-03 / RADAR-04', surfaces: RADAR_REGRESSION,
+    description: '专项回归配置：正多边形网格；不给 max，走自动 nice 上界。',
     ...RADAR_DENSITY,
     /* [RADAR-04] **有意不给 max**：与另两条固定量程的示例并排，即可看出自动档会把上界抬到
        nice 值、两张图量程不同因而形状不可比——那正是留 max 这个口子的理由。 */
     cfg: (n) => ({
-      name: '综合财务评分', dimensions: radarDims(n), series: radarSeries(n),
+      name: '综合财务评分', dimensions: radarDims(n), series: radarSeries(n).slice(0, 2),
       segments: RADAR_SEGMENTS, gridShape: 'polygon',
     }),
   },
   {
+    id: 'radar-rating', group: '雷达图', chart: 'radar',
+    title: '分区雷达图', spec: 'RADAR-15 / COLOR-10', surfaces: RADAR_ALL_SURFACES,
+    description: '低表现到高表现的同心语义分区；默认连续渐变，可切换为离散色带。',
+    ...RADAR_DENSITY,
+    cfg: (n) => ({
+      name: '能力风险评估', dimensions: radarDims(n), series: [radarSeries(n)[0]],
+      max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS, variant: 'rating',
+    }),
+  },
+  {
     id: 'radar-adjustable', group: '雷达图', chart: 'radar',
-    title: '可调节雷达图', spec: 'RADAR-18', surfaces: BOTH,
-    description: '单系列输入形态：支持直线或曲线闭合，维度名沿外围弧排布；拖动轴上手柄或用方向键调值。',
+    title: '可调节能力配置', spec: 'RADAR-18', surfaces: RADAR_REGRESSION,
+    description: '专项回归配置：在标准雷达上开启单系列编辑能力，验证径向拖动、键盘调值与环绕标签。',
     ...RADAR_DENSITY,
     cfg: (n) => ({
       name: '自定义能力配置', dimensions: radarDims(n),
       series: [radarSeries(n)[0]],
       max: RADAR_FIXED_MAX, segments: RADAR_SEGMENTS,
-      editable: true, editStep: 0.1,
+      editable: true, editStep: 0.1, axisLabelLayout: 'arc',
     }),
   },
   {
@@ -910,24 +982,58 @@ export const supportsArea = (example) => {
 /* 该示例实际可用的旋钮（图表类型能力 ∩ 本示例配置形态） */
 export const capabilitiesOf = (example) => {
   const caps = CHART_CAPABILITIES[example.chart] ?? {};
-  const editableRadar = example.chart === 'radar'
-    && example.cfg(defaultDensityCountOf(example)).editable === true;
+  const sampleCfg = example.cfg(defaultDensityCountOf(example));
+  const ratingRadar = example.chart === 'radar' && sampleCfg.variant === 'rating';
+  const singleSeriesRadar = example.chart === 'radar' && sampleCfg.series?.length === 1;
   return {
     density: caps.density !== false,
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
     legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
-    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue && !editableRadar,
-    radarShape: !!caps.radarShape && editableRadar,
+    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue,
+    radarGridShape: !!caps.radarGridShape, radarShape: !!caps.radarShape,
+    ratingStyle: !!caps.ratingStyle && ratingRadar,
+    ratingBandCount: !!caps.ratingBandCount && ratingRadar,
+    axisLabelLayout: !!caps.axisLabelLayout,
+    radarEditable: !!caps.radarEditable && singleSeriesRadar,
   };
 };
+
+const radarSampleConfig = (example) => example.cfg(defaultDensityCountOf(example));
+
+/* [RADAR-03/05/18] 预览控件显示的有效值。`auto` 保留专项回归示例自己的配置；
+   主站两类示例显式选择后才覆盖。集中在这里，避免三个面各自猜组件默认。 */
+export function radarGridShapeOf(example, requested = 'auto') {
+  if (requested === 'circle' || requested === 'polygon') return requested;
+  return radarSampleConfig(example).gridShape ?? 'circle';
+}
+
+export function radarShapeOf(example, requested = 'auto') {
+  if (requested === 'straight' || requested === 'curve') return requested;
+  return radarSampleConfig(example).shape ?? 'straight';
+}
+
+export function radarEditableOf(example, requested = 'auto') {
+  if (!capabilitiesOf(example).radarEditable) return false;
+  if (requested === true || requested === 'on') return true;
+  if (requested === false || requested === 'off') return false;
+  return radarSampleConfig(example).editable === true;
+}
+
+/* [RADAR-07/14] 标签默认还要看最终是否开启编辑：常规横排、editable 环绕。 */
+export function radarAxisLabelLayoutOf(example, requested = 'auto', editable = 'auto') {
+  if (requested === 'horizontal' || requested === 'arc') return requested;
+  const cfg = example.cfg(defaultDensityCountOf(example));
+  return cfg.axisLabelLayout ?? (radarEditableOf(example, editable) ? 'arc' : 'horizontal');
+}
 
 /*
  * 示例 + 当前旋钮状态 → 传给 L2 组件的最终配置。
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
  *   state = { density='few', theme='ths', platform='pc', zoom, area, dataLabel, axisTitle, animation,
- *             legend, labelLayout, labelAlign, treemapColor, radarShape } —— 各项皆可缺省
+ *             legend, labelLayout, labelAlign, treemapColor, radarGridShape, radarShape,
+ *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
  * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
  * behavior 解析。theme 在这里仅允许驱动示例声明的 L3 presentation 文案映射。
@@ -937,7 +1043,9 @@ export function buildConfig(example, state = {}) {
     density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
-    treemapColor = 'intensity', axisValue = false, radarShape = 'straight',
+    treemapColor = 'intensity', axisValue = false,
+    radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
+    axisLabelLayout = 'auto', radarEditable = 'auto',
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
@@ -950,6 +1058,8 @@ export function buildConfig(example, state = {}) {
   const sourceCfg = example.cfg(count);
   const presentedCfg = example.presentation?.(sourceCfg, { theme }) ?? sourceCfg;
   const cfg = { ...presentedCfg, platform };
+  const effectiveEditable = radarEditableOf(example, radarEditable);
+  const effectiveAxisLabelLayout = radarAxisLabelLayoutOf(example, axisLabelLayout, radarEditable);
 
   if (caps.zoom && zoom) cfg.zoom = { ...INITIAL_ZOOM };
   /* [AXISTITLE-01/03] 默认不显示；旋钮打开才注入文案（示例自带的 axisTitle 优先，可给更贴切的措辞）。
@@ -989,10 +1099,40 @@ export function buildConfig(example, state = {}) {
   if (caps.treemapColor && treemapColor !== 'intensity') cfg.colorMode = treemapColor;
   /* [RADAR-07] 轴标签数值：组件默认关，故只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。
      它不牵动任何交互开关——基线 7.2 的「展示数值时不可交互」已被设计源推翻，见 specs/radar.md。 */
-  if (caps.axisValue && axisValue) cfg.axisValue = true;
-  /* [RADAR-18] 仅 editable 示例开放闭合形态切换。straight 是组件默认，不重复写；
-     curve 与手柄共用同一组数据点与编辑链路，只替换闭合插值。 */
-  if (caps.radarShape && radarShape === 'curve') cfg.shape = 'curve';
+  if (caps.axisValue && axisValue && !effectiveEditable && effectiveAxisLabelLayout === 'horizontal') cfg.axisValue = true;
+  /* [RADAR-03/05] 网格和轮廓是两类雷达都能组合的形态选项。auto 保留专项回归配置；
+     显式选默认档时删掉示例预置，让 L2 的 circle / straight 默认成为唯一真相。 */
+  if (caps.radarGridShape && radarGridShape !== 'auto') {
+    if (radarGridShape === 'polygon') cfg.gridShape = 'polygon';
+    else delete cfg.gridShape;
+  }
+  if (caps.radarShape && radarShape !== 'auto') {
+    if (radarShape === 'curve') cfg.shape = 'curve';
+    else delete cfg.shape;
+  }
+  /* [RADAR-15] 分区雷达默认就是连续渐变，故只在切到离散色带时显式落字段。
+     分段数量同时写入 segments 与说明数组：L2 用同一个数量画环线、色带与底部色块。 */
+  if (caps.ratingStyle && ratingStyle === 'bands') {
+    const bandCount = String(ratingBandCount) === '5' ? 5 : 6;
+    cfg.ratingStyle = 'bands';
+    cfg.segments = bandCount;
+    cfg.ratingBandLabels = [...RADAR_RATING_BAND_LABELS[bandCount]];
+  }
+  /* [RADAR-18] editable 是正交能力。开启时按组件契约收敛为单系列，避免同轴多组手柄重叠；
+     关闭则去掉专项回归示例的编辑字段。默认步长只属于演示装配，不进入组件默认。 */
+  if (caps.radarEditable && radarEditable !== 'auto') {
+    if (effectiveEditable) {
+      cfg.editable = true;
+      cfg.editStep ??= 0.1;
+      cfg.series = cfg.series.slice(0, 1);
+    } else {
+      delete cfg.editable;
+      delete cfg.editStep;
+      delete cfg.onChange;
+    }
+  }
+  /* [RADAR-07/14] auto 保留示例 / 编辑能力的默认；显式选项覆盖全部雷达形态。 */
+  if (caps.axisLabelLayout && axisLabelLayout !== 'auto') cfg.axisLabelLayout = effectiveAxisLabelLayout;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;

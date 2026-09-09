@@ -30,7 +30,7 @@
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |
 | `palette.js` | 系列取色器 | color.md |
-| `visual-color.js` | 数据项的系列、强度与有符号语义取色；不识别图表、主题或业务字段 | color.md（COLOR-06/09） |
+| `visual-color.js` | 数据项的系列、强度与有符号语义取色，以及低表现→高表现的通用色阶；不识别图表、主题或业务字段 | color.md（COLOR-06/09/10） |
 | `format.js` | 数值格式化 | format.md |
 | `theme.js` | 主题行为解析（behavior.json → 参数） | WORKFLOW 第六节 |
 | `tokens.js` | 从计算样式读取 CSS 自定义属性 | — |

@@ -160,6 +160,17 @@ AInvest 差异来源为 Figma《AInvest矩形树图规范》节点 `0:232`。审
 AInvest 不走透明度近似，直接保存 Figma 的完整 light / dark 色值；iFinD 当前 `color-mode=series`，
 未启用语义分档，等设计源补齐前各档只别名基础涨跌色。`semantic-flat` 固定消费 1 档。
 
+同一公共颜色分节另含 `color-performance-level-1..6`，按风险红 → 两档警示橙黄 → 良好黄绿 →
+两档优秀绿排列，供 COLOR-10 的表现色阶使用。浅色值还原 AInvest Figma `51086:57384`，三主题共用；
+它与市场涨跌色是两套语义，A 股主题也不会把“优秀”翻成红色。分区雷达的数据折线与直线档数据点
+固定消费 `color-radar-rating-line`（当前为黑色），不再叠加系列色语义。雷达分区说明的色条高、图面净距与
+每档固定宽度、文字净距分别使用 `size-radar-rating-scale-height`、
+`size-radar-rating-scale-band-width`、`spacing-radar-rating-scale-gap`、
+`spacing-radar-rating-scale-label-gap`。
+雷达分区背景的整体强度由本族 token `opacity-radar-rating-background` 控制。
+可调节手柄在标准雷达中使用 `color-radar-handle-background` / `opacity-radar-handle`；叠加到分区雷达时改用
+`color-radar-rating-handle-background` / `opacity-radar-rating-handle`（黑色 50%），箭头色保持不变。
+
 构建器除合同、分叉和别名校验外，还校验值域：`opacity-*` 的最终叶值必须位于 0..1；
 `color-*` 只接受本仓库支持的 hex、`rgb(a)`、颜色关键字或 token 别名。非法值在生成 CSS 前即失败，
 避免浏览器静默忽略后才在视觉验收中暴露。

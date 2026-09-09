@@ -262,10 +262,50 @@
       </div>
 
       <div class="field">
-        <div class="field-label"><b>闭合形态</b><span>RADAR-18 · 可调节雷达图</span></div>
+        <div class="field-label"><b>网格形态</b><span>RADAR-03 · 雷达外观配置</span></div>
+        <div class="seg" id="seg-radar-grid-shape">
+          <button data-value="circle" class="is-active">圆形</button>
+          <button data-value="polygon">多边形</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>闭合轮廓</b><span>RADAR-05 · 雷达外观配置</span></div>
         <div class="seg" id="seg-radar-shape">
           <button data-value="straight" class="is-active">直线</button>
           <button data-value="curve">曲线</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>维度标签排列</b><span>RADAR-07/14</span></div>
+        <div class="seg" id="seg-axis-label-layout">
+          <button data-value="horizontal" class="is-active">横排</button>
+          <button data-value="arc">环绕</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>分区</b><span>RADAR-15 · 默认渐变</span></div>
+        <div class="seg" id="seg-rating-style">
+          <button data-value="gradient" class="is-active">渐变</button>
+          <button data-value="bands">分段</button>
+        </div>
+      </div>
+
+      <div class="field" hidden>
+        <div class="field-label"><b>分段数量</b><span>RADAR-15 · 同步雷达与说明</span></div>
+        <div class="seg" id="seg-rating-band-count">
+          <button data-value="5">5 段</button>
+          <button data-value="6" class="is-active">6 段</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>可调节能力</b><span>RADAR-18 · 开启后收敛为单系列</span></div>
+        <div class="seg" id="seg-radar-editable">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
         </div>
       </div>
 
@@ -353,12 +393,12 @@
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf } from '../demos/examples.js';
+  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf } from '../demos/examples.js';
 
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarShape: 'straight', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -433,6 +473,10 @@
        将来接入饼 / 环这类无类目轴的图表时，缩放轴等开关自动不出现，本页无需改代码 */
     const caps = capabilitiesOf(cat);
     const densityControl = densityControlOf(cat);
+    const effectiveRadarGridShape = radarGridShapeOf(cat, state.radarGridShape);
+    const effectiveRadarShape = radarShapeOf(cat, state.radarShape);
+    const effectiveRadarEditable = radarEditableOf(cat, state.radarEditable);
+    const effectiveAxisLabelLayout = radarAxisLabelLayoutOf(cat, state.axisLabelLayout, state.radarEditable);
     document.getElementById('seg-density').closest('.field').hidden = !caps.density;
     document.getElementById('density-label').textContent = densityControl.label;
     document.getElementById('density-hint').textContent = densityControl.hint;
@@ -450,8 +494,21 @@
     /* [PIE-13] 对齐档只在引线形态下有意义：置灰而不隐藏（见 CSS 说明） */
     document.getElementById('seg-label-align').querySelectorAll('button')
       .forEach((b) => { b.disabled = state.labelLayout !== 'outside'; });
-    document.getElementById('seg-axis-value').closest('.field').hidden = !caps.axisValue;
+    document.getElementById('seg-axis-value').closest('.field').hidden = !caps.axisValue || effectiveRadarEditable || effectiveAxisLabelLayout === 'arc';
+    document.getElementById('seg-radar-grid-shape').closest('.field').hidden = !caps.radarGridShape;
     document.getElementById('seg-radar-shape').closest('.field').hidden = !caps.radarShape;
+    document.getElementById('seg-rating-style').closest('.field').hidden = !caps.ratingStyle;
+    document.getElementById('seg-rating-band-count').closest('.field').hidden = !caps.ratingBandCount || state.ratingStyle !== 'bands';
+    document.getElementById('seg-radar-editable').closest('.field').hidden = !caps.radarEditable;
+    document.getElementById('seg-radar-grid-shape').querySelectorAll('button').forEach((button) =>
+      button.classList.toggle('is-active', button.dataset.value === effectiveRadarGridShape));
+    document.getElementById('seg-radar-shape').querySelectorAll('button').forEach((button) =>
+      button.classList.toggle('is-active', button.dataset.value === effectiveRadarShape));
+    document.getElementById('seg-radar-editable').querySelectorAll('button').forEach((button) =>
+      button.classList.toggle('is-active', button.dataset.value === (effectiveRadarEditable ? 'on' : 'off')));
+    document.getElementById('seg-axis-label-layout').closest('.field').hidden = !caps.axisLabelLayout;
+    document.getElementById('seg-axis-label-layout').querySelectorAll('button').forEach((button) =>
+      button.classList.toggle('is-active', button.dataset.value === effectiveAxisLabelLayout));
     document.getElementById('seg-axis-title').closest('.field').hidden = !caps.axisTitle;
     document.getElementById('seg-area').closest('.field').hidden = !caps.area;
     document.getElementById('seg-zoom').closest('.field').hidden = !caps.zoom;
@@ -489,7 +546,12 @@
         legendSelect: state.legendSelect, /* [LEGEND-06][LEGEND-14] 多选 / 单选 / 强调 */
         axisTitle: state.axisTitle === 'on',
         axisValue: state.axisValue === 'on', /* [RADAR-07] 轴标签数值，与交互无关 */
-        radarShape: state.radarShape, /* [RADAR-18] 可调节形态：直线 / 曲线 */
+        radarGridShape: state.radarGridShape, /* [RADAR-03] 圆形 / 多边形网格 */
+        radarShape: state.radarShape, /* [RADAR-05] 直线 / 曲线轮廓 */
+        radarEditable: state.radarEditable, /* [RADAR-18] 可叠加的编辑能力 */
+        ratingStyle: state.ratingStyle, /* [RADAR-15] 分区背景：渐变 / 分段 */
+        ratingBandCount: state.ratingBandCount, /* [RADAR-15] 5 / 6 段，同步图面与说明 */
+        axisLabelLayout: state.axisLabelLayout, /* [RADAR-07/14] 横排 / 环绕；auto 保留示例默认 */
         yIndicator: state.yIndicator === 'on', /* [TOOLTIP-12] Y 横线 + Y 值徽标，默认关 */
         animation: state.animation === 'on',
       }).instance;
@@ -527,7 +589,12 @@
   wireSeg('seg-legend', 'legend');
   wireSeg('seg-legend-select', 'legendSelect');
   wireSeg('seg-axis-value', 'axisValue');
+  wireSeg('seg-radar-grid-shape', 'radarGridShape');
   wireSeg('seg-radar-shape', 'radarShape');
+  wireSeg('seg-rating-style', 'ratingStyle');
+  wireSeg('seg-rating-band-count', 'ratingBandCount');
+  wireSeg('seg-radar-editable', 'radarEditable');
+  wireSeg('seg-axis-label-layout', 'axisLabelLayout');
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');
   wireSeg('seg-zoom', 'zoom');

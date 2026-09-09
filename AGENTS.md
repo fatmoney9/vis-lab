@@ -72,7 +72,7 @@
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
   **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
-- **另有 `playground/radar-preview.html`**（雷达专用对照面，四形态 × 三主题同屏）。它与桑基那条**性质不同**：
+- **另有 `playground/radar-preview.html`**（雷达专用对照面，六个典型配置 × 三主题同屏；是回归矩阵、不是六种图表分类）。它与桑基那条**性质不同**：
   **它 import `demos/examples.js`、只负责「怎么摆」**，故没有「改示例要改两处」的漂移代价，加示例仍然只改 `demos/`。
   想为某个图型另开对照面时照它、不要照桑基。
   这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
@@ -108,12 +108,12 @@
   - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
 - **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
 
-- **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..18）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用，但通用构件全部原样复用（**L1 一个文件未改**，同 `SankeyChart` 当初）。要点：
+- **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..18）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用；既有通用构件继续复用，分区形态通过 L1 `visual-color.js` 取得通用表现色阶。要点：
   - **极坐标 ≠ 雷达**：饼环也画在极坐标里，但两者做的是**相反**的事——饼环「值 → 角度、半径恒定」，雷达「角度均分（`360/n`）、值 → 半径」。真正共享的只有 `(角度,半径)→(x,y)` 那个三角公式，故**没有 `core/polar.js`**；极坐标几何在 `radar/geometry.js` 标 `[L2-LOCAL]`。**将来三个下沉点的判断条件写在 `specs/radar.md` 的「分层边界」与 `geometry.js` 文件头**——做仪表盘的人先读那两处，它会命中「下沉点 ②」（绕圆标签几何 `labelAnchor` / `labelArc`），正确做法是提到 L1 两边共用，**不是照抄一份**
   - **值域上界两条路**（RADAR-04）：给了 `max` 就定死、`[0,max]` 均分；不给才走 `niceSplit`。留这个口子是因为 `niceSplit(0, 5, {lineCount:4})` 会得出 5.4——0–5 评分被画成 0–5.4，且两张图数据不同时量程不同、形状不可比
   - **n 根轴共用一把标尺**（RADAR-17）：不做逐轴归一化。这是**明确的非目标不是待办**——逐轴各自量程会让图形面积失去意义，且容易靠调量程把形状「调好看」
   - **常规雷达的 hover 热区是扇形不是数据点**（RADAR-10，基线 9.1 的 0728 更新）；气泡恒 `follow`（TOOLTIP-07 无坐标系图特例，L2 定死、不进 behavior.json）。点系列进钉住态（RADAR-11）：一个问「这个维度各系列多少」，一个问「这个系列各维度多少」
-  - **可调节雷达图**是 `editable: true` 的单系列输入能力（RADAR-18），不是新图族也不占 `variant`；手柄沿径向轴拖动、可键盘调值，仍共用 `[0,max]` 标尺。它不渲染常规扇形 hover 热区，轴标签沿外圈弧线排布；多系列直接抛错，避免同轴手柄重叠后编辑对象不明
-  - 网格形状（圆 / 正多边形）与闭合形状（直线 / 曲线）是**组件 cfg 不是主题分叉**——Figma 里 AInvest 自己就同时提供两种，故 `behavior.json` **一个键未加**；基础 / 曲线 / 多边形网格 / 可调节共四条独立示例，可调节示例自身支持直线与曲线切换
+  - **可调节雷达图**是 `editable: true` 的单系列输入能力（RADAR-18），不是新图族也不占 `variant`；手柄沿径向轴拖动、可键盘调值，仍共用 `[0,max]` 标尺。它不渲染常规扇形 hover 热区；多系列直接抛错，避免同轴手柄重叠后编辑对象不明
+  - 对外示例分**标准雷达 / 多数据雷达 / 分区雷达**，但组件视觉变体仍只有 `variant: 'basic' | 'rating'`，多数据只由 `series` 数量表达且不开放可调节能力；仅 index 详情页用“数据组数”滑块选择 2–5 条示例系列，它不是 `CHART_CAPABILITIES` 或组件配置。网格形状（圆 / 正多边形）、闭合形状（直线 / 曲线）与维度标签排列（横排 / 环绕）是可正交组合的组件 cfg；可调节能力只用于单系列。主预览面用旋钮组合，专项面对六个典型配置做三主题回归。维度标签用 `axisLabelLayout: 'horizontal' | 'arc'`，常规默认横排、editable 默认环绕，两者均可显式覆盖。分区示例用 `ratingStyle` 在连续渐变（默认）与离散色带间切换；离散档支持 5 / 6 段，`ratingBandLabels.length` 同时控制图内色带、环线与底部色块，阈值文案可配置、色值不可配置
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

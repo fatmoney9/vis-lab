@@ -632,7 +632,7 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig } from './demos/examples.js';
+    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf } from './demos/examples.js';
     import { sankeyPlaybackCopy } from './demos/sankey-presentation.js';
     import {
       applySankeyPlaybackViewport,
@@ -665,7 +665,13 @@
                                 进详情时由 defaultDensityCountOf 换成该示例的默认值 */
       treemapColor: 'intensity',
       axisValue: false,       /* [RADAR-07] 轴标签数值，默认关；与交互无关 */
-      radarShape: 'straight', /* [RADAR-18] 可调节雷达的闭合形态：直线 / 曲线 */
+      radarGridShape: 'auto', /* [RADAR-03] 圆形 / 多边形网格；auto 保留示例默认 */
+      radarShape: 'auto',    /* [RADAR-05] 直线 / 曲线轮廓；auto 保留示例默认 */
+      radarEditable: 'off',  /* [RADAR-18] 编辑是可叠加能力，不是第三类雷达图 */
+      seriesCount: 0,        /* index 专属示例控件：增减假数据 series，不进入图表能力或组件 cfg */
+      ratingStyle: 'gradient', /* [RADAR-15] 分区雷达默认连续渐变，可切离散色带 */
+      ratingBandCount: '6',  /* [RADAR-15] 分段档同时控制图内环带与底部说明，默认 6 段 */
+      axisLabelLayout: 'auto', /* [RADAR-07/14] 常规横排、可调节环绕；点选后显式覆盖 */
       dataLabel: 'auto',      /* [LABEL-05] 开关的「开」= 按图表类型默认，不落进 cfg */
       labelLayout: 'off',     /* [PIE-12] 饼环显隐 + 形态合一：关 / 引线 / 扇区内，默认关 */
       labelAlign: 'anchor',   /* [PIE-13] 默认就近；仅引线档生效 */
@@ -685,6 +691,26 @@
     const searchClear = document.getElementById('search-clear');
     let charts = [];
     let chartCleanups = [];
+
+    /* 仅 index 详情页消费的示例数据控件。范围声明跟示例夹具住在一起，但它不是
+       CHART_CAPABILITIES，也不会作为 seriesCount 参数传进任何 L2 组件。 */
+    function indexSeriesControlOf(example) {
+      const range = example?.indexSeriesRange;
+      if (!range) return null;
+      const min = Math.max(1, Math.round(Number(range.min) || 1));
+      const max = Math.max(min, Math.round(Number(range.max) || min));
+      const value = Math.max(min, Math.min(max, Math.round(Number(range.default) || min)));
+      return { label: '数据组数', hint: '调整叠加展示的系列数量', unit: '组数据', min, max, value };
+    }
+
+    function clampIndexSeriesCount(example, count) {
+      const control = indexSeriesControlOf(example);
+      if (!control) return 0;
+      const value = Math.round(Number(count));
+      return Number.isFinite(value) ? Math.max(control.min, Math.min(control.max, value)) : control.value;
+    }
+
+    const defaultIndexSeriesCountOf = (example) => indexSeriesControlOf(example)?.value ?? 0;
 
     function destroyCharts() {
       chartCleanups.splice(0).forEach((cleanup) => cleanup());
@@ -835,9 +861,17 @@
 
     function activeExample(example) {
       const periods = playbackPeriodsOf(example);
-      if (!periods.length) return example;
-      const period = periods[clampPeriodIndex(example)];
-      return { ...example, presentation: undefined, cfg: () => period };
+      let active = example;
+      if (periods.length) {
+        const period = periods[clampPeriodIndex(example)];
+        active = { ...example, presentation: undefined, cfg: () => period };
+      }
+      const seriesControl = indexSeriesControlOf(active);
+      if (!seriesControl) return active;
+      const sourceCfg = active.cfg;
+      const seriesCount = clampIndexSeriesCount(active, state.seriesCount);
+      /* 第二参数只选示例假数据；返回给组件的仍是普通 cfg，没有 seriesCount 字段。 */
+      return { ...active, cfg: (density) => sourceCfg(density, seriesCount) };
     }
 
     function playbackMarkup(example) {
@@ -1020,6 +1054,10 @@
       const playbackCopy = sankeyPlaybackCopy({ theme: state.theme });
       const densitySlider = densitySliderOf(example);
       const densityLabel = `${state.density} ${densitySlider.unit}`;
+      const seriesControl = indexSeriesControlOf(example);
+      const seriesLabel = seriesControl
+        ? `${clampIndexSeriesCount(example, state.seriesCount)} ${seriesControl.unit}`
+        : '';
       const exampleSummary = example.summaryByTheme?.[state.theme] ?? example.summary;
       /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
       const surfaceVariables = [
@@ -1033,6 +1071,10 @@
         : '';
       /* 旋钮按图表类型能力显隐——接入饼 / 环等无类目轴的图表时，缩放轴等开关自动不出现 */
       const caps = capabilitiesOf(example);
+      const effectiveRadarGridShape = radarGridShapeOf(example, state.radarGridShape);
+      const effectiveRadarShape = radarShapeOf(example, state.radarShape);
+      const effectiveRadarEditable = radarEditableOf(example, state.radarEditable);
+      const effectiveAxisLabelLayout = radarAxisLabelLayoutOf(example, state.axisLabelLayout, state.radarEditable);
       const areaAvailable = caps.area;
 
       main.innerHTML = `<div class="detail">
@@ -1081,9 +1123,24 @@
                 aria-label="${densitySlider.label}" />
               <div class="slider__ends"><span>${densitySlider.min}</span><span>${densitySlider.max}</span></div>
             </div>` : ''}
+            ${seriesControl ? `<div class="field">
+              <div class="field__row">
+                <div class="field__copy"><span class="field__label">${seriesControl.label}</span><span class="field__hint">${seriesControl.hint}</span></div>
+                <output class="slider__value" id="series-value">${seriesLabel}</output>
+              </div>
+              <input class="slider" id="series-slider" type="range" step="1"
+                min="${seriesControl.min}" max="${seriesControl.max}" value="${clampIndexSeriesCount(example, state.seriesCount)}"
+                aria-label="${seriesControl.label}" />
+              <div class="slider__ends"><span>${seriesControl.min}</span><span>${seriesControl.max}</span></div>
+            </div>` : ''}
             ${caps.treemapColor && state.theme === 'ths' ? `<div class="field"><span class="field__label">颜色模式</span><span class="field__hint">THS · 程度五档 / 涨跌三档 / 涨跌无档位</span>${segment('treemapColor', [['intensity', '程度'], ['semantic-binned', '涨跌（分档）'], ['semantic-flat', '涨跌（不分档）']], state.treemapColor)}</div>` : ''}
-            ${caps.axisValue ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标签数值</span><span class="field__hint">RADAR-07 · 名称下方加一行数值；不影响 hover</span></div><label class="switch" aria-label="轴标签数值"><input id="axis-value-switch" type="checkbox"${state.axisValue ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
-            ${caps.radarShape ? `<div class="field"><span class="field__label">闭合形态</span><span class="field__hint">RADAR-18 · 两种形态均可拖动调值</span>${segment('radarShape', [['straight', '直线'], ['curve', '曲线']], state.radarShape)}</div>` : ''}
+            ${caps.radarGridShape ? `<div class="field"><span class="field__label">网格形态</span><span class="field__hint">RADAR-03 · 圆形或正多边形</span>${segment('radarGridShape', [['circle', '圆形'], ['polygon', '多边形']], effectiveRadarGridShape)}</div>` : ''}
+            ${caps.radarShape ? `<div class="field"><span class="field__label">闭合轮廓</span><span class="field__hint">RADAR-05 · 直线或曲线</span>${segment('radarShape', [['straight', '直线'], ['curve', '曲线']], effectiveRadarShape)}</div>` : ''}
+            ${caps.ratingStyle ? `<div class="field"><span class="field__label">分区</span><span class="field__hint">RADAR-15 · 默认连续渐变，可切离散色带</span>${segment('ratingStyle', [['gradient', '渐变'], ['bands', '分段']], state.ratingStyle)}</div>` : ''}
+            ${caps.ratingBandCount && state.ratingStyle === 'bands' ? `<div class="field"><span class="field__label">分段数量</span><span class="field__hint">RADAR-15 · 同时控制雷达色带与底部说明</span>${segment('ratingBandCount', [['5', '5 段'], ['6', '6 段']], state.ratingBandCount)}</div>` : ''}
+            ${caps.axisLabelLayout ? `<div class="field"><span class="field__label">维度标签排列</span><span class="field__hint">RADAR-07/14 · 横排或沿外围圆弧环绕</span>${segment('axisLabelLayout', [['horizontal', '横排'], ['arc', '环绕']], effectiveAxisLabelLayout)}</div>` : ''}
+            ${caps.radarEditable ? `<div class="field"><span class="field__label">可调节能力</span><span class="field__hint">RADAR-18 · 开启后使用单系列径向手柄</span>${segment('radarEditable', [['off', '关'], ['on', '开']], effectiveRadarEditable ? 'on' : 'off')}</div>` : ''}
+            ${caps.axisValue && !effectiveRadarEditable && effectiveAxisLabelLayout === 'horizontal' ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标签数值</span><span class="field__hint">RADAR-07 · 名称下方加一行数值；不影响 hover</span></div><label class="switch" aria-label="轴标签数值"><input id="axis-value-switch" type="checkbox"${state.axisValue ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.dataLabel ? `<div class="field"><span class="field__label">数据标签</span><span class="field__hint">LABEL-05 · 默认 = 各图表自己的规则；强开 = 分组柱 / 堆叠也画</span>${segment('dataLabel', [['auto', '默认'], ['on', '强开']], state.dataLabel)}</div>` : ''}
             ${caps.labelLayout ? `<div class="field"><span class="field__label">标签形态</span><span class="field__hint">PIE-12 · 引线与标签强绑定，故显隐与形态是同一个选择</span>${segment('labelLayout', [['off', '关'], ['outside', '引线'], ['inside', '扇区内']], state.labelLayout)}</div>` : ''}
             ${caps.labelAlign ? `<div class="field"><span class="field__label">标签对齐</span><span class="field__hint">PIE-13 · 仅引线档生效</span>${segment('labelAlign', [['anchor', '就近'], ['column', '成列'], ['edge', '贴边']], state.labelAlign, state.labelLayout !== 'outside')}</div>` : ''}
@@ -1156,7 +1213,20 @@
        ② 十来个旋钮每帧重排也没必要。读数与填充条同步走，重绘合并到下一帧。
        动效恒关：这不是「入场」，拖一格重播一次生长会看得人眼晕，
        「入场动效」那个旋钮管的是首次挂载，两者不是一回事。 */
-    let densityFrame = 0;
+    let detailSliderFrame = 0;
+    function remountDetailFromSlider(example) {
+      cancelAnimationFrame(detailSliderFrame);
+      detailSliderFrame = requestAnimationFrame(() => {
+        const host = main.querySelector('.stage__surface .chart-host');
+        if (!host) return;
+        destroyCharts();
+        host.innerHTML = '';
+        mountChart(host, activeExample(example), { animation: false });
+        const logicConfig = document.getElementById('logic-config');
+        if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
+      });
+    }
+
     function applyDensity(value) {
       const example = state.detail;
       state.density = clampDensity(example, value);
@@ -1172,16 +1242,23 @@
       const stageDensity = main.querySelector('[data-stage-density]');
       if (stageDensity) stageDensity.textContent = `${state.density} ${unit}`;
 
-      cancelAnimationFrame(densityFrame);
-      densityFrame = requestAnimationFrame(() => {
-        const host = main.querySelector('.stage__surface .chart-host');
-        if (!host) return;
-        destroyCharts();
-        host.innerHTML = '';
-        mountChart(host, activeExample(example), { animation: false });
-        const logicConfig = document.getElementById('logic-config');
-        if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
-      });
+      remountDetailFromSlider(example);
+    }
+
+    function applySeriesCount(value) {
+      const example = state.detail;
+      const control = indexSeriesControlOf(example);
+      if (!control) return;
+      state.seriesCount = clampIndexSeriesCount(example, value);
+      const slider = main.querySelector('#series-slider');
+      const readout = main.querySelector('#series-value');
+      if (readout) readout.textContent = `${state.seriesCount} ${control.unit}`;
+      if (slider) {
+        const span = Number(slider.max) - Number(slider.min);
+        const ratio = span > 0 ? (state.seriesCount - Number(slider.min)) / span : 0;
+        slider.style.setProperty('--fill', `${ratio * 100}%`);
+      }
+      remountDetailFromSlider(example);
     }
 
     function wireDetail() {
@@ -1189,6 +1266,11 @@
       if (densitySlider) {
         densitySlider.addEventListener('input', (event) => applyDensity(Number(event.target.value)));
         applyDensity(state.density);   /* 首屏把填充条对上当前值 */
+      }
+      const seriesSlider = document.getElementById('series-slider');
+      if (seriesSlider) {
+        seriesSlider.addEventListener('input', (event) => applySeriesCount(Number(event.target.value)));
+        applySeriesCount(state.seriesCount);
       }
       document.getElementById('zoom-switch')?.addEventListener('change', (event) => {
         state.zoom = event.target.checked;
@@ -1215,7 +1297,9 @@
           theme: 'ths', platform: 'pc', mode: 'light', density: defaultDensityCountOf(state.detail),
           dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
           legendSelect: 'multi',
-          treemapColor: 'intensity', axisValue: false, radarShape: 'straight',
+          treemapColor: 'intensity', axisValue: false,
+          radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', seriesCount: defaultIndexSeriesCountOf(state.detail), ratingStyle: 'gradient', ratingBandCount: '6',
+          axisLabelLayout: 'auto',
           area: false, zoom: false, axisTitle: false, animation: true, periodIndex: 0,
         });
         rerenderDetail();
@@ -1298,6 +1382,7 @@
       if ((state.detail?.id || null) === (nextDetail?.id || null)) return;
       state.detail = nextDetail;
       state.density = defaultDensityCountOf(nextDetail);
+      state.seriesCount = defaultIndexSeriesCountOf(nextDetail);
       render();
     }
 
@@ -1305,6 +1390,7 @@
     window.addEventListener('hashchange', syncRoute);
     state.detail = EXAMPLES.find((example) => example.id === window.location.hash.slice(1)) || null;
     state.density = defaultDensityCountOf(state.detail);
+    state.seriesCount = defaultIndexSeriesCountOf(state.detail);
     render();
   </script>
 </body>
