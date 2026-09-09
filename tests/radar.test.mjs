@@ -265,6 +265,23 @@ test('RADAR-14：弧长就是标签截断上限', () => {
   assert.ok(near(arc.length, 84 * span));
 });
 
+/*
+ * 下半圆的弧半径按字形 ascent 外移，弧长因此比 (R+gap)×span 长一截。
+ * index.js 曾对所有标签统一用 (R+gap)×span 当截断预算，于是下半圆被白白截短
+ * （R80 / gap4 / 60° / ascent12 时少 12.6px）。本条钉死「预算必须取各自那条弧的长度」——
+ * 回退成统一预算时它会红，而门禁与肉眼都发现不了这种「只是短了一点」的退化。
+ */
+test('RADAR-14：下半圆的截断预算必须取它自己那条弧，不能按 R+gap 统一估', () => {
+  const [R, gap, span, ascent] = [80, 4, Math.PI / 3, 12];
+  const flat = (R + gap) * span;                       /* 旧的统一预算 */
+  const top = labelArc(0, R, gap, span, ascent);
+  const bottom = labelArc(Math.PI, R, gap, span, ascent);
+
+  assert.ok(near(top.length, flat), '上半圆不外移，两种算法本就一致');
+  assert.ok(bottom.length > flat, '下半圆实际弧更长，统一预算会低估');
+  assert.ok(near(bottom.length, (R + gap + ascent) * span), '下半圆预算 = (R + gap + ascent) × span');
+});
+
 /* ── [RADAR-10] 扇形命中 ────────────────────────────────────── */
 
 test('RADAR-10：指针落在某轴正上方时命中该轴的扇形', () => {
@@ -352,4 +369,22 @@ test('RADAR-18：editStep 可选吸附并消除常见小数误差', () => {
   assert.equal(snapRadarValue(4.9, 5, 2), 4);
   assert.equal(snapRadarValue(7, 5, 0.5), 5);
   assert.equal(snapRadarValue(2.26, 5), 2.26);
+});
+
+/*
+ * 本条钉的是 index.js 冻结量程的**理由**，不是冻结动作本身（那一步在 build() 里、需要 DOM，
+ * 不在纯几何的可测范围内，故另由浏览器验收）。
+ * 自动档的上界是**数据的函数**：editable 会原地改数据，若每次 build 都重算，用户把各点拖低后
+ * 一次 resize 就会把标尺缩小、已设好的值跳到外圈。这条把「重算 = 会变」这个前提固定下来——
+ * 有人日后让 radarDomain 变得与数据无关时，它会红，提醒去检查冻结逻辑是否还有必要。
+ */
+test('RADAR-18：自动档上界随数据变，故可调节态必须冻结量程（冻结动作见 index.js）', () => {
+  const before = radarDomain([[3, 3, 3, 3, 3]], { segments: 5 }, niceSplit);
+  const after = radarDomain([[0.5, 0.4, 0.6, 0.5, 0.5]], { segments: 5 }, niceSplit);
+  assert.notEqual(after.max, before.max, '编辑后重算会得到不同上界——这正是必须冻结的原因');
+
+  /* 给了固定 max 的那条路本就不受编辑影响，两次必须一致 */
+  const fixedA = radarDomain([[3, 3, 3, 3, 3]], { max: 5, segments: 5 }, niceSplit);
+  const fixedB = radarDomain([[0.5, 0.4, 0.6, 0.5, 0.5]], { max: 5, segments: 5 }, niceSplit);
+  assert.equal(fixedA.max, fixedB.max);
 });

@@ -50,7 +50,7 @@ import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
 import {
   MIN_DIMENSIONS, pointAt, axisAngles, radarDomain, radarFrame,
-  ringRadii, gridPath, seriesPoints, labelAnchor, labelArc, sectorAt, sectorCorners,
+  ringRadii, gridPath, seriesPoints, labelAnchor, labelArc, sectorCorners,
   radarValueAt, snapRadarValue,
 } from './geometry.js';
 
@@ -169,6 +169,12 @@ export function RadarChart(host, cfg) {
   let stopGrow = () => {};
   let stopDrag = () => {};
   let hideTimer = 0;
+  /* [RADAR-18][RADAR-04] 可调节态的量程**一经建立就冻结**。
+     editable 会原地改 r.data，而 build() 每次都按当前数据重算量程——两者相乘的后果是：
+     用户把各点拖低后，任意一次重建（拖容器 / 切旋钮）都会把标尺跟着缩小，已设好的值
+     随之跳到外圈，`aria-valuemax` 也一起变。输入控件的标尺不能在用户手底下漂。
+     基础形态**不冻结**：那里数据是只读的，重算才跟得上图例显隐带来的值域变化。 */
+  let editDomain = null;
   /* [MOTION-04] 入场只在实例首次挂载时播一次——build() 同时被 resize / 图例显隐复用。 */
   let firstBuild = true;
 
@@ -218,8 +224,11 @@ export function RadarChart(host, cfg) {
     const n = dimensions.length;
     const angles = axisAngles(n);
     const step = (Math.PI * 2) / n;
-    /* [RADAR-04][RADAR-17] 一把标尺贯穿全部维度；niceSplit 经参数注入，几何模块保持零 import。 */
-    const domain = radarDomain(visible.map((r) => r.data), { max, segments }, niceSplit);
+    /* [RADAR-04][RADAR-17] 一把标尺贯穿全部维度；niceSplit 经参数注入，几何模块保持零 import。
+       [RADAR-18] 可调节态复用首次建立的那把（见 editDomain 的说明），不按编辑结果重算。 */
+    const domain = editDomain
+      ?? radarDomain(visible.map((r) => r.data), { max, segments }, niceSplit);
+    if (editable) editDomain = domain;
     /* [RADAR-04] 值 → 半径复用 L1 的通用比例尺：linearY(split, R, 0) 即 min→0、max→R。
        函数名带 Y 但数学是通用的，故不在本族另写一份（AGENTS.md「参数化 L1，不要在 L2 另写」）。 */
     const toRadius = linearY(domain, R, 0);
@@ -344,25 +353,28 @@ export function RadarChart(host, cfg) {
     const sideRoom = bandH - gap;
     const widthFor = (a) => (Math.abs(Math.sin(a)) < 1e-9 ? width / 2 : sideRoom);
     /* [RADAR-14] 每个标签占相邻轴夹角的 76%，三轴时封顶 60°，既保留轴间断口，也让
-       4 字中文标签有可见但不过度的曲率。弧长同时作为截断上限，显示与测量同一几何。 */
+       4 字中文标签有可见但不过度的曲率。 */
     const arcSpan = Math.min(step * 0.76, Math.PI / 3);
-    const arcMaxWidth = (R + gap) * arcSpan;
+    /* [RADAR-14] 截断上限 = **这个标签自己那条弧的长度**，不是统一按 R+gap 估一个数。
+       ⚠️ 下半圆的弧要按字形 ascent 外移（labelArc 内的同一套算法），半径大一圈、弧就长一截；
+       用统一预算会把下半圆的标签白白截短——实测 R80 / gap4 / 60° / ascent12 时少 12.6px。
+       ⚠️ ink 必须量**未截断的原文**：拿截断后的串再量会得到另一个 ascent，于是预算与渲染
+       又用上了两套几何——那正是这条要修掉的病。同一个 arcFor(i) 供两处使用，不可能再漂。 */
+    const fullInk = editable ? measureInk(plotHost, dimensions.map(String), NAME_CLASS) : [];
+    const arcFor = (i) => labelArc(angles[i], R, gap, arcSpan, fullInk[i]?.ascent ?? 0);
     /* [PIE-16 同法] 超宽走 truncateBatch 截断——整条丢弃等于丢掉一个维度的身份。
        measure 的第二参按 entry 传类名，两段字号不同故各量各的（#32 加宽的那个签名）。 */
     const nameRows = dimensions.map((label, i) => ({
-      text: String(label), maxWidth: editable ? arcMaxWidth : widthFor(angles[i]),
+      text: String(label), maxWidth: editable ? arcFor(i).length : widthFor(angles[i]),
     }));
     const names = truncateBatch(nameRows, (texts) => measureTexts(plotHost, texts, NAME_CLASS));
-    const nameInk = editable
-      ? measureInk(plotHost, names.map((entry) => entry.text ?? ''), NAME_CLASS)
-      : [];
     const valueTextByDimension = [];
     const labelDefs = editable ? root.append('defs') : null;
     dimensions.forEach((label, i) => {
       const g = labelLayer.append('g').attr('class', 'dv-radar-label');
       const nameText = names[i].text;
       if (editable) {
-        const arc = labelArc(angles[i], R, gap, arcSpan, nameInk[i]?.ascent ?? 0);
+        const arc = arcFor(i);   /* 与上面算截断预算的是同一条弧，显示与测量同一几何 */
         const pathId = `dv-radar-label-arc-${instanceId}-${i}`;
         const pathD = `M${cx + arc.start.x},${cy + arc.start.y}A${arc.radius},${arc.radius} 0 0 ${arc.sweep} ${cx + arc.end.x},${cy + arc.end.y}`;
         labelDefs.append('path').attr('id', pathId).attr('d', pathD);
@@ -500,7 +512,8 @@ export function RadarChart(host, cfg) {
           refreshHandleA11y();
           if (valueTextByDimension[i]) valueTextByDimension[i].text(format(value));
         }
-        hitLayer.selectAll('path').classed('is-active', (_, k) => k === i);
+        /* [RADAR-18] 此处不碰 hitLayer：可调节态压根不渲染扇形热区（见下方 `if (!editable)`），
+           选中集恒为空，调了也是空转，还会让人以为这一态也有灰色高亮块。 */
         showDimensionTip(i, event);
         if (changed && typeof onChange === 'function') {
           onChange({
@@ -555,8 +568,16 @@ export function RadarChart(host, cfg) {
         event.preventDefault();
         event.stopPropagation();
         emitEdit(d.i, next, event);
-      }).on('focus', (_, d) => {
-        hitLayer.selectAll('path').classed('is-active', (_, k) => k === d.i);
+      }).on('focus', (event, d) => {
+        /* [RADAR-18] 焦点落到哪个手柄，气泡就跟到哪个维度。
+           ⚠️ 不同步的话纯键盘路径会读到**上一个维度的值**：Tab 过去时气泡还停在原处，
+           要等按一次方向键才更新——比不显示更糟，因为它看起来是对的。
+           focus 事件没有 clientX/Y，showDimensionTip 会回落到该维度的数据点定位。 */
+        showDimensionTip(d.i, event);
+      }).on('blur', () => {
+        /* Tab 出图表后气泡不该长驻；此前只有鼠标划过绘图区再离开才收得掉。 */
+        clearTimeout(hideTimer);
+        tooltip.hide();
       });
 
       renderer.draw(1);
