@@ -160,8 +160,11 @@ AInvest 差异来源为 Figma《AInvest矩形树图规范》节点 `0:232`。审
 AInvest 不走透明度近似，直接保存 Figma 的完整 light / dark 色值；iFinD 当前 `color-mode=series`，
 未启用语义分档，等设计源补齐前各档只别名基础涨跌色。`semantic-flat` 固定消费 1 档。
 
-同一公共颜色分节另含 `color-performance-level-1..6`，按风险红 → 两档警示橙黄 → 良好黄绿 →
-两档优秀绿排列，供 COLOR-10 的表现色阶使用。浅色值还原 AInvest Figma `51086:57384`，三主题共用；
+同一公共颜色分节另含两套独立的 COLOR-10 表现色阶：`color-performance-five-level-1..5`
+依次为 `#FF1919 / #FF8C19 / #FFE225 / #A9E010 / #03D345`，
+`color-performance-six-level-1..6` 依次为
+`#E50000 / #FF6619 / #FFC61A / #BFE500 / #00CC22 / #00B239`；三主题与明暗模式共用。
+两套色阶都按风险红 → 警示橙黄 → 良好黄绿 → 优秀绿排列，五档不是从六档抽样；
 它与市场涨跌色是两套语义，A 股主题也不会把“优秀”翻成红色。分区雷达的数据折线与直线档数据点
 固定消费 `color-radar-rating-line`（当前为黑色），不再叠加系列色语义。雷达分区说明的色条高、图面净距与
 每档固定宽度、文字净距分别使用 `size-radar-rating-scale-height`、

@@ -11,21 +11,27 @@ export const PERFORMANCE_COLOR_LEVELS = 6;
 const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const levelOpacity = (level) => `var(--opacity-visualization-intensity-level-${level})`;
 
-/* [COLOR-10] 从低表现到高表现的通用六级语义色阶。调用方可请求任意档数；
- * 少于 / 多于六档时按归一化位置投影到最近的权威色阶，不在 L2 复制档位算法。
+/* [COLOR-10] 从低表现到高表现的通用语义色阶。五档与六档是设计源给出的两套独立色阶；
+ * 其他档数按归一化位置投影到最近的六档权威色阶，不在 L2 复制档位算法。
  * 返回 CSS token 引用而不是解析后的色值，明暗与主题切换继续交给级联。
  *
  * ⚠️ 正中间那一档（投影落在 x.5）**向下取**，不用 Math.round 的向上取整：
- * 五档时向上会得到 1/2/4/5/6，既跳过中性黄 level-3、又留下 level-5 与 level-6 两档
- * 肉眼难分的绿——离散色带因此少一个可读台阶，且「0%」这种中性档拿到偏正面的黄绿。
- * 向下取得到 1/2/3/5/6：中性档回到黄，被合并的是本就相近的那对绿。 */
+ * 该取整规则只处理非五档、非六档的派生数量；五档与六档均不做投影。 */
 const nearestLevel = (position) => Math.ceil(position - 0.5);
 
 export function performanceColorRamp(levelCount = PERFORMANCE_COLOR_LEVELS) {
   const count = Math.max(2, Math.floor(Number(levelCount) || PERFORMANCE_COLOR_LEVELS));
+  if (count === 5) {
+    return Array.from({ length: count }, (_, index) =>
+      `var(--color-performance-five-level-${index + 1})`);
+  }
+  if (count === PERFORMANCE_COLOR_LEVELS) {
+    return Array.from({ length: count }, (_, index) =>
+      `var(--color-performance-six-level-${index + 1})`);
+  }
   return Array.from({ length: count }, (_, index) => {
     const level = 1 + nearestLevel((index / (count - 1)) * (PERFORMANCE_COLOR_LEVELS - 1));
-    return `var(--color-performance-level-${level})`;
+    return `var(--color-performance-six-level-${level})`;
   });
 }
 

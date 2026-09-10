@@ -75,6 +75,7 @@ const VALUE_CLASS = 'dv-radar-label-value';
 const DEFAULT_RATING_RANGE_LABELS = ['Risk', 'Excellent'];
 /* Figma 51086:57384 的六档原文；第一档虽与常见区间写法不同，仍按设计源逐字还原。 */
 const DEFAULT_RATING_BAND_LABELS = ['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%'];
+const RATING_GRADIENT_LEVEL_COUNT = 5;
 let radarInstanceId = 0;
 
 export function RadarChart(host, cfg) {
@@ -162,11 +163,11 @@ export function RadarChart(host, cfg) {
     ? select(host).append('div').attr('class', 'dv-radar-rating-scale').node()
     : null;
   /* [RADAR-15][COLOR-10] 档数只对**离散**档有意义：那里色带、参考环线与底部色块必须同为
-     说明数组的长度。连续档不分档，恒取完整六级——底部那条渐变条由 CSS 直接消费六个
-     level token，SVG 侧跟着 ratingBandLabels 变长变短就会图内一套、说明另一套。 */
+     说明数组的长度。连续档固定五个色标，且图内 SVG 与底部渐变条共用 ratingColors，
+     不跟随 ratingBandLabels 的 5 / 6 段选择变化。 */
   const ratingColors = ratingStyle === 'bands'
     ? performanceColorRamp(ratingBandLabels.length)
-    : performanceColorRamp();
+    : performanceColorRamp(RATING_GRADIENT_LEVEL_COUNT);
   if (ratingScaleHost) {
     const scale = select(ratingScaleHost)
       .style('--dv-radar-rating-level-count', ratingColors.length)
@@ -174,6 +175,9 @@ export function RadarChart(host, cfg) {
         ? `${ratingRangeLabels[0]} – ${ratingRangeLabels[1]}`
         : ratingBandLabels.join('、'));
     if (ratingStyle === 'gradient') {
+      const stops = ratingColors.map((color, i) =>
+        `${color} ${(i / (ratingColors.length - 1)) * 100}%`).join(', ');
+      scale.style('--dv-radar-rating-gradient', `linear-gradient(90deg, ${stops})`);
       scale.append('div').attr('class', 'dv-radar-rating-scale__gradient');
       const labels = scale.append('div').attr('class', 'dv-radar-rating-scale__range-labels');
       ratingRangeLabels.forEach((label) => labels.append('span').text(label));
@@ -294,7 +298,7 @@ export function RadarChart(host, cfg) {
       bandV,
     });
     if (ratingScaleHost) {
-      /* Figma：渐变条与雷达直径同宽；分段档每档固定 36px，既与六层色带一一对应，
+      /* Figma：渐变条与雷达直径同宽；分段档每档固定 36px，既与实际色带层数一一对应，
          也保证最长阈值文案不会挤进相邻档而造成上下错位感。 */
       const bandWidth = tokenNum(plotHost, '--size-radar-rating-scale-band-width') || 36;
       const scaleWidth = ratingStyle === 'bands'

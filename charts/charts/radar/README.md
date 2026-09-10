@@ -34,9 +34,9 @@
 - **`scale`**：`linearY(split, R, 0)` 直接就是「值 → 半径」（min→0、max→R）。函数名带 Y 但数学是通用的，故**不在本族另写一份**——纪律见 `AGENTS.md`「参数化 L1，不要在 L2 另写一份」。
 - **`split`**：`niceSplit(0, 数据max, { lineCount: segments + 1 })` 求网格环的 nice 上界与环数，**仅在调用方没给 `max` 时走**（[RADAR-04]）。它经参数注入进 `geometry.js`，那里因此保持零 import、`node --test` 可直接加载。
 - **`label` / `measure`**：用 `truncateBatch` + `measureTexts` 截超长维度名（[RADAR-07]）；环绕档另用 `measureInk` 取得真实字形 ascent，让反向弧形标签与外圈保持相同视觉距离（[RADAR-14]）。**不用 `dropCollisions`**——轴标签环绕四周、本就不同行也不同列，两个方向的碰撞模型都不适用。
-- **`legend`**：marker 传 `'dot'`，三主题天然命中 `specs/legend.md` LEGEND-03 已写明的「饼/环/气泡/**雷达** 6×6 圆点」，`behavior.json` 无需新增任何键。
+- **`legend`**：marker 传 `'dot'`，直接复用 `specs/legend.md` LEGEND-03 的「饼/环/气泡/**雷达** 6×6 圆点」规则，`behavior.json` 无需新增任何键。
 - **可调节形态**：`editable` 只扩展本族的输入交互，继续使用同一份 `geometry.js`、`format`、`scale`、Tooltip 与 token 通道；没有新增或复制任何 L1 构件（[RADAR-18]）。
-- **分区形态**：`performanceColorRamp()` 提供低表现→高表现的通用语义色阶；L2 以 `ratingBandLabels.length` 同时决定彩色环带、参考环线与底部色块数量，保证 5 / 6 段下数量、顺序与颜色都一致，不识别主题与色值（[RADAR-15] / [COLOR-10]）。
+- **分区形态**：`performanceColorRamp()` 提供低表现→高表现的通用语义色阶；五档与六档是两套独立设计色，不互相抽样。连续渐变固定取五档，图内 SVG 与底部色条共用同一数组；离散档才以 `ratingBandLabels.length` 同时决定彩色环带、参考环线与底部色块数量，保证 5 / 6 段下数量、顺序与颜色都一致，不识别主题与色值（[RADAR-15] / [COLOR-10]）。
 
 ## 极坐标几何为什么留在本目录
 
