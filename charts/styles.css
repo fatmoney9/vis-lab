@@ -750,7 +750,7 @@
 .dv-radar-rating-band { fill: var(--dv-radar-rating-color); }
 
 /* [RADAR-15] Figma 51086:57384：分区说明在雷达图下方。渐变条与图面直径同宽；
-   分段档由 L2 按设计比例扩宽。色块直接消费与背景相同的六级 token，文字是图表内容。 */
+   分段档由 L2 按设计比例扩宽。色块直接消费与背景相同的独立五档 / 六档 token，文字是图表内容。 */
 .dv-chart--radar > .dv-radar-rating-scale {
   flex: none;
   align-self: center;
@@ -769,15 +769,7 @@
   height: var(--size-radar-rating-scale-height);
   /* 50% of the bar height, not CSS 50% of its 180px width (which forms an ellipse). */
   border-radius: calc(var(--size-radar-rating-scale-height) / 2);
-  background: linear-gradient(
-    90deg,
-    var(--color-performance-level-1) 0%,
-    var(--color-performance-level-2) 20%,
-    var(--color-performance-level-3) 40%,
-    var(--color-performance-level-4) 60%,
-    var(--color-performance-level-5) 80%,
-    var(--color-performance-level-6) 100%
-  );
+  background: var(--dv-radar-rating-gradient);
 }
 
 .dv-radar-rating-scale__range-labels {
@@ -927,6 +919,7 @@
 .dv-radar-label-name,
 .dv-radar-label-value {
   pointer-events: none;
+  font-weight: var(--font-weight-radar-label);
 }
 
 .dv-radar-label-name {

@@ -13,12 +13,17 @@
   --color-price-down-gradient-2: rgba(7, 171, 75, 0.75);
   --color-price-down-gradient-3: rgba(7, 171, 75, 0.55);
   --color-price-even-gradient: var(--color-price-even);
-  --color-performance-level-1: #E50000;
-  --color-performance-level-2: #FF6619;
-  --color-performance-level-3: #FFC61A;
-  --color-performance-level-4: #BFE500;
-  --color-performance-level-5: #00CC22;
-  --color-performance-level-6: #00B239;
+  --color-performance-five-level-1: #FF1919;
+  --color-performance-five-level-2: #FF8C19;
+  --color-performance-five-level-3: #FFE225;
+  --color-performance-five-level-4: #A9E010;
+  --color-performance-five-level-5: #03D345;
+  --color-performance-six-level-1: #E50000;
+  --color-performance-six-level-2: #FF6619;
+  --color-performance-six-level-3: #FFC61A;
+  --color-performance-six-level-4: #BFE500;
+  --color-performance-six-level-5: #00CC22;
+  --color-performance-six-level-6: #00B239;
   --color-sankey-income: #FF9500;
   --color-sankey-expense: #3366FF;
   --color-sankey-profit: var(--color-price-up);
@@ -248,6 +253,7 @@
   --opacity-radar-rating-background: 1;
   --font-size-radar-label-name: var(--font-size-extra-small);
   --line-height-radar-label-name: var(--line-height-small);
+  --font-weight-radar-label: var(--font-weight-regular);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
 }
@@ -259,11 +265,6 @@
 
 [data-theme="ths"][data-mode="dark"] {
   --color-price-even: rgba(255, 255, 255, 0.84);
-  --color-performance-level-1: #FF5A52;
-  --color-performance-level-2: #FF8A34;
-  --color-performance-level-3: #FFD43B;
-  --color-performance-level-5: #32D583;
-  --color-performance-level-6: #12B76A;
   --color-text-axis: rgba(255, 255, 255, 0.6);
   --color-text-primary: rgba(255, 255, 255, 0.84);
   --color-text-secondary: rgba(255, 255, 255, 0.6);
@@ -296,12 +297,17 @@
   --color-price-down-gradient-2: var(--color-price-down);
   --color-price-down-gradient-3: var(--color-price-down);
   --color-price-even-gradient: var(--color-price-even);
-  --color-performance-level-1: #E50000;
-  --color-performance-level-2: #FF6619;
-  --color-performance-level-3: #FFC61A;
-  --color-performance-level-4: #BFE500;
-  --color-performance-level-5: #00CC22;
-  --color-performance-level-6: #00B239;
+  --color-performance-five-level-1: #FF1919;
+  --color-performance-five-level-2: #FF8C19;
+  --color-performance-five-level-3: #FFE225;
+  --color-performance-five-level-4: #A9E010;
+  --color-performance-five-level-5: #03D345;
+  --color-performance-six-level-1: #E50000;
+  --color-performance-six-level-2: #FF6619;
+  --color-performance-six-level-3: #FFC61A;
+  --color-performance-six-level-4: #BFE500;
+  --color-performance-six-level-5: #00CC22;
+  --color-performance-six-level-6: #00B239;
   --color-sankey-income: #3366FF;
   --color-sankey-expense: #07AB4B;
   --color-sankey-profit: #FF2436;
@@ -531,6 +537,7 @@
   --opacity-radar-rating-background: 1;
   --font-size-radar-label-name: var(--font-size-extra-small);
   --line-height-radar-label-name: var(--line-height-small);
+  --font-weight-radar-label: var(--font-weight-regular);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
 }
@@ -541,11 +548,6 @@
 
 [data-theme="ifind-pc"][data-mode="dark"] {
   --color-price-even: #D1D1E0;
-  --color-performance-level-1: #FF5A52;
-  --color-performance-level-2: #FF8A34;
-  --color-performance-level-3: #FFD43B;
-  --color-performance-level-5: #32D583;
-  --color-performance-level-6: #12B76A;
   --color-text-axis: #A1A1B3;
   --color-text-primary: #E9E9F2;
   --color-text-secondary: #D1D1E0;
@@ -582,12 +584,17 @@
   --color-price-down-gradient-2: #F05045;
   --color-price-down-gradient-3: #981400;
   --color-price-even-gradient: #B8B8B8;
-  --color-performance-level-1: #E50000;
-  --color-performance-level-2: #FF6619;
-  --color-performance-level-3: #FFC61A;
-  --color-performance-level-4: #BFE500;
-  --color-performance-level-5: #00CC22;
-  --color-performance-level-6: #00B239;
+  --color-performance-five-level-1: #FF1919;
+  --color-performance-five-level-2: #FF8C19;
+  --color-performance-five-level-3: #FFE225;
+  --color-performance-five-level-4: #A9E010;
+  --color-performance-five-level-5: #03D345;
+  --color-performance-six-level-1: #E50000;
+  --color-performance-six-level-2: #FF6619;
+  --color-performance-six-level-3: #FFC61A;
+  --color-performance-six-level-4: #BFE500;
+  --color-performance-six-level-5: #00CC22;
+  --color-performance-six-level-6: #00B239;
   --color-sankey-income: #265FFC;
   --color-sankey-expense: var(--color-price-down);
   --color-sankey-profit: var(--color-price-up);
@@ -817,6 +824,7 @@
   --opacity-radar-rating-background: 1;
   --font-size-radar-label-name: var(--font-size-extra-small);
   --line-height-radar-label-name: var(--line-height-small);
+  --font-weight-radar-label: var(--font-weight-bold);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
 }
@@ -840,11 +848,6 @@
   --color-price-down-gradient-2: #991A12;
   --color-price-down-gradient-3: #E03838;
   --color-price-even-gradient: #333333;
-  --color-performance-level-1: #FF5A52;
-  --color-performance-level-2: #FF8A34;
-  --color-performance-level-3: #FFD43B;
-  --color-performance-level-5: #32D583;
-  --color-performance-level-6: #12B76A;
   --color-text-axis: #ffffff;
   --color-text-primary: #ffffff;
   --color-text-secondary: rgba(255, 255, 255, 0.6);

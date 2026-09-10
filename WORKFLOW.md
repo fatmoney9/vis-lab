@@ -235,8 +235,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 两处本来最像要改 L1 的地方也都免了：`scale.js` 的 `linearY(split, R, 0)` 拿来就是「值 → 半径」
 （函数名带 Y 但数学是通用的），`split.js` 的 `niceSplit(0, max, {lineCount})` 拿来就是网格环分段。
 **2026-09-09 接入分区雷达后，现役状态已不是“L1 零改动”**：`core/visual-color.js` 新增
-`performanceColorRamp()`，把低表现→高表现的六级 token 色阶做成跨图表通用能力；Radar L2 只决定
-连续渐变或离散色带的消费方式。这个后续扩展没有推翻初次接入结论，也没有在 L2 重写取色能力。
+`performanceColorRamp()`，把低表现→高表现的独立五档 / 六档 token 色阶做成跨图表通用能力；
+Radar L2 只决定连续渐变或离散色带的消费方式。这个后续扩展没有推翻初次接入结论，
+也没有在 L2 重写取色能力。
 **`behavior.json` 同样一个键未加**——网格形状与闭合形状在 Figma 里 AInvest 自己就同时提供两种，
 说明它们是图表配置不是品牌分叉（判据同 LEGEND-10，也是 `legend-select` 放错通道那次的教训）。
 

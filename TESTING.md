@@ -62,7 +62,7 @@ node --test "tests/**/*.test.mjs"    # 等价 npm test
 - `charts/core/legend-state.js`：图例点击的状态迁移——`applyToggle` 两档（multi 独立开关 / single 只留一项）+ LEGEND-12「最后一个可见项不可关」（含「全隐不可达」与承接 multi 遗留 hidden 的判据），`applyFocus` 强调档（选中迁移 + 不产生 hidden）。**这些逻辑此前零覆盖**，因为它们原本住在 import d3 的 `legend.js` 里、`node --test` 加载不了；单开一个纯模块正是为此。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
 - `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
-- `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 表现色阶把任意档数投影到六级权威 token，**正中间那档向下取**（五档保住中性黄、合并本就难分的那对绿）（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
+- `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
 
