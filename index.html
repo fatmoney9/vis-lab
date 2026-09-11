@@ -700,7 +700,7 @@
       const min = Math.max(1, Math.round(Number(range.min) || 1));
       const max = Math.max(min, Math.round(Number(range.max) || min));
       const value = Math.max(min, Math.min(max, Math.round(Number(range.default) || min)));
-      return { label: '数据组数', hint: '调整叠加展示的系列数量', unit: '组数据', min, max, value };
+      return { label: '数据组数', hint: '系列数量', unit: '组数据', min, max, value };
     }
 
     function clampIndexSeriesCount(example, count) {

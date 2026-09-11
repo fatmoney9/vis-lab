@@ -50,16 +50,34 @@ export const wave = (n, p = 0) => K(Array.from(
   (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6 + p) + 140 * Math.cos(i * 1.7 + p)),
 ));
 
-/* 含负值 / 0 / null 的单系列（基础柱专用：负值向下、0 值 1px 占位、null 断口全可见） */
+/* 含负值 / 0 / null 的单系列（正负值柱专用：负值向下、0 值 1px 占位、null 断口全可见） */
 export const signedWave = (n) => {
   const d = wave(n, 0.8).map((v) => v - 500000);
+  if (n > 1) d[1] = -Math.abs(d[1]);
   if (n > 2) d[2] = 0;
   if (n > 4) d[4] = null;
   return d;
 };
 
-/* 多系列正值波形：按序相移 */
-export const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, k * 0.9) }));
+/* 多系列正值波形：按序相移。
+   ⚠️ **相位不能一路按 index × 0.9 递增**：第 8 条落到 6.3，与 2π（6.283）只差 0.017，
+   于是与第 1 条几乎同轨——实测 Δmax 仅为量程的 0.72%。更糟的是 7 色板（COLOR-02）
+   恰好也在第 8 条循环回第 1 色，**同色又同高**，看起来像图表把同一条画了两遍。
+   故第 7 条起插半档相位回到区间前段：12 条全部落在 [0, 4.95]、互不重合，也不越过 2π。
+   前 6 条相位与本规则落地前逐字一致，故既有示例与三档预设的数据一个数都没变。
+   它只保证**轨迹不重复**，不干预折线自然交叉。 */
+const seriesPhase = (index) => (index < 6 ? index * 0.9 : (index - 6) * 0.9 + 0.45);
+export const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, seriesPhase(k)) }));
+
+const FINANCIAL_SERIES_NAMES = [
+  '营业收入', '成本', '利润', '税费', '研发投入', '现金流',
+  '销售费用', '管理费用', '财务费用', '投资收益', '营业外收入', '所得税',
+];
+
+const MARKET_INDEX_SERIES_NAMES = [
+  '沪深300', '中证500', '创业板指', '上证50', '科创50', '中证1000',
+  '中证红利', '国证2000', '北证50', '恒生指数', '恒生科技', '纳斯达克',
+];
 
 /* index 详情页的系列数量滑块会把第二个参数传进示例 cfg。这里仅负责从假数据池取数，
    不是图表能力；preserveLast 用于始终保留组合图折线 / 正负堆叠负值项。 */
@@ -74,10 +92,19 @@ const selectExampleSeries = (series, requested, fallback, preserveLast = false) 
 /* 负值系列（堆叠含负值用） */
 export const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
 
-/* 折线：中途一个 null 断口；多数据（>13 点）整体下移、含负值区 */
+/* 基础折线：保持正值，中途一个 null 断口 */
 export const lineWave = (n) => {
-  const d = wave(n, 0.4).map((v) => (n > 13 ? v - 500000 : v));
+  const d = wave(n, 0.4);
   d[Math.floor(n / 3)] = null;
+  return d;
+};
+
+/* 正负值折线：默认首屏即跨零；数据量增加后补一个 null 断口 */
+export const signedLineWave = (n) => {
+  const d = wave(n, 0.4).map((v) => v - 500000);
+  if (n > 1) d[1] = -Math.abs(d[1]);
+  if (n > 2) d[2] = 0;
+  if (n > 4) d[4] = null;
   return d;
 };
 
@@ -116,6 +143,11 @@ const RADAR_SCORES = {
     { name: '行业均值', data: [3.1, 3.3, 3.4, 2.7, 3.0, 2.9] },
     { name: '同类公司', data: [4.0, 3.1, 2.6, 3.8, 1.8, 3.5] },
     { name: '目标水平', data: [4.4, 4.2, 3.8, 4.0, 3.6, 4.1] },
+    { name: '三年均值', data: [3.2, 3.7, 3.0, 2.8, 2.6, 3.1] },
+    { name: '五年均值', data: [3.0, 3.5, 3.2, 2.6, 2.8, 2.9] },
+    { name: '行业上游', data: [3.8, 3.6, 2.9, 3.3, 2.5, 3.7] },
+    { name: '行业下游', data: [2.9, 3.2, 3.6, 3.0, 3.3, 2.7] },
+    { name: '市场基准', data: [3.4, 3.4, 3.4, 3.4, 3.4, 3.4] },
   ],
   en: [
     { name: 'SPY', data: [1.9, 2.9, 3.0, 3.4, 1.6, 2.5] },
@@ -555,15 +587,14 @@ export const clampDensity = (example, n) => {
 export const defaultDensityCountOf = (example) =>
   clampDensity(example, densityOptionsOf(example)[defaultDensityOf(example)]);
 
-/* 连续档控件描述。与 densityControlOf 并列而不是取代它——后者仍是三档面的数据源，
-   两者共用示例自带的 label / hint（那些 hint 多是量程建议，放在滑杆上照样成立）。 */
+/* 连续档控件描述。与 densityControlOf 并列而不是取代它——后者仍是三档面的数据源。
+   主站滑杆的说明保持简短；各示例的量程建议仍留在三档验收面。 */
 export const densitySliderOf = (example) => {
   const { min, max } = densityRangeOf(example);
   const control = example?.densityControl ?? {};
   return {
     label: control.label ?? '项数',
-    /* 缺省文案不能沿用三档那句「切换少量、中量与大量数据场景」：连续档上没有档位可言 */
-    hint: control.hint ?? '拖动调整数据量',
+    hint: '数据项数量',
     unit: densityUnitOf(example),
     min,
     max,
@@ -635,27 +666,33 @@ export const EXAMPLES = [
   {
     id: 'basic', group: '柱状图', chart: 'cartesian',
     title: '基础柱状图', spec: 'BAR-01 / BAR-03', surfaces: BOTH,
-    description: '单系列柱状图，覆盖正负值、0 值占位与 null 断口。',
-    cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: signedWave(n) }] }),
+    description: '单系列正值柱状图，展示基础柱宽、间距、圆角与数据标签。',
+    cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: wave(n) }] }),
+  },
+  {
+    id: 'bar-negative', group: '柱状图', chart: 'cartesian',
+    title: '正负值柱状图', spec: 'BAR-01 / BAR-03', surfaces: BOTH,
+    description: '单系列数据跨越零轴，覆盖负值向下、0 值占位与 null 断口。',
+    cfg: (n) => ({ categories: seq(n), series: [{ name: '净利润', data: signedWave(n) }] }),
   },
   {
     id: 'grouped3', group: '柱状图', chart: 'cartesian',
     title: '分组柱', spec: 'BAR-02 / COLOR-04', surfaces: BOTH,
-    description: 'index 详情页可在 2–6 个系列间调整数据组数，覆盖分组排布、色板与图例显隐。',
-    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    description: 'index 详情页可在 2–12 个系列间调整数据组数，覆盖分组排布、色板与图例显隐。',
+    indexSeriesRange: { min: 2, max: 12, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n),
-      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+      series: selectExampleSeries(posSeries(n, FINANCIAL_SERIES_NAMES), seriesCount, 3),
     }),
   },
   {
     id: 'stack', group: '堆叠图', chart: 'cartesian',
     title: '普通堆叠柱', spec: 'BAR-05', surfaces: BOTH,
     description: 'index 详情页可调整正值系列数；逐段累计，且仅整根堆叠外端保留主题圆角。',
-    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    indexSeriesRange: { min: 2, max: 12, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n),
-      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+      series: selectExampleSeries(posSeries(n, FINANCIAL_SERIES_NAMES), seriesCount, 3),
       stack: 'normal',
     }),
   },
@@ -663,11 +700,14 @@ export const EXAMPLES = [
     id: 'stackNeg', group: '堆叠图', chart: 'cartesian',
     title: '正负堆叠柱', spec: 'BAR-05', surfaces: BOTH,
     description: 'index 详情页可调整系列数；正值向上、负值向下累计，最小档仍保留负值项。',
-    indexSeriesRange: { min: 2, max: 5, default: 3 },
+    indexSeriesRange: { min: 2, max: 10, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n), stack: 'normal',
       series: selectExampleSeries(
-        [...posSeries(n, ['主营利润', '投资收益', '营业外收入', '公允价值变动']), { name: '净亏损项', data: negWave(n) }],
+        [...posSeries(n, [
+          '主营利润', '投资收益', '营业外收入', '公允价值变动', '资产处置收益',
+          '汇兑收益', '其他收益', '补贴收入', '利息收入',
+        ]), { name: '净亏损项', data: negWave(n) }],
         seriesCount, 3, true,
       ),
     }),
@@ -676,10 +716,10 @@ export const EXAMPLES = [
     id: 'percent', group: '堆叠图', chart: 'cartesian',
     title: '归一化堆叠柱', spec: 'BAR-06', surfaces: BOTH,
     description: 'index 详情页可调整系列数；每个类目归一到 100%，隐藏系列后占比重新计算。',
-    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    indexSeriesRange: { min: 2, max: 12, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n),
-      series: selectExampleSeries(posSeries(n, ['营业收入', '成本', '利润', '税费', '研发投入', '现金流']), seriesCount, 3),
+      series: selectExampleSeries(posSeries(n, FINANCIAL_SERIES_NAMES), seriesCount, 3),
       stack: 'percent',
     }),
   },
@@ -690,14 +730,20 @@ export const EXAMPLES = [
     cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
   },
   {
+    id: 'line-negative', group: '折线图', chart: 'cartesian',
+    title: '正负值折线图', spec: 'LINE-01', surfaces: BOTH,
+    description: '单系列折线跨越零轴，覆盖负值、0 值与 null 断点。',
+    cfg: (n) => ({ categories: seq(n), series: [{ name: '净利润', data: signedLineWave(n), type: 'line' }] }),
+  },
+  {
     id: 'line-multi', group: '折线图', chart: 'cartesian',
     title: '多折线图', spec: 'LINE-01 / COLOR-05', surfaces: BOTH,
-    description: 'index 详情页可在 2–6 条折线间调整数据组数；主线保持标准线宽，其余线使用细线 token。',
-    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    description: 'index 详情页可在 2–12 条折线间调整数据组数；新增系列使用错开的波形，避免重复已有轨迹。',
+    indexSeriesRange: { min: 2, max: 12, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n),
       series: selectExampleSeries(
-        posSeries(n, ['沪深300', '中证500', '创业板指', '上证50', '科创50', '中证1000']).map((s) => ({ ...s, type: 'line' })),
+        posSeries(n, MARKET_INDEX_SERIES_NAMES).map((s) => ({ ...s, type: 'line' })),
         seriesCount, 3,
       ),
     }),
@@ -706,11 +752,11 @@ export const EXAMPLES = [
     id: 'line-stack', group: '折线图', chart: 'cartesian',
     title: '堆叠折线图', spec: 'LINE-01', surfaces: BOTH,
     description: 'index 详情页可调整系列数；折线沿累计基线绘制，并在折线与基线之间填充同色区域。',
-    indexSeriesRange: { min: 2, max: 6, default: 3 },
+    indexSeriesRange: { min: 2, max: 12, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n), stack: 'normal',
       series: selectExampleSeries(
-        posSeries(n, ['沪深300', '中证500', '创业板指', '上证50', '科创50', '中证1000']).map((s) => ({ ...s, type: 'line' })),
+        posSeries(n, MARKET_INDEX_SERIES_NAMES).map((s) => ({ ...s, type: 'line' })),
         seriesCount, 3,
       ),
     }),
@@ -720,14 +766,14 @@ export const EXAMPLES = [
     title: '折柱组合 · 双 Y', spec: 'BAR-07 / SCALE-04', surfaces: BOTH,
     description: 'index 详情页可调整系列数；柱走主轴、线走副轴，最小档仍保留一柱一线。',
     axisTitle: { y: '单位：元', y2: '增速（%）', x: '交易日' },
-    indexSeriesRange: { min: 2, max: 5, default: 3 },
+    indexSeriesRange: { min: 2, max: 10, default: 3 },
     cfg: (n, seriesCount) => ({
       categories: seq(n),
       series: selectExampleSeries([
-        { name: '营业收入', data: wave(n), type: 'bar', axis: 'primary' },
-        { name: '成本', data: wave(n, 0.9), type: 'bar', axis: 'primary' },
-        { name: '利润', data: wave(n, 1.8), type: 'bar', axis: 'primary' },
-        { name: '现金流', data: wave(n, 2.7), type: 'bar', axis: 'primary' },
+        ...posSeries(n, [
+          '营业收入', '成本', '利润', '现金流', '研发投入',
+          '销售费用', '管理费用', '财务费用', '投资收益',
+        ]).map((series) => ({ ...series, type: 'bar', axis: 'primary' })),
         { name: '营收增速', data: growth(n), type: 'line', axis: 'secondary' },
       ], seriesCount, 3, true),
     }),
@@ -823,7 +869,7 @@ export const EXAMPLES = [
     title: '多数据雷达图', spec: 'RADAR-04 / RADAR-08 / RADAR-10', surfaces: RADAR_ALL_SURFACES,
     description: '多系列在同一组维度与量程中对比；保持只读，不提供可调节能力。',
     ...RADAR_DENSITY,
-    indexSeriesRange: { min: 2, max: 5, default: 2 },
+    indexSeriesRange: { min: 2, max: 10, default: 2 },
     cfg: (n, seriesCount) => ({
       name: '同期能力对比', dimensions: radarDims(n),
       series: selectExampleSeries(radarSeries(n), seriesCount, 2),

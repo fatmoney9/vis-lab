@@ -235,6 +235,44 @@ test('RADAR 分类：对外分标准 / 多数据 / 分区，专项面保留六�
   );
 });
 
+test('BAR-01：柱状图独立提供基础正值与跨零负值用例', () => {
+  assert.deepEqual(
+    examplesFor('index').filter((item) => item.group === '柱状图').map((item) => item.id),
+    ['basic', 'bar-negative', 'grouped3'],
+  );
+
+  const basicData = EXAMPLES.find((item) => item.id === 'basic').cfg(8).series[0].data;
+  assert.ok(basicData.every((value) => value > 0), '基础柱状图应保持纯正值，避免与负值用例职责重叠');
+
+  const defaultSignedData = EXAMPLES.find((item) => item.id === 'bar-negative').cfg(4).series[0].data;
+  assert.ok(defaultSignedData.some((value) => value > 0), '默认首屏应包含正值');
+  assert.ok(defaultSignedData.some((value) => value < 0), '默认首屏应直接看见负值');
+  assert.ok(defaultSignedData.includes(0), '默认首屏应覆盖 0 值占位');
+  assert.ok(
+    EXAMPLES.find((item) => item.id === 'bar-negative').cfg(8).series[0].data.includes(null),
+    '扩展数据量后应覆盖 null 断口',
+  );
+});
+
+test('LINE-01：折线图独立提供基础正值与跨零负值用例', () => {
+  assert.deepEqual(
+    examplesFor('index').filter((item) => item.group === '折线图').map((item) => item.id),
+    ['line', 'line-negative', 'line-multi', 'line-stack'],
+  );
+
+  const basicData = EXAMPLES.find((item) => item.id === 'line').cfg(16).series[0].data;
+  assert.ok(basicData.every((value) => value == null || value > 0), '基础折线图应保持正值与 null 断点');
+
+  const defaultSignedData = EXAMPLES.find((item) => item.id === 'line-negative').cfg(4).series[0].data;
+  assert.ok(defaultSignedData.some((value) => value > 0), '默认首屏应包含正值');
+  assert.ok(defaultSignedData.some((value) => value < 0), '默认首屏应直接看见负值');
+  assert.ok(defaultSignedData.includes(0), '默认首屏应覆盖 0 值点');
+  assert.ok(
+    EXAMPLES.find((item) => item.id === 'line-negative').cfg(8).series[0].data.includes(null),
+    '扩展数据量后应覆盖 null 断点',
+  );
+});
+
 test('RADAR-03/05/18：网格与轮廓可组合，可调节能力只开放给单系列示例', () => {
   for (const id of ['radar-basic', 'radar-rating']) {
     const example = EXAMPLES.find((item) => item.id === id);
@@ -264,22 +302,22 @@ test('RADAR-03/05/18：网格与轮廓可组合，可调节能力只开放给单
   const multiCfg = buildConfig(multi, { density: 'mid', radarEditable: 'on' });
   assert.equal(multiCfg.editable, undefined);
   assert.equal(multiCfg.series.length, 2);
-  assert.deepEqual(multi.indexSeriesRange, { min: 2, max: 5, default: 2 });
-  assert.equal(multi.cfg(5, 5).series.length, 5);
+  assert.deepEqual(multi.indexSeriesRange, { min: 2, max: 10, default: 2 });
+  assert.equal(multi.cfg(5, 10).series.length, 10);
   assert.equal(buildConfig(basic, { seriesCount: 5 }).series.length, 1, 'index 控件值不得进入共享配置装配');
 });
 
 test('index 数据组数滑块：合并重复分组柱，并覆盖堆叠、折线、组合与多数据雷达夹具', () => {
   assert.equal(EXAMPLES.some((item) => item.id === 'grouped6'), false, '重复的六系列分组柱用例应移除');
   const ranges = {
-    grouped3: [2, 6, 3],
-    stack: [2, 6, 3],
-    stackNeg: [2, 5, 3],
-    percent: [2, 6, 3],
-    'line-multi': [2, 6, 3],
-    'line-stack': [2, 6, 3],
-    combo: [2, 5, 3],
-    'radar-multi': [2, 5, 2],
+    grouped3: [2, 12, 3],
+    stack: [2, 12, 3],
+    stackNeg: [2, 10, 3],
+    percent: [2, 12, 3],
+    'line-multi': [2, 12, 3],
+    'line-stack': [2, 12, 3],
+    combo: [2, 10, 3],
+    'radar-multi': [2, 10, 2],
   };
   for (const [id, [min, max, defaultCount]] of Object.entries(ranges)) {
     const example = EXAMPLES.find((item) => item.id === id);
@@ -295,6 +333,38 @@ test('index 数据组数滑块：合并重复分组柱，并覆盖堆叠、折�
   assert.deepEqual(combo.series.map((series) => series.type), ['bar', 'line'], '最小档仍须保持折柱组合语义');
   assert.equal(buildConfig(EXAMPLES.find((item) => item.id === 'grouped3'), { seriesCount: 6 }).series.length, 3,
     '数据组数是 index 包装示例的控件，不应成为 buildConfig / 组件能力');
+});
+
+/* 相位按 index × 0.9 一路递增时，第 8 条落到 6.3、与 2π 只差 0.017，与第 1 条几乎同轨
+   （实测 Δmax 仅为量程的 0.72%），而 7 色板恰好也在第 8 条循环回第 1 色 —— 同色又同高。
+   故本条**遍历每一个带滑块的示例**，而不是只守最先发现问题的那一个：波形池是共用的，
+   只守一处等于把规则写下来却只在六分之一的地方生效。
+   阈值 3% 的来历：出问题那次是 0.72%，当前最紧的一对是 radar-multi 手写数据的 5.56%，
+   3% 落在两者之间——够抓住相位绕回，又不会把正当的「相近对比组」判成重复。 */
+test('示例数据池：任何两条系列都不得在最大档重复轨迹', () => {
+  const withSlider = EXAMPLES.filter((item) => item.indexSeriesRange);
+  assert.ok(withSlider.length >= 8, '带数据组数滑块的示例应全部纳入本条守卫');
+
+  for (const example of withSlider) {
+    const { max } = example.indexSeriesRange;
+    const series = example.cfg(20, max).series;
+    assert.equal(series.length, max, `${example.id} 最大档应取满 ${max} 条`);
+
+    const points = series.flatMap((s) => s.data.map(Number)).filter(Number.isFinite);
+    const span = Math.max(...points) - Math.min(...points);
+    for (let i = 0; i < series.length; i += 1) {
+      for (let j = 0; j < i; j += 1) {
+        const greatestDelta = Math.max(...series[i].data.map((value, point) => {
+          const a = Number(value);
+          const bValue = Number(series[j].data[point]);
+          return Number.isFinite(a) && Number.isFinite(bValue) ? Math.abs(a - bValue) : Infinity;
+        }));
+        assert.ok(greatestDelta > span * 0.03,
+          `${example.id}：第 ${i + 1} 条「${series[i].name}」与第 ${j + 1} 条「${series[j].name}」轨迹重复`
+          + `（Δmax 仅为量程的 ${(greatestDelta / span * 100).toFixed(2)}%）`);
+      }
+    }
+  }
 });
 
 test('RADAR-18：专项可调节配置仍保留既有回归默认', () => {
