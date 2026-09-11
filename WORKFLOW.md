@@ -51,7 +51,8 @@
 | **图型对照面**（可选） | `playground/<图型>-preview.html` | 单个图型的多形态 × 三主题同屏铺开。当前有 `radar-preview.html`；**它 import 共享示例源**，只负责「怎么摆」。桑基的 `sankey-preview.html` 是**另一回事**——那个自带数据，见第七节 |
 
 **示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 主题/密度档位 + 配置装配），
-`demos/registry.js` 登记「图表类型 → L2 组件」。各面 import 同一份、各自决定怎么展示，
+`demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理 Ainvest
+图表内部内容的英文展示。各面 import 同一份、各自决定怎么展示，
 故加示例只加一处、不会漂移；示例用 `surfaces` 字段声明进哪个面（缺省两面都进），
 用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（饼 / 环 / 横向条形…）的步骤写在
 `demos/examples.js` 文件头——预览面本身都不用改。
@@ -142,6 +143,11 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 |---|---|---|---|
 | **值 token** | 颜色、字号、间距、线宽等数值 | `tokens/<theme>.json` → CSS 变量 | 渲染引擎直接消费（CSS / `getComputedStyle`） |
 | **形态/行为** | 布局形式（Y 轴 A/B）、轴位置、碰撞策略等**参与逻辑分支和几何计算的规范** | `tokens/behavior.json` → `core/theme.js` 解析 | L2 组件取出后作为参数传给 L1 |
+
+这里的“两类”只描述**组件的视觉与几何规范**。示例业务内容的语言不进 token / behavior：
+Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业务名称由
+`demos/chart-presentation.js` 在 L3 最终装配为英文；THS / iFinD-PC 保持中文，站点导航与配置面板
+也保持中文。组件只接收转换后的普通配置，禁止在 L1 / L2 判断品牌或语言。
 
 - **共用开关**：容器（或任意祖先）上的 `data-theme` 属性同时作为两条通道的主题输入。
   值 token 会随属性经 CSS 级联更新；形态/行为只在组件重绘时重新解析，因此切主题必须

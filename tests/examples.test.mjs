@@ -121,6 +121,36 @@ test('SANKEY-27：共享示例仅在 Ainvest 主题输出英文财报文案', ()
   assert.deepEqual(ainvest.links, ths.links);
 });
 
+test('Ainvest：所有图表族的最终示例配置均使用英文内容，其他主题保持中文', () => {
+  const cjk = /[\u3400-\u9fff]/u;
+  const collectCjk = (value, path = 'cfg', found = []) => {
+    if (typeof value === 'string' && cjk.test(value)) found.push(`${path}=${value}`);
+    else if (Array.isArray(value)) value.forEach((item, index) => collectCjk(item, `${path}[${index}]`, found));
+    else if (value && typeof value === 'object') {
+      Object.entries(value).forEach(([key, item]) => collectCjk(item, `${path}.${key}`, found));
+    }
+    return found;
+  };
+
+  for (const example of EXAMPLES) {
+    const count = example.densityValues?.many ?? defaultDensityCountOf(example);
+    const source = example.cfg(count, example.indexSeriesRange?.max);
+    /* index 的“数据组数”也是这样先包装 cfg，再交给 buildConfig；用最大档覆盖完整名称池。 */
+    const fullExample = { ...example, cfg: () => source };
+    const config = buildConfig(fullExample, {
+      theme: 'ainvest', axisTitle: true, labelLayout: 'outside', ratingStyle: 'bands',
+    });
+    assert.deepEqual(collectCjk(config), [], `${example.id} 的 Ainvest 图内仍有中文`);
+  }
+
+  const bar = EXAMPLES.find((example) => example.id === 'basic');
+  assert.equal(buildConfig(bar, { theme: 'ths' }).series[0].name, '营业收入');
+  assert.equal(buildConfig(bar, { theme: 'ifind-pc' }).series[0].name, '营业收入');
+  assert.equal(buildConfig(bar, { theme: 'ainvest' }).series[0].name, 'Revenue');
+  const radar = EXAMPLES.find((example) => example.id === 'radar-basic');
+  assert.equal(buildConfig(radar, { theme: 'ainvest' }).dimensions[3], 'Funds Flow');
+});
+
 test('TOOLTIP-12：Y 向指示默认关，只有开才落进 cfg', () => {
   const cartesian = EXAMPLES.filter((example) => capabilitiesOf(example).yIndicator);
   assert.ok(cartesian.length, '应有直角坐标系示例声明 yIndicator 能力');
