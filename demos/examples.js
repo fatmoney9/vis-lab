@@ -37,6 +37,7 @@ import {
 } from '../charts/charts/sankey/model.js';
 import { buildFinancialDifferencePair } from './sankey-financial.js';
 import { financialSankeyPresentation } from './sankey-presentation.js';
+import { chartContentPresentation } from './chart-presentation.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
 
@@ -1082,7 +1083,8 @@ export function radarAxisLabelLayoutOf(example, requested = 'auto', editable = '
  *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
  * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
- * behavior 解析。theme 在这里仅允许驱动示例声明的 L3 presentation 文案映射。
+ * behavior 解析。theme 在这里仅允许驱动 L3 presentation 文案映射：Ainvest 图表内部内容
+ * 统一经 chart-presentation.js 转为英文；站点外壳仍保持中文。
  */
 export function buildConfig(example, state = {}) {
   const {
@@ -1182,7 +1184,7 @@ export function buildConfig(example, state = {}) {
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;
-  return cfg;
+  return chartContentPresentation(cfg, { theme, chart: example.chart });
 }
 
 /*

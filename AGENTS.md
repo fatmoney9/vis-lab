@@ -70,6 +70,8 @@
 - `demos/` 是各预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
   `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
+  Ainvest 的**图表内部示例内容统一为英文**，由 `demos/chart-presentation.js` 在最终配置装配时转换；
+  站点导航与配置面板仍保持中文。语言属于 L3 展示数据，不得把品牌或中英文判断写进 L2 组件。
   **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
 - **另有 `playground/radar-preview.html`**（雷达专用对照面，六个典型配置 × 三主题同屏；是回归矩阵、不是六种图表分类）。它与桑基那条**性质不同**：
