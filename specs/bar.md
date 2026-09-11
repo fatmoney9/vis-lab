@@ -37,6 +37,14 @@
 分组柱间距上限 `size-bar-group-inner-gap-max`（柱与间距同比缩小、仅柱顶到 `size-bar-max` 时取满值）· 容器内左右留白比 `size-bar-group-gap-ratio`（内容块:两侧留白，三主题 `2:1`；`0`=不留侧白）。
 系列色见 [color.md](color.md)（不是值 token）。
 
+## 活 demo
+
+对外站点与开发验收面均从 `demos/examples.js` 读取同一份示例：
+
+- `#basic` / `#bar-negative` / `#grouped3`：基础、跨零与多系列柱，对应 BAR-01..04。
+- `#stack` / `#stackNeg` / `#percent`：普通、正负与归一化堆叠，对应 BAR-05/06。
+- `#combo` / `#combo-single`：折柱组合与双 Y，对应 BAR-07。
+
 ## 待办
 
 - [x] **堆叠 + 归一化**（`stack: normal / percent`）→ BAR-05 / BAR-06。

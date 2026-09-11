@@ -47,6 +47,14 @@
 数据点尺寸 `size-line-point`（THS 6 / iFinD·Ainvest 8，含描边；形状走 behavior `line-point-shape`：circle / diamond）· 渐变面积两端透明度 `opacity-line-area-from` / `-to`（0.2 → 0）·
 堆叠填充带不透明度 `opacity-line-stack-fill`（0.2）。系列色见 [color.md](color.md)。
 
+## 活 demo
+
+对外站点与开发验收面均从 `demos/examples.js` 读取同一份示例：
+
+- `#line` / `#line-negative`：基础折线与跨零折线，对应 LINE-01。
+- `#line-multi` / `#line-stack`：多系列与堆叠折线。
+- `#combo` / `#combo-single`：折柱组合中的折线，组合规则见 [bar.md](bar.md) BAR-07。
+
 ## 待办（line.md 其余条目，后续切片）
 
 - [x] **数据点显隐分档**：**移动/PC 统一**——该线非 null 点数 > 13 隐藏所有点（决定：统一阈值规则取代原文「Web 碰撞隐藏」）。实现为纯渲染策略与交互解耦：点**留在 DOM**（带 `data-i` 类目序）、`points-muted` 类仅视觉静默（`mark.js` → `renderLine` 的 `showPoints` + styles.css）；「hover 十字准星唤出最近点」已随 tooltip 落地（[tooltip.md](tooltip.md) TOOLTIP-10，L2 按类目给 `.dv-line-point[data-i]` 挂 `.is-active` 压过静默）；原文另有「选中态即使隐藏也高亮当前点」一句——**折线本身没有选中态**（见上「颜色」小节），
