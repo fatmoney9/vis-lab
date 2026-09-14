@@ -179,6 +179,19 @@ async function waitFor(cdp, expression, timeout = 15000) {
   throw new Error(`浏览器条件等待超时：${expression}${lastError ? `（${lastError.message}）` : ''}`);
 }
 
+async function stopProcess(child, timeout = 2000) {
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  const exited = new Promise((resolvePromise) => child.once('exit', resolvePromise));
+  child.kill('SIGTERM');
+  const stopped = await Promise.race([
+    exited.then(() => true),
+    sleep(timeout).then(() => false),
+  ]);
+  if (stopped) return;
+  child.kill('SIGKILL');
+  await exited;
+}
+
 const setMainState = ({ theme, platform, mode }) => `(() => {
   const change = (node) => node.dispatchEvent(new Event('change', { bubbles: true }));
   const choose = (key, value) => {
@@ -435,13 +448,14 @@ async function main() {
     throw error;
   } finally {
     cdp?.close();
-    chrome.kill('SIGTERM');
-    await Promise.race([
-      new Promise((resolvePromise) => chrome.once('exit', resolvePromise)),
-      sleep(2000).then(() => chrome.kill('SIGKILL')),
-    ]);
+    await stopProcess(chrome);
     await new Promise((resolvePromise) => staticServer.close(resolvePromise));
-    await rm(profile, { recursive: true, force: true });
+    await rm(profile, {
+      recursive: true,
+      force: true,
+      maxRetries: 8,
+      retryDelay: 100,
+    });
   }
 }
 
