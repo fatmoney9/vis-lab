@@ -1,10 +1,11 @@
 /* L3 · 瀑布图示例文案映射。只换展示语言，不改变累计值、类型、分段或运算关系。 */
 const AINVEST_COPY = {
-  revenue: { name: 'Revenue', axisLabel: 'Revenue' },
-  cost: { name: 'Cost of sales', axisLabel: 'Cost of sales' },
-  gross: { name: 'Gross profit', axisLabel: 'Gross profit' },
-  'other-expenses': { name: 'Other Expenses', axisLabel: 'Other Expenses' },
-  'net-income': { name: 'Net income', axisLabel: 'Net income' },
+  revenue: { name: 'Revenue', axisLabel: ['Revenue'] },
+  cost: { name: 'Cost of sales', axisLabel: ['Cost of', 'sales'] },
+  gross: { name: 'Gross profit', axisLabel: ['Gross profit'] },
+  /* Figma 固定为两行；显式内容也让缺少品牌字体的 Linux 验收不依赖回落字体宽度。 */
+  'other-expenses': { name: 'Other Expenses', axisLabel: ['Other', 'Expenses'] },
+  'net-income': { name: 'Net income', axisLabel: ['Net income'] },
   assets: { name: 'Total Assets', axisLabel: 'Total Assets' },
   liabilities: { name: 'Total Liabilities', axisLabel: 'Total Liabilities' },
   equity: { name: 'Total Equity', axisLabel: 'Total Equity' },

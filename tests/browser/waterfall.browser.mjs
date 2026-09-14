@@ -27,9 +27,10 @@ const MIME = {
 const sleep = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms));
 
 async function chromeBinary() {
-  const configured = process.env.VIS_LAB_CHROME_BIN;
   const candidates = [
-    configured,
+    process.env.VIS_LAB_CHROME_BIN,
+    /* GitHub 官方 Ubuntu Runner 提供的浏览器路径合同。 */
+    process.env.CHROME_BIN,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing',
     '/usr/bin/google-chrome',
@@ -354,10 +355,11 @@ async function main() {
   const debugPort = await freePort();
   const profile = await mkdtemp(join(tmpdir(), 'vis-lab-chrome-'));
   const chrome = spawn(await chromeBinary(), [
-    '--headless=new',
+    '--headless',
     '--disable-gpu',
     '--disable-dev-shm-usage',
     '--no-sandbox',
+    `--remote-debugging-address=${LOOPBACK}`,
     `--remote-debugging-port=${debugPort}`,
     `--user-data-dir=${profile}`,
     'about:blank',

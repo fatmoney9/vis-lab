@@ -513,6 +513,8 @@ test('WATERFALL-01/04：瀑布示例完整透出类型、运算符与分段数�
   assert.equal(ths.items[1].operatorBefore, '+');
   assert.equal(ainvest.period, '2024 Q3');
   assert.equal(ainvest.items[0].name, 'Revenue');
+  assert.deepEqual(ainvest.items[1].axisLabel, ['Cost of', 'sales']);
+  assert.deepEqual(ainvest.items[3].axisLabel, ['Other', 'Expenses']);
   const dataCfg = buildConfig(data, { theme: 'ainvest' });
   assert.equal(dataCfg.items[0].segments.length, 2);
   assert.equal(dataCfg.items[0].segments[0].name, 'Current Assets');
