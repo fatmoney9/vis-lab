@@ -25,7 +25,7 @@
 | `label.js` | 数据标签渲染、批量省略、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤。`truncateBatch` 的测量回调可同时收到源条目，支持桑基同批标题按各自字号测量；`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列 | data-label.md（LABEL-01..09）、pie.md（PIE-16）、sankey.md（SANKEY-15） |
 | `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列） | legend.md（LEGEND-01/10/11） |
 | `legend-state.js` | 图例点击的状态迁移：`applyToggle`（筛，改 hidden）/ `applyFocus`（强调，改 selected）。**与 legend.js 分开只为一件事**——那边 import d3，住在里面就一行测不了 | legend.md（LEGEND-06/12/14） |
-| `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（X 贴片只负责状态背景、边界钳制与指示关系，文字直接复用 `axis.js` 的逐行结构、`.dv-axis-label` 基础样式及常态轴标签坐标；气泡标题可带实体图标，详情行可隐藏 marker；每行接收调用方已经完整格式化的单一 value；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md、waterfall.md（WATERFALL-08/13） |
+| `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（X 贴片只负责状态背景、边界钳制与指示关系，文字直接复用 `axis.js` 的逐行结构、`.dv-axis-label` 基础样式及常态轴标签坐标；气泡标题可带实体图标，详情行可隐藏 marker；每行接收调用方已经完整格式化的单一 value；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸；气泡宽度受内容 / 视口 / 容器三道封顶，容器封顶的比例走 token、由 `place()` 在读宽度前写入，「容器」= 图表根 `.dv-chart`、缺省回落到宿主（与 follow 档 clamp 边界同一个定义），见 TOOLTIP-01；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md（TOOLTIP-01/12）、waterfall.md（WATERFALL-08/13） |
 | `image-content.js` | 可选图片内容的标准化、尺寸档降级、SVG 结构和 Tooltip 内容转换；不识别图表、主题或业务字段 | image-content.md（IMAGECONTENT-01..04） |
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |

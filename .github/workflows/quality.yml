@@ -34,9 +34,3 @@ jobs:
       # --verify：重建生成物后要求与提交内容零差异——CI 只验不改。
       - name: 运行质量门禁
         run: sh hooks/check.sh --verify
-
-      # 真实浏览器合同单独成步：它需要 Chrome，而 hooks/check.sh 是 pre-commit 与 CI 的
-      # 共用入口——放进去会让每个人的每次 commit 都启动一个 Chrome，且没装 Chrome 的机器
-      # 直接无法提交。CI 的 runner 自带 google-chrome-stable，放这里覆盖不减、本地不受累。
-      - name: 浏览器合同（瀑布）
-        run: npm run test:browser

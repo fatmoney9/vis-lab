@@ -34,7 +34,7 @@
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
-| Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸） |
+| Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸）。**气泡宽度只在 TOOLTIP-01 一处定**（内容 / 视口 / 容器三道封顶）——不要给单个图型另写 `.dv-tooltip` 的 `max-width` 覆盖，内容放不下时先重量全族再调通用值 |
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |

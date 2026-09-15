@@ -15,7 +15,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| TOOLTIP-01 | 气泡形态：背景 `color-visualization-tooltip` · 内边距 `spacing-tooltip-pad` · 圆角 `radius-tooltip` · 行间距 `spacing-tooltip-row` · 数据行两列最小间距 `spacing-tooltip-row-gap` · 默认最大宽度 `size-tooltip-max-width`（超出换行）；**iFinD 特例叠加**：1px 边框 `color-visualization-tooltip-border` + 阴影 `shadow-tooltip` + 标题行下分割线 `color-visualization-tooltip-divider` + 字体 Arial（`font-family-tooltip`，Tooltip 内不用 YaHei）——THS / Ainvest 该组 token 置 transparent / none 自然无形 | `.dv-tooltip`（styles.css）· `core/tooltip.js` | ✅ |
+| TOOLTIP-01 | 气泡形态：背景 `color-visualization-tooltip` · 内边距 `spacing-tooltip-pad` · 圆角 `radius-tooltip` · 行间距 `spacing-tooltip-row` · 数据行两列最小间距 `spacing-tooltip-row-gap` · 宽度**自适应内容**（`width: max-content`，以最长一行为准），再受**三道各自独立的封顶**，取最小者：① 内容封顶 `size-tooltip-max-width`（**280px**，超出按 TOOLTIP-03 换行）；② 视口封顶（两侧各留 `spacing-24`，窄屏上气泡不顶边）；③ **容器封顶** = 容器宽 × `size-tooltip-max-container-ratio`（容器 = 图表根 `.dv-chart`，组件未挂该类时为气泡宿主本身；与 TOOLTIP-04 follow 档的 clamp 边界同一个定义）——**THS 移动端取 0.5，其余主题与 THS PC 端为 `none`**（不设此道）。<br>⚠️ ③ 的由来是 THS 的 **side-fixed 档**（TOOLTIP-06）：它按图表中点把气泡放到指针的对侧半区，气泡一旦宽过半个容器就会越过中线、盖住指针所在的那半边，这一档「躲开指针」的意义就没了。PC 容器宽（596–688px），280 远小于一半，从不触发；移动端容器 343px、半宽 171.5px，**瀑布图的读数（自然宽 183px）会触发**，其余图型实测 ≤131px 不触发——故验收必须拿瀑布图验，默认示例基本绕开这条。比例是取值（走 token 端分叉），合成在 `styles.css` 的 `min()`，`core/tooltip.js` 只在读宽度**之前**写入量好的容器宽 × 比例，本模块仍无 `if(theme)`。**各族一律不设专属宽度覆盖**，三道封顶对全部图型生效。注意桑基在移动端的「容器」是它可横向滚动的画布（实测 1144px），宽于可见外框，故半宽封顶在该族实际不收紧。<br>⚠️ **280 是量出来的**：全族 × 三主题实测自然宽 80–265px（最宽是桑基 Ainvest 的英文节点名 264.7，其次瀑布图 Ainvest 的复合读数 228），现有内容一律不折；⚠️ **余量已只剩约 6%**——再出现更长的常规读数就会开始换行，届时应先重量再决定是否上调，而不是给某一族另开覆盖；再宽的内容（如「超长名称」边界用例的 339px）本就该换行，而不是让气泡霸屏。**2026-09-15 前该值是 160px**，瀑布图与桑基图因此各自设有专属宽度覆盖；同类覆盖出现第二处，说明该改的是通用值，两处现已并入本条；**iFinD 特例叠加**：1px 边框 `color-visualization-tooltip-border` + 阴影 `shadow-tooltip` + 标题行下分割线 `color-visualization-tooltip-divider` + 字体 Arial（`font-family-tooltip`，Tooltip 内不用 YaHei）——THS / Ainvest 该组 token 置 transparent / none 自然无形 | `.dv-tooltip`（styles.css）· `core/tooltip.js` | ✅ |
 | TOOLTIP-02 | 气泡内容：自上而下 = **日期 / 标题行**（第一行）→ **数据行**（每系列一行）。**标题行可省**；也可带一个装饰性实体图标（如股票 Logo，24px），不改变主体骨架。图标合同支持 `titleIconFallback`：实体图片缺失或加载失败时，在同一 24px 槽位显示圆形 `color-background-layer1` 页面一级背景 + `color-text-primary` 单字符，字体用 `font-family-cn` 与 `font-weight-bold`，light / dark 随主题 token。有真实图片地址时首帧直接显示图片，不先显示兜底等待 `load` 事件。数据行固定两列：marker + 系列名左对齐、数值右对齐；详情型数据行可显式隐藏 marker，但仍复用同一两列布局。**行序与图例一致**（声明序）、隐藏系列不出现；默认 marker 跟随图例 marker 形态。标题字色 `color-text-tooltip-title`、系列名 `color-text-tooltip-series`、数值 `color-text-tooltip-value`，字号 `font-size-tooltip`，数值字重 `font-weight-tooltip-value`；**数值格式与 Y 轴同源**，null 值显示 "-" | `core/tooltip.js` → `createTooltip()` 的 `show()` | ✅ |
 | TOOLTIP-03 | 系列名过长换行三规则：① 数值 / marker **顶对齐系列名第一行**（不随多行高度居中）；② **只有系列名换行**，数值始终单行、贴右、不折行，且数值列 `flex:none` 不参与压缩；③ 系列名悬挂缩进——marker 只在第一行左侧出现一次，第 2 行起左边缘对齐**第一行文字起点**（marker 独立列 + 名称列 `min-width:0` / `overflow-wrap:anywhere` 实现）。无空格的英文长词也只能在名称列内断行，禁止溢入数值列 | `.dv-tooltip__row` / `__label` / `__value`（styles.css） | ✅ |
 
@@ -60,7 +60,7 @@
 
 气泡：`color-visualization-tooltip` · `color-text-tooltip-title/-series/-value` · `font-size-tooltip` ·
 `font-family-tooltip` · `font-weight-tooltip-value` · `spacing-tooltip-pad` · `spacing-tooltip-row` ·
-`spacing-tooltip-row-gap` · `radius-tooltip` · `size-tooltip-max-width`；iFinD 特例组
+`spacing-tooltip-row-gap` · `radius-tooltip` · `size-tooltip-max-width` · `size-tooltip-max-container-ratio`（端分叉，目前仅 THS 移动端 0.5）；iFinD 特例组
 `color-visualization-tooltip-border` / `shadow-tooltip` / `color-visualization-tooltip-divider`。
 指示线：`color-visualization-highlight-line` · `dash-highlight-line`（X 竖线与 Y 横线共用，TOOLTIP-08/12）。
 指示 block（TOOLTIP-11 纯分组柱 hover）：`color-visualization-highlight-block`（明暗各一组，三主题同值）。
@@ -74,7 +74,7 @@ Y 徽标**未新增任何 token**）。
 - iFinD：`font-weight-tooltip-value` 暂 regular · `color-visualization-tooltip-border` dark 暂同 light（#ECECF7）·
   `shadow-tooltip` 暂 `0 2px 8px rgba(0,0,0,0.15)` · `color-visualization-tooltip-divider` 暂同边框色 ·
   `spacing-axis-label-tag-pad-h` 暂 1px。
-- 移动端气泡最大宽度 = 1/2 图表宽度（三主题一致、无 token）——移动端触摸切片一并落。
+- 移动端气泡最大宽度：**THS 已按 1/2 容器宽落地**，权威口径见 TOOLTIP-01 ③（2026-09-15）。本处原写「三主题一致、无 token」（2026-07-19 的占位）；落地时只确认了 THS，故改走端分叉 token，**iFinD / Ainvest 移动端是否同样取 1/2 仍待设计确认**（当前为 `none`，不设容器封顶）。
 
 ## 待办（后续切片）
 
@@ -85,7 +85,7 @@ Y 徽标**未新增任何 token**）。
   堆叠 / 折线 / 组合 / 双 Y）维持竖线，故本条不能不加区分地给所有图型出 block；② **底色只留一个值**——本条用
   `color-visualization-highlight-block`（0.1），line.md 原写 `color-background-weak`（0.04），透明度差一倍半，
   已按语义取前者（后者归 §10 弱背景填充，现用处是缩放轴轨道底；前者才是 §10 的高亮反馈组）。
-- [ ] **移动端触摸**：触摸点即触发点（档位形态两端一致）；气泡最大宽度切 1/2 图表宽度；touch 事件接线。
+- [ ] **移动端触摸**：触摸点即触发点（档位形态两端一致）；touch 事件接线。（气泡最大宽度那半已拆出：THS 移动端 1/2 容器宽见 TOOLTIP-01 ③；iFinD / Ainvest 待定，见上方占位待定值。）
 - [ ] **常驻显示（always-show）**：开启后关闭自动隐藏与延迟。
 - [x] **无坐标系图 → follow 档特例**（TOOLTIP-07）：随 `PieChart` 落地，在 L2 定死、未给 behavior 加键。
 - [ ] **饼环气泡的占比数值**：当前数据行只显示原值（与轴 / 标签同一份 `makeFormatter`）。饼环的核心读数是占比，
