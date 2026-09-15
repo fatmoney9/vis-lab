@@ -267,6 +267,9 @@ const inspectHover = (index) => `(() => {
     tooltipVisible: getComputedStyle(tooltip).display !== 'none',
     tooltipNoOverlap: !labelRect || !valueRect || labelRect.right <= valueRect.left + 0.5,
     tooltipValue: tooltipValue?.textContent ?? '',
+    /* [TOOLTIP-01] 容器封顶：宽度对比图表根 */
+    tooltipWidth: tooltip.getBoundingClientRect().width,
+    chartWidth: tooltip.closest('.dv-chart')?.getBoundingClientRect().width ?? 0,
   };
 })()`;
 
@@ -372,6 +375,10 @@ async function main() {
     const platforms = ['pc', 'mobile'];
     const modes = ['light', 'dark'];
     let checks = 0;
+    /* [TOOLTIP-01] THS 移动端容器封顶真正「撞上」的次数。本合同 hover 的第 3 根柱读数
+       自然宽 186.6px > 半容器 171.5px，是这条规则的触发用例；若将来数据变窄、再没有一次
+       撞上封顶，下面的「≤ 半宽」断言就会空跑通过，故另立一道守卫要求至少撞上一次。 */
+    let thsMobileCapped = 0;
     for (const theme of themes) {
       for (const platform of platforms) {
         for (const mode of modes) {
@@ -382,6 +389,12 @@ async function main() {
             assertHover(result, `${theme}/${platform}/${mode}/item-${index}`, {
               expectPercent: index === 3,
             });
+            if (theme === 'ths' && platform === 'mobile') {
+              const half = result.chartWidth / 2;
+              assert.ok(result.tooltipWidth <= half + 0.5,
+                `${theme}/${platform}/${mode}/item-${index}：THS 移动端 Tooltip 宽 ${result.tooltipWidth.toFixed(1)}px 超过容器的 1/2（${half.toFixed(1)}px）`);
+              if (Math.abs(result.tooltipWidth - half) <= 0.5) thsMobileCapped++;
+            }
             if (theme === 'ainvest' && index === 3) {
               assert.deepEqual(result.lines, ['Other', 'Expenses'],
                 `${theme}/${platform}/${mode}：双行标签内容发生变化`);
@@ -391,6 +404,9 @@ async function main() {
         }
       }
     }
+
+    assert.ok(thsMobileCapped > 0,
+      'THS 移动端没有任何一次 hover 撞上容器封顶——「≤ 半宽」断言在空跑，换一根读数更宽的柱来验');
 
     await evaluate(cdp, inspectThreeLineFixture);
     await waitFor(cdp, 'window.__waterfallThreeLine');

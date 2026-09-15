@@ -75,7 +75,7 @@ CI 的 runner 自带 `google-chrome-stable`，故它作为 `.github/workflows/qu
 - `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
-- `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；不读取源码或 CSS 文本、不手写生产 SVG。
+- `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；另断言 **THS 移动端 Tooltip 宽 ≤ 图表根宽的 1/2**（TOOLTIP-01 ③），并要求至少一次 hover 真正撞上该封顶——第 3 根柱读数自然宽 186.6px 是触发用例，数据若变窄到再无一次触发，该守卫会报红而不是让断言空跑；不读取源码或 CSS 文本、不手写生产 SVG。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。
