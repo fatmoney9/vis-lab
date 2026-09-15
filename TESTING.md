@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖） |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换已接入，其余待接入 | Chrome DevTools Protocol（零依赖） |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· CI |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· CI |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 
@@ -36,7 +36,12 @@ node --test "tests/**/*.test.mjs"    # 等价 npm test
 node --experimental-websocket tests/browser/waterfall.browser.mjs # 等价 npm run test:browser
 ```
 
-浏览器合同会自动查找 macOS Chrome 与 Linux Chrome/Chromium；非标准安装位置通过
+浏览器合同**只在 CI 跑，不进 `hooks/check.sh`**：那个脚本是 pre-commit 与 CI 的共用入口，
+把需要 Chrome 的用例放进去，等于让每个人的每次提交都启动一个浏览器，没装 Chrome 的机器更是直接无法提交。
+CI 的 runner 自带 `google-chrome-stable`，故它作为 `.github/workflows/quality.yml` 的独立 step 执行——
+覆盖不减，本地提交不受累。改动瀑布 hover / 轴贴片相关代码时，请在本地手动跑一次上面那条命令。
+
+它会自动查找 macOS Chrome 与 Linux Chrome/Chromium；非标准安装位置通过
 `VIS_LAB_CHROME_BIN` 指向可执行文件。它自行启动临时静态服务与隔离浏览器配置，不依赖已运行的 8123 预览。
 该合同依赖 Node 20.10 新增的内置 WebSocket；命令保留显式开关，以兼容尚未默认开启它的 Node 20。
 

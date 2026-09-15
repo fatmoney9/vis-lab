@@ -19,7 +19,7 @@
 | `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞；`wrapAxisLabel` 按真实测量结果做通用两行折行，`axisLabelLines` / `renderAxisLabelLines` 是常态 X 标签与高亮贴片共用的逐行内容结构；多行标签按每一行最终类名测量，以最宽行参与碰撞 | axes.md（AXIS-01..08）、tooltip.md（TOOLTIP-09） |
 | `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |
-| `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 批量量宽，`createTextMeasurer` 支持反复拟合字号；两者走隐藏 SVG + 真实类名。`measureTexts` / `measureInk` 都可按行接收类名函数，避免多行异字重被当成同一字体；`measureInk` 量**墨迹上下边**，走 Canvas（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08）、treemap.md（TREEMAP-05）、sankey.md（SANKEY-18） |
+| `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 批量量宽，`createTextMeasurer` 支持反复拟合字号；两者走隐藏 SVG + 真实类名。`measureTexts` 可按行接收类名函数，避免多行异字重被当成同一字体；`measureInk` 量**墨迹上下边**，走 Canvas（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08）、treemap.md（TREEMAP-05）、sankey.md（SANKEY-18） |
 | `mark.js` | 柱 / 线 / 数据点的图元渲染（返回逐帧重绘闭包供生长动效驱动） | bar.md、line.md、motion.md |
 | `motion.js` | 缓动曲线、减弱动效判断与逐帧生长循环（零 DOM，rAF / 时钟可注入）；桑基季度播放复用曲线与减弱动效判断，保留专属暂停时序 | motion.md（MOTION-01..07）、sankey.md（SANKEY-24） |
 | `label.js` | 数据标签渲染、批量省略、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤。`truncateBatch` 的测量回调可同时收到源条目，支持桑基同批标题按各自字号测量；`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列 | data-label.md（LABEL-01..09）、pie.md（PIE-16）、sankey.md（SANKEY-15） |

@@ -52,7 +52,6 @@ function withFakeDocument(run) {
         measureText: () => ({
           actualBoundingBoxAscent: context.font.includes('700') ? 9 : 7,
           actualBoundingBoxDescent: context.font.includes('700') ? 3 : 2,
-          hangingBaseline: 8,
         }),
       };
       return { getContext: () => context };
@@ -92,20 +91,6 @@ test('AXIS-08：批量宽度测量允许逐项应用真实渲染类', () => {
       index === 1 ? 'dv-axis-label wide' : 'dv-axis-label'
     ));
     assert.deepEqual(widths, [10, 20]);
-    assert.equal(host.children.length, 0);
-  });
-});
-
-test('AXIS-08/TOOLTIP-09：墨迹测量按逐行类分别解析字体', () => {
-  withFakeDocument(() => {
-    const host = new FakeNode('host');
-    const metrics = measureInk(host, ['Name', '100'], (_text, index) => (
-      index === 1 ? 'dv-axis-label bold' : 'dv-axis-label'
-    ));
-    assert.deepEqual(metrics, [
-      { ascent: 7, descent: 2, hanging: 8 },
-      { ascent: 9, descent: 3, hanging: 8 },
-    ]);
     assert.equal(host.children.length, 0);
   });
 });

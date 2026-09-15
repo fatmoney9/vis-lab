@@ -239,22 +239,8 @@ const inspectHover = (index) => `(() => {
 
   const normalSpans = [...normal.querySelectorAll('tspan')];
   const selectedSpans = [...selected.querySelectorAll('tspan')];
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  let baseline = Number(selected.getAttribute('y'));
-  const inkBounds = selectedSpans.map((span) => {
-    baseline += Number(span.getAttribute('dy')) || 0;
-    const style = getComputedStyle(span);
-    context.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
-    const metrics = context.measureText(span.textContent);
-    const hanging = Number.isFinite(metrics.hangingBaseline)
-      ? metrics.hangingBaseline
-      : metrics.actualBoundingBoxAscent;
-    return {
-      top: baseline + hanging - metrics.actualBoundingBoxAscent,
-      bottom: baseline + hanging + metrics.actualBoundingBoxDescent,
-    };
-  });
+  /* [TOOLTIP-09/12] 背景以文字 em 排版盒中心定位（与 Y 值徽标同源），故量排版盒而非字形墨迹。 */
+  const textBox = selected.getBBox();
   const backgroundY = Number(background.getAttribute('y'));
   const backgroundHeight = Number(background.getAttribute('height'));
   const tooltipLabel = tooltip.querySelector('.dv-tooltip__label');
@@ -272,8 +258,8 @@ const inspectHover = (index) => `(() => {
     normalFontSize: getComputedStyle(normal).fontSize,
     selectedFontSize: getComputedStyle(selected).fontSize,
     lines: selectedSpans.map((span) => span.textContent),
-    topGap: Math.min(...inkBounds.map((bound) => bound.top)) - backgroundY,
-    bottomGap: backgroundY + backgroundHeight - Math.max(...inkBounds.map((bound) => bound.bottom)),
+    topGap: textBox.y - backgroundY,
+    bottomGap: backgroundY + backgroundHeight - (textBox.y + textBox.height),
     crosshairEnd: Number(crosshair.getAttribute('y2')),
     backgroundY,
     backgroundFill: getComputedStyle(background).fill,
@@ -290,7 +276,7 @@ function assertHover(result, context, { expectPercent = false } = {}) {
   assert.deepEqual(result.normalDy, result.selectedDy, `${context}：点击态逐行 dy 发生变化`);
   assert.equal(result.normalFontSize, result.selectedFontSize, `${context}：点击态字号发生变化`);
   assert.ok(Math.abs(result.topGap - result.bottomGap) <= 0.75,
-    `${context}：贴片上下未居中（${result.topGap} / ${result.bottomGap}）`);
+    `${context}：贴片未以文字排版盒上下居中（${result.topGap} / ${result.bottomGap}）`);
   assert.ok(Math.abs(result.crosshairEnd - result.backgroundY) <= 0.01,
     `${context}：指示线没有连接贴片上沿`);
   assert.notEqual(result.backgroundFill, 'rgba(0, 0, 0, 0)', `${context}：贴片背景透明`);
@@ -334,29 +320,14 @@ const inspectThreeLineFixture = `void (async () => {
   const selected = host.querySelector('.dv-axis-tag-text');
   const spans = [...selected.querySelectorAll('tspan')];
   const background = host.querySelector('.dv-axis-tag-bg');
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  let baseline = Number(selected.getAttribute('y'));
-  const bounds = spans.map((span) => {
-    baseline += Number(span.getAttribute('dy')) || 0;
-    const style = getComputedStyle(span);
-    context.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + ' ' + style.fontFamily;
-    const metrics = context.measureText(span.textContent);
-    const hanging = Number.isFinite(metrics.hangingBaseline)
-      ? metrics.hangingBaseline
-      : metrics.actualBoundingBoxAscent;
-    return {
-      top: baseline + hanging - metrics.actualBoundingBoxAscent,
-      bottom: baseline + hanging + metrics.actualBoundingBoxDescent,
-    };
-  });
+  const textBox = selected.getBBox();
   const backgroundY = Number(background.getAttribute('y'));
   const backgroundHeight = Number(background.getAttribute('height'));
   window.__waterfallThreeLine = {
     lines: spans.map((span) => span.textContent),
     classes: spans.map((span) => span.getAttribute('class') ?? ''),
-    topGap: Math.min(...bounds.map((entry) => entry.top)) - backgroundY,
-    bottomGap: backgroundY + backgroundHeight - Math.max(...bounds.map((entry) => entry.bottom)),
+    topGap: textBox.y - backgroundY,
+    bottomGap: backgroundY + backgroundHeight - (textBox.y + textBox.height),
   };
   chart.destroy();
   surface.remove();
@@ -427,7 +398,7 @@ async function main() {
     assert.deepEqual(threeLine.lines, ['Other', 'Expenses', '-10'], 'name-value 贴片应保留三行');
     assert.match(threeLine.classes[2], /dv-waterfall-axis-value/, '数值行应保留数字强调类');
     assert.ok(Math.abs(threeLine.topGap - threeLine.bottomGap) <= 0.75,
-      `三行贴片上下未居中（${threeLine.topGap} / ${threeLine.bottomGap}）`);
+      `三行贴片未以文字排版盒上下居中（${threeLine.topGap} / ${threeLine.bottomGap}）`);
     assert.deepEqual(cdp.errors, [], `浏览器控制台存在错误：\n${cdp.errors.join('\n')}`);
     console.log(`✓ 瀑布浏览器合同通过：${checks} 个主题×端×明暗×标签状态 + 1 个三行配置`);
   } catch (error) {
