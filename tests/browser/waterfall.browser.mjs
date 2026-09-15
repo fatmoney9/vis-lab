@@ -93,6 +93,10 @@ const inspectHover = (index) => `(() => {
     tooltipVisible: getComputedStyle(tooltip).display !== 'none',
     tooltipNoOverlap: !labelRect || !valueRect || labelRect.right <= valueRect.left + 0.5,
     tooltipValue: tooltipValue?.textContent ?? '',
+    /* [TOOLTIP-01] 容器封顶：宽度对比图表根 */
+    tooltipWidth: tooltip.getBoundingClientRect().width,
+    chartWidth: tooltip.closest('.dv-chart')?.getBoundingClientRect().width ?? 0,
+    containerCap: tooltip.style.getPropertyValue('--dv-tooltip-container-cap') || '（未写入）',
   };
 })()`;
 
@@ -113,6 +117,38 @@ function assertHover(result, context, { expectPercent = false } = {}) {
     assert.match(result.tooltipValue, /\([^)]*%\)$/, `${context}：Tooltip 未合并数值与百分比`);
   }
 }
+
+/*
+ * [TOOLTIP-01] 容器封顶的机制检查——**与运行环境的字体宽度无关**。
+ * 不能靠示例读数「碰巧」宽过半个容器来验：本机苹方下第 3 根柱自然宽 186.6px 会触发，
+ * 但 CI 的 Ubuntu 字体更窄、同一读数不到半宽，于是「至少撞上一次」的守卫在 CI 上必然误报。
+ * 这里改为人为塞一个远超任何容器宽的名称，让封顶**必然**被撞上，再读宽度：
+ * 封顶生效 → 宽度恰为容器宽 × 比例、名称折行、数值仍在气泡内；未生效 → 宽度会停在 280px。
+ * 名称用带空格的拉丁词：任何环境都有可用的西文字体，且空格保证可折行。
+ */
+const inspectContainerCap = `(() => {
+  const hit = [...document.querySelectorAll('.dv-waterfall-hit')][3];
+  const rect = hit.getBoundingClientRect();
+  hit.dispatchEvent(new MouseEvent('mouseenter', {
+    bubbles: true, clientX: rect.left + rect.width / 2, clientY: rect.top + Math.max(1, rect.height / 2),
+  }));
+  const tooltip = document.querySelector('.dv-chart--waterfall .dv-tooltip');
+  const label = tooltip.querySelector('.dv-tooltip__label');
+  label.textContent = 'Other Operating Expenses '.repeat(8);
+  const tipRect = tooltip.getBoundingClientRect();
+  const labelRect = label.getBoundingClientRect();
+  const valueRect = tooltip.querySelector('.dv-tooltip__value').getBoundingClientRect();
+  const lineHeight = parseFloat(getComputedStyle(label).lineHeight) || 16;
+  const result = {
+    containerCap: tooltip.style.getPropertyValue('--dv-tooltip-container-cap'),
+    tooltipWidth: tipRect.width,
+    chartWidth: tooltip.closest('.dv-chart').getBoundingClientRect().width,
+    labelWrapped: labelRect.height > lineHeight + 1,
+    valueInside: valueRect.right <= tipRect.right + 0.5 && valueRect.left >= tipRect.left - 0.5,
+  };
+  hit.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+  return result;
+})()`;
 
 const inspectThreeLineFixture = `void (async () => {
   const surface = document.createElement('div');
@@ -198,6 +234,9 @@ async function main() {
     const platforms = ['pc', 'mobile'];
     const modes = ['light', 'dark'];
     let checks = 0;
+    /* [TOOLTIP-01] THS 移动端容器封顶真正「撞上」的次数。本合同 hover 的第 3 根柱读数
+       自然宽 186.6px > 半容器 171.5px，是这条规则的触发用例；若将来数据变窄、再没有一次
+       撞上封顶，下面的「≤ 半宽」断言就会空跑通过，故另立一道守卫要求至少撞上一次。 */
     for (const theme of themes) {
       for (const platform of platforms) {
         for (const mode of modes) {
@@ -208,6 +247,11 @@ async function main() {
             assertHover(result, `${theme}/${platform}/${mode}/item-${index}`, {
               expectPercent: index === 3,
             });
+            if (theme === 'ths' && platform === 'mobile') {
+              const half = result.chartWidth / 2;
+              assert.ok(result.tooltipWidth <= half + 0.5,
+                `${theme}/${platform}/${mode}/item-${index}：THS 移动端 Tooltip 宽 ${result.tooltipWidth.toFixed(1)}px 超过容器的 1/2（${half.toFixed(1)}px），封顶变量 ${result.containerCap}`);
+            }
             if (theme === 'ainvest' && index === 3) {
               assert.deepEqual(result.lines, ['Other', 'Expenses'],
                 `${theme}/${platform}/${mode}：双行标签内容发生变化`);
@@ -216,6 +260,30 @@ async function main() {
           }
         }
       }
+    }
+
+for (const [theme, platform, expectCapped] of [
+      ['ths', 'mobile', true],
+      ['ths', 'pc', false],
+      ['ifind-pc', 'mobile', false],
+      ['ainvest', 'mobile', false],
+    ]) {
+      await evaluate(cdp, setMainState({ theme, platform, mode: 'light' }));
+      await waitFor(cdp, "document.querySelectorAll('.dv-waterfall-hit').length === 5");
+      const cap = await evaluate(cdp, inspectContainerCap);
+      const where = `${theme}/${platform}：超长名称`;
+      const half = cap.chartWidth / 2;
+      if (expectCapped) {
+        assert.ok(cap.containerCap, `${where}：容器封顶变量未写入（L1 没有在 place() 里写 --dv-tooltip-container-cap）`);
+        assert.ok(Math.abs(cap.tooltipWidth - half) <= 0.5,
+          `${where}：Tooltip 宽 ${cap.tooltipWidth.toFixed(1)}px，应被收紧到容器的 1/2（${half.toFixed(1)}px）`);
+      } else {
+        assert.equal(cap.containerCap, '', `${where}：不该写入容器封顶，实际 ${cap.containerCap}`);
+        assert.ok(cap.tooltipWidth > half + 0.5,
+          `${where}：Tooltip 宽 ${cap.tooltipWidth.toFixed(1)}px 被收到了半宽以内——容器封顶不该作用于该主题 / 端`);
+      }
+      assert.ok(cap.labelWrapped, `${where}：名称应在封顶处折行`);
+      assert.ok(cap.valueInside, `${where}：数值被挤出气泡`);
     }
 
     await evaluate(cdp, inspectThreeLineFixture);

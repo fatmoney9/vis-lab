@@ -36,7 +36,7 @@
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
 | **图元 hover / 点击钉住的状态** | `core/highlight-state.js` | `applyHover` · `applyLeave` · `applyPick` · `applyClear` · `activeTarget`（[SANKEY-10] / [SANKEY-20] / [TREEMAP-06]）——**钉位只有一个**，别在 L2 给每类图元各留一个变量再手工维持互斥 |
 | **把文字摆在圆周上 / 求绕圆标签带宽** | `core/polar-label.js` | `pointAt`（极坐标→直角，**全库唯一三角公式**）· `labelAnchor`（八向对齐）· `labelArc`（可读弧线）· `labelBand`（带吃剩余并封顶）（[RADAR-07] / [RADAR-14] / [PIE-13]） |
-| Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸） |
+| Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸）。**气泡宽度只在 TOOLTIP-01 一处定**（内容 / 视口 / 容器三道封顶）——不要给单个图型另写 `.dv-tooltip` 的 `max-width` 覆盖，内容放不下时先重量全族再调通用值 |
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |

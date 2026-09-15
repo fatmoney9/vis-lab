@@ -117,7 +117,8 @@
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
-  --size-tooltip-max-width: 160px;
+  --size-tooltip-max-width: 280px;
+  --size-tooltip-max-container-ratio: none;
   --color-visualization-tooltip-border: transparent;
   --shadow-tooltip: none;
   --color-visualization-tooltip-divider: transparent;
@@ -276,6 +277,7 @@
 
 [data-theme="ths"][data-platform="mobile"] {
   --font-size-axis: 10px;
+  --size-tooltip-max-container-ratio: 0.5;
   --size-grid-line: 0.5px;
 }
 
@@ -417,7 +419,8 @@
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
-  --size-tooltip-max-width: 160px;
+  --size-tooltip-max-width: 280px;
+  --size-tooltip-max-container-ratio: none;
   --color-visualization-tooltip-border: #ECECF7;
   --shadow-tooltip: 0 2px 8px rgba(0, 0, 0, 0.15);
   --color-visualization-tooltip-divider: #ECECF7;
@@ -720,7 +723,8 @@
   --spacing-tooltip-row: var(--spacing-4);
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
-  --size-tooltip-max-width: 160px;
+  --size-tooltip-max-width: 280px;
+  --size-tooltip-max-container-ratio: none;
   --color-visualization-tooltip-border: transparent;
   --shadow-tooltip: none;
   --color-visualization-tooltip-divider: transparent;

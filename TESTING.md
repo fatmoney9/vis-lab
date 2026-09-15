@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· CI |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· CI |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 
@@ -33,14 +33,21 @@ CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份
 
 ```sh
 node --test "tests/**/*.test.mjs"    # 等价 npm test
-npm run test:browser                        # 全部浏览器合同（瀑布 + 弦图），逐个串跑
+npm run test:browser                        # 全部浏览器合同（瀑布 + 弦图 + 跨族高亮），三份逐个串跑
 node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中一份
 ```
 
-浏览器合同**只在 CI 跑，不进 `hooks/check.sh`**：那个脚本是 pre-commit 与 CI 的共用入口，
+浏览器合同**不进 `hooks/check.sh`**：那个脚本是 pre-commit 与 CI 的共用入口，
 把需要 Chrome 的用例放进去，等于让每个人的每次提交都启动一个浏览器，没装 Chrome 的机器更是直接无法提交。
-CI 的 runner 自带 `google-chrome-stable`，故它作为 `.github/workflows/quality.yml` 的独立 step 执行——
-覆盖不减，本地提交不受累。改动瀑布 hover / 轴贴片相关代码时，请在本地手动跑一次上面那条命令。
+
+⚠️ **它目前也不在 CI 里，只能本地手动跑**。2026-09-15 起从 `.github/workflows/quality.yml` 移除，原因有二：
+① 入口与步骤名都按单个图型写死（`test:browser` 只跑瀑布一个文件，步骤名叫「浏览器合同（瀑布）」），
+不是像 `npm test` 那样的通配入口，接下一个图型就得改 CI 与 `package.json`；
+② 放在必需检查的 job 里，单个图型的验收一红就拦下整个 PR。
+重新接回 CI 前应先通用化。进度：共用的服务器 / Chrome / CDP 外壳 `tests/browser/harness.mjs` 与第一份按规则组织的跨图型合同
+`highlight-state.browser.mjs` 已就位；**仍差两件**——`test:browser` 仍是手工串联三份文件而非通配 `tests/browser/*.browser.mjs`，
+TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成的 `tooltip.browser.mjs`。
+在那之前，**改动 hover、Tooltip、轴贴片相关代码时，请在本地手动跑一次上面那条命令**。
 
 它会自动查找 macOS Chrome 与 Linux Chrome/Chromium；非标准安装位置通过
 `VIS_LAB_CHROME_BIN` 指向可执行文件。它自行启动临时静态服务与隔离浏览器配置，不依赖已运行的 8123 预览。
@@ -79,7 +86,9 @@ CI 的 runner 自带 `google-chrome-stable`，故它作为 `.github/workflows/qu
 - `tests/browser/harness.mjs`：服务器 / Chrome / CDP 这层**与图表无关的壳**，各图型的合同共用一份。抄第二份的代价不是行数，是两份壳会各自长出细节差异（超时、端口、Chrome 路径回落），到时候「瀑布过了弦图没过」分不清是图的问题还是壳的问题。
 - `tests/browser/highlight-state.browser.mjs`：`core/highlight-state.js` 的**跨族合同**——桑基 / 矩形树图 / 弦图三个消费方各跑同一组 8 条迁移，验的是「同一套状态机在三个 L2 身上表现一致」，而不是某一个图型。纯逻辑那半由 `tests/highlight-state.test.mjs` 覆盖，这里补的是 L2 把状态翻译成 DOM 时有没有接错线；事件用合成 Event 派发，与容器尺寸、滚动位置和图元疏密无关。
 - `tests/browser/chord.browser.mjs`：三主题 × 明暗 × 两档 variant × 两档标签 × 实体数 4/10 共 48 组，断言**每个实体标签都不是空串**（横排档的标签带曾被容器高度决定、四个汉字放不下而整层渲染成空，当时门禁与单测全绿）、画布不溢出容器、实体色写进 `--dv-series-N`、弦透明度取自 token；另含邻域高亮 / 钉住回落、大弧标志（合成一个跨度超半圈的实体）与减弱动效三项专项。
-- `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；不读取源码或 CSS 文本、不手写生产 SVG。
+- `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；另断言 **THS 移动端 Tooltip 宽 ≤ 图表根宽的 1/2**（TOOLTIP-01 ③）。封顶是否生效不靠示例读数「碰巧」宽过半宽来验——
+那取决于运行环境的字体（macOS 苹方下第 3 根柱 186.6px 会触发，Ubuntu 字体更窄则不会）——
+而是人为塞入超长名称让封顶必然生效，断言宽度**恰等于**半宽，并以 THS PC / iFinD 移动端 / Ainvest 移动端作不收紧的反向对照；不读取源码或 CSS 文本、不手写生产 SVG。
 
 依赖浏览器 SVG 测量、CSS token、事件或远程 D3 import 的模块不在 Node 单测中伪造环境；它们进入后续
 Playwright 测试。只有能形成稳定、真实合同的逻辑才下沉为单元测试。

@@ -531,7 +531,21 @@
   box-shadow: var(--shadow-tooltip);
   border-radius: var(--radius-tooltip);
   padding: var(--spacing-tooltip-pad);
-  max-width: var(--size-tooltip-max-width);
+  /* [TOOLTIP-01] 宽度自适应内容（width: max-content 那条），再受**三道**封顶：
+     · 内容封顶 --size-tooltip-max-width —— 超过它的文字按 TOOLTIP-03 换行；
+     · 视口封顶 —— 窄屏上两侧各留 spacing-24，气泡永远不会顶到屏幕边；
+     · 容器封顶 —— 图表根宽 × --size-tooltip-max-container-ratio（目前仅 THS 移动端 0.5）。
+     取最小者，故各道独立生效，不必为某一族或某一端另写一条规则。
+     280px 是量出来的不是拍的：全族 × 三主题实测自然宽 111–228px（最宽是瀑布图
+     Ainvest 的复合读数 228），280 留了约两成余量；再宽的内容（如「超长名称」
+     边界用例的 339px）本就该换行，而不是让气泡霸屏。 */
+  max-width: min(
+    var(--size-tooltip-max-width),
+    calc(100vw - var(--spacing-24) - var(--spacing-24)),
+    /* 第三道：容器封顶（THS 移动端 = 图表根宽的 1/2，由 core/tooltip.js 量好写入）。
+       未写入时回落到内容封顶本身，min() 结果不变——不用魔数兜底。 */
+    var(--dv-tooltip-container-cap, var(--size-tooltip-max-width))
+  );
   font-family: var(--font-family-tooltip);
   font-size: var(--font-size-tooltip);
   font-weight: var(--font-weight-regular);
@@ -606,11 +620,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* [WATERFALL-08] 数值与涨幅合成一个不可换行读数后会突破通用 160px 上限。
-   本族按内容自然扩宽，极端长度以视口两侧安全边距封顶；其他图表仍使用默认 token。 */
-.dv-chart--waterfall .dv-tooltip {
-  max-width: calc(100vw - var(--spacing-24) - var(--spacing-24));
-}
 /* [TOOLTIP-08] X 轴竖指示线：线色/虚实随主题 token（iFinD 虚线 3 3）；线宽与网格线同源 */
 .dv-crosshair-x {
   stroke: var(--color-visualization-highlight-line);
@@ -751,19 +760,8 @@
   display: none;
 }
 
-/* [SANKEY-20] 节点看板必须在一行完整展示名称与值；突破通用 160px 上限，
-   但固定定位的气泡仍限制在视口两侧各 24px 的安全区内。 */
-.dv-sankey .dv-tooltip {
-  max-width: calc(100vw - var(--spacing-24) - var(--spacing-24));
-}
-
 .dv-sankey .dv-tooltip__row {
   align-items: center;
-}
-
-.dv-sankey .dv-tooltip__label {
-  flex: none;
-  white-space: nowrap;
 }
 
 .dv-sankey .dv-tooltip__value {

@@ -33,9 +33,14 @@ export function createTooltip(plotHost) {
    * 差的就是外壳那圈内边距（实测每侧约 15px），肉眼不可辨。
    * 找不到时回落到 plotHost 自身 = 保持旧行为，不抛错。
    */
+  /* 「容器」的唯一定义：图表根，找不到就是 plotHost 自身。follow 档的 clamp 边界与
+     TOOLTIP-01 的容器封顶共用这一个——两处各写一份时，封顶曾对不挂 .dv-chart 的族
+     悄悄失效，等于给它开了一个没人看得见的例外。 */
+  const containerEl = () => plotHost.closest('.dv-chart') ?? plotHost;
+
   function bounds(box) {
-    const rootEl = plotHost.closest('.dv-chart');
-    if (!rootEl) return { left: 0, top: 0, right: box.width, bottom: box.height };
+    const rootEl = containerEl();
+    /* 回落到 plotHost 时 r 就是 box，下式得 {0, 0, box.width, box.height}，与旧的早退分支同值 */
     const r = rootEl.getBoundingClientRect();
     return { left: r.left - box.left, top: r.top - box.top, right: r.right - box.left, bottom: r.bottom - box.top };
   }
@@ -123,6 +128,21 @@ export function createTooltip(plotHost) {
    */
   function place(mode, ctx) {
     const { grid, cx, pointer } = ctx;
+    /*
+     * [TOOLTIP-01] 容器封顶：气泡宽 ≤ 图表根宽 × --size-tooltip-max-container-ratio。
+     * 目前只有 THS 移动端取 0.5，其余一律 none（tokenNum 得 0 → 不设这道封顶，同
+     * size-bar-group-container-max 的 none 口径）。由来是 THS 的 side-fixed 档
+     * （TOOLTIP-06）：它按图表中点把气泡放到指针的**对侧半区**，气泡一旦宽过半个容器
+     * 就会越过中线、盖住指针所在的那半边——PC 容器宽从不触发，移动端 343px 就触发了。
+     *
+     * ⚠️ 必须在下一行读 offsetWidth **之前**写：max-width 决定宽度，宽度又决定下面各档
+     * 的 clamp 与翻转。写在后面，本次定位用的仍是封顶前的宽度，要到下一次 place 才对。
+     * 这里只写一个测量结果（容器宽 × 比例），不写策略——比例在 token，封顶的合成在
+     * styles.css 的 min()，本模块依旧没有 if(theme)。
+     */
+    const ratio = tokenNum(plotHost, '--size-tooltip-max-container-ratio');
+    root.style('--dv-tooltip-container-cap',
+      ratio > 0 ? `${containerEl().getBoundingClientRect().width * ratio}px` : null);
     const w = root.node().offsetWidth;
     const h = root.node().offsetHeight;
     /* 这个 rect 既是各档 clamp 边界的换算原点，也是末尾 fixed 换算的原点——一处取、处处同源 */
