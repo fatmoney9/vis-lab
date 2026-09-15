@@ -2,7 +2,8 @@
  * pie/geometry.js —— 【扇区角度 + 半径环宽 + 标签锚点】 · [L2-LOCAL] 图表专属，有意不下沉 L1（PIE-01/02/04）
  *
  * 干什么：把「每个扇区占多少角、环画多大多厚、标签摆在哪」算成**纯数据**，交给 index.js 去画。
- * 不碰 DOM、不碰 d3、不碰 token——只做几何/数值，故可被 node --test 直接加载（同 cartesian/layout.js）。
+ * 不碰 DOM、不碰 d3、不碰 token——只做几何/数值；唯一的 import 是同样零依赖的
+ * core/polar-label.js，故仍可被 node --test 直接加载（同 cartesian/layout.js）。
  *
  * 角度约定与 d3.arc 一致：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
  * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——labelAnchor 用的就是这个式子，
@@ -14,7 +15,13 @@
  *   labelAnchor  单个扇区 → **扇区内**标签锚点 {x, y, maxWidth}（PIE-04）
  *   leaderElbow  单个扇区 → **外侧**引线的前两点 + 所在侧（PIE-12）
  *   alignOutside 一批外侧标签 + 对齐档 → 横段末端 / 文字锚点 / 标签带宽（PIE-13）
+ *   labelBandPx  容器宽 + R + 封顶 → 每侧标签带宽，取整（PIE-13，公式本体在 L1）
+ *
+ * ⚠️ 本族的 labelAnchor 与 L1 core/polar-label.js 的**同名函数不是一回事**：这里吃的是
+ * 一个扇区的两个角、返回 {x, y, maxWidth}，只分左右两侧；那边吃单个角度、返回八向对齐。
+ * 两者都没有下沉/上浮的关系，别互相替换。
  */
+import { labelBand } from '../../core/polar-label.js';
 
 const TAU = Math.PI * 2;
 
@@ -194,8 +201,13 @@ export function alignOutside(entries, mode, { lateral = 0, gap = 0, band = 0, R 
  *   R       = 外半径
  *   maxBand = --size-donut-label-band-max（三主题 120px）
  * 容器越宽带宽越宽，到 maxBand 封顶；两侧同值，故环恒在画布正中。
- * 取整让画布落在整像素上（此处不再有「刚好装得下被判成装不下」的问题——带宽已与文本解耦）。
+ *
+ * 「带吃剩下的」那条公式本身已下沉 L1（core/polar-label.js 的 labelBand，三个消费方共用）；
+ * 本函数只在它外面加一层**取整**——让画布落在整像素上是本族的版面意图，不是公式的一部分
+ * （此处不再有「刚好装得下被判成装不下」的问题，带宽已与文本解耦）。
+ * maxBand 取自像素 token（整数），故在外层取整与原先内联取整完全等价。
+ * 名字带 Px 后缀以示与 L1 那支的区别：**两处同名不同语义迟早会有人拿错**。
  */
-export function labelBand(avail, R, maxBand = Infinity) {
-  return Math.max(0, Math.min(Math.floor((avail - 2 * R) / 2), maxBand));
+export function labelBandPx(avail, R, maxBand = Infinity) {
+  return Math.floor(labelBand(avail, R, maxBand));
 }

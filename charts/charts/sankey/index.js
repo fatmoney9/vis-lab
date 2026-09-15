@@ -12,6 +12,9 @@ import { easeOutCubic, reducedMotion } from '../../core/motion.js';
 import { resolveBehavior } from '../../core/theme.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { tokenNum } from '../../core/tokens.js';
+import {
+  createHighlightState, applyHover, applyLeave, applyPick, applyClear, activeTarget,
+} from '../../core/highlight-state.js';
 import { resolveSankeySettings } from './config.js';
 import {
   sankeyNodeDashboard,
@@ -43,8 +46,9 @@ export function SankeyChart(host, initialConfig) {
   let motionFrame = 0;
   let motionResolve = null;
   let destroyed = false;
-  let pinnedNodeId = null;
-  let pinnedLinkIndex = null;
+  /* [SANKEY-10][SANKEY-20] hover / 钉住的状态迁移收在 L1（core/highlight-state.js）：
+     钉位只有一个，跨类互斥由类型保证；本层只管「把当前状态画出来」。 */
+  let highlight = createHighlightState();
   let displayValueByNodeId = null;
   let displayValueByLinkIndex = null;
 
@@ -444,23 +448,32 @@ export function SankeyChart(host, initialConfig) {
       node.x + node.width / 2,
       node.y + node.height / 2,
     );
-    const pinnedNode = () => graph.nodes.find((node) => node.id === pinnedNodeId);
-    const pinnedLink = () => graph.links.find((link) => link.index === pinnedLinkIndex);
-    const restorePinnedInteraction = () => {
-      const node = pinnedNode();
+    /*
+     * 把 L1 算出的当前目标画出来。**本函数只渲染、不迁移状态**——迁移一律走
+     * applyHover / applyLeave / applyPick / applyClear，两件事分开才测得了。
+     *
+     * 返回「有没有目标」：没有目标时气泡该立刻收还是延时收，各入口policy 不同
+     * （节点移出延时收，流向移出与点空白立刻收），故交给调用方决定，不在这里定死。
+     */
+    const renderHighlight = (point) => {
+      const target = activeTarget(highlight);
+      const node = target?.kind === 'node'
+        ? graph.nodes.find((item) => item.id === target.key)
+        : null;
       if (node) {
         highlightNode(null, node);
-        showNodeTooltip(node, nodeAnchor(node));
+        showNodeTooltip(node, point ?? nodeAnchor(node));
         return true;
       }
-      const link = pinnedLink();
+      const link = target?.kind === 'edge'
+        ? graph.links.find((item) => item.index === target.key)
+        : null;
       if (link) {
         highlightEdge(null, link);
-        hideTooltip();
+        hideTooltip(); /* 流向只编辑高亮状态，不触发数据看板 */
         return true;
       }
       resetHighlight();
-      hideTooltip();
       return false;
     };
     const pointerPoint = (event, node) => {
@@ -470,33 +483,23 @@ export function SankeyChart(host, initialConfig) {
     };
 
     const enterNode = (event, node) => {
-      highlightNode(event, node);
+      highlight = applyHover(highlight, 'node', node.id);
       const [x, y] = pointer(event, root.node());
-      showNodeTooltip(node, { x, y });
+      renderHighlight({ x, y });
     };
     const leaveNode = () => {
-      if (pinnedNodeId !== null || pinnedLinkIndex !== null) {
-        restorePinnedInteraction();
-        return;
-      }
-      resetHighlight();
-      scheduleTooltipHide();
+      highlight = applyLeave(highlight);
+      /* 有钉住则回落到钉住态；否则收气泡——节点这一路是**延时**收（SANKEY-20） */
+      if (!renderHighlight()) scheduleTooltipHide();
     };
     const clickNode = (event, node) => {
       event.stopPropagation();
-      const shouldClose = pinnedNodeId === node.id;
-      pinnedNodeId = shouldClose ? null : node.id;
-      pinnedLinkIndex = null;
-      if (shouldClose) {
-        resetHighlight();
-        hideTooltip();
-        return;
-      }
-      highlightNode(event, node);
-      showNodeTooltip(node, pointerPoint(event, node));
+      highlight = applyPick(highlight, 'node', node.id);
+      if (!renderHighlight(pointerPoint(event, node))) hideTooltip();
     };
     const blurInteractiveItem = () => {
-      if (!restorePinnedInteraction()) hideTooltip();
+      highlight = applyLeave(highlight);
+      if (!renderHighlight()) hideTooltip();
     };
 
     /* [SANKEY-10/20] 节点矩形与文字共享 hover / click 看板；点击后保持以支持移动端。 */
@@ -506,8 +509,8 @@ export function SankeyChart(host, initialConfig) {
       .on('pointerleave', leaveNode)
       .on('click', clickNode)
       .on('focus', (event, node) => {
-        highlightNode(event, node);
-        showNodeTooltip(node, nodeAnchor(node));
+        highlight = applyHover(highlight, 'node', node.id);
+        renderHighlight(nodeAnchor(node));
       })
       .on('blur', blurInteractiveItem);
     nodeLabelHits
@@ -519,35 +522,33 @@ export function SankeyChart(host, initialConfig) {
     /* 流向只编辑高亮状态，不触发数据看板。点击后保持单条流向高亮。 */
     edgeGroups
       .on('pointerenter', (event, link) => {
-        hideTooltip();
-        highlightEdge(event, link);
+        highlight = applyHover(highlight, 'edge', link.index);
+        renderHighlight();
       })
-      .on('pointerleave', restorePinnedInteraction)
+      .on('pointerleave', () => {
+        highlight = applyLeave(highlight);
+        /* 流向这一路**立刻**收气泡：它本就没出过看板，没有「让用户读完」的延时需求 */
+        if (!renderHighlight()) hideTooltip();
+      })
       .on('click', (event, link) => {
         event.stopPropagation();
-        const shouldClose = pinnedLinkIndex === link.index;
-        pinnedNodeId = null;
-        pinnedLinkIndex = shouldClose ? null : link.index;
-        hideTooltip();
-        if (shouldClose) resetHighlight();
-        else highlightEdge(event, link);
+        highlight = applyPick(highlight, 'edge', link.index);
+        if (!renderHighlight()) hideTooltip();
       })
       .on('focus', (event, link) => {
-        hideTooltip();
-        highlightEdge(event, link);
+        highlight = applyHover(highlight, 'edge', link.index);
+        renderHighlight();
       })
       .on('blur', blurInteractiveItem);
 
     svg.on('click.sankey-interaction', () => {
-      pinnedNodeId = null;
-      pinnedLinkIndex = null;
-      resetHighlight();
+      highlight = applyClear();
+      renderHighlight();
       hideTooltip();
     });
 
-    if (pinnedNodeId !== null || pinnedLinkIndex !== null) {
-      restorePinnedInteraction();
-    }
+    /* 重渲（resize / 播放补间）后把钉住态画回去——否则拖一下容器钉住就没了 */
+    if (highlight.pinned) renderHighlight();
 
     const layoutDetail = {
       recommendedHeight,
@@ -572,8 +573,7 @@ export function SankeyChart(host, initialConfig) {
   return {
     update(nextConfig, options = {}) {
       cancelMotion();
-      pinnedNodeId = null;
-      pinnedLinkIndex = null;
+      highlight = applyClear();
       const shouldAnimate = options.animate === true
         && hasSameSankeyTopology(config, nextConfig)
         && !reducedMotion(window);

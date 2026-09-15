@@ -12,6 +12,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 不用：桑基节点与流向不依赖坐标网格 |
+| `highlight-state` | 用 |
 | `image-content` | 不用：节点看板没有图片内容，Tooltip 也不带实体图标 |
 | `label` | 用 |
 | `legend` | 用 |
@@ -20,6 +21,7 @@
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 不用：颜色按收入、支出、利润业务角色解析，不按系列序号取色 |
+| `polar-label` | 不用：节点与流带是直角列布局，标签横排在节点两侧，不存在圆周方位与弧线 |
 | `scale` | 不用：流量几何由桑基守恒布局统一换算，不使用坐标比例尺 |
 | `split` | 不用：无坐标刻度，不需要 nice split 数学 |
 | `theme` | 用 |
@@ -31,9 +33,13 @@
 ## L1 / L2 / L3 边界
 
 - L1：`frame.observeResize` 统一 resize 生命周期；`measure.createTextMeasurer` 统一真实 SVG
-  文字测量；`motion.easeOutCubic` / `reducedMotion` 统一缓动曲线与减弱动效判断。格式化、标题省略、
+  文字测量；`motion.easeOutCubic` / `reducedMotion` 统一缓动曲线与减弱动效判断；
+  `highlight-state` 统一 hover / 钉住的**状态迁移**。格式化、标题省略、
   图例、主题行为、token 读取和 Tooltip 继续复用既有 L1。
 - L2 `index.js`：只负责编排组件生命周期、SVG 装配、交互和季度播放时序。
+  交互只剩「把当前状态画出来」：目标该是谁由 L1 的 `activeTarget` 回答，
+  邻域怎么算、class 怎么贴、出不出看板留在本层——**钉位只有一个**，跨类互斥由类型保证，
+  不再是每类图元各留一个变量再手工维持互斥。
 - L2 `layout.js`：桑基专属 DAG 校验、守恒、节点 / 流带几何、高度与标签尺寸计算。
 - L2 `model.js`：节点看板、直接邻域、同拓扑判断、季度数值插值，以及共享比例尺 / 序列视口装配；
   主轴识别与各期所需高度都复用 `layout.js` 的校验和布局结果，不包含 DOM，也不复制布局公式。

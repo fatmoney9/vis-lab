@@ -155,6 +155,16 @@ const AINVEST_TEXT = new Map([
   ['电信服务', 'Telecommunication Services'],
   ['煤炭', 'Coal'],
   ['石油石化', 'Oil & Gas'],
+
+  /* 弦图：申万一级行业（行业间资金流向） */
+  ['电子', 'Electronics'],
+  ['医药生物', 'Pharmaceuticals'],
+  ['电力设备', 'Power Equipment'],
+  ['非银金融', 'Non-bank Financials'],
+  ['计算机', 'Computers'],
+  ['有色金属', 'Non-ferrous Metals'],
+  ['汽车', 'Automobiles'],
+  ['机械设备', 'Machinery'],
 ]);
 
 const AINVEST_CHART_TEXT = {

@@ -1,15 +1,19 @@
 /*
  * 雷达图几何的纯逻辑单测（specs/radar.md）。
  *
- * 只测 charts/charts/radar/geometry.js —— 它零 import、不碰 DOM / d3 / token，故可直接加载。
+ * 测 charts/charts/radar/geometry.js —— 它不碰 DOM / d3 / token，唯一的 import 是同样
+ * 零依赖的 core/polar-label.js，故可直接加载。
  * niceSplit 经参数注入，这里传真货（core/split.js 同样零依赖），测的就是线上那条路。
+ *
+ * pointAt / labelAnchor / labelArc 已下沉 L1（specs/radar.md 下沉点②），故从 core 取；
+ * **断言一字未改**——这正是「移动纯函数而非重写」的凭据。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { niceSplit } from '../charts/core/split.js';
+import { pointAt, labelAnchor, labelArc } from '../charts/core/polar-label.js';
 import {
   MIN_DIMENSIONS,
-  pointAt,
   axisAngles,
   radarDomain,
   radarFrame,
@@ -18,8 +22,6 @@ import {
   gridPath,
   seriesPoints,
   snapRadarValue,
-  labelAnchor,
-  labelArc,
   sectorAt,
   sectorCorners,
 } from '../charts/charts/radar/geometry.js';

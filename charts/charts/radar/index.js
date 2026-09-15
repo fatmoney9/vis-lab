@@ -56,9 +56,10 @@ import { applyToggle, applyFocus } from '../../core/legend-state.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
+import { pointAt, labelAnchor, labelArc } from '../../core/polar-label.js';
 import {
-  MIN_DIMENSIONS, pointAt, axisAngles, radarDomain, radarFrame,
-  ringRadii, gridPath, seriesPoints, labelAnchor, labelArc, sectorCorners,
+  MIN_DIMENSIONS, axisAngles, radarDomain, radarFrame,
+  ringRadii, gridPath, seriesPoints, sectorCorners,
   radarValueAt, snapRadarValue,
 } from './geometry.js';
 

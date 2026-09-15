@@ -97,6 +97,8 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     ratingStyle: false,
     ratingBandCount: false,
     axisLabelLayout: false,
+    chordVariant: false,
+    chordLabelLayout: false,
     radarEditable: false,
     waterfallColor: false,
   });
@@ -234,9 +236,9 @@ test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）',
  */
 /* ⚠️ **这是全库唯一一处硬编码图表类型清单**（其余判定都按 cfg 形态或能力声明走）。
    接入新的无坐标系图型时必须加进来——**漏了不会报错**，守卫只是静悄悄地不覆盖它。 */
-const AXISLESS_CHARTS = ['pie', 'treemap', 'radar'];
+const AXISLESS_CHARTS = ['pie', 'treemap', 'radar', 'chord'];
 
-test('PIE-05/PIE-08/TREEMAP-08/RADAR-07：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
+test('PIE-05/PIE-08/TREEMAP-08/RADAR-07/CHORD-19：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
   const axisless = EXAMPLES.filter((e) => AXISLESS_CHARTS.includes(e.chart));
   assert.ok(axisless.length > 0, 'EXAMPLES 里应至少有一个无坐标系示例，否则本守卫形同虚设');
   /* 名单里的每一类都得真有示例，否则「加了类型键但忘了加示例」会让这一类静默失覆盖 */
@@ -253,6 +255,36 @@ test('PIE-05/PIE-08/TREEMAP-08/RADAR-07：无坐标系图不得声明轴相关�
     assert.equal(cfg.zoom, undefined, `示例「${e.id}」开缩放轴旋钮不该装进 cfg`);
     assert.equal(cfg.axisTitle, undefined, `示例「${e.id}」开轴标题旋钮不该装进 cfg`);
   }
+});
+
+test('CHORD 分类：对外只出一个弦图示例，两档形态由旋钮切而不是各出一条', () => {
+  assert.deepEqual(
+    examplesFor('index').filter((item) => item.chart === 'chord').map((item) => item.id),
+    ['chord-sector-flow'],
+  );
+});
+
+test('CHORD-02：行业数旋钮拖动时，已有格子的流量值不变 —— 新增行业只是多一段弧', () => {
+  /* 这条保的是旋钮的可比性：若示例数据用 Math.random()，每拖一格整张图都会变成
+     另一份数据，"加了一个行业"这件事本身就看不出来了。 */
+  const [small, large] = [
+    EXAMPLES.find((e) => e.id === 'chord-sector-flow').cfg(4),
+    EXAMPLES.find((e) => e.id === 'chord-sector-flow').cfg(10),
+  ];
+  assert.deepEqual(small.entities, large.entities.slice(0, 4), '前 4 个行业与顺序不变');
+  for (let i = 0; i < 4; i += 1) {
+    assert.deepEqual(small.matrix[i], large.matrix[i].slice(0, 4), `第 ${i} 行的已有格子不变`);
+  }
+});
+
+test('CHORD-05/CHORD-11：两档形态都是默认时不落进 cfg，选非默认档才写字段', () => {
+  const example = EXAMPLES.find((e) => e.id === 'chord-sector-flow');
+  const base = buildConfig(example, {});
+  assert.equal(base.variant, undefined, "'undirected' 是组件默认，不该出现在 cfg 里");
+  assert.equal(base.entityLabelLayout, undefined, "'arc' 是组件默认，不该出现在 cfg 里");
+  const switched = buildConfig(example, { chordVariant: 'directed', chordLabelLayout: 'horizontal' });
+  assert.equal(switched.variant, 'directed');
+  assert.equal(switched.entityLabelLayout, 'horizontal');
 });
 
 test('RADAR 分类：对外分标准 / 多数据 / 分区，专项面保留六个典型配置', () => {
@@ -479,6 +511,8 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     ratingStyle: false,
     ratingBandCount: false,
     axisLabelLayout: false,
+    chordVariant: false,
+    chordLabelLayout: false,
     radarEditable: false,
     waterfallColor: false,
   });

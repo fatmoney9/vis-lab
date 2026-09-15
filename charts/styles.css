@@ -1034,3 +1034,85 @@
 .dv-radar-sector:focus { outline: none; }
 
 .dv-radar-sector:focus-visible { fill: var(--color-visualization-highlight-block); }
+
+/* ── 弦图 Chord（specs/chord.md）──────────────────────────────────────────────
+   结构样式只管「怎么摆、怎么亮」：实体色由 L2 写成 --dv-series-N 后经 --dv-chord-color
+   逐图元下发；透明度三档全部来自 token（CHORD-17），本文件不出现任何色值或数值常量。 */
+.dv-chord {
+  position: relative;
+  display: flex;
+  /* ⚠️ 本元素同时带 .dv-chart，而那条规则是 flex-direction: column——
+     故**横向居中要 align-items、不是 justify-content**（后者在 column 下管的是纵向）。 */
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--size-chord-container);
+  font-family: var(--font-family-cn);
+}
+
+.dv-chord__svg {
+  display: block;
+  overflow: visible;
+}
+
+/* [CHORD-07] 外圈环带：实体本色实心，是这张图的「坐标系」，不参与透明度分档。 */
+.dv-chord__arc-band {
+  fill: var(--dv-chord-color);
+  cursor: pointer;
+}
+
+/* [CHORD-17] 弦默认半透明；描边透明只为撑出命中区（细弦也要点得中），同桑基的做法。 */
+.dv-chord__ribbon-band {
+  /* [CHORD-08] 填充是两端实体色的渐变（L2 逐条生成 linearGradient 后由此变量下发）。
+     留 --dv-chord-color 作兜底：渐变缺失时退成单色，而不是整条弦不可见。 */
+  fill: var(--dv-chord-ribbon-fill, var(--dv-chord-color));
+  fill-opacity: var(--opacity-chord-ribbon);
+  stroke: var(--dv-chord-color);
+  stroke-width: var(--spacing-8);
+  stroke-opacity: 0;
+  vector-effect: non-scaling-stroke;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* [CHORD-11] 实体标签：两档共用同一套字号与字重，差别只在摆放几何。 */
+.dv-chord__label {
+  fill: var(--color-text-primary);
+  font-size: var(--font-size-chord-label);
+  font-weight: var(--font-weight-chord-label);
+  pointer-events: none;
+}
+
+.dv-chord__label-hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+/* [CHORD-12][CHORD-17] 高亮只改变可见度，不改变实体色、也不重新排序。 */
+.dv-chord__ribbon.is-active .dv-chord__ribbon-band {
+  fill-opacity: var(--opacity-chord-ribbon-active);
+}
+
+.dv-chord__arc.is-dimmed,
+.dv-chord__ribbon.is-dimmed,
+.dv-chord__label.is-dimmed {
+  opacity: var(--opacity-visualization-dim);
+}
+
+.dv-chord__arc:focus,
+.dv-chord__ribbon:focus {
+  outline: none;
+}
+
+.dv-chord__arc:focus .dv-chord__arc-band {
+  stroke: var(--color-text-primary);
+  stroke-width: var(--size-grid-line);
+  vector-effect: non-scaling-stroke;
+}
+
+/* [CHORD-13] 看板数值跟随该实体色，与桑基同一口径。 */
+.dv-chord .dv-tooltip__value {
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}

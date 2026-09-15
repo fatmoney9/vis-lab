@@ -12,6 +12,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 用 |
+| `highlight-state` | 不用：柱与连接线按 X 切片整列联动，没有单个图元的钉住态，也没有图元邻域可高亮 |
 | `image-content` | 不用：柱与 Tooltip 均不包含图片内容块 |
 | `label` | 用 |
 | `legend` | 不用：增减含义由柱形与有符号语义表达，设计源未提供独立图例 |
@@ -20,6 +21,7 @@
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |
+| `polar-label` | 不用：直角坐标系里文字横平竖直排布，不存在按圆周方位决定对齐或生成弧线的问题 |
 | `scale` | 用 |
 | `split` | 用 |
 | `theme` | 用 |

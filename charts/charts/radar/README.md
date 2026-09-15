@@ -13,6 +13,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 不用：网格是同心环或正多边形，不是直角网格线与 0 轴基线 |
+| `highlight-state` | 不用：选中态走 legend-state 的单选迁移，扇形高亮只作用于自身，没有邻域与钉住 |
 | `image-content` | 不用：轴标签与气泡只承载名称和数值，没有图片内容块 |
 | `label` | 用 |
 | `legend` | 用 |
@@ -21,6 +22,7 @@
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |
+| `polar-label` | 用 |
 | `scale` | 用 |
 | `split` | 用 |
 | `theme` | 用 |

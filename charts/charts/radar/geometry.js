@@ -1,39 +1,36 @@
 /*
- * radar/geometry.js —— 【轴角均分 + 值→半径 + 网格环 + 绕圆标签锚点 / 弧线 + 扇形命中】
- * [L2-LOCAL] 图表专属，本期有意不下沉 L1（[RADAR-02][RADAR-03][RADAR-04][RADAR-07][RADAR-09][RADAR-10][RADAR-14][RADAR-18]）
+ * radar/geometry.js —— 【轴角均分 + 值→半径 + 网格环 + 扇形命中】
+ * [L2-LOCAL] 余下部分图表专属，有意不下沉 L1（[RADAR-02][RADAR-03][RADAR-04][RADAR-09][RADAR-10][RADAR-18]）
  *
- * 干什么：把「每根轴指向哪、值该落在多远、网格环画多大、标签摆在哪、指针落在第几个扇形」
- * 算成**纯数据**，交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token、**零 import**——
- * 故可被 `node --test` 直接加载（同 pie/geometry.js、cartesian/layout.js）。
+ * 干什么：把「每根轴指向哪、值该落在多远、网格环画多大、指针落在第几个扇形」
+ * 算成**纯数据**，交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token；
+ * 唯一的 import 是同样零依赖的 core/polar-label.js，故仍可被 `node --test` 直接加载
+ * （同 pie/geometry.js、cartesian/layout.js）。
  *
- * 角度约定与 pie/geometry.js 同源：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
- * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——见 pointAt()。
+ * 角度约定由 core/polar-label.js 统一：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
+ * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——见该模块的 pointAt()。
  *
- * ── 将来下沉 L1 的三个点（满足各自消费方条件时才动，别提前抽象）────────────
+ * ── 三个下沉点的现状（判断条件写在 specs/radar.md「分层边界」）──────────
  *
- * 下沉点 ①：axisAngles / seriesPoints / ringRadii —— 极坐标骨架
+ * 下沉点 ①：axisAngles / seriesPoints / ringRadii —— 极坐标骨架 · **未命中，仍在本文件**
  *   判断条件：出现**第二个**「角度按 360/n 均分、数据映射到半径」的图型。
  *   会触发：玫瑰图 / 南丁格尔图。
  *   不会触发：极坐标柱状图——它的角度方向是一根真正的轴（一根 angleAxis 上排若干类目），
  *             不是均分出来的常量位置；看着像，数学不是一回事。
+ *   **弦图也不触发**：它是角度∝数据、半径=常量，与本族恰好相反（见 specs/radar.md 的对照表）。
  *
- * 下沉点 ②：labelAnchor / labelArc —— 绕圆文字的锚点与可读弧线
- *   判断条件：出现**第二个**需要「把文字摆在圆周上、决定对齐方式或生成可读弧线」的图型。
- *   会触发：**仪表盘**（刻度标签沿弧排布，问题与雷达维度标签完全相同）。
- *   饼环不算：pie 的 labelAnchor 吃的是一个扇区的两个角、只分左右两侧，没有八向逻辑。
- *   ⚠️ 故两个函数都只收角度、半径等纯几何参数，不收 dimensions / series / cfg——
- *      命中时是「移动纯函数」，不是重写。改签名前先想清楚这件事。
+ * 下沉点 ②：labelAnchor / labelArc —— 绕圆文字的锚点与可读弧线 · ✅ **已下沉**
+ *   落点 charts/core/polar-label.js，随它一并搬走的还有基元 pointAt()。
+ *   当年把两者的签名定成「只收角度、半径等纯几何参数」，正是为了命中时能整个搬走——
+ *   事实上一个字没改。需要它们的模块请直接 import L1，**不要在本文件做转出**。
  *
- * 下沉点 ③：radarFrame 的标签带「吃剩下的」公式
- *   判断条件：出现**第三个**需要「图元先占位、标签带吃剩余空间并封顶」的图型。
- *   现有两个消费方是 pie/geometry.js 的 labelBand 与本族 radarFrame；公式虽同，调用形态不同。
- *   第三个消费方出现时不要再抄第四份，应连同调用形态一起收进 L1。
+ * 下沉点 ③：标签带「吃剩下的」公式 · ✅ **已下沉**
+ *   落点同为 charts/core/polar-label.js 的 labelBand()，radarFrame 现在调它。
  *
- * 三个下沉点互相独立，命中 ② 不代表 ① 也该动。
  * gridPath 与 sectorAt **不在下沉候选内**：闭合整环只有雷达要，而 sectorAt 整个算法
  * 建立在「角度均分」这个雷达专属前提上。
- * 完整判据与规范见 specs/radar.md 的「分层边界」。
  */
+import { pointAt, labelBand } from '../../core/polar-label.js';
 
 const TAU = Math.PI * 2;
 
@@ -52,14 +49,6 @@ const MIN_SEGMENTS = 2;
 export const MIN_DIMENSIONS = 3;
 
 const clamp = (lo, v, hi) => Math.max(lo, Math.min(v, hi));
-
-/*
- * 极坐标 → 直角坐标（相对圆心）。**全族唯一一处三角公式**，别在别处再写一遍。
- * a = 0 指向 12 点，正角顺时针；y 轴向下为正，故 cos 前带负号。
- */
-export function pointAt(a, r) {
-  return { x: Math.sin(a) * r, y: -Math.cos(a) * r };
-}
 
 /*
  * [RADAR-02] n 根径向轴的角度：首轴恒在 12 点方向（0 弧度），其余按 360/n 均分、顺时针。
@@ -115,13 +104,13 @@ export function radarDomain(seriesData, { max, segments = 5 } = {}, niceSplit) {
  * ⚠️ 曾经反着做：固定扣 2×40 的带再 clamp R，且画布宽吃满容器宽。后果是容器一小就过早溢出
  * （实测 280×220 即溢出，饼环同尺寸安好），且宽方向多出的画布变成随容器浮动的死空间。
  *
- * ⚠️ **下沉候选**：`(avail − 2R)/2` 封顶这条「带吃剩下的」公式，`pie/geometry.js` 的
- * `labelBand()` 已有一份。两族都是 [L2-LOCAL]、互不可 import（分层守卫禁 L2→L2），
- * 故此处是同式而非复用。**出现第三个消费方时应下沉 L1**，别再抄第三份。见 specs/radar.md。
+ * ③ 的「带吃剩下的」公式**已下沉 L1**（core/polar-label.js 的 labelBand），三个消费方
+ * 共用一份：本族横向带、饼环外侧标签带、弦图横排实体标签带。调用形态的差异留在各自这一侧
+ * ——本族横竖分开、只有横向带走它，纵向带由文字行高决定。
  */
 export function radarFrame(width, height, { maxRadius, maxBandH, bandV }) {
   const R = clamp(maxRadius * MIN_RADIUS_RATIO, Math.min(width / 2, (height - 2 * bandV) / 2), maxRadius);
-  const bandH = clamp(0, (width - 2 * R) / 2, maxBandH);
+  const bandH = labelBand(width, R, maxBandH);
   /* [RADAR-09] 图元**触底时**的高度 = 2×(下限半径 + 纵向带)。调用方拿它推容器最小高度，
      免得在别处再抄一遍 50% 这个比例（抄一遍就等于多一处会漂的常量）。 */
   const minHeight = 2 * (maxRadius * MIN_RADIUS_RATIO + bandV);
@@ -188,62 +177,6 @@ export function snapRadarValue(value, max, step) {
   const decimals = Math.min(12, Math.max(0, String(step).split('.')[1]?.length ?? 0));
   const snapped = Number((Math.round(clamped / step) * step).toFixed(decimals));
   return clamp(0, snapped, max);
-}
-
-/*
- * [RADAR-07] 轴标签锚点：沿径向轴外延 gap 后的位置 + **按所在方位定的八向对齐**。
- *
- * ⚠️ **签名是契约的一部分**：只收 (angle, radius, gap)，不收 dimensions / series / cfg。
- * 这是为了「下沉点 ②」（仪表盘刻度标签）命中时能整个函数搬进 charts/core/ 而不必重写。
- * 见本文件头。
- *
- * 八向由 sin / cos 的符号定，恰好 3×3 去掉圆心那格：
- *   sin > 0 右侧 → start   · sin < 0 左侧 → end     · sin ≈ 0 正上/正下 → middle
- *   cos > 0 上方 → auto    · cos < 0 下方 → hanging · cos ≈ 0 正左/正右 → central
- * 用 `central` 而不是 `middle` 的理由同 [TOOLTIP-12]：SVG 的 middle 对齐的是
- * 「字母基线 + 半个 x-height」，而标签里是汉字与数字、高度远超 x-height，用 middle 会整体上浮。
- */
-export function labelAnchor(angle, radius, gap) {
-  const r = radius + gap;
-  const { x, y } = pointAt(angle, r);
-  const sx = Math.sin(angle);
-  const cy = Math.cos(angle);
-  const TOL = 1e-9;
-  return {
-    x,
-    y,
-    textAnchor: sx > TOL ? 'start' : sx < -TOL ? 'end' : 'middle',
-    baseline: cy > TOL ? 'auto' : cy < -TOL ? 'hanging' : 'central',
-  };
-}
-
-/*
- * [RADAR-14] 雷达维度名的弧形环绕路径。
- *
- * 默认沿顺时针弧排字，基线的外侧正好朝圆外；落在下半圆时反向，避免文字倒置，并按
- * 真实字形 ascent 外移，让反向路径朝内生长的墨迹仍从 R + gap 之外开始。返回纯几何数据，
- * index.js 只负责装配 <path> / <textPath>。
- */
-export function labelArc(angle, radius, gap, span, inkAscent = 0) {
-  const normalized = ((angle % TAU) + TAU) % TAU;
-  const reversed = normalized > Math.PI / 2 && normalized < (Math.PI * 3) / 2;
-  const arcSpan = clamp(0, Number.isFinite(span) ? span : 0, Math.PI - 1e-6);
-  const r = Math.max(0, radius + gap + (reversed ? Math.max(0, inkAscent) : 0));
-  const half = arcSpan / 2;
-  const startAngle = reversed ? angle + half : angle - half;
-  const endAngle = reversed ? angle - half : angle + half;
-  const start = pointAt(startAngle, r);
-  const end = pointAt(endAngle, r);
-  const sweep = reversed ? 0 : 1;
-  return {
-    d: `M${start.x},${start.y}A${r},${r} 0 0 ${sweep} ${end.x},${end.y}`,
-    radius: r,
-    length: r * arcSpan,
-    reversed,
-    start,
-    end,
-    sweep,
-  };
 }
 
 /*

@@ -18,6 +18,7 @@
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 不用：无坐标系，没有网格线；扇区靠 `geometry.js` 算角度与半径 |
+| `highlight-state` | 不用：强调是单选的扇区 / 图例状态，走 legend-state 的 applyFocus，不是图元邻域与钉住 |
 | `image-content` | 不用：扇区当前只展示名称与数值，没有节点图片内容块 |
 | `label` | 用 |
 | `legend` | 用 |
@@ -26,6 +27,7 @@
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |
+| `polar-label` | 用 |
 | `scale` | 不用：无坐标轴，不存在「值→像素」的线性换算；扇区是「值→角度」，按可见项占比闭合 360°（PIE-03） |
 | `split` | 不用：刻度数学（`niceSplit`）服务于坐标轴，饼环没有刻度 |
 | `theme` | 用 |

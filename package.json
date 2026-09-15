@@ -11,7 +11,7 @@
     "check": "sh hooks/check.sh",
     "check:ci": "sh hooks/check.sh --verify",
     "test": "node --test \"tests/**/*.test.mjs\"",
-    "test:browser": "node --experimental-websocket tests/browser/waterfall.browser.mjs",
+    "test:browser": "node --experimental-websocket tests/browser/waterfall.browser.mjs && node --experimental-websocket tests/browser/chord.browser.mjs && node --experimental-websocket tests/browser/highlight-state.browser.mjs",
     "build:tokens": "node tokens/build.mjs",
     "build:watermark": "node assets/build-watermark-assets.mjs",
     "preview": "python3 -m http.server 8123"
