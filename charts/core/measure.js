@@ -9,18 +9,22 @@
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+const classAt = (className, text, index) => (typeof className === 'function'
+  ? className(String(text), index)
+  : className);
+
 /*
  * 量一批文本在 className 样式下的渲染宽度（px 数组，与入参一一对应）。
  *   host      —— 提供 token 作用域的元素（隐藏 SVG 挂它下面，继承同一套 CSS 变量）
  *   texts     —— 文本数组（非字符串会被 String() 化）
- *   className —— 参与测量的类名（决定字号/字体/字重）
+ *   className —— 参与测量的类名（决定字号/字体/字重），也可传 `(text, index) => class`
  */
 export function measureTexts(host, texts, className) {
   const svg = document.createElementNS(SVG_NS, 'svg');
   svg.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:visible';
-  const nodes = texts.map((t) => {
+  const nodes = texts.map((t, index) => {
     const el = document.createElementNS(SVG_NS, 'text');
-    el.setAttribute('class', className);
+    el.setAttribute('class', classAt(className, t, index) ?? '');
     el.textContent = String(t);
     svg.appendChild(el);
     return el;

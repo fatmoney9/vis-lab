@@ -5,12 +5,13 @@
   "description": "design token 驱动的可视化规范站。本文件只登记命令：零依赖、无需 npm install，每条脚本都能直接手敲。",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.10"
   },
   "scripts": {
     "check": "sh hooks/check.sh",
     "check:ci": "sh hooks/check.sh --verify",
     "test": "node --test \"tests/**/*.test.mjs\"",
+    "test:browser": "node --experimental-websocket tests/browser/waterfall.browser.mjs",
     "build:tokens": "node tokens/build.mjs",
     "build:watermark": "node assets/build-watermark-assets.mjs",
     "preview": "python3 -m http.server 8123"

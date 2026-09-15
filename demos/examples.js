@@ -38,6 +38,7 @@ import {
 import { buildFinancialDifferencePair } from './sankey-financial.js';
 import { financialSankeyPresentation } from './sankey-presentation.js';
 import { chartContentPresentation } from './chart-presentation.js';
+import { waterfallPresentation } from './waterfall-presentation.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
 
@@ -642,6 +643,9 @@ export const CHART_CAPABILITIES = {
   sankey: { density: false },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
   treemap: { animation: true, treemapColor: true },
+  /* 瀑布图固定少量叙事项，不提供密度旋钮；仅颜色提供预览旋钮。
+     X 轴内容与节点关系仍是实例语义配置，直接写在示例 cfg 中，不进入预览菜单。 */
+  waterfall: { density: false, animation: true, waterfallColor: true },
 };
 
 /*
@@ -922,6 +926,56 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'waterfall-bridge', group: '瀑布图', chart: 'waterfall',
+    title: '累计桥接瀑布图', spec: 'WATERFALL-01 / WATERFALL-09', surfaces: BOTH,
+    description: '从营业收入经过成本与费用的有符号增减，得到净利润；Ainvest 使用主题独占箭头柱。',
+    summary: '5 个叙事项 · 累计守恒',
+    preferredWidth: 630,
+    logicNote: 'kind 与有符号 value 决定累计公式；operatorBefore 只负责等式叙事，颜色模式、箭头形态和格式化分别由语义配置、behavior 与 L1 构件解析。',
+    presentation: waterfallPresentation,
+    cfg: () => ({
+      name: '利润桥接', period: '2024 三季报', variant: 'standard',
+      xAxisContent: 'name', showRelations: true,
+      items: [
+        { id: 'revenue', name: '营业收入', axisLabel: ['营业收入'], kind: 'total', value: 98.1e9, percent: 2.242 },
+        { id: 'cost', name: '营业成本', axisLabel: ['营业成本'], kind: 'delta', value: -8.4e9, operatorBefore: '+', percent: -12.12 },
+        { id: 'gross', name: '毛利', axisLabel: ['毛利'], kind: 'subtotal', value: 89.7e9, operatorBefore: '=' },
+        { id: 'other-expenses', name: '其他费用', axisLabel: ['其他费用'], kind: 'delta', value: -10.6e9, operatorBefore: '-', percent: -5.18 },
+        { id: 'net-income', name: '净利润', axisLabel: ['净利润'], kind: 'total', value: 79.1e9, operatorBefore: '=' },
+      ],
+    }),
+  },
+  {
+    id: 'waterfall-data', group: '瀑布图', chart: 'waterfall',
+    title: '分组数据柱瀑布图', spec: 'WATERFALL-04 / WATERFALL-12', surfaces: BOTH,
+    description: '总资产由分段构成，扣除负债后得到所有者权益；段内标签按可用高度自动退场。',
+    summary: '3 个等式项 · 5 个数据段',
+    preferredWidth: 630,
+    logicNote: 'segments 在所属项区间内连续累计，value 可由有符号段和值推导；X 轴固定展示项目名称，分段和值在柱内与 Tooltip 中读取。',
+    presentation: waterfallPresentation,
+    cfg: () => ({
+      name: '资产负债构成', period: '2024 三季报', variant: 'data',
+      xAxisContent: 'name', showRelations: true,
+      items: [
+        {
+          id: 'assets', name: '总资产', axisLabel: ['总资产'], kind: 'total',
+          segments: [
+            { id: 'current-assets', name: '流动资产', value: 2e12, percent: 2.242 },
+            { id: 'non-current-assets', name: '非流动资产', value: 6e12 },
+          ],
+        },
+        {
+          id: 'liabilities', name: '总负债', axisLabel: ['总负债'], kind: 'delta', operatorBefore: '=',
+          segments: [
+            { id: 'current-liabilities', name: '流动负债', value: -3e12, percent: -2.242 },
+            { id: 'non-current-liabilities', name: '非流动负债', value: -2e12 },
+          ],
+        },
+        { id: 'equity', name: '所有者权益', axisLabel: ['所有者权益'], kind: 'total', value: 3e12, operatorBefore: '+' },
+      ],
+    }),
+  },
+  {
     id: 'donut', group: '饼图与环形图', chart: 'pie',
     title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
     description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
@@ -995,6 +1049,7 @@ export const CHART_FAMILIES = {
   radar: '多维对比图',
   sankey: '流向图',
   treemap: '层级占比图',
+  waterfall: '过程变化图',
 };
 
 /* 某个面要展示的示例（surfaces 缺省 = 两面都进） */
@@ -1044,6 +1099,7 @@ export const capabilitiesOf = (example) => {
     ratingBandCount: !!caps.ratingBandCount && ratingRadar,
     axisLabelLayout: !!caps.axisLabelLayout,
     radarEditable: !!caps.radarEditable && singleSeriesRadar,
+    waterfallColor: !!caps.waterfallColor,
   };
 };
 
@@ -1080,7 +1136,7 @@ export function radarAxisLabelLayoutOf(example, requested = 'auto', editable = '
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
  *   state = { density='few', theme='ths', platform='pc', zoom, area, dataLabel, axisTitle, animation,
  *             legend, labelLayout, labelAlign, treemapColor, radarGridShape, radarShape,
- *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable } —— 各项皆可缺省
+ *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable, waterfallColor } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
  * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
  * behavior 解析。theme 在这里仅允许驱动 L3 presentation 文案映射：Ainvest 图表内部内容
@@ -1093,7 +1149,7 @@ export function buildConfig(example, state = {}) {
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
     treemapColor = 'intensity', axisValue = false,
     radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
-    axisLabelLayout = 'auto', radarEditable = 'auto',
+    axisLabelLayout = 'auto', radarEditable = 'auto', waterfallColor = 'primary',
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
@@ -1181,6 +1237,9 @@ export function buildConfig(example, state = {}) {
   }
   /* [RADAR-07/14] auto 保留示例 / 编辑能力的默认；显式选项覆盖全部雷达形态。 */
   if (caps.axisLabelLayout && axisLabelLayout !== 'auto') cfg.axisLabelLayout = effectiveAxisLabelLayout;
+  /* [WATERFALL-10] Figma 的验收配置只保留主色 / 语义色两档，预览面始终显式下发当前选择。
+     [WATERFALL-12] xAxisContent / showRelations 直接来自示例 cfg，是代码配置而非预览旋钮。 */
+  if (caps.waterfallColor) cfg.colorMode = waterfallColor;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;
@@ -1188,26 +1247,12 @@ export function buildConfig(example, state = {}) {
 }
 
 /*
- * 数组字段的展示摘要：长数组或原始值数组折成 `Array(n)`，短对象数组保留但去掉数组字段
- * （series 的 data 一折就是几十个数字，刷屏且无信息）。
- * **按值的形状判，不按字段名判**——故 cartesian 的 series 与饼环的 items 走同一条规则，
- * 面里和这里都不出现 `if (chart === …)`。
- */
-const briefValue = (v) => {
-  if (!Array.isArray(v)) return v;
-  if (v.length > 6 || v.some((x) => x == null || typeof x !== 'object')) return `Array(${v.length})`;
-  return v.map((o) => Object.fromEntries(Object.entries(o).filter(([, x]) => !Array.isArray(x))));
-};
-
-/*
- * 「逻辑」面板要展示的配置摘要。**内部调的就是同一个 buildConfig**，
- * 保证展示的和真正传进组件的是同一份（examples.js 上方注释里的承诺）。
- * 因此这里**不补任何默认值**：cfg 里没有 stack / animation 就是「走组件默认」，
- * 面板照实不显示——比印一个 `stack: 'none'` 更接近真相（那个值组件里才产生）。
+ * 「逻辑」面板完整展示传给 L2 组件的实例配置。节点、流向、类目、系列与逐点数据
+ * 一律原样保留，便于核对 Sankey 的 role / stage / order / negativeSource 等数据语义。
+ * 这里仍然**不补任何默认值**：cfg 里没有 stack / animation 就是「走组件默认」，
+ * 面板照实不显示——L2 几何、主题 token 与 behavior 不是实例入参，不能混进来冒充可配置项。
  * 主题 / 明暗不在此：它们不进 cfg，走容器的 data-* 属性 + CSS 级联。
  */
 export function describeConfig(example, state = {}) {
-  return Object.fromEntries(
-    Object.entries(buildConfig(example, state)).map(([k, v]) => [k, briefValue(v)]),
-  );
+  return buildConfig(example, state);
 }

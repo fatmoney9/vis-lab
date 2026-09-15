@@ -88,6 +88,110 @@ export function renderYLabels(layer, frame, ticks, y, opts = {}) {
 const measureRendered = (host, texts) => measureTexts(host, texts, 'dv-axis-label');
 
 /*
+ * [AXIS-04] 轴标签的逐行内容协议。
+ * 字符串 = 单行；数组 = 显式分行；允许调用方装配时多包一层数组，但最终只产出一维字符串。
+ * 这是常态 X 标签与 TOOLTIP-09 高亮标签共用的唯一标准化入口，避免交互态把数组隐式
+ * String() 成 `Other,Expenses`，或在另一个模块重新发明一套分行规则。
+ */
+export function axisLabelLines(label) {
+  const source = Array.isArray(label) ? label : [label];
+  const lines = source
+    .flatMap((line) => (Array.isArray(line) ? line : [line]))
+    .map((line) => String(line ?? ''))
+    .filter(Boolean);
+  return lines.length > 0 ? lines : [''];
+}
+
+/*
+ * [AXIS-04] 把单行 X 轴名称按真实渲染宽度折成最多两行。
+ * - 已显式分行（数组 / 换行符）时尊重调用方；超过两行则把余文并回末行，完整内容不丢失；
+ * - 自动折行先找单词边界，并以两行视觉宽度最均衡为优先；单词本身仍超宽时才按字符兜底；
+ * - measure 由调用方接入 core/measure.js，函数本身保持纯计算，禁止另造字体宽度估算。
+ *
+ * 这里不加省略号：是否允许丢失轴节点文本是图型叙事规则，不应成为通用折行器的副作用。
+ */
+export function wrapAxisLabel(label, maxWidth, measure) {
+  const raw = Array.isArray(label) ? label : String(label ?? '').split(/\r?\n/);
+  const explicit = axisLabelLines(raw);
+  if (explicit.length > 1) {
+    return explicit.length <= 2
+      ? explicit
+      : [explicit[0], explicit.slice(1).join(' ')];
+  }
+
+  const text = explicit[0].trim().replace(/\s+/g, ' ');
+  if (!text || !(maxWidth > 0) || measure(text) <= maxWidth) return [text];
+
+  const score = (lines) => {
+    const widths = lines.map((line) => Number(measure(line)) || 0);
+    return {
+      lines,
+      overflow: widths.reduce((sum, width) => sum + Math.max(0, width - maxWidth), 0),
+      imbalance: Math.abs(widths[0] - widths[1]),
+      widest: Math.max(...widths),
+    };
+  };
+  const choose = (candidates) => candidates
+    .map(score)
+    .sort((a, b) => a.overflow - b.overflow
+      || a.imbalance - b.imbalance
+      || a.widest - b.widest)[0];
+
+  const words = text.split(' ');
+  let candidates = words.slice(1).map((_word, index) => [
+    words.slice(0, index + 1).join(' '),
+    words.slice(index + 1).join(' '),
+  ]);
+  let best = candidates.length > 0 ? choose(candidates) : null;
+
+  /* CSS 的 break-word 语义：只在按词切仍装不下时，才允许拆开长单词 / 无空格文字。 */
+  if (!best || best.overflow > 0) {
+    const chars = Array.from(text);
+    candidates = chars.slice(1).map((_char, index) => [
+      chars.slice(0, index + 1).join('').trimEnd(),
+      chars.slice(index + 1).join('').trimStart(),
+    ]).filter((lines) => lines.every(Boolean));
+    if (candidates.length > 0) best = choose(candidates);
+  }
+  return best?.lines ?? [text];
+}
+
+/*
+ * [AXIS-04][TOOLTIP-09] 给已有 SVG <text> 写入同构的逐行 <tspan>。
+ * selection 由调用方创建，因此本函数不引入 d3；常态轴与高亮态只在外层 class / 背景上分叉，
+ * 内容结构、行高和水平锚点都走这里。lineClass 只给调用方附加逐行语义样式。
+ */
+export function renderAxisLabelLines(selection, {
+  lines = (d) => d.lines ?? d.label,
+  x = (d) => d.x,
+  lineHeight,
+  lineClass = null,
+} = {}) {
+  selection.text(null);
+  selection.selectAll('tspan')
+    .data((datum, datumIndex, nodes) => axisLabelLines(lines(datum, datumIndex, nodes))
+      .map((text, lineIndex) => ({ datum, datumIndex, nodes, text, lineIndex })))
+    .join('tspan')
+    .attr('class', (line) => (lineClass
+      ? lineClass(line.text, line.lineIndex, line.datum, line.datumIndex, line.nodes)
+      : null))
+    .attr('x', (line) => x(line.datum, line.datumIndex, line.nodes))
+    .attr('dy', (line) => (line.lineIndex === 0 ? 0 : lineHeight))
+    .text((line) => line.text);
+  return selection;
+}
+
+/* [AXIS-04][TOOLTIP-09] 常态与高亮态 X 标签共用的文字定位合同。
+   位置与逐行节奏只能在这一处定义，避免两个状态各自计算后产生像素跳动。 */
+export function xAxisLabelTextLayout(frame) {
+  return {
+    y: frame.xBandTop,
+    dominantBaseline: 'hanging',
+    lineHeight: frame.lineH,
+  };
+}
+
+/*
  * [AXIS-08] outside 标签列宽：每次重绘按当前刻度**一次性渲染测量**，精确贴合，
  * 不附加余量、不做量化/滞回——列宽随缩放窗口的标签变化即时调整。
  */
@@ -102,33 +206,60 @@ export function yLabelInset(host, ticks, format = formatValue) {
 }
 
 /*
- * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x }]，x = 类目中心）。
+ * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x, lines? }]，x = 类目中心）。
+ * lines 缺省时维持单行；存在时直接逐行测量并以最宽行作为标签盒，不要求 L2 另造测量探针。
  * [AXIS-05] 对齐：中间标签居中；首尾是否贴绘制区边缘由 flushFirst / flushLast
  *           决定（数据贴边时为 true，如满幅折线）；居中标签越界时向内回收。
  * [AXIS-06] 碰撞（任意相邻净距 < --spacing-axis-x-label-min-gap，默认 8px，触发；策略随主题）：
  *   segment3 —— 整体改 3 段式，只留首/中/尾（THS / Ainvest）
  *   hide     —— 隐藏碰撞标签，首尾始终保留（iFinD-PC）
+ *   none     —— 全量保留；仅供缺少任一节点都会破坏叙事的图型显式选择（如瀑布等式）
  *   宽度走渲染级测量（与 AXIS-08 同源）——碰撞判定无估算误差。
  * [GRID-03] 容器宽度变化后必须重新调用（碰撞结果随宽度变化）。
  */
 export function renderXLabels(layer, frame, items, opts = {}) {
-  const { collision = 'segment3', flushFirst = false, flushLast = false } = opts;
+  const {
+    collision = 'segment3', flushFirst = false, flushLast = false, lineClass = null,
+  } = opts;
   const n = items.length;
   const minGap = tokenNum(frame.host, '--spacing-axis-x-label-min-gap');
-  const widths = measureRendered(frame.host, items.map((d) => d.label));
+  const lineGroups = items.map((datum, datumIndex) => axisLabelLines(datum.lines ?? datum.label)
+    .map((text, lineIndex) => ({
+      datum,
+      datumIndex,
+      lineIndex,
+      text,
+      className: lineClass
+        ? lineClass(text, lineIndex, datum, datumIndex, [])
+        : null,
+    })));
+  const flatLines = lineGroups.flat();
+  const flatWidths = measureTexts(frame.host, flatLines.map((line) => line.text), (_text, index) => [
+    'dv-axis-label',
+    flatLines[index].className,
+  ].filter(Boolean).join(' '));
+  let measuredOffset = 0;
+  const widths = lineGroups.map((lines) => {
+    const lineWidths = flatWidths.slice(measuredOffset, measuredOffset + lines.length);
+    measuredOffset += lines.length;
+    return Math.max(0, ...lineWidths);
+  });
+  const textLayout = xAxisLabelTextLayout(frame);
 
   const boxes = items.map((d, i) => {
     let left = d.x - widths[i] / 2;
     if (i === 0 && flushFirst) left = frame.grid.left;
     if (i === n - 1 && flushLast) left = frame.grid.right - widths[i];
     left = Math.max(frame.grid.left, Math.min(left, frame.grid.right - widths[i]));
-    return { label: d.label, left, width: widths[i], i };
+    return { ...d, label: d.label, left, width: widths[i], i };
   });
 
   const collides = (a, b) => b.left - (a.left + a.width) < minGap;
 
   let kept = boxes;
-  if (n > 2 && boxes.some((b, i) => i > 0 && collides(boxes[i - 1], b))) {
+  if (collision !== 'none'
+    && n > 2
+    && boxes.some((b, i) => i > 0 && collides(boxes[i - 1], b))) {
     if (collision === 'segment3') {
       const mid = boxes[Math.round((n - 1) / 2)];
       kept = [boxes[0], mid, boxes[n - 1]];
@@ -144,13 +275,26 @@ export function renderXLabels(layer, frame, items, opts = {}) {
     }
   }
 
-  layer
+  const labels = layer
     .selectAll('text.dv-axis-label')
     .data(kept, (d) => d.i)
     .join('text')
     .attr('class', 'dv-axis-label')
-    .attr('y', frame.xBandTop)
-    .attr('dominant-baseline', 'hanging')
-    .attr('x', (d) => d.left)
-    .text((d) => d.label);
+    .attr('y', textLayout.y)
+    .attr('dominant-baseline', textLayout.dominantBaseline);
+
+  if (kept.some((d) => d.lines != null)) {
+    const textX = (d) => d.left + d.width / 2;
+    labels.attr('x', textX).attr('text-anchor', 'middle');
+    renderAxisLabelLines(labels, {
+      lines: (d) => d.lines ?? d.label,
+      x: textX,
+      lineHeight: textLayout.lineHeight,
+      lineClass,
+    });
+  } else {
+    /* 保持既有单行轴 DOM 与起点锚定不变，避免无关图型因本次多行能力重构发生像素漂移。 */
+    labels.attr('x', (d) => d.left).attr('text-anchor', null).text((d) => d.label);
+  }
+  return labels;
 }

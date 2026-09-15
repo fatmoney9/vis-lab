@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createTextMeasurer } from '../charts/core/measure.js';
+import { createTextMeasurer, measureInk, measureTexts } from '../charts/core/measure.js';
 
 class FakeNode {
   constructor(tagName) {
@@ -10,9 +10,16 @@ class FakeNode {
     this.parentNode = null;
     this.style = {};
     this.textContent = '';
+    this.attributes = {};
   }
 
-  setAttribute() {}
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+
+  getAttribute(name) {
+    return this.attributes[name] ?? null;
+  }
 
   appendChild(child) {
     child.parentNode = this;
@@ -28,17 +35,40 @@ class FakeNode {
 
   getComputedTextLength() {
     const fontSize = Number.parseFloat(this.style.fontSize) || 10;
-    return Array.from(this.textContent).length * fontSize;
+    const factor = this.getAttribute('class')?.includes('wide') ? 2 : 1;
+    return Array.from(this.textContent).length * fontSize * factor;
   }
 }
 
 function withFakeDocument(run) {
   const original = globalThis.document;
-  globalThis.document = { createElementNS: (_namespace, tagName) => new FakeNode(tagName) };
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.document = {
+    createElementNS: (_namespace, tagName) => new FakeNode(tagName),
+    createElement: (tagName) => {
+      assert.equal(tagName, 'canvas');
+      const context = {
+        font: '',
+        measureText: () => ({
+          actualBoundingBoxAscent: context.font.includes('700') ? 9 : 7,
+          actualBoundingBoxDescent: context.font.includes('700') ? 3 : 2,
+        }),
+      };
+      return { getContext: () => context };
+    },
+  };
+  globalThis.getComputedStyle = (node) => ({
+    fontStyle: 'normal',
+    fontWeight: node.getAttribute('class')?.includes('bold') ? '700' : '400',
+    fontSize: '12px',
+    fontFamily: 'sans-serif',
+  });
   try {
     return run();
   } finally {
     globalThis.document = original;
+    globalThis.getComputedStyle = originalGetComputedStyle;
+    measureInk.ctx = null;
   }
 }
 
@@ -50,6 +80,17 @@ test('TREEMAP-05：可复用测量器按传入字号测量并在销毁时清理'
     assert.equal(measurer.measure('1234', 14), 56);
     assert.equal(measurer.measure('1234', 11), 44);
     measurer.destroy();
+    assert.equal(host.children.length, 0);
+  });
+});
+
+test('AXIS-08：批量宽度测量允许逐项应用真实渲染类', () => {
+  withFakeDocument(() => {
+    const host = new FakeNode('host');
+    const widths = measureTexts(host, ['A', 'A'], (_text, index) => (
+      index === 1 ? 'dv-axis-label wide' : 'dv-axis-label'
+    ));
+    assert.deepEqual(widths, [10, 20]);
     assert.equal(host.children.length, 0);
   });
 });

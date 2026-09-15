@@ -36,9 +36,9 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| AXIS-04 | X 轴标签自成**容器带**（非一根基线）：带高 = 行高 + 上下间距；调间距 = 调带高。**inside**：底部网格线到 X 标签顶部 4px。**outside**：底部 Y 标签与末条网格线垂直居中，因此先避让其向下溢出的半行高，再从 **Y 标签外缘到 X 标签顶部留 4px 净距**；即上间距按「半行高 + 4px」计算。X 标签底部到标签带下沿统一 4px | `core/frame.js`（`xBandTop` 计算） | ✅ |
+| AXIS-04 | X 轴标签自成**容器带**（非一根基线）：带高 = **标签行数 × 行高** + 上下间距，默认 1 行；需要名称换行的图型通过 `xBandLines` 显式声明行数。自动换行统一调用 `wrapAxisLabel()`：真实测量后优先按词折为最多两行，长词 / 无空格文案再按字符兜底，不加省略号；显式行仍受尊重。逐行内容统一经 `axisLabelLines()` 标准化，再由 `renderAxisLabelLines()` 生成 `<tspan>`；常态轴标签与 TOOLTIP-09 高亮态共用这份内容结构，状态不得另行拼接文字，且**高亮前后的 y、dominant-baseline 与逐行 dy 必须完全一致**，共同取自 `xAxisLabelTextLayout()`。**inside**：底部网格线到 X 标签顶部 4px。**outside**：底部 Y 标签与末条网格线垂直居中，因此先避让其向下溢出的半行高，再从 **Y 标签外缘到 X 标签顶部留 4px 净距**；即上间距按「半行高 + 4px」计算。X 标签底部到标签带下沿统一 4px | `core/frame.js`（`xBandTop` / `xBandLines`）；`core/axis.js`（`wrapAxisLabel()` / `axisLabelLines()` / `renderAxisLabelLines()` / `xAxisLabelTextLayout()`） | ✅ |
 | AXIS-05 | 对齐：中间标签居中；**首尾标签是否贴绘制区边缘取决于数据是否贴边**（如折线满幅时首尾贴边对齐）；居中标签越界时向内回收 | `core/axis.js` → `renderXLabels()` 的 `flushFirst/flushLast` | ✅ |
-| AXIS-06 | 碰撞处理（相邻净距 < **8px** 触发，主题分化）：<br>THS / Ainvest —— 整体改 **3 段式**（只留首/中/尾）；<br>iFinD-PC —— **隐藏碰撞标签**（后来者让位，首尾始终保留） | `renderXLabels()` 的 `collision: 'segment3' \| 'hide'` | ✅ |
+| AXIS-06 | 碰撞处理（相邻净距 < **8px** 触发，主题分化）：<br>THS / Ainvest —— 整体改 **3 段式**（只留首/中/尾）；<br>iFinD-PC —— **隐藏碰撞标签**（后来者让位，首尾始终保留）。若图型缺少任一节点会破坏完整叙事（瀑布等式），L2 可显式选择 `none`，但必须先按 AXIS-04 折行并自行保证可用宽度；该例外不改变普通轴图的主题默认。 | `renderXLabels()` 的 `collision: 'segment3' \| 'hide' \| 'none'` | ✅ |
 
 ## 轴刻度线（Tick Marks）
 

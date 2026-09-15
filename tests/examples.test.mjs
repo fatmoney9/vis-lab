@@ -98,6 +98,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     ratingBandCount: false,
     axisLabelLayout: false,
     radarEditable: false,
+    waterfallColor: false,
   });
   const cfg = buildConfig(sankey, { platform: 'mobile', animation: false });
   assert.equal(cfg.platform, 'mobile');
@@ -479,7 +480,44 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     ratingBandCount: false,
     axisLabelLayout: false,
     radarEditable: false,
+    waterfallColor: false,
   });
+});
+
+test('WATERFALL-10/12：瀑布颜色走预览旋钮，X 轴内容与关系保留为代码配置', () => {
+  const bridge = EXAMPLES.find((item) => item.id === 'waterfall-bridge');
+  const data = EXAMPLES.find((item) => item.id === 'waterfall-data');
+  const bar = EXAMPLES.find((item) => item.id === 'basic');
+  assert.ok(bridge && data, 'EXAMPLES 中应同时注册两种瀑布图形态');
+  assert.equal(buildConfig(bridge).colorMode, 'primary');
+  assert.equal(buildConfig(bridge, { waterfallColor: 'primary' }).colorMode, 'primary');
+  assert.equal(buildConfig(bridge, { waterfallColor: 'semantic' }).colorMode, 'semantic');
+  assert.equal(buildConfig(data).xAxisContent, 'name');
+  assert.equal(buildConfig(data).showRelations, true);
+  const codeConfigured = {
+    ...data,
+    cfg: () => ({ ...data.cfg(), xAxisContent: 'name-value', showRelations: false }),
+  };
+  assert.equal(buildConfig(codeConfigured).xAxisContent, 'name-value');
+  assert.equal(buildConfig(codeConfigured).showRelations, false);
+  assert.equal(buildConfig(bar, { waterfallColor: 'semantic' }).colorMode, undefined);
+  assert.equal(buildConfig(bar).xAxisContent, undefined);
+});
+
+test('WATERFALL-01/04：瀑布示例完整透出类型、运算符与分段数据，并为 Ainvest 映射英文', () => {
+  const bridge = EXAMPLES.find((item) => item.id === 'waterfall-bridge');
+  const data = EXAMPLES.find((item) => item.id === 'waterfall-data');
+  const ths = buildConfig(bridge, { theme: 'ths' });
+  const ainvest = buildConfig(bridge, { theme: 'ainvest' });
+  assert.ok(ths.items.every((item) => item.kind && 'value' in item));
+  assert.equal(ths.items[1].operatorBefore, '+');
+  assert.equal(ainvest.period, '2024 Q3');
+  assert.equal(ainvest.items[0].name, 'Revenue');
+  assert.deepEqual(ainvest.items[1].axisLabel, ['Cost of', 'sales']);
+  assert.deepEqual(ainvest.items[3].axisLabel, ['Other', 'Expenses']);
+  const dataCfg = buildConfig(data, { theme: 'ainvest' });
+  assert.equal(dataCfg.items[0].segments.length, 2);
+  assert.equal(dataCfg.items[0].segments[0].name, 'Current Assets');
 });
 
 test('TREEMAP-17/COLOR-09：颜色策略只装进矩形树图配置，强度模式走组件默认', () => {
@@ -729,28 +767,40 @@ test('两条通道同源：档位 id 与它对应的数字装配出同一份 cfg
 
 /*
  * 「逻辑」面板展示的必须就是真正生效的那一份 cfg（examples.js 文件头的承诺）。
- * describeConfig 只做长数组折叠，不得增删字段、不得补默认值——
+ * describeConfig 必须完整保留数组与嵌套数据，不得增删字段、不得补默认值——
  * 补一个 cfg 里本来没有的 `stack:'none'` 会让面板说谎（那个默认值是组件里才产生的）。
  */
-test('describeConfig：字段集合与 buildConfig 完全一致，不补默认值', () => {
+test('describeConfig：与 buildConfig 完全一致，不折叠数据或补默认值', () => {
   for (const e of EXAMPLES) {
     const state = { density: 'mid', zoom: true, axisTitle: true, animation: false };
     assert.deepEqual(
-      Object.keys(describeConfig(e, state)),
-      Object.keys(buildConfig(e, state)),
-      `示例「${e.id}」的展示摘要与真实 cfg 字段集合不一致`,
+      describeConfig(e, state),
+      buildConfig(e, state),
+      `示例「${e.id}」的完整展示与真实 cfg 不一致`,
     );
   }
 });
 
-test('describeConfig：长数组折成 Array(n)，短对象数组去掉逐点数据', () => {
-  const bar = EXAMPLES.find((e) => e.id === 'basic');
-  const shown = describeConfig(bar, { density: 'mid' });
+test('describeConfig：完整透出 Sankey 节点分层与流向数据', () => {
+  const sankey = EXAMPLES.find((e) => e.id === 'sankey-financial');
+  const shown = describeConfig(sankey, { theme: 'ths', platform: 'pc' });
 
-  assert.equal(shown.categories, 'Array(16)', 'categories 应折叠');
-  assert.deepEqual(shown.series, [{ name: '营业收入' }], 'series 保留但去掉 data');
-
-  const donut = EXAMPLES.find((e) => e.id === 'donut');
-  assert.equal(describeConfig(donut, { density: 'many' }).items, 'Array(36)', '多扇区应折叠');
-  assert.ok(Array.isArray(describeConfig(donut, { density: 'few' }).items), '少扇区应保留明细');
+  assert.equal(shown.nodes.length, 15);
+  assert.equal(shown.links.length, 14);
+  assert.ok(
+    shown.nodes.every((node) => (
+      'id' in node && 'name' in node && 'role' in node && 'stage' in node && 'order' in node
+    )),
+    '每个节点都应完整展示身份、业务角色、阶段和同层顺序',
+  );
+  assert.ok(
+    shown.links.every((link) => (
+      'source' in link && 'target' in link && 'value' in link
+    )),
+    '每条流向都应完整展示来源、目标和有符号值',
+  );
+  assert.ok(
+    shown.links.some((link) => 'negativeSource' in link),
+    '财务差额流向的同层视觉来源也必须透出',
+  );
 });

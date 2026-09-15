@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { makeFormatter } from '../charts/core/format.js';
+
+const behavior = JSON.parse(readFileSync(new URL('../tokens/behavior.json', import.meta.url), 'utf8'));
 
 test('FORMAT-01：THS 中文单位在边界值正确换算并去尾零', () => {
   const format = makeFormatter({ system: 'cn', 'max-decimals': 2 });
@@ -31,4 +34,11 @@ test('FORMAT-01：plain 使用千分位，空值与 NaN 使用无数据占位', 
   assert.equal(format(1234.5), '1,234.5');
   assert.equal(format(null), '—');
   assert.equal(format(Number.NaN), '—');
+});
+
+test('FORMAT-01：iFinD 使用中文数量单位而不是裸大数', () => {
+  const format = makeFormatter(behavior['ifind-pc']['number-format']);
+
+  assert.equal(format(120000000), '1.2亿');
+  assert.equal(format(-840000000), '-8.4亿');
 });

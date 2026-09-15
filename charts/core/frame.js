@@ -10,7 +10,7 @@ import { tokenNum } from './tokens.js';
  */
 export function verticalGeometry(host, opts = {}) {
   const {
-    height, yForm = 'inside', xBand = true, navH = 0,
+    height, yForm = 'inside', xBand = true, xBandLines = 1, navH = 0,
     titleTopH = 0, titleBottomH = 0, minGridHeight = 48,
   } = opts;
   const lineH = tokenNum(host, '--line-height-axis') || 14;
@@ -23,8 +23,9 @@ export function verticalGeometry(host, opts = {}) {
      因此 X 标签位置 = 网格线 + halfLabel + 规范净距。 */
   const xGapTop = (yForm === 'outside' ? halfLabel : 0) + xBandTopGap;
   /* [AXISTITLE-02] X 标题带接在 X 标签带下沿之后 */
+  const xLines = Math.max(1, Math.floor(Number(xBandLines) || 1));
   const bottomPad = (xBand
-    ? xGapTop + lineH + xBandBottomGap
+    ? xGapTop + lineH * xLines + xBandBottomGap
     : yForm === 'outside' ? halfLabel : 0) + titleBottomH;
 
   const regionH = tokenNum(host, '--size-chart-region-height') || 160;
@@ -58,6 +59,9 @@ export function createFrame(host, opts = {}) {
     /* [AXIS-02] 双 Y：副轴（主轴反侧）的标签列宽，outside 布局时预留 */
     yLabelWidthSecondary = 0,
     xBand = true,
+    /* [AXIS-04] X 标签带默认一行；需要名称换行的图型显式传行数。
+       只扩带高，不改变标签绘制策略，既有调用方缺省仍逐像素不变。 */
+    xBandLines = 1,
     /* [DATAZOOM-01] 缩放轴带：在 X 标签带下方额外预留的高度（含手柄溢出与上下间距）。
        默认 0 = 无缩放轴，几何与原状逐像素一致。带宽 = grid 宽（与网格/X 轴对齐，天然不含 outside 的 Y 标签列）。 */
     navH = 0,

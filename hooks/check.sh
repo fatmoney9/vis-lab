@@ -36,7 +36,7 @@ if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/core/watermark-assets.
 find charts hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
   | xargs -0 -n1 node --check
 
-# 4/11 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20/24）
+# 4/11 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20.10/24）
 # 引号不能去：让 node 自己展开 **，shell 展开只匹配一层。写成 tests/*.mjs 时
 # tests/ 子目录里的测试会被**静默跳过**——不报错、不警告，只是那些用例从此不再跑。
 node --test "tests/**/*.test.mjs"
