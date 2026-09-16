@@ -59,6 +59,7 @@ TreemapChart(host, {
   colorThresholds,                // semantic-binned 的两个正数业务阈值，如 [1, 2]
   platform = 'pc',
   animation = true,
+  text,                           // 可选：固定文案整套替换，缺省 content.js 的 TREEMAP_TEXT（CHARTTEXT-01/02）
 })
 ```
 

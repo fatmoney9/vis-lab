@@ -67,7 +67,7 @@ sh hooks/check.sh
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 分支、提交、PR 与质量门禁 |
 | [TESTING.md](TESTING.md) | 测试分层、覆盖矩阵、视觉基线规则 |
 | [AGENTS.md](AGENTS.md) | 给 AI 会话的项目约定 |
-| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) |
+| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) |
 
 当前进度与后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)；
 各规范页末尾的「待办」是未完成能力的权威清单——未验证的能力不标为完成。

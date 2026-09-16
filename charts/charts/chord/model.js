@@ -3,11 +3,26 @@
  * [L2-LOCAL] 图表专属，有意不下沉 L1（[CHORD-12][CHORD-13]）
  *
  * 干什么：回答两个问题——「高亮这个图元时，还有谁该亮」和「看板上写什么」。
- * 纯数据、零 DOM、零 d3、零 import，故可被 `node --test` 直接加载。
+ * 纯数据、零 DOM、零 d3；只 import 零依赖的 L1 core/chart-text.js，故仍可被 `node --test` 直接加载。
  *
  * ⚠️ 这里**不管 hover / 钉住的状态迁移**——那是 L1 core/highlight-state.js 的事。
  * 本模块只把「当前目标」翻译成「该亮哪些图元」与「看板内容」，两件事分开才测得了。
  */
+
+import { fillText } from '../../core/chart-text.js';
+
+/*
+ * [CHARTTEXT-01] 本族固定文案的缺省表。调用方经 config.text 整套替换（CHARTTEXT-02），
+ * 本族不认识语言：Ainvest 的英文表由 L3 demos/chart-presentation.js 注入。
+ */
+export const CHORD_TEXT = Object.freeze({
+  chartLabel: '弦图：展示实体之间的相互流动',
+  outflow: '流出',
+  inflow: '流入',
+  net: '净额',
+  arcLabel: '{name}，流出 {outflow}，流入 {inflow}',
+  ribbonLabel: '{source} 与 {target} 之间的流量：{source} 流向 {target} {forward}，{target} 流向 {source} {backward}',
+});
 
 /*
  * [CHORD-12] 邻域：**只含直接相邻，不做传递闭包**（同 SANKEY-10）。
@@ -50,13 +65,13 @@ export function chordRelatedNeighborhood(target, ribbons) {
  * 明细按对手方声明序（与槽位同序），让看板行与圆上的段一一对得上；
  * 按值排序会让「看板第三行」和「弧上第三段」不是同一个东西。
  */
-export function chordEntityDashboard(group, graph, format) {
+export function chordEntityDashboard(group, graph, format, text = CHORD_TEXT) {
   const { entities, matrix } = graph;
   const i = group.index;
   const rows = [
-    { key: 'outflow', label: '流出', value: format(group.outflow), showMarker: false },
-    { key: 'inflow', label: '流入', value: format(group.inflow), showMarker: false },
-    { key: 'net', label: '净额', value: format(group.inflow - group.outflow), showMarker: false },
+    { key: 'outflow', label: text.outflow, value: format(group.outflow), showMarker: false },
+    { key: 'inflow', label: text.inflow, value: format(group.inflow), showMarker: false },
+    { key: 'net', label: text.net, value: format(group.inflow - group.outflow), showMarker: false },
   ];
   entities.forEach((name, j) => {
     if (j === i) return;
@@ -79,7 +94,7 @@ export function chordEntityDashboard(group, graph, format) {
  * 两行的方向写成「甲 → 乙」而不是靠行序暗示，因为 undirected 档下一条弦同时承载两个方向，
  * 只给两个数字读者无从判断哪个是哪个。
  */
-export function chordRibbonDashboard(ribbon, graph, format) {
+export function chordRibbonDashboard(ribbon, graph, format, text = CHORD_TEXT) {
   const { entities } = graph;
   const a = entities[ribbon.i];
   const b = entities[ribbon.j];
@@ -104,7 +119,7 @@ export function chordRibbonDashboard(ribbon, graph, format) {
       },
       {
         key: 'net',
-        label: '净额',
+        label: text.net,
         value: format(Math.abs(forward - backward)),
         showMarker: false,
       },
@@ -115,13 +130,19 @@ export function chordRibbonDashboard(ribbon, graph, format) {
 /*
  * 无障碍文案。与看板同源，避免「看得见的」和「读得出的」两套说法各自漂移。
  */
-export function chordArcLabel(group, format) {
-  return `${group.name}，流出 ${format(group.outflow)}，流入 ${format(group.inflow)}`;
+export function chordArcLabel(group, format, text = CHORD_TEXT) {
+  return fillText(text.arcLabel, {
+    name: group.name,
+    outflow: format(group.outflow),
+    inflow: format(group.inflow),
+  });
 }
 
-export function chordRibbonLabel(ribbon, graph, format) {
-  const a = graph.entities[ribbon.i];
-  const b = graph.entities[ribbon.j];
-  return `${a} 与 ${b} 之间的流量：${a} 流向 ${b} ${format(ribbon.sourceValue)}，`
-    + `${b} 流向 ${a} ${format(ribbon.targetValue)}`;
+export function chordRibbonLabel(ribbon, graph, format, text = CHORD_TEXT) {
+  return fillText(text.ribbonLabel, {
+    source: graph.entities[ribbon.i],
+    target: graph.entities[ribbon.j],
+    forward: format(ribbon.sourceValue),
+    backward: format(ribbon.targetValue),
+  });
 }

@@ -148,6 +148,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业务名称由
 `demos/chart-presentation.js` 在 L3 最终装配为英文；THS / iFinD-PC 保持中文，站点导航与配置面板
 也保持中文。组件只接收转换后的普通配置，禁止在 L1 / L2 判断品牌或语言。
+组件自己写死的固定文案（无障碍描述、看板固定行名）同理：L2 只持中文缺省表，Ainvest 英文表由 L3 经
+`config.text` 整套注入，见 `specs/chart-text.md`。
 
 - **共用开关**：容器（或任意祖先）上的 `data-theme` 属性同时作为两条通道的主题输入。
   值 token 会随属性经 CSS 级联更新；形态/行为只在组件重绘时重新解析，因此切主题必须

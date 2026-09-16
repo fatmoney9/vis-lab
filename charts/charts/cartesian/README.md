@@ -11,6 +11,7 @@
 |---|---|
 | `axis` | 用 |
 | `axis-title` | 用 |
+| `chart-text` | 不用：组件内没有写死的文案，系列名、轴标题、图例文字全部来自配置 |
 | `crosshair` | 用 |
 | `datazoom` | 用 |
 | `format` | 用 |

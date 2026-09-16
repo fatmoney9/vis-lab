@@ -6,6 +6,17 @@
 
 import { imageContentTooltip, normalizeImageContent } from '../../core/image-content.js';
 
+/*
+ * [CHARTTEXT-01] 本族固定文案的缺省表（无障碍描述）。调用方经 config.text 整套替换（CHARTTEXT-02），
+ * 本族不认识语言：Ainvest 的英文表由 L3 demos/chart-presentation.js 注入。
+ * fallbackName 是整图没有 name、根节点也没有 name 时的兜底称呼。
+ */
+export const TREEMAP_TEXT = Object.freeze({
+  chartLabel: '{name}：按面积展示层级占比',
+  fallbackName: '矩形树图',
+  leafLabel: '{name}，{value}，可查看详情',
+});
+
 const finiteOrNull = (value) => {
   if (value == null || value === '') return null;
   const number = Number(value);

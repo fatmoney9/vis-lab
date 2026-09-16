@@ -7,6 +7,9 @@
  *
  * 财报桑基还有周期、播放控件与稳定节点 id 的专用映射，继续由 sankey-presentation.js
  * 负责；本模块在最终配置层补齐其余图表族的可见业务文案。
+ *
+ * 组件自己写死的固定文案（无障碍描述、看板固定行名）不在示例配置里，翻译配置够不着；
+ * 它们经 `config.text` 整套注入（CHARTTEXT-01/02，specs/chart-text.md），英文表见 AINVEST_COMPONENT_TEXT。
  */
 
 const AINVEST_TEXT = new Map([
@@ -173,6 +176,27 @@ const AINVEST_CHART_TEXT = {
   ]),
 };
 
+/* 与各族 L2 缺省表（CHORD_TEXT / RADAR_TEXT / TREEMAP_TEXT）键集一一对应；缺键或多键组件会当场报错。 */
+const AINVEST_COMPONENT_TEXT = {
+  chord: {
+    chartLabel: 'Chord chart showing mutual flows between entities',
+    outflow: 'Outflow',
+    inflow: 'Inflow',
+    net: 'Net',
+    arcLabel: '{name}, outflow {outflow}, inflow {inflow}',
+    ribbonLabel: 'Flow between {source} and {target}: {source} to {target} {forward}, {target} to {source} {backward}',
+  },
+  radar: {
+    handleLabel: '{dimension}, {series}',
+    ratingBandSeparator: ', ',
+  },
+  treemap: {
+    chartLabel: '{name}: hierarchical share by area',
+    fallbackName: 'Treemap',
+    leafLabel: '{name}, {value}, view details',
+  },
+};
+
 function ainvestText(value, chart) {
   if (typeof value !== 'string') return value;
   const chartSpecific = AINVEST_CHART_TEXT[chart]?.get(value);
@@ -195,6 +219,15 @@ function translateDeep(value, chart) {
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, translateDeep(item, chart)]));
 }
 
+export function ainvestComponentText(chart) {
+  const text = AINVEST_COMPONENT_TEXT[chart];
+  return text ? { ...text } : undefined;
+}
+
 export function chartContentPresentation(config, { theme = 'ths', chart } = {}) {
-  return theme === 'ainvest' ? translateDeep(config, chart) : config;
+  if (theme !== 'ainvest') return config;
+  const translated = translateDeep(config, chart);
+  const text = ainvestComponentText(chart);
+  /* 固定文案在翻译之后挂上：模板里的占位与英文句子不该再过一遍中文词表 */
+  return text ? { ...translated, text } : translated;
 }

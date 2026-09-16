@@ -123,6 +123,7 @@ RadarChart(host, {
  legendSelect = 'multi',    // 'multi' | 'single' | 'focus'（LEGEND-06/14）
  platform = 'pc',
  animation = true,       // 入场顺时针依次出现；减弱动效下恒终态（MOTION-07）
+ text,                  // 可选：固定文案整套替换，缺省 index.js 的 RADAR_TEXT（CHARTTEXT-01/02）
 })
 ```
 

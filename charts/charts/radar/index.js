@@ -57,6 +57,7 @@ import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
 import { pointAt, labelAnchor, labelArc } from '../../core/polar-label.js';
+import { fillText, resolveChartText } from '../../core/chart-text.js';
 import {
   MIN_DIMENSIONS, axisAngles, radarDomain, radarFrame,
   ringRadii, gridPath, seriesPoints, sectorCorners,
@@ -77,6 +78,13 @@ const DEFAULT_RATING_RANGE_LABELS = ['Risk', 'Excellent'];
 /* Figma 51086:57384 的六档原文；第一档虽与常见区间写法不同，仍按设计源逐字还原。 */
 const DEFAULT_RATING_BAND_LABELS = ['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%'];
 const RATING_GRADIENT_LEVEL_COUNT = 5;
+/* [CHARTTEXT-01] 本族固定文案的缺省表（无障碍描述）。调用方经 cfg.text 整套替换（CHARTTEXT-02），
+   本族不认识语言：Ainvest 的英文表由 L3 demos/chart-presentation.js 注入。
+   两句都只有标点是固定的——中文顿号 / 逗号放进英文描述里就是混排，故同样走缺省表。 */
+export const RADAR_TEXT = Object.freeze({
+  handleLabel: '{dimension}，{series}',
+  ratingBandSeparator: '、',
+});
 let radarInstanceId = 0;
 
 export function RadarChart(host, cfg) {
@@ -88,6 +96,8 @@ export function RadarChart(host, cfg) {
     axisLabelLayout, axisValue = false, editable = false, editStep, onChange,
     legendSelect = 'multi', platform = 'pc', animation = true,
   } = cfg;
+  /* [CHARTTEXT-01/02] 固定文案：不给走缺省表，给了必须整套——语言由 L3 决定，本层不判断 */
+  const chartText = resolveChartText(RADAR_TEXT, cfg.text, 'RadarChart');
 
   /* [RADAR-01] 维度数下限当场抛错：两根轴构不成面积、读不出任何形状，静默画出来更糟。 */
   if (!Array.isArray(dimensions) || dimensions.length < MIN_DIMENSIONS) {
@@ -174,7 +184,7 @@ export function RadarChart(host, cfg) {
       .style('--dv-radar-rating-level-count', ratingColors.length)
       .attr('aria-label', ratingStyle === 'gradient'
         ? `${ratingRangeLabels[0]} – ${ratingRangeLabels[1]}`
-        : ratingBandLabels.join('、'));
+        : ratingBandLabels.join(chartText.ratingBandSeparator));
     if (ratingStyle === 'gradient') {
       const stops = ratingColors.map((color, i) =>
         `${color} ${(i / (ratingColors.length - 1)) * 100}%`).join(', ');
@@ -606,7 +616,7 @@ export function RadarChart(host, cfg) {
         .enter().append('g').attr('class', 'dv-radar-handle')
         .attr('tabindex', 0).attr('role', 'slider')
         .attr('aria-valuemin', domain.min).attr('aria-valuemax', domain.max)
-        .attr('aria-label', (d) => `${d.label}，${r.name}`);
+        .attr('aria-label', (d) => fillText(chartText.handleLabel, { dimension: d.label, series: r.name }));
       handles.append('circle').attr('class', 'dv-radar-handle-hit');
       handles.append('circle').attr('class', 'dv-radar-handle-thumb');
       /* 双箭头只表达「可增 / 可减」，不承担命中；上下两个闭合子路径 = 实色三角形。

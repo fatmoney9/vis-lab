@@ -33,6 +33,7 @@
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
+| **组件写死的文案（读屏描述 / 看板固定行名）** | `core/chart-text.js` | `resolveChartText`（缺省表 + `config.text` 整套替换）· `fillText`（`{key}` 模板）（[CHARTTEXT-01..03]）——别在 L2 拼中文模板字符串，Ainvest 的英文由 L3 注入 |
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
 | **图元 hover / 点击钉住的状态** | `core/highlight-state.js` | `applyHover` · `applyLeave` · `applyPick` · `applyClear` · `activeTarget`（[SANKEY-10] / [SANKEY-20] / [TREEMAP-06]）——**钉位只有一个**，别在 L2 给每类图元各留一个变量再手工维持互斥 |
 | **把文字摆在圆周上 / 求绕圆标签带宽** | `core/polar-label.js` | `pointAt`（极坐标→直角，**全库唯一三角公式**）· `labelAnchor`（八向对齐）· `labelArc`（可读弧线）· `labelBand`（带吃剩余并封顶）（[RADAR-07] / [RADAR-14] / [PIE-13]） |
@@ -74,6 +75,9 @@
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
   Ainvest 的**图表内部示例内容统一为英文**，由 `demos/chart-presentation.js` 在最终配置装配时转换；
   站点导航与配置面板仍保持中文。语言属于 L3 展示数据，不得把品牌或中英文判断写进 L2 组件。
+  组件自己写死的文案（无障碍描述、看板固定行名）配置里没有、翻译够不着，走 L1 `core/chart-text.js`：
+  L2 给中文缺省表，L3 经 `config.text` **整套**注入英文（`specs/chart-text.md`）。新增这类文案时两边同一次改齐，
+  否则 Ainvest 渲染当场抛错。
   **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
 - **另有 `playground/radar-preview.html`**（雷达专用对照面，六个典型配置 × 三主题同屏；是回归矩阵、不是六种图表分类）。它与桑基那条**性质不同**：

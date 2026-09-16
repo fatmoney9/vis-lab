@@ -12,10 +12,11 @@ import { easeOutCubic, reducedMotion } from '../../core/motion.js';
 import { resolveBehavior } from '../../core/theme.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { tokenNum } from '../../core/tokens.js';
+import { fillText, resolveChartText } from '../../core/chart-text.js';
 import {
   createHighlightState, applyHover, applyLeave, applyPick, applyClear, activeTarget,
 } from '../../core/highlight-state.js';
-import { resolveSankeySettings } from './config.js';
+import { resolveSankeySettings, SANKEY_TEXT } from './config.js';
 import {
   sankeyNodeDashboard,
   sankeyNodeDashboardValueColor,
@@ -57,8 +58,7 @@ export function SankeyChart(host, initialConfig) {
   const legendHost = root.append('div').attr('class', 'dv-sankey__legend-host');
   const svg = root.append('svg')
     .attr('class', 'dv-sankey__svg')
-    .attr('role', 'img')
-    .attr('aria-label', '桑基图：展示节点之间的流向与流量');
+    .attr('role', 'img');
   const tooltip = createTooltip(root.node());
   let tooltipHideTimer = 0;
 
@@ -84,6 +84,9 @@ export function SankeyChart(host, initialConfig) {
     if (!['pc', 'mobile'].includes(platform)) {
       throw new TypeError("SankeyChart：platform 仅支持 'pc' 或 'mobile'");
     }
+    /* [CHARTTEXT-01/02] 固定文案：不给走缺省表，给了必须整套——语言由 L3 决定，本层不判断 */
+    const chartText = resolveChartText(SANKEY_TEXT, config.text, 'SankeyChart');
+    svg.attr('aria-label', chartText.chartLabel);
 
     const style = resolveSankeySettings(platform);
     const behavior = resolveBehavior(host, platform);
@@ -119,7 +122,7 @@ export function SankeyChart(host, initialConfig) {
     legendHost
       .select('.dv-legend')
       .attr('role', 'list')
-      .attr('aria-label', '桑基图颜色图例');
+      .attr('aria-label', chartText.legendLabel);
     legendHost
       .selectAll('.dv-legend-item')
       .attr('role', 'listitem');
@@ -288,11 +291,11 @@ export function SankeyChart(host, initialConfig) {
       .attr('class', 'dv-sankey__edge')
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
-      .attr('aria-label', (link) => (
-        `${(link.visualSource ?? link.source).name}`
-        + `流向${(link.visualTarget ?? link.target).name}，`
-        + `数值${format(link.displayValue)}`
-      ))
+      .attr('aria-label', (link) => fillText(chartText.linkLabel, {
+        source: (link.visualSource ?? link.source).name,
+        target: (link.visualTarget ?? link.target).name,
+        value: format(link.displayValue),
+      }))
       .style('--dv-sankey-color', (link) => link.color);
 
     edgeGroups.append('path')
@@ -318,7 +321,10 @@ export function SankeyChart(host, initialConfig) {
       .attr('class', 'dv-sankey__node')
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
-      .attr('aria-label', (node) => `${node.name}，数值${format(node.displayValue)}`)
+      .attr('aria-label', (node) => fillText(chartText.nodeLabel, {
+        name: node.name,
+        value: format(node.displayValue),
+      }))
       .style('--dv-sankey-color', (node) => node.color);
 
     nodeGroups.append('rect')

@@ -34,6 +34,7 @@
 | `palette.js` | 系列取色器 | color.md |
 | `visual-color.js` | 数据项的系列、强度与有符号语义取色，以及低表现→高表现的通用色阶；不识别图表、主题或业务字段 | color.md（COLOR-06/09/10） |
 | `format.js` | 数值格式化 | format.md |
+| `chart-text.js` | 组件固定文案（零 import，可被 node 加载）：`resolveChartText` 取 L2 缺省表或调用方的**整套**替换（缺键 / 多键当场抛错），`fillText` 填 `{key}` 模板。不认识语言或品牌——Ainvest 英文表由 L3 注入 | chart-text.md（CHARTTEXT-01..03） |
 | `theme.js` | 主题行为解析（behavior.json → 参数） | WORKFLOW 第六节 |
 | `tokens.js` | 从计算样式读取 CSS 自定义属性 | — |
 

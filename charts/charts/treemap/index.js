@@ -4,7 +4,8 @@
  * API 只接收层级数据与形态语义：
  *   { name?, root:{name,value?,children?}, direction='squarify',
  *     variant='local', labelType='twoLineCenter', colorMode='intensity', colorThresholds?,
- *     platform='pc', animation=true }
+ *     platform='pc', animation=true, text? }
+ * text 是组件固定文案的整套替换（CHARTTEXT-01/02），缺省为 content.js 的 TREEMAP_TEXT。
  * 高度由宿主容器决定；间距、圆角、文字和颜色由 token / 公共构件决定；
  * 语义分档阈值由业务配置提供。
  */
@@ -23,6 +24,7 @@ import { ITEM_COLOR_MODES, resolveItemColors } from '../../core/visual-color.js'
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { reducedMotion, runGrowth } from '../../core/motion.js';
+import { fillText, resolveChartText } from '../../core/chart-text.js';
 import {
   displayChildren,
   entryCells,
@@ -33,6 +35,7 @@ import {
 import {
   detailTooltipContent,
   itemPresentation,
+  TREEMAP_TEXT,
 } from './content.js';
 
 const NAME_CLASS = 'dv-treemap-label__name';
@@ -116,6 +119,8 @@ export function TreemapChart(host, cfg) {
   if (!['pc', 'mobile'].includes(platform)) {
     throw new TypeError("TreemapChart：platform 仅支持 'pc' 或 'mobile'");
   }
+  /* [CHARTTEXT-01/02] 固定文案：不给走缺省表，给了必须整套——语言由 L3 决定，本层不判断 */
+  const chartText = resolveChartText(TREEMAP_TEXT, cfg.text, 'TreemapChart');
 
   const initialHostHeight = host.clientHeight;
   host.replaceChildren();
@@ -169,7 +174,7 @@ export function TreemapChart(host, cfg) {
     const frame = createFrame(plotHost, { width, height: plotHeight, xBand: false, minGridHeight: 0 });
     frame.svg
       .attr('class', 'dv-treemap')
-      .attr('aria-label', `${name ?? root.name ?? '矩形树图'}：按面积展示层级占比`);
+      .attr('aria-label', fillText(chartText.chartLabel, { name: name ?? root.name ?? chartText.fallbackName }));
 
     if (!items.length) {
       selfHeight = host.clientHeight;
@@ -240,7 +245,10 @@ export function TreemapChart(host, cfg) {
       .style('color', (d) => `var(${d.data.item.colorVar})`)
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('aria-label', (d) => `${d.data.item.displayName}，${d.data.item.displayValue}，可查看详情`);
+      .attr('aria-label', (d) => fillText(chartText.leafLabel, {
+        name: d.data.item.displayName,
+        value: d.data.item.displayValue,
+      }));
     groups.append('rect')
       .attr('class', 'dv-treemap-node__rect')
       .style('fill-opacity', (d) => d.data.item.opacity);

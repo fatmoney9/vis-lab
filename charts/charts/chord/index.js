@@ -23,6 +23,7 @@ import { createTooltip } from '../../core/tooltip.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { tokenNum } from '../../core/tokens.js';
 import { labelAnchor, labelArc } from '../../core/polar-label.js';
+import { resolveChartText } from '../../core/chart-text.js';
 import {
   createHighlightState, applyHover, applyLeave, applyPick, applyClear, activeTarget,
 } from '../../core/highlight-state.js';
@@ -30,7 +31,7 @@ import { resolveChordSettings } from './config.js';
 import { layoutChord, taperedSpan, ribbonPath } from './layout.js';
 import {
   chordRelatedNeighborhood, chordEntityDashboard, chordRibbonDashboard,
-  chordArcLabel, chordRibbonLabel,
+  chordArcLabel, chordRibbonLabel, CHORD_TEXT,
 } from './model.js';
 
 const LABEL_CLASS = 'dv-chord__label';
@@ -51,8 +52,7 @@ export function ChordChart(host, initialConfig) {
   const root = select(host).append('div').attr('class', 'dv-chart dv-chord');
   const svg = root.append('svg')
     .attr('class', 'dv-chord__svg')
-    .attr('role', 'img')
-    .attr('aria-label', '弦图：展示实体之间的相互流动');
+    .attr('role', 'img');
   const tooltip = createTooltip(root.node());
   let tooltipHideTimer = 0;
 
@@ -77,6 +77,9 @@ export function ChordChart(host, initialConfig) {
     const style = resolveChordSettings(platform);
     const behavior = resolveBehavior(host, platform);
     const format = makeFormatter(behavior['number-format']);
+    /* [CHARTTEXT-01/02] 固定文案：不给走缺省表，给了必须整套——语言由 L3 决定，本层不判断 */
+    const chartText = resolveChartText(CHORD_TEXT, config.text, 'ChordChart');
+    svg.attr('aria-label', chartText.chartLabel);
     const marker = behavior['legend-marker'];
     const wm = behavior.watermark;
     const configuredHideDelay = tokenNum(host, '--tooltip-hide-delay');
@@ -163,7 +166,7 @@ export function ChordChart(host, initialConfig) {
       .attr('class', 'dv-chord__ribbon')
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
-      .attr('aria-label', (r) => chordRibbonLabel(r, graph, format))
+      .attr('aria-label', (r) => chordRibbonLabel(r, graph, format, chartText))
       /* 填充走渐变；描边只是撑命中区（stroke-opacity: 0），取源端色即可 */
       .style('--dv-chord-ribbon-fill', (r, i) => `url(#${uid}-rib-${i})`)
       .style('--dv-chord-color', (r) => colorVar(r.i));
@@ -178,7 +181,7 @@ export function ChordChart(host, initialConfig) {
       .attr('class', 'dv-chord__arc')
       .attr('tabindex', 0)
       .attr('role', 'graphics-symbol')
-      .attr('aria-label', (g) => chordArcLabel(g, format))
+      .attr('aria-label', (g) => chordArcLabel(g, format, chartText))
       .style('--dv-chord-color', (g) => colorVar(g.index));
     arcGroups.append('path')
       .attr('class', 'dv-chord__arc-band')
@@ -302,12 +305,12 @@ export function ChordChart(host, initialConfig) {
       if (target.kind === 'arc') {
         const g = graph.groups.find((item) => item.index === target.key);
         if (!g) { resetHighlight(); return false; }
-        tooltip.show(chordEntityDashboard(g, graph, format), marker);
+        tooltip.show(chordEntityDashboard(g, graph, format, chartText), marker);
         placeTooltip(point ?? arcAnchor(g));
       } else {
         const r = graph.ribbons.find((item) => item.key === target.key);
         if (!r) { resetHighlight(); return false; }
-        tooltip.show(chordRibbonDashboard(r, graph, format), marker);
+        tooltip.show(chordRibbonDashboard(r, graph, format, chartText), marker);
         placeTooltip(point ?? arcAnchor(graph.groups[r.i]));
       }
       return true;

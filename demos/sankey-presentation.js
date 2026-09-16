@@ -29,6 +29,14 @@ const AINVEST_LEGEND_LABELS = {
   profit: 'Profit',
 };
 
+/* [CHARTTEXT-01/02] 组件固定文案（无障碍描述），与 sankey/config.js 的 SANKEY_TEXT 键集一一对应 */
+const AINVEST_COMPONENT_TEXT = {
+  chartLabel: 'Sankey chart showing flows and volumes between nodes',
+  legendLabel: 'Sankey color legend',
+  linkLabel: '{source} to {target}, value {value}',
+  nodeLabel: '{name}, value {value}',
+};
+
 const AINVEST_STATUS_LABELS = {
   盈利: 'Profit',
   亏损: 'Loss',
@@ -70,6 +78,7 @@ export function financialSankeyPresentation(config, { theme = 'ths' } = {}) {
       name: AINVEST_NODE_NAMES[node.id] ?? node.name,
     })),
     legendLabels: { ...AINVEST_LEGEND_LABELS },
+    text: { ...AINVEST_COMPONENT_TEXT },
     period,
     timelinePeriod: englishTimelinePeriod(period),
     shortPeriod: englishShortPeriod(period),
