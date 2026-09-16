@@ -286,6 +286,22 @@
       </div>
 
       <div class="field">
+        <div class="field-label"><b>方向语义</b><span>CHORD-05/06 · 弦图形态</span></div>
+        <div class="seg" id="seg-chord-variant">
+          <button data-value="undirected" class="is-active">无向</button>
+          <button data-value="directed">有向</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><b>实体标签排列</b><span>CHORD-11</span></div>
+        <div class="seg" id="seg-chord-label-layout">
+          <button data-value="arc" class="is-active">环绕</button>
+          <button data-value="horizontal">横排</button>
+        </div>
+      </div>
+
+      <div class="field">
         <div class="field-label"><b>维度标签排列</b><span>RADAR-07/14</span></div>
         <div class="seg" id="seg-axis-label-layout">
           <button data-value="horizontal" class="is-active">横排</button>
@@ -406,7 +422,7 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -515,6 +531,8 @@
       button.classList.toggle('is-active', button.dataset.value === effectiveRadarShape));
     document.getElementById('seg-radar-editable').querySelectorAll('button').forEach((button) =>
       button.classList.toggle('is-active', button.dataset.value === (effectiveRadarEditable ? 'on' : 'off')));
+    document.getElementById('seg-chord-variant').closest('.field').hidden = !caps.chordVariant;
+    document.getElementById('seg-chord-label-layout').closest('.field').hidden = !caps.chordLabelLayout;
     document.getElementById('seg-axis-label-layout').closest('.field').hidden = !caps.axisLabelLayout;
     document.getElementById('seg-axis-label-layout').querySelectorAll('button').forEach((button) =>
       button.classList.toggle('is-active', button.dataset.value === effectiveAxisLabelLayout));
@@ -562,6 +580,8 @@
         ratingStyle: state.ratingStyle, /* [RADAR-15] 分区背景：渐变 / 分段 */
         ratingBandCount: state.ratingBandCount, /* [RADAR-15] 5 / 6 段，同步图面与说明 */
         axisLabelLayout: state.axisLabelLayout, /* [RADAR-07/14] 横排 / 环绕；auto 保留示例默认 */
+        chordVariant: state.chordVariant, /* [CHORD-05/06] 无向一条带 / 有向每向一条 */
+        chordLabelLayout: state.chordLabelLayout, /* [CHORD-11] 环绕弧字 / 径向横排 */
         yIndicator: state.yIndicator === 'on', /* [TOOLTIP-12] Y 横线 + Y 值徽标，默认关 */
         animation: state.animation === 'on',
       }).instance;
@@ -605,6 +625,8 @@
   wireSeg('seg-rating-style', 'ratingStyle');
   wireSeg('seg-rating-band-count', 'ratingBandCount');
   wireSeg('seg-radar-editable', 'radarEditable');
+  wireSeg('seg-chord-variant', 'chordVariant');
+  wireSeg('seg-chord-label-layout', 'chordLabelLayout');
   wireSeg('seg-axis-label-layout', 'axisLabelLayout');
   wireSeg('seg-axis-title', 'axisTitle');
   wireSeg('seg-area', 'area');

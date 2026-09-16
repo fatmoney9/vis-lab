@@ -35,7 +35,7 @@ import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
-import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBand } from './geometry.js';
+import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBandPx } from './geometry.js';
 
 /* [PIE-03] 图例 marker 类型键：三主题都按这个键取「饼/环 6×6 圆点」——
    THS / iFinD-PC 命中各自 legend-marker.shapes.dot，Ainvest 是 unified 恒圆点（LEGEND-03）。
@@ -284,7 +284,7 @@ export function PieChart(host, cfg) {
          两者互为因果 —— 截断是离散的，截完必然比可用宽窄一点，回头重算带宽就会收缩，
          收缩后又要多截一个字，`column` 档尤其会来回震荡。锚在容器上一刀切断。 */
       const legendW = legend === 'bottom' ? 0 : legendHost.getBoundingClientRect().width + gapPx;
-      const band = labelBand(
+      const band = labelBandPx(
         host.clientWidth - legendW,
         R,
         tokenNum(plotHost, '--size-donut-label-band-max') || Infinity,

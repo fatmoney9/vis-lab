@@ -8,11 +8,13 @@
 |---|---|
 | `axis` | 不用：轴标签是绕圆的八向定位，不是直角坐标的行列宽度与碰撞模型 |
 | `axis-title` | 不用：无坐标轴，也没有轴标题带可言 |
+| `chart-text` | 用 |
 | `crosshair` | 不用：本族的指示是扇形高亮，不存在 X / Y 向指示线与轴贴片 |
 | `datazoom` | 不用：维度是并列的固定几项，没有可开窗的类目序列 |
 | `format` | 用 |
 | `frame` | 用 |
 | `grid` | 不用：网格是同心环或正多边形，不是直角网格线与 0 轴基线 |
+| `highlight-state` | 不用：选中态走 legend-state 的单选迁移，扇形高亮只作用于自身，没有邻域与钉住 |
 | `image-content` | 不用：轴标签与气泡只承载名称和数值，没有图片内容块 |
 | `label` | 用 |
 | `legend` | 用 |
@@ -21,6 +23,7 @@
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |
+| `polar-label` | 用 |
 | `scale` | 用 |
 | `split` | 用 |
 | `theme` | 用 |

@@ -100,6 +100,17 @@ function validateSettings() {
 
 validateSettings();
 
+/*
+ * [CHARTTEXT-01] 本族固定文案的缺省表（无障碍描述）。调用方经 config.text 整套替换（CHARTTEXT-02），
+ * 本族不认识语言：Ainvest 的英文表由 L3 demos/sankey-presentation.js 注入。图例文字另走 legendLabels。
+ */
+export const SANKEY_TEXT = Object.freeze({
+  chartLabel: '桑基图：展示节点之间的流向与流量',
+  legendLabel: '桑基图颜色图例',
+  linkLabel: '{source}流向{target}，数值{value}',
+  nodeLabel: '{name}，数值{value}',
+});
+
 export function resolveSankeySettings(platform) {
   if (!['pc', 'mobile'].includes(platform)) {
     throw new TypeError("SankeyChart：platform 仅支持 'pc' 或 'mobile'");

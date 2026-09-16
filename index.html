@@ -673,6 +673,8 @@
       ratingBandCount: '6',  /* [RADAR-15] 分段档同时控制图内环带与底部说明，默认 6 段 */
       axisLabelLayout: 'auto', /* [RADAR-07/14] 常规横排、可调节环绕；点选后显式覆盖 */
       waterfallColor: 'primary',
+      chordVariant: 'undirected', /* [CHORD-05/06] 无向一条带 / 有向每向一条 */
+      chordLabelLayout: 'arc',    /* [CHORD-11] 环绕弧字 / 径向横排 */
       dataLabel: 'auto',      /* [LABEL-05] 开关的「开」= 按图表类型默认，不落进 cfg */
       labelLayout: 'off',     /* [PIE-12] 饼环显隐 + 形态合一：关 / 引线 / 扇区内，默认关 */
       labelAlign: 'anchor',   /* [PIE-13] 默认就近；仅引线档生效 */
@@ -748,6 +750,13 @@
       '折线图': ICON('<path d="M2.5 11l3.5-4 3 2.5L13.5 4"/>'),
       /* 组合：两根柱 + 一条线 */
       '组合图': ICON('<path d="M3.5 13V8.5M12.5 13V6"/><path d="M2.5 5.5l4 2 3-2.5 4 1.5"/>'),
+      /* 瀑布：三个**逐级悬空**的块拼成阶梯。
+         ⚠️ 两条都是试出来的，别退回去：
+         ① **不画三根等底的竖条**——那就是柱状图的图标，两族会撞；瀑布的辨识点是「柱不落在同一条底线上」。
+         ② **不画虚线连接线**——语义上对，但 svg 继承了 stroke-linecap:round，
+            1.5 长的 dash 在 16px 下被磨成一串灰点，整个图标糊成一团。
+         悬空这一点由块的错位表达就够了，不需要连接线。 */
+      '瀑布图': ICON('<rect x="2.8" y="9" width="3" height="4" rx=".6"/><rect x="6.5" y="6" width="3" height="4" rx=".6"/><rect x="10.2" y="3" width="3" height="4" rx=".6"/>'),
       /* 桑基：左右两侧节点 + 中间流带 */
       '桑基图': ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
       /* 树图：一个矩形被切成大小不等的块 */
@@ -756,12 +765,16 @@
       '雷达图': ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/><path d="M8 2.5v5.4M8 7.9l5.2-1.6M8 7.9l-5.2-1.6M8 7.9l3.2 4.6M8 7.9l-3.2 4.6" stroke-opacity=".45"/>'),
       /* 饼环：圆 + 一条切分线 */
       '饼图与环形图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
+      /* 弦图：圆环 + 两条向心收束的弦 */
+      '弦图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M3.6 5.1C7.2 8.4 8.8 8.4 12.4 5.1M4.4 11.4C7 8 9.6 7.2 13.2 9.2" stroke-opacity=".55"/>'),
       /* 族级回落 */
       cartesian: ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
       sankey: ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
       treemap: ICON('<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M8.5 3v10M8.5 8h5"/>'),
       radar: ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/>'),
       pie: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
+      waterfall: ICON('<rect x="2.8" y="9" width="3" height="4" rx=".6"/><rect x="6.5" y="6" width="3" height="4" rx=".6"/><rect x="10.2" y="3" width="3" height="4" rx=".6"/>'),
+      chord: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M3.6 5.1C7.2 8.4 8.8 8.4 12.4 5.1"/>'),
       /* 跨族入口：田字格 */
       __all: ICON('<rect x="2.5" y="2.5" width="5" height="5" rx="1"/><rect x="8.5" y="2.5" width="5" height="5" rx="1"/><rect x="2.5" y="8.5" width="5" height="5" rx="1"/><rect x="8.5" y="8.5" width="5" height="5" rx="1"/>'),
     };
@@ -1140,6 +1153,8 @@
             ${caps.radarShape ? `<div class="field"><span class="field__label">闭合轮廓</span><span class="field__hint">RADAR-05 · 直线或曲线</span>${segment('radarShape', [['straight', '直线'], ['curve', '曲线']], effectiveRadarShape)}</div>` : ''}
             ${caps.ratingStyle ? `<div class="field"><span class="field__label">分区</span><span class="field__hint">RADAR-15 · 默认连续渐变，可切离散色带</span>${segment('ratingStyle', [['gradient', '渐变'], ['bands', '分段']], state.ratingStyle)}</div>` : ''}
             ${caps.ratingBandCount && state.ratingStyle === 'bands' ? `<div class="field"><span class="field__label">分段数量</span><span class="field__hint">RADAR-15 · 同时控制雷达色带与底部说明</span>${segment('ratingBandCount', [['5', '5 段'], ['6', '6 段']], state.ratingBandCount)}</div>` : ''}
+            ${caps.chordVariant ? `<div class="field"><span class="field__label">方向语义</span><span class="field__hint">CHORD-05/06 · 无向一条带或有向每向一条</span>${segment('chordVariant', [['undirected', '无向'], ['directed', '有向']], state.chordVariant)}</div>` : ''}
+            ${caps.chordLabelLayout ? `<div class="field"><span class="field__label">实体标签排列</span><span class="field__hint">CHORD-11 · 沿弧环绕或径向横排</span>${segment('chordLabelLayout', [['arc', '环绕'], ['horizontal', '横排']], state.chordLabelLayout)}</div>` : ''}
             ${caps.axisLabelLayout ? `<div class="field"><span class="field__label">维度标签排列</span><span class="field__hint">RADAR-07/14 · 横排或沿外围圆弧环绕</span>${segment('axisLabelLayout', [['horizontal', '横排'], ['arc', '环绕']], effectiveAxisLabelLayout)}</div>` : ''}
             ${caps.radarEditable ? `<div class="field"><span class="field__label">可调节能力</span><span class="field__hint">RADAR-18 · 开启后使用单系列径向手柄</span>${segment('radarEditable', [['off', '关'], ['on', '开']], effectiveRadarEditable ? 'on' : 'off')}</div>` : ''}
             ${caps.axisValue && !effectiveRadarEditable && effectiveAxisLabelLayout === 'horizontal' ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标签数值</span><span class="field__hint">RADAR-07 · 名称下方加一行数值；不影响 hover</span></div><label class="switch" aria-label="轴标签数值"><input id="axis-value-switch" type="checkbox"${state.axisValue ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
@@ -1303,6 +1318,7 @@
           treemapColor: 'intensity', axisValue: false,
           radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', seriesCount: defaultIndexSeriesCountOf(state.detail), ratingStyle: 'gradient', ratingBandCount: '6',
           axisLabelLayout: 'auto', waterfallColor: 'primary',
+          chordVariant: 'undirected', chordLabelLayout: 'arc',
           area: false, zoom: false, axisTitle: false, animation: true, periodIndex: 0,
         });
         rerenderDetail();

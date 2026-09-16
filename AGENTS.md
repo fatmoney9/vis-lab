@@ -2,7 +2,7 @@
 
 ## 定位
 
-这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、饼 / 环、桑基、矩形树图、雷达图与瀑布图六族）。
+这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、饼 / 环、桑基、矩形树图、雷达图、瀑布图与弦图七族）。
 
 ## 运行与验证
 
@@ -33,7 +33,10 @@
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
+| **组件写死的文案（读屏描述 / 看板固定行名）** | `core/chart-text.js` | `resolveChartText`（缺省表 + `config.text` 整套替换）· `fillText`（`{key}` 模板）（[CHARTTEXT-01..03]）——别在 L2 拼中文模板字符串，Ainvest 的英文由 L3 注入 |
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
+| **图元 hover / 点击钉住的状态** | `core/highlight-state.js` | `applyHover` · `applyLeave` · `applyPick` · `applyClear` · `activeTarget`（[SANKEY-10] / [SANKEY-20] / [TREEMAP-06]）——**钉位只有一个**，别在 L2 给每类图元各留一个变量再手工维持互斥 |
+| **把文字摆在圆周上 / 求绕圆标签带宽** | `core/polar-label.js` | `pointAt`（极坐标→直角，**全库唯一三角公式**）· `labelAnchor`（八向对齐）· `labelArc`（可读弧线）· `labelBand`（带吃剩余并封顶）（[RADAR-07] / [RADAR-14] / [PIE-13]） |
 | Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸）。**气泡宽度只在 TOOLTIP-01 一处定**（内容 / 视口 / 容器三道封顶）——不要给单个图型另写 `.dv-tooltip` 的 `max-width` 覆盖，内容放不下时先重量全族再调通用值 |
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
@@ -72,6 +75,9 @@
   `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
   Ainvest 的**图表内部示例内容统一为英文**，由 `demos/chart-presentation.js` 在最终配置装配时转换；
   站点导航与配置面板仍保持中文。语言属于 L3 展示数据，不得把品牌或中英文判断写进 L2 组件。
+  组件自己写死的文案（无障碍描述、看板固定行名）配置里没有、翻译够不着，走 L1 `core/chart-text.js`：
+  L2 给中文缺省表，L3 经 `config.text` **整套**注入英文（`specs/chart-text.md`）。新增这类文案时两边同一次改齐，
+  否则 Ainvest 渲染当场抛错。
   **唯一已知例外是桑基**：因 SANKEY-23 的 812px 横版财报外框与序列统一高度，另有 `playground/sankey-preview.html`
   独立面（**自带数据、不 import `demos/examples.js`**），且两个预览面里有专属样式与旋钮接线。
 - **另有 `playground/radar-preview.html`**（雷达专用对照面，六个典型配置 × 三主题同屏；是回归矩阵、不是六种图表分类）。它与桑基那条**性质不同**：
@@ -79,12 +85,15 @@
   想为某个图型另开对照面时照它、不要照桑基。
   这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
 - `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
+  画廊卡片靠 `.example-card__preview .chart-host { pointer-events: none }` **继承**关掉交互，所以
+  **组件样式不得给命中元素显式声明 `pointer-events`**——显式值优先于继承值，写死就等于在预览卡片里
+  把鼠标要回来（2026-09-16 弦图与桑基图实测如此）。透明粗描边与 `fill: transparent` 的热区默认就能命中，不必声明。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
 - 多人分支、中文提交、验证和 PR 约定以 `CONTRIBUTING.md` 为准。
 
 ## 当前状态与下一步
 
-当前有**六个 L2 图表组件**：
+当前有**七个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
@@ -118,5 +127,15 @@
   - **常规雷达的 hover 热区是扇形不是数据点**（RADAR-10，基线 9.1 的 0728 更新）；气泡恒 `follow`（TOOLTIP-07 无坐标系图特例，L2 定死、不进 behavior.json）。点系列进钉住态（RADAR-11）：一个问「这个维度各系列多少」，一个问「这个系列各维度多少」
   - **可调节雷达图**是 `editable: true` 的单系列输入能力（RADAR-18），不是新图族也不占 `variant`；手柄沿径向轴拖动、可键盘调值，仍共用 `[0,max]` 标尺。它不渲染常规扇形 hover 热区；多系列直接抛错，避免同轴手柄重叠后编辑对象不明
   - 对外示例分**标准雷达 / 多数据雷达 / 分区雷达**，但组件视觉变体仍只有 `variant: 'basic' | 'rating'`，多数据只由 `series` 数量表达且不开放可调节能力；仅 index 详情页用“数据组数”滑块选择 2–10 条示例系列，它不是 `CHART_CAPABILITIES` 或组件配置。网格形状（圆 / 正多边形）、闭合形状（直线 / 曲线）与维度标签排列（横排 / 环绕）是可正交组合的组件 cfg；可调节能力只用于单系列。主预览面用旋钮组合，专项面对六个典型配置做三主题回归。维度标签用 `axisLabelLayout: 'horizontal' | 'arc'`，常规默认横排、editable 默认环绕，两者均可显式覆盖。分区示例用 `ratingStyle` 在连续渐变（默认）与离散色带间切换；渐变固定取独立五档色阶，离散档支持独立的 5 / 6 段色阶，`ratingBandLabels.length` 同时控制图内色带、环线与底部色块，阈值文案可配置、色值不可配置
+
+- **ChordChart**（`charts/charts/chord/`，见 `specs/chord.md` CHORD-01..19）：同一组实体之间的**相互流动**。与桑基互补——桑基讲纵向拆解、弦图讲横向流转，但**两者不能合成一个组件**：桑基强制 DAG、禁自环、要求流量守恒，而 A→B 与 B→A 同时成环正是弦图的本体，校验规则互为否定。要点：
+  - 输入是 `entities` + **n×n 流量方阵**（`matrix[i][j]` = i 流向 j）。对角线一律忽略、负值与非数按 0，全零矩阵只画外圈占位不抛错（CHORD-01）
+  - **角度 = 数据、半径 = 常量**，与饼环同列、与雷达相反——这是 `specs/radar.md`「下沉点①」不被弦图触发的依据
+  - `variant: 'undirected'（默认）| 'directed'` 的**唯一差异是槽位表**（CHORD-05）：无向档弧长 = 总流出、有向档 = 流出 + 流入。同一份数据两档外圈弧长不同是模型的必然结果，不是 bug。角度分配、路径、取色、交互、动效一概与 variant 无关；方向由目标端**按比例收窄**表达，不用 `<marker>` 箭头
+  - 路径**手写**，不用 `d3.chord()` / `d3.ribbon()`（判据同桑基不用 `d3-sankey`）：环带是「外弧 sweep=1 + 内弧 sweep=0」，弦是两段内圆弧 + 两段**以圆心为唯一控制点**的二次贝塞尔。⚠️ 大弧标志在跨度 ≤ π 时取 0 或 1 画出来一样，**均匀数据永远测不出写错**，验收必须造「单实体占比 > 50%」的夹具
+  - 实体色走**扇区盘**（`type:'pie'`，COLOR-08）——外圈实体与饼扇区是同一种东西；超出盘长按声明序循环（Ainvest 8 色，n ≥ 9 时循环，见 `specs/chord.md` 待办）
+  - `entityLabelLayout: 'arc'（默认）| 'horizontal'` 两档**共用 L1 `core/polar-label.js`**，本族一份都不复制。⚠️ **两档的画布形状不同**：arc 档四周等宽是正方形，horizontal 档照雷达**横竖分开**（横向带由**容器宽度**决定）——两档共用 `min(宽,高)` 会让横排档的带宽被高度饿死、标签整层渲染成空串，而门禁与单测全绿
+  - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
+  - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

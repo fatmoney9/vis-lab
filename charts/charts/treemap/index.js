@@ -4,12 +4,16 @@
  * API 只接收层级数据与形态语义：
  *   { name?, root:{name,value?,children?}, direction='squarify',
  *     variant='local', labelType='twoLineCenter', colorMode='intensity', colorThresholds?,
- *     platform='pc', animation=true }
+ *     platform='pc', animation=true, text? }
+ * text 是组件固定文案的整套替换（CHARTTEXT-01/02），缺省为 content.js 的 TREEMAP_TEXT。
  * 高度由宿主容器决定；间距、圆角、文字和颜色由 token / 公共构件决定；
  * 语义分档阈值由业务配置提供。
  */
 import { hierarchy, select, treemap, treemapDice, treemapSlice, treemapSquarify } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
+import {
+  createHighlightState, applyHover, applyLeave, applyPick, activeTarget,
+} from '../../core/highlight-state.js';
 import { tokenNum } from '../../core/tokens.js';
 import { modeOf, resolveBehavior } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
@@ -20,6 +24,7 @@ import { ITEM_COLOR_MODES, resolveItemColors } from '../../core/visual-color.js'
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { reducedMotion, runGrowth } from '../../core/motion.js';
+import { fillText, resolveChartText } from '../../core/chart-text.js';
 import {
   displayChildren,
   entryCells,
@@ -30,6 +35,7 @@ import {
 import {
   detailTooltipContent,
   itemPresentation,
+  TREEMAP_TEXT,
 } from './content.js';
 
 const NAME_CLASS = 'dv-treemap-label__name';
@@ -113,6 +119,8 @@ export function TreemapChart(host, cfg) {
   if (!['pc', 'mobile'].includes(platform)) {
     throw new TypeError("TreemapChart：platform 仅支持 'pc' 或 'mobile'");
   }
+  /* [CHARTTEXT-01/02] 固定文案：不给走缺省表，给了必须整套——语言由 L3 决定，本层不判断 */
+  const chartText = resolveChartText(TREEMAP_TEXT, cfg.text, 'TreemapChart');
 
   const initialHostHeight = host.clientHeight;
   host.replaceChildren();
@@ -166,7 +174,7 @@ export function TreemapChart(host, cfg) {
     const frame = createFrame(plotHost, { width, height: plotHeight, xBand: false, minGridHeight: 0 });
     frame.svg
       .attr('class', 'dv-treemap')
-      .attr('aria-label', `${name ?? root.name ?? '矩形树图'}：按面积展示层级占比`);
+      .attr('aria-label', fillText(chartText.chartLabel, { name: name ?? root.name ?? chartText.fallbackName }));
 
     if (!items.length) {
       selfHeight = host.clientHeight;
@@ -237,7 +245,10 @@ export function TreemapChart(host, cfg) {
       .style('color', (d) => `var(${d.data.item.colorVar})`)
       .attr('tabindex', 0)
       .attr('role', 'button')
-      .attr('aria-label', (d) => `${d.data.item.displayName}，${d.data.item.displayValue}，可查看详情`);
+      .attr('aria-label', (d) => fillText(chartText.leafLabel, {
+        name: d.data.item.displayName,
+        value: d.data.item.displayValue,
+      }));
     groups.append('rect')
       .attr('class', 'dv-treemap-node__rect')
       .style('fill-opacity', (d) => d.data.item.opacity);
@@ -354,7 +365,10 @@ export function TreemapChart(host, cfg) {
     const tooltipMode = 'follow';
     const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
     let hideTimer = 0;
-    let pinnedLeaf = null;
+    /* [TREEMAP-06] hover / 钉住的状态迁移走 L1（core/highlight-state.js），与其他关系型图同一套。
+       本族只有一类图元、也没有邻域可算，故 kind 恒为 'leaf'、key 直接用 leaf 对象本身——
+       状态与 pinnedLeaf 一样活在 build() 内，重渲即重置，行为与先前逐字一致。 */
+    let highlight = createHighlightState();
     const reset = () => masks.classed('is-active', false);
     const showTip = (event, leaf) => {
       clearTimeout(hideTimer);
@@ -376,23 +390,31 @@ export function TreemapChart(host, cfg) {
         : { x: frame.grid.left + (leaf.x0 + leaf.x1) / 2, y: frame.grid.top + (leaf.y0 + leaf.y1) / 2 };
       tooltip.place(tooltipMode, { grid: frame.grid, cx: pointer.x, pointer });
     };
+    /* 把当前高亮目标画出来；返回是否有目标——没有时气泡怎么收由调用方决定
+       （移出是延时收，点掉钉住是立刻收）。 */
+    const renderHighlight = (event) => {
+      const target = activeTarget(highlight);
+      if (!target) { reset(); return false; }
+      showTip(event, target.key);
+      return true;
+    };
+    const enter = (event, leaf) => {
+      highlight = applyHover(highlight, 'leaf', leaf);
+      renderHighlight(event);
+    };
     const leave = () => {
-      if (pinnedLeaf) {
-        showTip(null, pinnedLeaf);
-      } else {
-        reset();
-        hideTimer = setTimeout(() => tooltip.hide(), hideDelay);
-      }
+      highlight = applyLeave(highlight);
+      /* 有钉住则回落到钉住态，否则延时收气泡 */
+      if (!renderHighlight(null)) hideTimer = setTimeout(() => tooltip.hide(), hideDelay);
     };
     /* [TREEMAP-06] 单层展示，无下钻：点击只钉住 / 取消钉住 Tooltip。 */
     const activate = (event, leaf) => {
-      pinnedLeaf = pinnedLeaf === leaf ? null : leaf;
-      if (pinnedLeaf) showTip(event, leaf);
-      else { reset(); tooltip.hide(); }
+      highlight = applyPick(highlight, 'leaf', leaf);
+      if (!renderHighlight(event)) tooltip.hide();
     };
     groups
-      .on('mouseenter', (event, leaf) => showTip(event, leaf))
-      .on('mousemove', (event, leaf) => showTip(event, leaf))
+      .on('mouseenter', enter)
+      .on('mousemove', enter)
       .on('mouseleave', leave)
       .on('click', (event, leaf) => activate(event, leaf))
       .on('keydown', (event, leaf) => {

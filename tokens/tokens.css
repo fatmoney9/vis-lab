@@ -263,6 +263,16 @@
   --opacity-waterfall-delta-fill: 0.2;
   --size-waterfall-delta-cap: 2px;
   --size-waterfall-arrow-line: 1px;
+  --size-chord-container: 200px;
+  --size-chord-radius: 80px;
+  --size-chord-ring: 10px;
+  --size-chord-label-gap: var(--spacing-4);
+  --size-chord-label-band: 56px;
+  --font-size-chord-label: var(--font-size-extra-small);
+  --line-height-chord-label: var(--line-height-small);
+  --font-weight-chord-label: var(--font-weight-regular);
+  --opacity-chord-ribbon: 0.2;
+  --opacity-chord-ribbon-active: 0.64;
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -555,6 +565,16 @@
   --opacity-waterfall-delta-fill: 0.2;
   --size-waterfall-delta-cap: 2px;
   --size-waterfall-arrow-line: 1px;
+  --size-chord-container: 200px;
+  --size-chord-radius: 80px;
+  --size-chord-ring: 10px;
+  --size-chord-label-gap: var(--spacing-4);
+  --size-chord-label-band: 56px;
+  --font-size-chord-label: var(--font-size-extra-small);
+  --line-height-chord-label: var(--line-height-small);
+  --font-weight-chord-label: var(--font-weight-regular);
+  --opacity-chord-ribbon: 0.2;
+  --opacity-chord-ribbon-active: 0.64;
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -849,6 +869,16 @@
   --opacity-waterfall-delta-fill: 0.2;
   --size-waterfall-delta-cap: 2px;
   --size-waterfall-arrow-line: 1px;
+  --size-chord-container: 220px;
+  --size-chord-radius: 90px;
+  --size-chord-ring: 12px;
+  --size-chord-label-gap: var(--spacing-4);
+  --size-chord-label-band: 56px;
+  --font-size-chord-label: var(--font-size-extra-small);
+  --line-height-chord-label: var(--line-height-small);
+  --font-weight-chord-label: var(--font-weight-bold);
+  --opacity-chord-ribbon: 0.2;
+  --opacity-chord-ribbon-active: 0.64;
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

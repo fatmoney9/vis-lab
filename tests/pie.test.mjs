@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBand,
+  sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBandPx,
 } from '../charts/charts/pie/geometry.js';
 import { truncateBatch } from '../charts/core/label.js';
 
@@ -206,7 +206,7 @@ test('PIE-12：radial 取负按 0 兜底（肘点退化到弧上，不产生反�
 /* ── PIE-13 三档对齐（带宽已改为入参，见 PIE-02/13）───────────────── */
 
 const R = 70;
-/* band 现在是**入参**：由容器算好、两侧同值（labelBand），alignOutside 只在带内排布。
+/* band 现在是**入参**：由容器算好、两侧同值（labelBandPx），alignOutside 只在带内排布。
    取 76 让下面几档都排得开，个别用例再单独收紧以验 maxWidth 的响应。 */
 const OPT = { lateral: 8, gap: 8, R, band: 76 };
 /* 三个右侧扇区。最远的肘点与最宽的文本刻意不在同一项——column 与 anchor 的末端才会分开。 */
@@ -296,22 +296,22 @@ test('PIE-13：空入参不抛错', () => {
 /* ── PIE-02/13 标签带宽：只看容器 ──────────────────────────────── */
 
 test('PIE-13：带宽 = (可用宽 − 2R) / 2，容器越宽带越宽', () => {
-  assert.equal(labelBand(400, 70, Infinity), 130);   /* (400−140)/2 */
-  assert.equal(labelBand(500, 70, Infinity), 180);
-  assert.ok(labelBand(500, 70, Infinity) > labelBand(400, 70, Infinity), '单调不减');
+  assert.equal(labelBandPx(400, 70, Infinity), 130);   /* (400−140)/2 */
+  assert.equal(labelBandPx(500, 70, Infinity), 180);
+  assert.ok(labelBandPx(500, 70, Infinity) > labelBandPx(400, 70, Infinity), '单调不减');
 });
 
 test('PIE-13：带宽封顶 size-donut-label-band-max，且不出负数', () => {
-  assert.equal(labelBand(400, 70, 120), 120, '(400−140)/2=130 → 被 120 封顶');
-  assert.equal(labelBand(200, 70, 120), 30, '容器紧时按容器，封顶不生效');
-  assert.equal(labelBand(100, 70, 120), 0, '容器比环还窄 → 带宽 0，不出负数');
-  assert.equal(labelBand(-50, 70, 120), 0);
+  assert.equal(labelBandPx(400, 70, 120), 120, '(400−140)/2=130 → 被 120 封顶');
+  assert.equal(labelBandPx(200, 70, 120), 30, '容器紧时按容器，封顶不生效');
+  assert.equal(labelBandPx(100, 70, 120), 0, '容器比环还窄 → 带宽 0，不出负数');
+  assert.equal(labelBandPx(-50, 70, 120), 0);
 });
 
 test('PIE-13：带宽与文本完全解耦 —— 这是截断不会引起震荡的根据', () => {
   /* 端到端地证：同一容器下，文本宽差 100 倍，每个标签拿到的可用宽也一模一样。
      可用宽不随文本变 ⇒ 截断改变文本后不会反过来改可用宽 ⇒ 不存在「截了又要再截」的环。 */
-  const band = labelBand(400, R, 120);
+  const band = labelBandPx(400, R, 120);
   const narrow = alignOutside([{ side: 'right', ex: 10, textWidth: 20 }], 'anchor', { ...OPT, band });
   const wide = alignOutside([{ side: 'right', ex: 10, textWidth: 2000 }], 'anchor', { ...OPT, band });
 

@@ -544,6 +544,41 @@ export const THEMES = [
   { id: 'ainvest', label: 'Ainvest', dot: '#265FFC' },
 ];
 
+/* ── 弦图：行业间资金流向（CHORD-01）────────────────────────────
+   申万一级行业，按「资金从 i 流向 j」组织成方阵。 */
+const CHORD_INDUSTRIES = [
+  '电子', '银行', '医药生物', '食品饮料', '电力设备',
+  '非银金融', '计算机', '有色金属', '汽车', '机械设备',
+];
+
+/*
+ * 确定性伪随机：同一对 (i, j) 恒得同一个数。
+ * **这一条是为旋钮服务的**——行业数 4→10 拖动时，已有格子的值一个不变，
+ * 新增行业只是在环上多出一段，正是 CHORD-02「不按值排序」想保住的那种可比性；
+ * 若这里用 Math.random()，每拖一格整张图都会重画成另一份数据，什么也比不出来。
+ *
+ * 约一成组合判为无往来：真实资金流不会两两全通，全连通的矩阵会让 n=10 直接顶到
+ * 45 条弦的上限，看不出稀疏与密集的差别。
+ * ⚠️ 阈值**只能取小**：单元格为零意味着该方向没有回流，弦在那一端收成一个点（这是
+ * 单向流量的正确画法，不是缺陷）；但一对实体里恰好一个方向为零的概率是 2p(1−p)，
+ * 阈值 0.22 时高达三分之一，满屏都是收成尖点的带子，图面会显得毛躁。0.12 约两成，
+ * 既留得住单向形态，又不至于喧宾夺主。
+ */
+const industryFlowAt = (i, j) => {
+  const h = Math.sin((i + 1) * 12.9898 + (j + 1) * 78.233) * 43758.5453;
+  const r = h - Math.floor(h);
+  return r < 0.12 ? 0 : Math.round(r * 90 + 10) * 10;
+};
+
+const industryFlow = (count) => {
+  const entities = CHORD_INDUSTRIES.slice(0, count);
+  return {
+    entities,
+    matrix: entities.map((_, i) => entities.map((__, j) => (i === j ? 0 : industryFlowAt(i, j)))),
+  };
+};
+
+
 /* 数据密度 = 传给 cfg 的类目数（cfg 是 n 的函数，故新图表可自行解释「一个类目」的含义） */
 export const DENSITY = { few: 4, mid: 16, many: 36 };
 export const DENSITY_LEVELS = [
@@ -641,6 +676,10 @@ export const CHART_CAPABILITIES = {
   },
   /* 桑基当前由节点 hover / 点击和季度播放 API 承担交互，不复用坐标轴或饼环旋钮。 */
   sankey: { density: false },
+  /* [CHORD-05][CHORD-11][CHORD-19] 弦图无坐标轴、无 Y 轴、无折线：zoom / area / axisTitle /
+     dataLabel 一概不声明。**不声明 legendSelect**：本族根本不渲染图例（CHORD-19 写明这是
+     判断不是遗漏），没有图例可点。chordVariant / chordLabelLayout 是本族专属的两档形态语义。 */
+  chord: { density: true, animation: true, chordVariant: true, chordLabelLayout: true },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
   treemap: { animation: true, treemapColor: true },
   /* 瀑布图固定少量叙事项，不提供密度旋钮；仅颜色提供预览旋钮。
@@ -797,67 +836,16 @@ export const EXAMPLES = [
     }),
   },
   {
-    id: 'sankey-financial', group: '桑基图', chart: 'sankey',
-    title: '财报收支拆解', spec: 'SANKEY-01 / SANKEY-24 / SANKEY-26', surfaces: BOTH,
-    description: '收入、成本与利润按真实业务阶段展开，负值保留方向并参与有符号守恒。',
-    summary: '15 节点 · 14 条流向 · 8 期',
-    preferredWidth: 812,
-    logicNote: '节点只接收业务角色、阶段与有符号流量；节点宽高、列距、最小可见粗细和主题语义色均由 Sankey token 解析。',
-    presentation: financialSankeyPresentation,
-    summaryByTheme: { ainvest: '15 nodes · 14 flows · 8 periods' },
-    playback: financialSankeyPlayback(),
-    cfg: () => financialSankey(),
+    id: 'donut', group: '饼图与环形图', chart: 'pie',
+    title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
+    description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
+    cfg: (n) => ({ name: '营收构成', variant: 'donut', items: sliceItems(n) }),
   },
   {
-    id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
-    title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
-    description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
-    densityValues: { few: 3, mid: 6, many: 8 },
-    densityUnit: '个模块',
-    densityControl: {
-      hint: 'PRD 建议 3–8 个入口模块',
-      default: 'mid',
-      labels: { few: '3项', mid: '6项', many: '8项' },
-    },
-    cfg: (count) => ({
-      name: '行业入口', root: treemapHierarchy(count), variant: 'entry',
-      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
-    }),
-  },
-  {
-    id: 'treemap-local', group: '矩形树图', chart: 'treemap',
-    title: '通用矩形树图', spec: 'TREEMAP-05 / TREEMAP-08 / TREEMAP-13', surfaces: BOTH,
-    description: '对应 PRD 局部类型单屏形态，展示头部重点或二级完整数据，兼顾比例和文字可读性。',
-    densityValues: { few: 10, mid: 18, many: 30 },
-    densityUnit: '项',
-    densityControl: {
-      hint: 'PRD 建议不超过 30 项',
-      default: 'mid',
-      labels: { few: '10项', mid: '18项', many: '30项' },
-    },
-    cfg: (count) => ({
-      name: '重点行业', root: treemapHierarchy(count), variant: 'local',
-      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
-    }),
-  },
-  {
-    id: 'treemap-overall', group: '矩形树图', chart: 'treemap',
-    title: '全局矩形树图', spec: 'TREEMAP-12 / TREEMAP-13', surfaces: BOTH,
-    description: '对应 PRD 整体类型固定页形态，容纳 30 项以上全量数据，面积严格映射真实占比。',
-    densityValues: { few: 32, mid: 42, many: 54 },
-    /* 上限必须盖过本例最大的预设档（54）：滑杆够不到自己的预设档，
-       就成了「三档面能看到、主站看不到」的静默分叉 */
-    densityRange: { min: 1, max: 60 },
-    densityUnit: '项',
-    densityControl: {
-      hint: 'PRD 建议 30 项以上',
-      default: 'mid',
-      labels: { few: '32项', mid: '42项', many: '54项' },
-    },
-    cfg: (count) => ({
-      name: '全市场行业', root: treemapHierarchy(count), variant: 'overall',
-      labelType: 'twoLineLeftBottom', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
-    }),
+    id: 'pie', group: '饼图与环形图', chart: 'pie',
+    title: '饼图', spec: 'PIE-02 / COLOR-08', surfaces: BOTH,
+    description: '实心饼图，与环形图同一组件、同一份数据，只差 variant 一个旋钮。',
+    cfg: (n) => ({ name: '营收构成', variant: 'pie', items: sliceItems(n) }),
   },
   {
     id: 'radar-basic', group: '雷达图', chart: 'radar',
@@ -926,6 +914,87 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
+    title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
+    description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
+    densityValues: { few: 3, mid: 6, many: 8 },
+    densityUnit: '个模块',
+    densityControl: {
+      hint: 'PRD 建议 3–8 个入口模块',
+      default: 'mid',
+      labels: { few: '3项', mid: '6项', many: '8项' },
+    },
+    cfg: (count) => ({
+      name: '行业入口', root: treemapHierarchy(count), variant: 'entry',
+      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
+    }),
+  },
+  {
+    id: 'treemap-local', group: '矩形树图', chart: 'treemap',
+    title: '通用矩形树图', spec: 'TREEMAP-05 / TREEMAP-08 / TREEMAP-13', surfaces: BOTH,
+    description: '对应 PRD 局部类型单屏形态，展示头部重点或二级完整数据，兼顾比例和文字可读性。',
+    densityValues: { few: 10, mid: 18, many: 30 },
+    densityUnit: '项',
+    densityControl: {
+      hint: 'PRD 建议不超过 30 项',
+      default: 'mid',
+      labels: { few: '10项', mid: '18项', many: '30项' },
+    },
+    cfg: (count) => ({
+      name: '重点行业', root: treemapHierarchy(count), variant: 'local',
+      labelType: 'twoLineCenter', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
+    }),
+  },
+  {
+    id: 'treemap-overall', group: '矩形树图', chart: 'treemap',
+    title: '全局矩形树图', spec: 'TREEMAP-12 / TREEMAP-13', surfaces: BOTH,
+    description: '对应 PRD 整体类型固定页形态，容纳 30 项以上全量数据，面积严格映射真实占比。',
+    densityValues: { few: 32, mid: 42, many: 54 },
+    /* 上限必须盖过本例最大的预设档（54）：滑杆够不到自己的预设档，
+       就成了「三档面能看到、主站看不到」的静默分叉 */
+    densityRange: { min: 1, max: 60 },
+    densityUnit: '项',
+    densityControl: {
+      hint: 'PRD 建议 30 项以上',
+      default: 'mid',
+      labels: { few: '32项', mid: '42项', many: '54项' },
+    },
+    cfg: (count) => ({
+      name: '全市场行业', root: treemapHierarchy(count), variant: 'overall',
+      labelType: 'twoLineLeftBottom', colorThresholds: TREEMAP_SEMANTIC_THRESHOLDS,
+    }),
+  },
+  {
+    id: 'sankey-financial', group: '桑基图', chart: 'sankey',
+    title: '财报收支拆解', spec: 'SANKEY-01 / SANKEY-24 / SANKEY-26', surfaces: BOTH,
+    description: '收入、成本与利润按真实业务阶段展开，负值保留方向并参与有符号守恒。',
+    summary: '15 节点 · 14 条流向 · 8 期',
+    preferredWidth: 812,
+    logicNote: '节点只接收业务角色、阶段与有符号流量；节点宽高、列距、最小可见粗细和主题语义色均由 Sankey token 解析。',
+    presentation: financialSankeyPresentation,
+    summaryByTheme: { ainvest: '15 nodes · 14 flows · 8 periods' },
+    playback: financialSankeyPlayback(),
+    cfg: () => financialSankey(),
+  },
+  {
+    id: 'chord-sector-flow', group: '弦图', chart: 'chord',
+    title: '行业资金流向', spec: 'CHORD-01 / CHORD-05 / CHORD-11', surfaces: BOTH,
+    description: '主力资金在申万一级行业之间的流转：外圈一段弧是一个行业，圈内的带是两个行业之间的往来，带的两端粗细分别是两个方向的量。',
+    summary: '6 个行业 · 双向流量',
+    summaryByTheme: { ainvest: '6 sectors · two-way flows' },
+    densityValues: { few: 4, mid: 6, many: 10 },
+    densityRange: { min: 4, max: 10 },
+    densityUnit: '个行业',
+    densityControl: {
+      label: '行业数',
+      hint: '组件下限是 3（CHORD-01）；示例从 4 起，10 已接近可读上限',
+      default: 'mid',
+      labels: { few: '4个', mid: '6个', many: '10个' },
+    },
+    logicNote: '组件只接收实体名与 n×n 流量方阵；弧长、弦宽、配色、透明度与标签排布全部由规范数据决定。对角线（行业自流）被忽略，负值与非数按 0。',
+    cfg: (count) => industryFlow(count),
+  },
+  {
     id: 'waterfall-bridge', group: '瀑布图', chart: 'waterfall',
     title: '累计桥接瀑布图', spec: 'WATERFALL-01 / WATERFALL-09', surfaces: BOTH,
     description: '从营业收入经过成本与费用的有符号增减，得到净利润；Ainvest 使用主题独占箭头柱。',
@@ -974,18 +1043,6 @@ export const EXAMPLES = [
         { id: 'equity', name: '所有者权益', axisLabel: ['所有者权益'], kind: 'total', value: 3e12, operatorBefore: '+' },
       ],
     }),
-  },
-  {
-    id: 'donut', group: '饼图与环形图', chart: 'pie',
-    title: '环形图', spec: 'PIE-01 / PIE-02', surfaces: BOTH,
-    description: '中空环形占比图，扇区按声明序固定取色，隐藏后重新闭合 360°。',
-    cfg: (n) => ({ name: '营收构成', variant: 'donut', items: sliceItems(n) }),
-  },
-  {
-    id: 'pie', group: '饼图与环形图', chart: 'pie',
-    title: '饼图', spec: 'PIE-02 / COLOR-08', surfaces: BOTH,
-    description: '实心饼图，与环形图同一组件、同一份数据，只差 variant 一个旋钮。',
-    cfg: (n) => ({ name: '营收构成', variant: 'pie', items: sliceItems(n) }),
   },
 
   /* ── 边界与极端情况（**只进 playground**）────────────────────────
@@ -1045,6 +1102,10 @@ export const EXAMPLES = [
  */
 export const CHART_FAMILIES = {
   cartesian: '直角坐标图',
+  /* chord → 关系流向图：桑基已占「流向图」，而两者是**两个 L2 组件**，按本表
+     「一个组件一族」的口径必须分开列（族名恒出的理由见 index.html renderNavigation
+     的注释）。差别也正在名字里——桑基是一笔总量的纵向拆解，弦图是同一组实体之间的相互流动。 */
+  chord: '关系流向图',
   pie: '占比图',
   radar: '多维对比图',
   sankey: '流向图',
@@ -1098,6 +1159,7 @@ export const capabilitiesOf = (example) => {
     ratingStyle: !!caps.ratingStyle && ratingRadar,
     ratingBandCount: !!caps.ratingBandCount && ratingRadar,
     axisLabelLayout: !!caps.axisLabelLayout,
+    chordVariant: !!caps.chordVariant, chordLabelLayout: !!caps.chordLabelLayout,
     radarEditable: !!caps.radarEditable && singleSeriesRadar,
     waterfallColor: !!caps.waterfallColor,
   };
@@ -1150,6 +1212,7 @@ export function buildConfig(example, state = {}) {
     treemapColor = 'intensity', axisValue = false,
     radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
     axisLabelLayout = 'auto', radarEditable = 'auto', waterfallColor = 'primary',
+    chordVariant = 'undirected', chordLabelLayout = 'arc',
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
@@ -1240,6 +1303,11 @@ export function buildConfig(example, state = {}) {
   /* [WATERFALL-10] Figma 的验收配置只保留主色 / 语义色两档，预览面始终显式下发当前选择。
      [WATERFALL-12] xAxisContent / showRelations 直接来自示例 cfg，是代码配置而非预览旋钮。 */
   if (caps.waterfallColor) cfg.colorMode = waterfallColor;
+  /* [CHORD-05][CHORD-11] 两档 variant 与两档标签排列都是**形态语义**（同 pie 的 variant）。
+     'undirected' 与 'arc' 是组件默认，故选中默认档时什么都不落进 cfg——「逻辑」面板里
+     没有这两个字段就等于走组件默认，与 animation 同一口径。 */
+  if (caps.chordVariant && chordVariant !== 'undirected') cfg.variant = chordVariant;
+  if (caps.chordLabelLayout && chordLabelLayout !== 'arc') cfg.entityLabelLayout = chordLabelLayout;
   /* [MOTION-07] 组件默认就播，故只有**关**才落进 cfg——「逻辑」面板里 cfg 无 animation = 走默认（开）。
      与 zoom / axisTitle「有才开」的方向相反，这里是「有才关」。 */
   if (caps.animation && animation === false) cfg.animation = false;

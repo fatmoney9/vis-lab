@@ -15,11 +15,13 @@
       "「行高规则 > 字号」等非数值规则不属于 token，见规范文档"
     ]
   },
-
   "$section-01": "涨跌、平盘与桑基业务语义色",
   "color-price-up": "#FF2436",
   "color-price-down": "#07AB4B",
-  "color-price-even": { "light": "rgba(0, 0, 0, 0.84)", "dark": "rgba(255, 255, 255, 0.84)" },
+  "color-price-even": {
+    "light": "rgba(0, 0, 0, 0.84)",
+    "dark": "rgba(255, 255, 255, 0.84)"
+  },
   "color-price-up-gradient-1": "{color-price-up}",
   "color-price-up-gradient-2": "rgba(255, 36, 54, 0.75)",
   "color-price-up-gradient-3": "rgba(255, 36, 54, 0.55)",
@@ -41,12 +43,10 @@
   "color-sankey-income": "#FF9500",
   "color-sankey-expense": "#3366FF",
   "color-sankey-profit": "{color-price-up}",
-
   "$section-02": "字体家族",
   "font-family-number": "THSJinRongTi",
   "font-family-cn": "system-ui,-apple-system,Noto Sans,San Francisco,BlinkMacSystemFont,Helvetica Neue,Helvetica,sans-serif",
   "font-family-en": "{font-family-cn}",
-
   "$section-03": "字号阶梯",
   "font-size-super-large": "24px",
   "font-size-extra-large": "20px",
@@ -58,7 +58,6 @@
   "font-size-super-small": "11px",
   "font-size-xxs": "10px",
   "font-size-xxxs": "9px",
-
   "$section-04": "行高阶梯",
   "line-height-super-large": "30px",
   "line-height-extra-large": "24px",
@@ -69,12 +68,10 @@
   "line-height-extra-small": "14px",
   "line-height-super-small": "12px",
   "line-height-xxs": "10px",
-
   "$section-05": "字重阶梯",
   "font-weight-regular": 400,
   "font-weight-medium": 500,
   "font-weight-bold": 600,
-
   "$section-06": "圆角阶梯",
   "radius-0": "0px",
   "radius-1": "1px",
@@ -87,7 +84,6 @@
   "radius-14": "14px",
   "radius-16": "16px",
   "radius-full": "50%",
-
   "$section-07": "间距阶梯",
   "spacing-0": "0px",
   "spacing-2": "2px",
@@ -100,42 +96,71 @@
   "spacing-16": "16px",
   "spacing-20": "20px",
   "spacing-24": "24px",
-
   "$section-08": "坐标轴",
-  "font-size-axis": { "mobile": "10px", "pc": "12px" },
+  "font-size-axis": {
+    "mobile": "10px",
+    "pc": "12px"
+  },
   "line-height-axis": "12px",
   "font-weight-axis": "{font-weight-medium}",
-  "color-text-axis": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
+  "color-text-axis": {
+    "light": "rgba(0, 0, 0, 0.6)",
+    "dark": "rgba(255, 255, 255, 0.6)"
+  },
   "spacing-axis-y-inset-gap": "{spacing-8}",
   "spacing-axis-x-label-min-gap": "{spacing-8}",
   "spacing-axis-y-label-gap": "{spacing-8}",
   "spacing-axis-y-label-inside-gap": "{spacing-2}",
   "spacing-axis-x-band-top": "{spacing-4}",
   "spacing-axis-x-band-bottom": "{spacing-4}",
-
   "$section-09": "通用文字颜色",
-  "color-text-primary": { "light": "rgba(0, 0, 0, 0.84)", "dark": "rgba(255, 255, 255, 0.84)" },
-  "color-text-secondary": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
-  "color-text-tertiary": { "light": "rgba(0, 0, 0, 0.4)", "dark": "rgba(255, 255, 255, 0.4)" },
-  "color-text-quaternary": { "light": "rgba(0, 0, 0, 0.24)", "dark": "rgba(255, 255, 255, 0.24)" },
+  "color-text-primary": {
+    "light": "rgba(0, 0, 0, 0.84)",
+    "dark": "rgba(255, 255, 255, 0.84)"
+  },
+  "color-text-secondary": {
+    "light": "rgba(0, 0, 0, 0.6)",
+    "dark": "rgba(255, 255, 255, 0.6)"
+  },
+  "color-text-tertiary": {
+    "light": "rgba(0, 0, 0, 0.4)",
+    "dark": "rgba(255, 255, 255, 0.4)"
+  },
+  "color-text-quaternary": {
+    "light": "rgba(0, 0, 0, 0.24)",
+    "dark": "rgba(255, 255, 255, 0.24)"
+  },
   "color-text-inverse": "#ffffff",
   "color-text-inverse-primary": "rgba(255, 255, 255, 0.84)",
   "color-text-inverse-secondary": "rgba(255, 255, 255, 0.6)",
   "color-text-inverse-quaternary": "rgba(255, 255, 255, 0.24)",
   "color-text-link": "#4167D9",
-
   "$section-10": "可视化分割线、背景与高亮反馈",
-  "color-visualization-divider": { "light": "rgba(0, 0, 0, 0.06)", "dark": "rgba(255, 255, 255, 0.06)" },
+  "color-visualization-divider": {
+    "light": "rgba(0, 0, 0, 0.06)",
+    "dark": "rgba(255, 255, 255, 0.06)"
+  },
   "color-visualization-divider-deep": "{color-visualization-divider}",
-  "color-background-layer1": { "light": "#F5F5F5", "dark": "#0F0F0F" },
-  "color-background-weak": { "light": "rgba(0, 0, 0, 0.04)", "dark": "rgba(255, 255, 255, 0.06)" },
-
+  "color-background-layer1": {
+    "light": "#F5F5F5",
+    "dark": "#0F0F0F"
+  },
+  "color-background-weak": {
+    "light": "rgba(0, 0, 0, 0.04)",
+    "dark": "rgba(255, 255, 255, 0.06)"
+  },
   "color-visualization-tooltip": "#3B3B3B",
   "color-text-tooltip-title": "rgba(255, 255, 255, 0.6)",
   "color-text-tooltip-series": "rgba(255, 255, 255, 0.84)",
   "color-text-tooltip-value": "rgba(255, 255, 255, 0.84)",
-  "color-visualization-highlight-line": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
-  "color-visualization-highlight-block": { "light": "rgba(0, 0, 0, 0.1)", "dark": "rgba(255, 255, 255, 0.1)" },
+  "color-visualization-highlight-line": {
+    "light": "rgba(0, 0, 0, 0.6)",
+    "dark": "rgba(255, 255, 255, 0.6)"
+  },
+  "color-visualization-highlight-block": {
+    "light": "rgba(0, 0, 0, 0.1)",
+    "dark": "rgba(255, 255, 255, 0.1)"
+  },
   "color-visualization-highlight-background-tick": "#3366FF",
   "color-text-highlight-tick": "#ffffff",
   "opacity-visualization-intensity-level-1": 0.55,
@@ -143,7 +168,6 @@
   "opacity-visualization-intensity-level-3": 0.75,
   "opacity-visualization-intensity-level-4": 0.85,
   "opacity-visualization-intensity-level-5": 1,
-
   "$section-11": "提示框 Tooltip",
   "font-size-tooltip": "12px",
   "font-family-tooltip": "{font-family-cn}",
@@ -161,11 +185,13 @@
   "radius-axis-label-tag": "{radius-2}",
   "spacing-axis-label-tag-pad-h": "1px",
   "tooltip-hide-delay": "2000ms",
-
   "$section-12": "图例",
   "font-size-legend": "12px",
   "line-height-legend": "16px",
-  "color-text-legend": { "light": "rgba(0, 0, 0, 0.6)", "dark": "rgba(255, 255, 255, 0.6)" },
+  "color-text-legend": {
+    "light": "rgba(0, 0, 0, 0.6)",
+    "dark": "rgba(255, 255, 255, 0.6)"
+  },
   "size-legend-marker": "12px",
   "size-legend-label-max": "120px",
   "spacing-legend-marker-label": "{spacing-2}",
@@ -177,13 +203,21 @@
   "spacing-legend-chart-gap": "{spacing-24}",
   "spacing-legend-container-h": "{spacing-0}",
   "opacity-visualization-dim": 0.2,
-
   "$section-13": "缩放轴 Axes Navigator",
   "color-datazoom-filler": "rgba(51, 102, 255, 0.08)",
-  "color-datazoom-data-bg": { "light": "rgba(0, 0, 0, 0.08)", "dark": "rgba(255, 255, 255, 0.12)" },
+  "color-datazoom-data-bg": {
+    "light": "rgba(0, 0, 0, 0.08)",
+    "dark": "rgba(255, 255, 255, 0.12)"
+  },
   "color-datazoom-data-select": "rgba(51, 102, 255, 0.16)",
-  "color-datazoom-handle": { "light": "#FFFFFF", "dark": "#3B3B3B" },
-  "color-datazoom-handle-border": { "light": "rgba(0, 0, 0, 0.2)", "dark": "rgba(255, 255, 255, 0.2)" },
+  "color-datazoom-handle": {
+    "light": "#FFFFFF",
+    "dark": "#3B3B3B"
+  },
+  "color-datazoom-handle-border": {
+    "light": "rgba(0, 0, 0, 0.2)",
+    "dark": "rgba(255, 255, 255, 0.2)"
+  },
   "color-datazoom-handle-grip": "#858585",
   "shadow-datazoom-handle": "none",
   "size-slider-height": "24px",
@@ -191,20 +225,32 @@
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-6}",
   "radius-playback-step": "{radius-4}",
-
   "$section-14": "中性灰阶",
-  "color-grey-01": { "light": "#E6E6E6", "dark": "#292929" },
-  "color-grey-02": { "light": "#D1D1D1", "dark": "#3B3B3B" },
-  "color-grey-03": { "light": "#B3B3B3", "dark": "#575757" },
-  "color-grey-04": { "light": "#9C9C9C", "dark": "#6E6E6E" },
+  "color-grey-01": {
+    "light": "#E6E6E6",
+    "dark": "#292929"
+  },
+  "color-grey-02": {
+    "light": "#D1D1D1",
+    "dark": "#3B3B3B"
+  },
+  "color-grey-03": {
+    "light": "#B3B3B3",
+    "dark": "#575757"
+  },
+  "color-grey-04": {
+    "light": "#9C9C9C",
+    "dark": "#6E6E6E"
+  },
   "color-grey-05": "#858585",
-
   "$section-15": "图表公共区域、网格与引导线",
   "size-chart-region-height": "160px",
-  "size-grid-line": { "mobile": "0.5px", "pc": "1px" },
+  "size-grid-line": {
+    "mobile": "0.5px",
+    "pc": "1px"
+  },
   "spacing-chart-region-gap": "{spacing-8}",
   "spacing-leader-line-offset": "{spacing-8}",
-
   "$section-16": "柱状图 Bar",
   "size-bar-max": "16px",
   "size-bar-container-max": "24px",
@@ -214,26 +260,25 @@
   "size-bar-radius-full-min-width": "8px",
   "size-bar-radius-reduced-min-width": "4px",
   "size-zero-bar-placeholder": "1px",
-
   "$section-17": "分组柱状图 Grouped Bar",
   "size-bar-group-gap-ratio": "2:1",
   "size-bar-group-container-max": "none",
   "size-bar-group-inner-gap-max": "2px",
-
   "$section-18": "折线图 Line",
   "size-line-stroke": "1.5px",
   "size-line-stroke-multi": "1px",
   "size-line-point": "6px",
-  "color-visualization-line-point-hover": { "light": "#ffffff", "dark": "#000000" },
+  "color-visualization-line-point-hover": {
+    "light": "#ffffff",
+    "dark": "#000000"
+  },
   "opacity-line-area-from": 0.2,
   "opacity-line-area-to": 0,
   "opacity-line-stack-fill": 0.2,
-
   "$section-19": "横向柱状图 HBar",
   "size-hbar-row-max": "24px",
   "size-hbar-y-label-max": "80px",
   "size-hbar-data-label-max": "40px",
-
   "$section-20": "环形图 Donut",
   "size-donut-container": "160px",
   "size-donut-radius": "70px",
@@ -248,7 +293,6 @@
   "font-weight-donut-label-name": "{font-weight-regular}",
   "font-size-donut-label-value": "{font-size-extra-small}",
   "line-height-donut-label-value": "{line-height-small}",
-
   "$section-21": "数据标签 Data Label",
   "color-text-data-label-on-light": "rgba(0, 0, 0, 0.84)",
   "color-text-data-label-on-dark": "{color-text-inverse-primary}",
@@ -257,18 +301,15 @@
   "line-height-data-label": "{line-height-axis}",
   "spacing-data-label-gap": "{spacing-4}",
   "spacing-data-label-min-gap": "{spacing-4}",
-
   "$section-22": "轴标题 Axis Title",
   "font-size-axis-title": "{font-size-axis}",
   "line-height-axis-title": "{line-height-axis}",
   "font-weight-axis-title": "{font-weight-axis}",
   "color-text-axis-title": "{color-text-axis}",
   "spacing-axis-title-gap": "{spacing-4}",
-
   "$section-23": "动效 Motion",
   "motion-duration-grow": "480ms",
   "motion-duration-emphasis": "200ms",
-
   "$section-24": "矩形树图 Treemap",
   "size-treemap-gap": "{spacing-2}",
   "radius-treemap-canvas": "{radius-4}",
@@ -288,7 +329,6 @@
   "font-weight-treemap-name": "{font-weight-regular}",
   "size-treemap-content-image-max": "64px",
   "size-treemap-content-image-min": "12px",
-
   "$section-25": "雷达图 Radar",
   "size-radar-container": "200px",
   "size-radar-radius": "80px",
@@ -327,5 +367,17 @@
   "dash-waterfall-connector": "2 2",
   "opacity-waterfall-delta-fill": 0.2,
   "size-waterfall-delta-cap": "2px",
-  "size-waterfall-arrow-line": "1px"
+  "size-waterfall-arrow-line": "1px",
+
+  "$section-27": "弦图 Chord",
+  "size-chord-container": "200px",
+  "size-chord-radius": "80px",
+  "size-chord-ring": "10px",
+  "size-chord-label-gap": "{spacing-4}",
+  "size-chord-label-band": "56px",
+  "font-size-chord-label": "{font-size-extra-small}",
+  "line-height-chord-label": "{line-height-small}",
+  "font-weight-chord-label": "{font-weight-regular}",
+  "opacity-chord-ribbon": 0.2,
+  "opacity-chord-ribbon-active": 0.64
 }
