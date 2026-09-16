@@ -63,6 +63,7 @@
 | CHORD-17 | 弦默认 `opacity-chord-ribbon`、高亮 `opacity-chord-ribbon-active`、弱化 `opacity-visualization-dim`。**三档透明度走 token 而非 L2 常量**：它是会被某个主题单独调掉的**取值**（判据同 RADAR-03 那条 Ainvest 无底填充——取值差异不是形态差异，故进 `tokens/*.json` 不进 `behavior.json`），与 `opacity-radar-area` 同类 | `tokens/*.json`；`charts/styles.css` | ✅ |
 | CHORD-18 | 值为 0 的槽位不占角（同 PIE-01）；**非零但极小的槽位不小于 `min-slot-angle`**，避免"有流量却看不见"——这是 SANKEY-12「最细非零边仍须可见」的角度版 | `layout.js` → `chordAngles()`；`config.js` → `min-slot-angle` | ✅ |
 | CHORD-19 | **不渲染图例**。实体名已沿外圈逐个标注，图例是同一份信息的第二遍，且会吃掉正方形画布本就紧张的高度。<br>写成规则而不是"暂未实现"，是为了让下一个人知道这是**判断不是遗漏**；若将来确有需要，marker 传 `'dot'` 即命中 [legend.md](legend.md) LEGEND-03 的既有规则，`behavior.json` 无需新增键（同 PIE-03 / RADAR-08） | — | ✅ |
+| CHORD-20 | 命中区由**透明粗描边**撑出（弦带 `stroke-opacity: 0`）与**透明填充矩形**承担（标签热区 `fill: transparent`），细弦也点得中。两者在默认 `visiblePainted` 下即可命中，故**不显式声明 `pointer-events`**：显式值优先于继承值，会盖掉容器关交互的开关（画廊预览卡片用的就是继承的 `pointer-events: none`） | `charts/styles.css` → `.dv-chord__ribbon-band` / `.dv-chord__label-hit` | ✅ |
 
 ## 活 demo
 
@@ -82,6 +83,7 @@ ChordChart(host, {
   entityLabelLayout = 'arc',     // 形态语义：'arc' 沿弧环绕 / 'horizontal' 径向横排（CHORD-11）
   platform = 'pc',
   animation = true,              // 弦顺时针依次生长；减弱动效下恒终态（CHORD-16）
+  text,                          // 可选：固定文案整套替换，缺省 model.js 的 CHORD_TEXT（CHARTTEXT-01/02）
 })
 ```
 

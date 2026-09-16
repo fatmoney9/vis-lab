@@ -705,7 +705,11 @@
   overflow: visible;
 }
 
-/* [SANKEY-08] 单色边带，色取终节点语义色；透明度由 Sankey L2 配置下发。 */
+/* [SANKEY-08] 单色边带，色取终节点语义色；透明度由 Sankey L2 配置下发。
+   [SANKEY-20] 透明粗描边只为撑出命中区（细带也要点得中）。**不要给命中元素显式写 pointer-events**：
+   默认的 visiblePainted 已经认这圈描边（stroke 是真实颜色，只是 stroke-opacity: 0），
+   而显式值会盖过**继承来的** pointer-events: none——画廊预览卡片正是靠继承关掉交互的
+   （index.html 的 .example-card__preview .chart-host），写死就会让卡片重新接管鼠标。 */
 .dv-sankey__edge-ribbon {
   fill: var(--dv-sankey-color);
   fill-opacity: var(--dv-sankey-edge-opacity);
@@ -713,7 +717,6 @@
   stroke-width: var(--spacing-8);
   stroke-opacity: 0;
   vector-effect: non-scaling-stroke;
-  pointer-events: all;
   cursor: pointer;
 }
 
@@ -728,9 +731,10 @@
   pointer-events: none;
 }
 
+/* [SANKEY-20] 透明矩形接管标签区域的命中；fill 是 transparent（不是 none），故 visiblePainted 认它，
+   同样不写 pointer-events，理由见上面 .dv-sankey__edge-ribbon。 */
 .dv-sankey__node-label-hit {
   fill: transparent;
-  pointer-events: all;
   cursor: pointer;
 }
 
@@ -1059,7 +1063,9 @@
   cursor: pointer;
 }
 
-/* [CHORD-17] 弦默认半透明；描边透明只为撑出命中区（细弦也要点得中），同桑基的做法。 */
+/* [CHORD-17][CHORD-20] 弦默认半透明；描边透明只为撑出命中区（细弦也要点得中），同桑基的做法。
+   同样**不写 pointer-events**：默认 visiblePainted 已经认这圈透明描边，显式值则会盖过
+   继承来的 pointer-events: none，让画廊预览卡片里的弦重新接管鼠标（详见 .dv-sankey__edge-ribbon）。 */
 .dv-chord__ribbon-band {
   /* [CHORD-08] 填充是两端实体色的渐变（L2 逐条生成 linearGradient 后由此变量下发）。
      留 --dv-chord-color 作兜底：渐变缺失时退成单色，而不是整条弦不可见。 */
@@ -1069,7 +1075,6 @@
   stroke-width: var(--spacing-8);
   stroke-opacity: 0;
   vector-effect: non-scaling-stroke;
-  pointer-events: all;
   cursor: pointer;
 }
 
@@ -1081,9 +1086,10 @@
   pointer-events: none;
 }
 
+/* [CHORD-20] 透明矩形接管标签区域的命中；fill 是 transparent（不是 none），故 visiblePainted 认它，
+   同样不写 pointer-events，理由见 .dv-sankey__edge-ribbon。 */
 .dv-chord__label-hit {
   fill: transparent;
-  pointer-events: all;
   cursor: pointer;
 }
 
