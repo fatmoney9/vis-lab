@@ -273,6 +273,13 @@
   --font-weight-chord-label: var(--font-weight-regular);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;
+  --size-callout-max-width: 200px;
+  --size-callout-ring: 12px;
+  --size-callout-ring-stroke: var(--size-line-stroke);
+  --size-callout-leader: 32px;
+  --font-size-callout: var(--font-size-extra-small);
+  --line-height-callout: var(--line-height-small);
+  --font-weight-callout: var(--font-weight-regular);
 }
 
 [data-theme="ths"][data-platform="mobile"] {
@@ -575,6 +582,13 @@
   --font-weight-chord-label: var(--font-weight-regular);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;
+  --size-callout-max-width: 200px;
+  --size-callout-ring: 14px;
+  --size-callout-ring-stroke: var(--size-line-stroke);
+  --size-callout-leader: 32px;
+  --font-size-callout: var(--font-size-extra-small);
+  --line-height-callout: var(--line-height-small);
+  --font-weight-callout: var(--font-weight-regular);
 }
 
 [data-theme="ifind-pc"][data-platform="mobile"] {
@@ -879,6 +893,13 @@
   --font-weight-chord-label: var(--font-weight-bold);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;
+  --size-callout-max-width: 220px;
+  --size-callout-ring: 14px;
+  --size-callout-ring-stroke: var(--size-line-stroke);
+  --size-callout-leader: 40px;
+  --font-size-callout: var(--font-size-extra-small);
+  --line-height-callout: var(--line-height-small);
+  --font-weight-callout: var(--font-weight-regular);
 }
 
 [data-theme="ainvest"][data-platform="mobile"] {

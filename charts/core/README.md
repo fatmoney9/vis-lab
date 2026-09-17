@@ -30,6 +30,7 @@
 | `image-content.js` | 可选图片内容的标准化、尺寸档降级、SVG 结构和 Tooltip 内容转换；不识别图表、主题或业务字段 | image-content.md（IMAGECONTENT-01..04） |
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |
+| `callout.js` | 图表标注：强调环 + 定宽折行的多行文字 + 三次贝塞尔引线与手写箭头，**位置自动选**（8 方位 × 近/远两档，压住图元 / 越界 / 互撞逐条打分，选不出即整条丢弃）。不 import d3，几何全部导出可单测；只认像素锚点与矩形，**锚点解析留 L2** | callout.md（CALLOUT-01..16） |
 | `polar-label.js` | 绕圆标签几何（零 import，可被 node 加载）：`pointAt`（**全库唯一三角公式**）· `labelAnchor`（八向对齐）· `labelArc`（可读弧线，下半圆自动反向）· `labelBand`（图元占位后标签带吃剩余并封顶）。由 specs/radar.md 的下沉点②③命中而建 | radar.md（RADAR-07/09/14）、pie.md（PIE-13） |
 | `palette.js` | 系列取色器 | color.md |
 | `visual-color.js` | 数据项的系列、强度与有符号语义取色，以及低表现→高表现的通用色阶；不识别图表、主题或业务字段 | color.md（COLOR-06/09/10） |

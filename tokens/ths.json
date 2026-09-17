@@ -379,5 +379,14 @@
   "line-height-chord-label": "{line-height-small}",
   "font-weight-chord-label": "{font-weight-regular}",
   "opacity-chord-ribbon": 0.2,
-  "opacity-chord-ribbon-active": 0.64
+  "opacity-chord-ribbon-active": 0.64,
+
+  "$section-28": "图表标注 Callout",
+  "size-callout-max-width": "200px",
+  "size-callout-ring": "12px",
+  "size-callout-ring-stroke": "{size-line-stroke}",
+  "size-callout-leader": "32px",
+  "font-size-callout": "{font-size-extra-small}",
+  "line-height-callout": "{line-height-small}",
+  "font-weight-callout": "{font-weight-regular}"
 }

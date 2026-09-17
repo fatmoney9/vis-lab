@@ -651,7 +651,7 @@ export const INITIAL_ZOOM = { start: 0.35, end: 1 };
  *   animation 入场生长开关（MOTION-01/07，**默认开**——与其他旋钮相反，关掉才落进 cfg）
  */
 export const CHART_CAPABILITIES = {
-  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true, legendSelect: true, yIndicator: true },
+  cartesian: { zoom: true, area: true, dataLabel: true, axisTitle: true, animation: true, legendSelect: true, yIndicator: true, callout: true },
   /* 饼 / 环无类目轴、无 Y 轴、无折线：zoom / area / axisTitle 一概不声明，
      两个预览面的对应旋钮据此自动不出现（见 specs/pie.md 活 demo 的验收点）。
      **不声明 dataLabel**：饼环的显隐与形态是同一件事（PIE-12「引线与标签强绑定」——
@@ -711,7 +711,13 @@ export const EXAMPLES = [
     id: 'basic', group: '柱状图', chart: 'cartesian',
     title: '基础柱状图', spec: 'BAR-01 / BAR-03', surfaces: BOTH,
     description: '单系列正值柱状图，展示基础柱宽、间距、圆角与数据标签。',
-    cfg: (n) => ({ categories: seq(n), series: [{ name: '营业收入', data: wave(n) }] }),
+    /* [CALLOUT-01] 标注的**内容**由示例携带（同 axisTitle 的先例），旋钮只管显隐。
+       锚在柱顶外端，走 CALLOUT-02 的真实数据点档。 */
+    cfg: (n) => ({
+      categories: seq(n),
+      series: [{ name: '营业收入', data: wave(n) }],
+      callout: [{ series: '营业收入', category: '2', text: '该季度含一次性资产处置收益' }],
+    }),
   },
   {
     id: 'bar-negative', group: '柱状图', chart: 'cartesian',
@@ -771,7 +777,16 @@ export const EXAMPLES = [
     id: 'line', group: '折线图', chart: 'cartesian',
     title: '基础折线图', spec: 'LINE-01', surfaces: BOTH,
     description: '折线直连，null 处断开；数据点显隐随密度分档。',
-    cfg: (n) => ({ categories: seq(n), series: [{ name: '指数', data: lineWave(n), type: 'line' }] }),
+    /* [CALLOUT-02] 两档锚点各一条：真实数据点 + 任意数值坐标。
+       拖数据组数到 3 以下时第一条会消失——那是「类目不在可见窗口内就不出」的活演示。 */
+    cfg: (n) => ({
+      categories: seq(n),
+      series: [{ name: '指数', data: lineWave(n), type: 'line' }],
+      callout: [
+        { series: '指数', category: '3', text: '若人人都按这个水平消耗资源，一年需要八个地球才够' },
+        { category: '1', value: 0, text: '基准线' },
+      ],
+    }),
   },
   {
     id: 'line-negative', group: '折线图', chart: 'cartesian',
@@ -1151,6 +1166,9 @@ export const capabilitiesOf = (example) => {
   return {
     density: caps.density !== false,
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
+    /* [CALLOUT-01] 标注的内容由示例携带，没声明内容的示例不出这个旋钮
+       （按示例条件化，先例同 ratingStyle / radarEditable / area） */
+    callout: !!caps.callout && Array.isArray(sampleCfg.callout) && sampleCfg.callout.length > 0,
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
     legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
@@ -1198,8 +1216,9 @@ export function radarAxisLabelLayoutOf(example, requested = 'auto', editable = '
  * 铁律3/4：只装配**数据与语义配置**，样式一律走 token；预览面不得在此之外自加参数。
  *   state = { density='few', theme='ths', platform='pc', zoom, area, dataLabel, axisTitle, animation,
  *             legend, labelLayout, labelAlign, treemapColor, radarGridShape, radarShape,
- *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable, waterfallColor } —— 各项皆可缺省
+ *             ratingStyle, ratingBandCount, axisLabelLayout, radarEditable, waterfallColor, callout } —— 各项皆可缺省
  *   labelLayout（饼环）= 'off' | 'outside' | 'inside'，缺省 'off' —— 它同时是显隐开关
+ *   callout —— **缺省 true**：内容由示例自带，旋钮只管显隐，只有显式 false 才把它摘掉（CALLOUT-01）
  * 主题与明暗不作为样式参数进 cfg：它们写在容器的 data-theme / data-mode 上，走 CSS 级联 +
  * behavior 解析。theme 在这里仅允许驱动 L3 presentation 文案映射：Ainvest 图表内部内容
  * 统一经 chart-presentation.js 转为英文；站点外壳仍保持中文。
@@ -1207,7 +1226,7 @@ export function radarAxisLabelLayoutOf(example, requested = 'auto', editable = '
 export function buildConfig(example, state = {}) {
   const {
     density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
-    dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto',
+    dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto', callout = true,
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
     treemapColor = 'intensity', axisValue = false,
     radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
@@ -1246,6 +1265,10 @@ export function buildConfig(example, state = {}) {
   /* [LABEL-05] 直角坐标系：开关的「开」= 'auto' = **按图表类型默认**（单柱 / 单折线出、
      分组柱 / 堆叠不出），故开着时什么都不落进 cfg；只有关掉才显式写 false。 */
   if (caps.dataLabel && dataLabel !== 'auto') cfg.dataLabel = dataLabel === true || dataLabel === 'on';
+  /* [CALLOUT-01] 标注：内容由示例的 cfg 自带，**默认就显示**（作者声明了就是要它出现），
+     故方向与 animation 一致——只有关掉才动 cfg，这里是把它整个摘掉。
+     不做成「开才加内容」是因为内容不在 state 里、旋钮造不出那句话。 */
+  if (caps.callout && callout === false) delete cfg.callout;
   /* [PIE-12] 饼环：显隐与形态合成一个三档旋钮（关 / 引线 / 扇区内）——
      「关」= 组件默认（LABEL-05 饼环默认就不出），故不落进 cfg；另两档才同时给出显隐与形态。
      [PIE-13] 对齐档只在外侧引线下有意义，扇区内时不装进 cfg（免得给组件一个它用不上的字段）。 */

@@ -683,6 +683,7 @@
       area: false,
       zoom: false,
       axisTitle: false,
+      callout: true,   /* [CALLOUT-01] 示例声明了标注内容就默认显示，旋钮用来对比「没有标注时」 */
       animation: true, /* [MOTION-07] 与其他旋钮相反：默认开 */
       periodIndex: 0,
     };
@@ -851,7 +852,7 @@
       main.querySelectorAll('.example-card').forEach((card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
-          density: defaultDensityOf(example), theme: 'ths', platform: 'pc', area: false, zoom: false, axisTitle: false,
+          density: defaultDensityOf(example), theme: 'ths', platform: 'pc', area: false, zoom: false, axisTitle: false, callout: true,
           animation: true, compact: true,
         });
       });
@@ -1166,6 +1167,7 @@
             ${caps.legendSelect ? `<div class="field"><span class="field__label">图例点击</span><span class="field__hint">LEGEND-06/14 · 前两档改数据构成，强调档不改、只压不透明度</span>${segment('legendSelect', [['multi', '多选'], ['single', '单选'], ['focus', '强调']], state.legendSelect)}</div>` : ''}
             ${caps.zoom ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">缩放轴</span><span class="field__hint">DATAZOOM-01..07 · 初始后 65%</span></div><label class="switch" aria-label="缩放轴"><input id="zoom-switch" type="checkbox"${state.zoom ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.axisTitle ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">轴标题</span><span class="field__hint">AXISTITLE-01..06 · 默认不显示</span></div><label class="switch" aria-label="轴标题"><input id="axis-title-switch" type="checkbox"${state.axisTitle ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
+            ${caps.callout ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">标注</span><span class="field__hint">CALLOUT-01..15 · 环 + 曲线引线 + 说明文字，位置自动避让</span></div><label class="switch" aria-label="标注"><input id="callout-switch" type="checkbox"${state.callout ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.animation ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">入场动效</span><span class="field__hint">MOTION-01..07 · 默认开 · 仅首次挂载</span></div><label class="switch" aria-label="入场动效"><input id="animation-switch" type="checkbox"${state.animation ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${areaAvailable ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">主线渐变面积</span><span class="field__hint">非堆叠折线语义配置</span></div><label class="switch" aria-label="主线渐变面积"><input id="area-switch" type="checkbox"${state.area ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             <button class="button" id="reset-button" type="button">恢复默认配置</button>
@@ -1302,6 +1304,10 @@
         state.axisTitle = event.target.checked;
         rerenderDetail();
       });
+      document.getElementById('callout-switch')?.addEventListener('change', (event) => {
+        state.callout = event.target.checked;
+        rerenderDetail();
+      });
       document.getElementById('animation-switch')?.addEventListener('change', (event) => {
         state.animation = event.target.checked;
         rerenderDetail();
@@ -1319,7 +1325,7 @@
           radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', seriesCount: defaultIndexSeriesCountOf(state.detail), ratingStyle: 'gradient', ratingBandCount: '6',
           axisLabelLayout: 'auto', waterfallColor: 'primary',
           chordVariant: 'undirected', chordLabelLayout: 'arc',
-          area: false, zoom: false, axisTitle: false, animation: true, periodIndex: 0,
+          area: false, zoom: false, axisTitle: false, callout: true, animation: true, periodIndex: 0,
         });
         rerenderDetail();
       });
