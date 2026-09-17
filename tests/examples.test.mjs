@@ -80,6 +80,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     zoom: false,
     dataLabel: false,
     axisTitle: false,
+    callout: false,
     animation: false,
     area: false,
     legend: false,
@@ -497,6 +498,7 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     zoom: false,
     dataLabel: false,
     axisTitle: false,
+    callout: false,
     animation: true,
     area: false,
     legend: false,
@@ -837,4 +839,60 @@ test('describeConfig：完整透出 Sankey 节点分层与流向数据', () => {
     shown.links.some((link) => 'negativeSource' in link),
     '财务差额流向的同层视觉来源也必须透出',
   );
+});
+
+/* [CALLOUT-02] 带标注的示例，其锚点必须在**默认密度档**解析得出来。
+   拖到更低的数据组数时会消失，那是「类目不在可见窗口内就不出」的活演示、是预期行为；
+   但默认档一进来就看不见标注，那是示例坏了。 */
+test('CALLOUT-02：带标注的示例锚点在默认密度档存在，且两档锚点都有覆盖', () => {
+  const hosts = EXAMPLES.filter((e) => Array.isArray(e.cfg(defaultDensityCountOf(e)).callout));
+  assert.ok(hosts.length >= 2, '至少要有两个示例携带标注内容');
+
+  const modes = new Set();
+  for (const ex of hosts) {
+    const cfg = buildConfig(ex, { theme: 'ths' });
+    for (const c of cfg.callout) {
+      assert.ok(cfg.categories.includes(c.category), `${ex.id} 的锚点类目 ${c.category} 必须在默认密度档存在`);
+      assert.ok(c.text, `${ex.id} 的每条标注都要有文案`);
+      if (c.series != null) {
+        modes.add('series');
+        const r = cfg.series.find((x) => x.name === c.series);
+        assert.ok(r, `${ex.id} 标注引用的系列 ${c.series} 必须存在`);
+        assert.notEqual(r.data[cfg.categories.indexOf(c.category)], null, `${ex.id} 锚点处不得是 null 断口`);
+      } else {
+        modes.add('value');
+        assert.ok(Number.isFinite(c.value), `${ex.id} 任意坐标档必须给有限数值`);
+      }
+    }
+  }
+  assert.deepEqual([...modes].sort(), ['series', 'value'], '真实数据点档与任意数值坐标档都要被示例覆盖');
+});
+
+/* [CALLOUT-01] 旋钮语义：内容由示例携带、默认显示，**只有关掉才动 cfg**（方向同 animation）。
+   做成「开才加内容」是不可能的——那句话不在 state 里，旋钮造不出来。 */
+test('CALLOUT-01：标注旋钮默认开，关掉才把 callout 从 cfg 摘掉', () => {
+  const host = EXAMPLES.find((e) => Array.isArray(e.cfg(defaultDensityCountOf(e)).callout));
+  assert.ok(Array.isArray(buildConfig(host, {}).callout), '缺省即显示');
+  assert.ok(Array.isArray(buildConfig(host, { callout: true }).callout), '显式开仍显示');
+  assert.equal(buildConfig(host, { callout: false }).callout, undefined, '关掉必须整个摘掉');
+
+  /* 没声明标注内容的示例不出这个旋钮（按示例条件化） */
+  const bare = EXAMPLES.find((e) => e.chart === 'cartesian' && !e.cfg(defaultDensityCountOf(e)).callout);
+  assert.ok(bare, '应当存在不带标注的直角坐标系示例');
+  assert.equal(capabilitiesOf(bare).callout, false, '没内容就不该出旋钮');
+  assert.equal(capabilitiesOf(host).callout, true, '有内容才出旋钮');
+});
+
+/* [CALLOUT-03] Ainvest 走整句替换：中文词条漏了会让英文面上残留中文。 */
+test('CALLOUT-03：Ainvest 下标注文案与被引用的系列名同时英文化', () => {
+  const hosts = EXAMPLES.filter((e) => Array.isArray(e.cfg(defaultDensityCountOf(e)).callout));
+  for (const ex of hosts) {
+    const en = buildConfig(ex, { theme: 'ainvest' });
+    for (const c of en.callout) {
+      assert.ok(!/[\u4e00-\u9fff]/.test(c.text), `${ex.id} 的标注文案仍是中文：${c.text}`);
+      if (c.series == null) continue;
+      assert.ok(en.series.some((r) => r.name === c.series),
+        `${ex.id}：系列名英文化后，标注里的 series 引用必须跟着改，否则锚点解析不到`);
+    }
+  }
 });

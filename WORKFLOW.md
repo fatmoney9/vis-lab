@@ -128,8 +128,9 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 - 规范正文用 markdown 写，按主题分文件（color / axis / tooltip / 每种图表一篇）
 - 每条规则一个稳定 ID，格式 `{类别}-{序号}`：
   `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `AXISTITLE-` 轴标题 ·
-  `DATAZOOM-` 缩放轴 · `MARK-` 图形标记 · `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
-  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印 ·
+  `DATAZOOM-` 缩放轴 · `MARK-` 图形标记（柱 / 线 / 数据点本身，即 `core/mark.js`；**当前为空号段**）·
+  `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
+  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印 · `CALLOUT-` 图表标注（环 + 文字 + 引线）·
   图型专属：`BAR-` 柱系 · `LINE-` 折线 · `PIE-` 饼环 · `RADAR-` 雷达 · `WATERFALL-` 瀑布
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 

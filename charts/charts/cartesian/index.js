@@ -14,8 +14,11 @@
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
  *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left',
- *           zoom, dataLabel='auto', axisTitle, animation=true }
+ *           zoom, dataLabel='auto', axisTitle, animation=true, callout }
  *         type 默认 bar / axis 默认 primary
+ *         callout（语义配置，标在哪 + 写什么）：[{ series?, category, value?, text, axis? }]
+ *           给 series 锚到该系列在该类目的真实数据点；不给则用 value 锚任意数值坐标。
+ *           位置由 L1 自动选（CALLOUT-05），API 不收方位 / 颜色 / 字号等样式参数
  *         dataLabel（语义配置，非样式）：'auto' 按图表类型定默认 / true 全开 / false 全关（LABEL-05）
  *         axisTitle（语义配置，文案即内容）：{ y, y2, x } 三个可选字符串，默认不显示（AXISTITLE-01）
  *         animation（语义配置，"要不要有入场行为"，时长/缓动仍走 token 与规范值常量）：
@@ -37,15 +40,17 @@ import { applyToggle, applyFocus } from '../../core/legend-state.js';
 import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { renderDataLabels } from '../../core/label.js';
+import { renderCallouts } from '../../core/callout.js';
 import { axisTitleBand, axisTitleAnchor, renderAxisTitles } from '../../core/axis-title.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from './layout.js';
+import { resolveCalloutAnchors, barObstacles, lineObstacles } from './callout-anchor.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false, callout } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = containerDrivesHeight(host.clientHeight);
 
@@ -278,6 +283,16 @@ export function CartesianChart(host, cfg) {
     const labelText = (v) => (v == null ? null : (stack === 'percent' ? pctFormat : format)(v));
     const labelBatches = [];
     let labelLayer = null;
+    /* [CALLOUT-02][CALLOUT-07] 标注的锚点与障碍矩形在各 mark 分支里顺手收，
+       与 labelBatches 同一条路数——**不重算布局**：槽位偏移、堆叠基线、该系列走哪根 Y，
+       在那里都已经算好了，回头再算一遍必然与渲染结果漂移。
+       markAt 的键是 `${系列名}|${窗口内类目下标}`，是标注锚点的**唯一来源**。 */
+    const markAt = new Map();
+    const calloutObstacles = [];
+    let calloutLayer = null;
+
+    /* [CALLOUT-16] 标注**不改变任何既有图层的位置**——它是叠加层，只能叠上去。
+       2026-09-17 曾短暂让被标注点的数据标签给强调环让位，当天撤销，理由见 specs/callout.md。 */
 
     /* [MOTION-01/02] 入场生长：收集各图元的逐帧重绘闭包（mark 层返回的 draw(t)）。
        时长全图统一（MOTION-02），故这里只收闭包、不需要按图元折算任何东西——
@@ -310,6 +325,14 @@ export function CartesianChart(host, cfg) {
             zeroBar: false,
           },
           x, yOf(r)));
+        /* [CALLOUT-02] 堆叠段的锚点取**该段外端**（累计值处），与段顶边重合 */
+        const yySeg = yOf(r);
+        calloutObstacles.push(...barObstacles(viewCats, seg.values, seg.base, x, yySeg, col.offset, col.width));
+        viewCats.forEach((c, j) => {
+          const v = seg.values[j];
+          if (v == null) return;
+          markAt.set(`${r.name}|${j}`, { x: x(c) + col.offset + col.width / 2, y: yySeg(seg.base[j] + v), dot: true });
+        });
         /* [LABEL-01] 堆叠段：段内垂直居中、压在填充上 → 走档②（按段色明暗反色，LABEL-04）。
            [LABEL-06③] 放不下就不放：段高不足一行标签高（含 0 值无高度段）在此判；
            横向放不下（文本宽 > 柱宽）由 L1 用 maxWidth 判——档② 的字一旦横向溢出色块，
@@ -349,6 +372,14 @@ export function CartesianChart(host, cfg) {
       visBars.forEach((r, i) => {
         grow.push(renderBars(seriesG('dv-bar-series', r.name), frame,
           { categories: viewCats, values: r.data, offset: slots[i].offset, width: slots[i].width, colorVar: r.colorVar }, x, yOf(r))); /* [BAR-01] */
+        /* [CALLOUT-02] 柱的锚点 = 柱顶外端（负值柱即柱底），与 yy(v) 逐像素一致 */
+        const yyBar = yOf(r);
+        calloutObstacles.push(...barObstacles(viewCats, r.data, null, x, yyBar, slots[i].offset, slots[i].width));
+        viewCats.forEach((c, j) => {
+          const v = r.data[j];
+          if (v == null) return;
+          markAt.set(`${r.name}|${j}`, { x: x(c) + slots[i].offset + slots[i].width / 2, y: yyBar(v), dot: true });
+        });
         /* [LABEL-01] 基础 / 分组柱：柱顶外侧——正值在柱顶上方（文字底对齐锚点）、
            负值在柱底下方（顶对齐），水平居中于该柱；落在图形外空白区 → 档①（跟随系列色，LABEL-03）。 */
         if (showBarLabel && withinLabelDensity(r.data)) {
@@ -399,6 +430,17 @@ export function CartesianChart(host, cfg) {
       grow.push(renderLine(seriesG('dv-line-series', r.name), frame,
         { categories: viewCats, values, base: st?.base ?? null, colorVar: r.colorVar }, x, yOf(r),
         { showPoints, multi, area: r.area && !stacked, stackFill: !!st, pointShape }));
+      /* [CALLOUT-02] 折线锚点 = 数据点圆心（类目中心）。**showPoints 为假时那里没有图元**
+         （点数 > 13 整条线不画点，见 line.md），故 dot 要补上，否则环里是空的。
+         [CALLOUT-07] 障碍矩形外扩线宽/2 + 点半高，把线与点一并包住。 */
+      const yyLine = yOf(r);
+      const cx = (c) => x(c) + x.bandwidth() / 2;
+      calloutObstacles.push(...lineObstacles(viewCats, values, cx, yyLine,
+        (tokenNum(plotHost, '--size-line-stroke') || 2) / 2 + linePointH));
+      viewCats.forEach((c, j) => {
+        if (values[j] == null) return;
+        markAt.set(`${r.name}|${j}`, { x: cx(c), y: yyLine(values[j]), dot: !showPoints });
+      });
       /* [LABEL-01] 折线：数据点正上方（类目中心），落在图形外 → 档①。
          [LABEL-06①] 非 null 点数 > 5 → 整条线不出标签（与柱同一阈值、全端统一）。
          堆叠折线：位置取累计后的点（values），文本取该系列**自身**的段值（= 累计值 − 基线）。 */
@@ -432,8 +474,29 @@ export function CartesianChart(host, cfg) {
           .attr('class', 'dv-data-label-series')
           .style('color', `var(${batch.colorVar})`);
         g.node().dataset.key = batch.key;
-        renderDataLabels(g, frame, batch.items);
+        /* [CALLOUT-07] 已经画出的数据标签也是障碍物。盒子由 renderDataLabels **返回**——
+           它是按 classOf 的完整 class 串量的，L2 自己再量一遍就会多出第二个类名口径
+           （本族 README 把 measure 声明为「不用」时要避的正是这件事）。 */
+        calloutObstacles.push(...renderDataLabels(g, frame, batch.items));
       });
+    }
+
+    /* [CALLOUT-14] 标注层在**数据标签之上、水印之下**追加（层级 = DOM 顺序，同 LABEL-08 / WATERMARK-05）。
+       层序只决定「谁压谁」，不决定位置——位置由 CALLOUT-16 定死：标注不动任何下层元素。
+       整层 pointer-events:none，且**不参与 applyDim**：标注是作者刻意的重点，
+       不该因为 hover 别的系列而变淡；它跟随系列的那部分已由「系列被隐藏就整条不出」表达。 */
+    if (callout?.length) {
+      const anchors = resolveCalloutAnchors(callout, {
+        categories: viewCats,
+        hidden: state.hidden,
+        markAt,
+        bandCenter: (c) => x(c) + x.bandwidth() / 2,
+        valueToY: (v, axis) => (axis === 'secondary' ? yS : yP)(v),
+      });
+      if (anchors.length) {
+        calloutLayer = frame.svg.append('g').attr('class', 'dv-callout-layer');
+        renderCallouts(calloutLayer, frame, anchors, { obstacles: calloutObstacles });
+      }
     }
 
     /* [AXISTITLE-01..06] 轴标题：带高已在 createFrame 前预留，这里只定「摆哪、写什么」。
@@ -490,18 +553,19 @@ export function CartesianChart(host, cfg) {
     /* ── [MOTION-01/04/05/07] 入场生长（本函数最后一步，此前所有元素都已画到终态）──
        只在首次挂载播；animation:false 或系统「减弱动态效果」下直接终态——不是跑一遍 0ms 空动画，
        而是根本不进这个分支，保证与不带本能力时逐像素一致（MOTION-07 的零回归验收点）。
-       坐标系 / 图例 / 轴标题 / 缩放轴 / 水印不参与生长；数据标签整层先藏、结束后出现（MOTION-05）。
+       坐标系 / 图例 / 轴标题 / 缩放轴 / 水印不参与生长；数据标签与标注整层先藏、结束后出现（MOTION-05 / CALLOUT-15）。
        hover 已在上面接线，生长期间即可用（气泡取数据真值，与动画进度无关）。 */
     const animate = animation && firstBuild && grow.length > 0 && !reducedMotion();
     firstBuild = false;
     if (!animate) return;
 
-    if (labelLayer) labelLayer.style('display', 'none');
+    const overlays = [labelLayer, calloutLayer].filter(Boolean);
+    overlays.forEach((layer) => layer.style('display', 'none'));
     grow.forEach((draw) => draw(0)); /* 先落零帧，避免首帧闪出终态再跳回起点 */
     stopGrow = runGrowth(
       tokenNum(plotHost, '--motion-duration-grow'), /* [MOTION-02] 全图统一时长，不按图表 / 数据分档 */
       (t) => grow.forEach((draw) => draw(t)),
-      { onDone: () => { if (labelLayer) labelLayer.style('display', null); } },
+      { onDone: () => overlays.forEach((layer) => layer.style('display', null)) },
     );
   }
 

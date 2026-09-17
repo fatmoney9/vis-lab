@@ -13,6 +13,10 @@
  */
 
 const AINVEST_TEXT = new Map([
+  /* 图表标注（CALLOUT-03：文案由调用方写死，故经本词表整句替换） */
+  ['若人人都按这个水平消耗资源，一年需要八个地球才够', 'If everyone consumed at this level, we would need eight Earths a year'],
+  ['基准线', 'Baseline'],
+  ['该季度含一次性资产处置收益', 'Includes a one-off gain on asset disposal'],
   /* 直角坐标图 */
   ['营业收入', 'Revenue'],
   ['成本', 'Cost'],

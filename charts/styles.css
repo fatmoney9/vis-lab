@@ -509,6 +509,45 @@
    pointer-events:none —— 永不抢鼠标，贴数据之上也不影响 hover/tooltip 命中。 */
 .dv-watermark { pointer-events: none; }
 
+/* [CALLOUT-13][CALLOUT-14] 图表标注：强调环 + 曲线引线 + 箭头 + 多行文字。
+   整层 pointer-events:none —— 纯装饰，永不抢 hover/tooltip 命中（同水印与数据标签）。
+   环与引线走**中性色**不跟随系列色：标注是编辑性批注、不是系列读数，染成系列色会被
+   误读成又一组数据；LABEL-09 让饼图引线跟随系列色的前提是「引线在承担色彩关联」，
+   而标注的关联由「箭头指着它」承担，颜色不必再说一遍。
+   color 挂在整组上，环 / 引线 / 箭头一律 currentColor 取之——本模块 JS 内零色值字面量。 */
+.dv-callout {
+  color: var(--color-visualization-highlight-line);
+  pointer-events: none;
+}
+.dv-callout-ring {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-callout-ring-stroke);
+}
+/* 实心点只在锚点处**没有**既有图元时才画（柱顶 / 任意数值坐标档，CALLOUT-04） */
+.dv-callout-dot { fill: currentColor; }
+/* [CALLOUT-11] 引线线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / 饼图引线同源），
+   不设自有 token——先例与理由见 .dv-pie-label-line。 */
+.dv-callout-leader {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-grid-line);
+}
+/* [CALLOUT-12] 箭头是手写三角 <path>，不用 SVG <marker>（同 WATERFALL 方向头与 CHORD-05） */
+.dv-callout-arrow {
+  fill: currentColor;
+  stroke: none;
+}
+/* [CALLOUT-13] ⚠️ 刻意**不复用 .dv-data-label**：那套带 font-family-number + tabular-nums
+   + medium 字重，隐含前提是「内容是数字」（PIE-15 已为此付过一次账）。
+   标注是整句散文 → 正文字体 + regular 字重 + 通用正文色（随明暗模式翻转，同 LABEL-09 档③）。 */
+.dv-callout-text {
+  fill: var(--color-text-primary);
+  font-size: var(--font-size-callout);
+  font-weight: var(--font-weight-callout);
+  font-family: var(--font-family-cn);
+}
+
 /* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
    iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
    pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。

@@ -40,7 +40,7 @@ sh hooks/check.sh
 | 目录 | 层 | 内容 |
 |---|---|---|
 | `tokens/` | L0 | 多主题值 token、行为矩阵、系列色板；`tokens.css` 是生成物，不要手改 |
-| `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、动效、比例尺、格式化 |
+| `charts/core/` | L1 | 跨图表共享构件：轴、轴标题、网格、图例、tooltip、缩放轴、水印、数据标签、图表标注、动效、比例尺、格式化 |
 | `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `pie`（饼 / 环）· `sankey`（流向流量 / 季度播放）· `treemap`（入口 / 通用 / 全局）· `radar`（多指标对比）· `chord`（实体间相互流动）。每族的 `README.md` 是它的 **L1 复用声明**（门禁校验，且与代码 import 对账） |
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 各预览面共享的示例数据源与图表类型注册表 |
@@ -67,7 +67,7 @@ sh hooks/check.sh
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 分支、提交、PR 与质量门禁 |
 | [TESTING.md](TESTING.md) | 测试分层、覆盖矩阵、视觉基线规则 |
 | [AGENTS.md](AGENTS.md) | 给 AI 会话的项目约定 |
-| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) |
+| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [瀑布](specs/waterfall.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图表标注](specs/callout.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) |
 
 当前进度与后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)；
 各规范页末尾的「待办」是未完成能力的权威清单——未验证的能力不标为完成。

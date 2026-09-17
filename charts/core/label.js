@@ -172,17 +172,19 @@ const leftOf = (x, width, anchor) =>
  *           由 L2 分好左右两栏后各调一次 dropCollisions（同一个函数，喂 y 值，PIE-14）
  * 空文本 / 无 items 直接返回（LABEL-07 的 null 已由 L2 过滤，此处只做兜底）。
  * 一次测量供两道过滤共用（宽度超限 → 碰撞），不重复量。
+ * **返回实际画出的标签盒** [{x,y,width,height}]，供调用方拿去做避让（当前消费者：
+ * core/callout.js 的障碍物集）；未测量的批次返回空数组，理由见下面 painted() 的说明。
  */
 export function renderDataLabels(g, frame, items, opts = {}) {
   const { collide = true } = opts;
   const list = items.filter((d) => d && d.text != null && d.text !== '');
-  if (!list.length) return;
+  if (!list.length) return [];
 
   /* 没有任何一项要判宽、也不判碰撞时，测量结果无人消费——直接跳过（饼环外侧档就是这种：
      宽度已由 PIE-16 的截断保证装得下，碰撞已在 L2 按纵向判过）。省一次 layout flush。 */
   const needsMeasure = collide || list.some((d) => d.maxWidth != null);
   const widths = needsMeasure ? measureByClass(frame.host, list) : null;
-  if (!needsMeasure) return paint(g, list);
+  if (!needsMeasure) { paint(g, list); return []; }
 
   let boxes = list.map((d, i) => ({
     /* 水平向的 {start,size}：dropCollisions 收的是轴无关字段（LABEL-06②） */
@@ -197,8 +199,34 @@ export function renderDataLabels(g, frame, items, opts = {}) {
     boxes = dropCollisions(boxes, tokenNum(frame.host, '--spacing-data-label-min-gap')); /* [LABEL-06②] */
   }
   const visible = boxes.map((b) => b.item);
-  if (!visible.length) return;
+  if (!visible.length) return [];
   paint(g, visible);
+  return painted(frame, boxes);
+}
+
+/*
+ * 实际画出的标签盒（像素，svg 坐标系）：[{ x, y, width, height }]。
+ *
+ * 为什么由本模块返回而不是让调用方自己量：宽度是在这里按 classOf 的**完整 class 串**测的
+ * （sizeClass 会改字号，见 measureByClass）。调用方要拿盒子就得复制一份同样的类名口径，
+ * 那正是 charts/charts/cartesian/README.md 把 `measure` 声明为「不用」时要避免的事。
+ * 当前消费者：core/callout.js 的障碍物集（CALLOUT-07），让标注别压住已经画好的标签。
+ *
+ * ⚠️ **未测量的批次返回空数组**（needsMeasure 为假，如饼环外侧档）：那条路径是刻意
+ * 省掉一次 layout flush 的，为了拿盒子再量一趟就把它省下的东西原样还回去了。
+ * 需要那一族的盒子时，应当让它也走测量，而不是在这里偷偷补一次。
+ */
+function painted(frame, boxes) {
+  const lineH = tokenNum(frame.host, '--line-height-data-label');
+  return boxes.map(({ start, size, item }) => ({
+    x: start,
+    width: size,
+    height: lineH,
+    /* baseline 三档决定盒子上沿：'auto' 文字在锚点上方 / 'hanging' 下方 / 'middle' 居中 */
+    y: item.baseline === 'hanging' ? item.y
+      : item.baseline === 'middle' ? item.y - lineH / 2
+        : item.y - lineH,
+  }));
 }
 
 /*
