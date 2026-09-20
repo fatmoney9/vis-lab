@@ -3,7 +3,7 @@
  *
  * 干什么：把「每个扇区占多少角、环画多大多厚、标签摆在哪」算成**纯数据**，交给 index.js 去画。
  * 不碰 DOM、不碰 d3、不碰 token——只做几何/数值；唯一的 import 是同样零依赖的
- * core/polar-label.js，故仍可被 node --test 直接加载（同 cartesian/layout.js）。
+ * core/polar-label.js，故仍可被 node --test 直接加载（同 L1 的 bar-geometry）。
  *
  * 角度约定与 d3.arc 一致：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
  * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——labelAnchor 用的就是这个式子，

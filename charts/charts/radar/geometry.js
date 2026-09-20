@@ -5,7 +5,7 @@
  * 干什么：把「每根轴指向哪、值该落在多远、网格环画多大、指针落在第几个扇形」
  * 算成**纯数据**，交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token；
  * 唯一的 import 是同样零依赖的 core/polar-label.js，故仍可被 `node --test` 直接加载
- * （同 pie/geometry.js、cartesian/layout.js）。
+ * （同 pie/geometry.js、L1 的 bar-geometry）。
  *
  * 角度约定由 core/polar-label.js 统一：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
  * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——见该模块的 pointAt()。

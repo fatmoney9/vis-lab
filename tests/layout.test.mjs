@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { groupedBars, singleBar, stackBars } from '../charts/charts/cartesian/layout.js';
+import { groupedBars, singleBar, stackBars } from '../charts/core/bar-geometry.js';
 
 const closeTo = (actual, expected) => assert.ok(
   Math.abs(actual - expected) < 1e-9,

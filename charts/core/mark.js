@@ -1,5 +1,6 @@
 import { line, area } from 'd3';
 import { tokenNum } from './tokens.js';
+import { barPath, barRadius } from './bar-geometry.js';
 
 let areaGradSeq = 0; // 渐变面积 def 的唯一 id 计数（每次重绘递增，画布整体重建不残留）
 
@@ -8,21 +9,8 @@ let areaGradSeq = 0; // 渐变面积 def 的唯一 id 计数（每次重绘递�
  * 分组偏移、堆叠累加等**布局计算是图表专属**，由 L2 算好后经参数传入（见 specs/bar.md · BAR-02）。
  */
 
-/* 单根柱的路径：仅“远离基线”的一端圆角（正值圆顶、负值圆底），r=0 时退化为直角矩形 */
-function barPath(x, yTop, w, h, r, side) {
-  r = Math.max(0, Math.min(r, w / 2, h));
-  if (r === 0) return `M${x},${yTop}h${w}v${h}h${-w}Z`;
-  return side === 'top'
-    ? `M${x},${yTop + h}V${yTop + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${yTop + h}Z`
-    : `M${x},${yTop}V${yTop + h - r}a${r},${r} 0 0 0 ${r},${r}h${w - 2 * r}a${r},${r} 0 0 0 ${r},${-r}V${yTop}Z`;
-}
-
-/* [BAR-01] THS 的柱顶圆角随最终柱宽降级；其他主题的 rMax=0，仍保持直角。 */
-function barRadius(width, rMax, rReduced, fullMinWidth, reducedMinWidth) {
-  if (rMax <= 0 || width < reducedMinWidth) return 0;
-  if (width < fullMinWidth) return Math.min(rMax, rReduced);
-  return rMax;
-}
+/* 柱的路径与圆角分档住在 core/bar-geometry.js（零 import，故可单测；本文件 import d3、
+   `node --test` 加载不了）。那边的纵向两档被 golden-value 锁死，改动前先读它的文件头。 */
 
 /*
  * [BAR-01][BAR-05] 一个柱系列的一批柱，渲染进已存在的分组 <g>（L2 每系列一个 g，便于整组控隐藏/弱化）。

@@ -1,16 +1,67 @@
 /*
- * cartesian/layout.js —— 【柱的 X 排布几何 + 堆叠累计】 · [L2-LOCAL] 图表专属，有意不下沉 L1（BAR-02/05）
+ * L1 · 柱系几何（纯计算：无 DOM、无 d3、无 token）。
+ * 权威规范见 specs/bar.md（BAR-01 / BAR-02 / BAR-03 / BAR-05 / BAR-06）。
  *
- * 干什么：把「有几根柱、band 多宽、堆叠怎么累」算成**纯数据**（offset / width / base），
- * 交给 mark 去画。不碰 DOM、不碰比例尺、不碰 token——只做几何/数值。
+ * ⚠️ **本模块必须零 import**，这不是风格是硬约束：消费方 `tests/bar-geometry.test.mjs` 与
+ * `tests/layout.test.mjs` 被 `node --test` 直接加载，而 `core/mark.js` 顶部 `import 'd3'`。
+ * 同 measure.js / split.js / polar-label.js / legend-state.js 的纪律。
  *
- * 三个策略：
- *   groupedBars   分组柱：band 内 n 根等分、整组居中 → 每根的 {offset, width}
- *   singleBar     单列（基础单柱 + 堆叠单列）：container 内留侧白居中 → 单个 {offset, width}
- *   stackBars     堆叠累计：可见柱逐个累计基线（正上负下分开、percent 先缩放到占比）→
- *                 {lo, hi, segs}；segs 是每系列的 {colorVar, values, base}（喂给 renderBars 的 base），
- *                 lo/hi 是堆叠后的值域上下限（供 domain 用）
+ * ── 为什么会有这个模块 ────────────────────────────────────────────
+ * 它不是「可能有用所以先抽出来」，而是两条既有纪律同时被兑现：
+ *   ① `groupedBars` / `singleBar` / `stackBars` 原先住在 `charts/charts/cartesian/layout.js`
+ *      并标着 `[L2-LOCAL]`。它们的签名里**没有一个 x/y 字样**、收的是标量 band 与值数组，
+ *      横向条把 band 当行高传即可、一行不用改 —— 第二个消费者一出现，
+ *      `WORKFLOW.md` 第三节「两种以上图表都要遵守的规范 → 沉到 L1」就机械触发。
+ *   ② `barPath` / `barRadius` 原先是 `core/mark.js` 的私有函数。那里 import d3、
+ *      `node --test` 加载不了 ⇒ **它们永远不能单测**，而圆角夹取 `min(r, w/2, h)` 写错
+ *      在 2px 圆角上肉眼根本看不出来。
+ * 两者合成一个模块而不是两个：都是「柱系的纯计算」，且每族 README 的 L1 声明只多一行。
+ *
+ * ── 为什么叫 bar-geometry 而不是 bar-layout ───────────────────────
+ * 里面既有「排布」（band 内怎么分格）也有「图元路径」（单根柱长什么样），
+ * 叫 layout 会让人以为 barPath 不在这儿。geometry 同时涵盖两者，
+ * 与 `charts/charts/radar/geometry.js`、`charts/charts/waterfall/geometry.js` 的用词一致。
  */
+
+/*
+ * [BAR-01][HBAR-02] 单根柱 / 条的路径：仅**远离基线的那一端**圆角，r=0 退化为直角矩形。
+ *   side —— 'top'    正值竖柱（圆角在上）   · 'bottom' 负值竖柱（圆角在下）
+ *           'right'  正值横条（圆角在右）   · 'left'   负值横条（圆角在左）
+ *
+ * 圆角夹取**按方向换轴**：竖向 `min(r, w/2, h)`（半个柱宽、整根柱高），
+ * 横向 `min(r, h/2, w)`（半个条厚、整根条长）。两者是同一条规则的两个方向——
+ * 「圆角不得超过厚度的一半，也不得超过长度」。
+ *
+ * ⚠️ **'top' / 'bottom' 两支是从 core/mark.js 原样迁入的，一个字符都没改。**
+ * `tests/bar-geometry.test.mjs` 用 golden-value 把它们的输出串锁死了：
+ * 这是「柱系几何下沉没有改变 cartesian 任何一个像素」的可执行证据，
+ * 比肉眼比对截图可靠。要改纵向路径，先想清楚你在改的是全部纵向柱图。
+ */
+export function barPath(x, yTop, w, h, r, side = 'top') {
+  if (side === 'right' || side === 'left') {
+    r = Math.max(0, Math.min(r, h / 2, w));
+    if (r === 0) return `M${x},${yTop}h${w}v${h}h${-w}Z`;
+    return side === 'right'
+      ? `M${x},${yTop}H${x + w - r}a${r},${r} 0 0 1 ${r},${r}V${yTop + h - r}a${r},${r} 0 0 1 ${-r},${r}H${x}Z`
+      : `M${x + w},${yTop}H${x + r}a${r},${r} 0 0 0 ${-r},${r}V${yTop + h - r}a${r},${r} 0 0 0 ${r},${r}H${x + w}Z`;
+  }
+  r = Math.max(0, Math.min(r, w / 2, h));
+  if (r === 0) return `M${x},${yTop}h${w}v${h}h${-w}Z`;
+  return side === 'top'
+    ? `M${x},${yTop + h}V${yTop + r}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}V${yTop + h}Z`
+    : `M${x},${yTop}V${yTop + h - r}a${r},${r} 0 0 0 ${r},${r}h${w - 2 * r}a${r},${r} 0 0 0 ${r},${-r}V${yTop}Z`;
+}
+
+/*
+ * [BAR-01] 圆角按**最终条厚**分档：THS 的圆角随柱变窄降级，其他主题 rMax=0 恒直角。
+ * 首参叫 thickness 而不是 width —— 竖柱的「厚」是柱宽、横条的「厚」是行厚，是同一件事；
+ * 叫 width 会让横向消费方以为该传条长。语义未变，纵向调用方传的仍是柱宽。
+ */
+export function barRadius(thickness, rMax, rReduced, fullMinThickness, reducedMinThickness) {
+  if (rMax <= 0 || thickness < reducedMinThickness) return 0;
+  if (thickness < fullMinThickness) return Math.min(rMax, rReduced);
+  return rMax;
+}
 
 /* [BAR-02/03] 分组：band 走 'slot' 模式 = 整格 step（每格铺满、组间距最小 0）。n 根柱在
    container=min(band, containerMax) 内、整组回 band 居中；**组间距 = band − 内容块** 为残量（数据少→容器封顶
@@ -35,12 +86,14 @@ export function groupedBars(n, band, barMax, gapMax, containerMax = Infinity, ra
   return Array.from({ length: n }, (_, i) => ({ offset: start + i * (width + g), width }));
 }
 
-/* [BAR-03/05] 单列（基础单柱 + 堆叠单列共用）：band 走 'slot' 模式 = 整格 step（每格铺满、格间距最小 0）。
+/* [BAR-03/05][HBAR-03] 单列（基础单柱 + 堆叠单列共用）：band 走 'slot' 模式 = 整格 step（每格铺满、格间距最小 0）。
    容器 = min(band, containerMax) = 「柱 + 左右侧白」：ratio>0（如 2:1）时柱只占容器 ratio/(ratio+1)、
    两侧各留 1/(2(ratio+1))；柱宽再受 barMax 封顶（containerMax·ratio/(ratio+1)=barMax 恒成立 → 宽格满宽）。
    数据少：band 大 → 容器封顶 containerMax、格间距=band−容器随之变大；数据多：band<containerMax → 容器缩小、格间距=0。
    ratio=0 → 不留侧白、退化为 min(band, barMax)。containerMax=size-bar-container-max、ratio=size-bar-gap-ratio。
-   （堆叠时所有系列段共用这一个 {offset,width}，靠 base 叠起。） */
+   （堆叠时所有系列段共用这一个 {offset,width}，靠 base 叠起。）
+   **横向条复用同一份**：band 传行高、返回的 offset/width 读作「行内纵向偏移 / 条厚」，
+   token 换成 size-hbar-row-* 一族；这是本模块从 L2 下沉的直接原因。 */
 export function singleBar(band, barMax, containerMax = Infinity, ratio = 0) {
   const container = Math.min(band, containerMax);
   const contentRegion = ratio > 0 ? (container * ratio) / (ratio + 1) : container;
