@@ -239,7 +239,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
 、`RadarChart`（标准 / 多数据 / 分区三类示例，角度均分 · 值→半径 · 横排 / 环绕标签 · 连续 / 分段背景 · 单系列可调节输入，见 `specs/radar.md` RADAR-01..18）
-、`WaterfallChart`（累计桥接 / 分组数据柱 · 有符号累计与分段守恒 · Ainvest 箭头柱主题分叉，见 `specs/waterfall.md` WATERFALL-01..15）
+、`WaterfallChart`（累计桥接 / 分组数据柱 · 有符号累计与分段守恒 · 三主题共用浅底箭头柱并使用各自主题色，见 `specs/waterfall.md` WATERFALL-01..15）
 与 `ChordChart`（实体间相互流动，n×n 方阵 · 角度∝流量 · 无向 / 有向两档槽位模型 · 环绕 / 横排两档实体标签，见 `specs/chord.md` CHORD-01..19）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，

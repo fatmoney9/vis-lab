@@ -39,6 +39,6 @@
 - L2 `model.js`：只负责瀑布累计公式、分段守恒与值域端点，零 DOM、零 d3，可单测。
 - L2 `geometry.js`：集中保存 Figma 明确给出的跨主题固定尺寸，并负责槽宽到柱宽的专属几何换算；零 DOM、零主题判断，品牌分叉不放这里。
 - L2 `render.js`：只装配无状态的瀑布专属 SVG 片段与展示文本，不持有重绘、动效或交互生命周期。
-- L2 `index.js`：编排浮动柱、连接线、Ainvest 箭头复合图元、数据柱内部标签及交互生命周期。
-- L0：Ainvest / THS / iFinD 的形态选择在 `tokens/behavior.json`；颜色、线宽、线型和透明度在三份主题 token 中保持同键合同。
+- L2 `index.js`：编排浮动柱、连接线、三主题共用的箭头复合图元、数据柱内部标签及交互生命周期。
+- L0：`tokens/behavior.json` 只保留各主题默认色彩模式；颜色、线宽、线型和透明度在三份主题 token 中保持同键合同，箭头通过 `currentColor` 自动使用当前主题色。
 - L3：规则 ID 在 `specs/waterfall.md`；示例、主题文案与旋钮装配在 `demos/`，两个预览入口不拼 SVG。

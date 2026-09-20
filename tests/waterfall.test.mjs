@@ -1,10 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   resolveWaterfall,
   waterfallExtent,
 } from '../charts/charts/waterfall/model.js';
 import { waterfallBarWidth } from '../charts/charts/waterfall/geometry.js';
+
+const BEHAVIOR = JSON.parse(
+  readFileSync(new URL('../tokens/behavior.json', import.meta.url), 'utf8'),
+);
+
+test('WATERFALL-09/10：箭头形态不按主题分叉，profile 只声明默认色彩模式', () => {
+  assert.deepEqual(BEHAVIOR.ths['waterfall-profile'], { 'default-color-mode': 'semantic' });
+  assert.deepEqual(BEHAVIOR['ifind-pc']['waterfall-profile'], { 'default-color-mode': 'semantic' });
+  assert.deepEqual(BEHAVIOR.ainvest['waterfall-profile'], { 'default-color-mode': 'primary' });
+});
 
 test('瀑布累计：delta 按上一终点增减，subtotal / total 回到 0 但不改变累计结果', () => {
   const model = resolveWaterfall([
