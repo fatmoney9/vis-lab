@@ -130,7 +130,8 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
   `COLOR-` 颜色 · `SCALE-` 比例尺刻度 · `GRID-` 网格 · `AXIS-` 坐标轴 · `AXISTITLE-` 轴标题 ·
   `DATAZOOM-` 缩放轴 · `MARK-` 图形标记（柱 / 线 / 数据点本身，即 `core/mark.js`；**当前为空号段**）·
   `LEGEND-` 图例 · `LABEL-` 数据标签 · `TEXT-` 文本 ·
-  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `WATERMARK-` 水印 · `CALLOUT-` 图表标注（环 + 文字 + 引线）·
+  `TOOLTIP-` 浮层 · `MOTION-` 动效 · `PLAYBACK-` 播放轴（时间轴控件本身，跨图型共用）·
+  `WATERMARK-` 水印 · `CALLOUT-` 图表标注（环 + 文字 + 引线）·
   图型专属：`BAR-` 柱系（**纵向**）· `HBAR-` 横向条系 · `LINE-` 折线 · `PIE-` 饼环 · `RADAR-` 雷达 · `WATERFALL-` 瀑布
 - 每条规范页的标准结构：规则表（ID + 描述）→ 活 demo → Do/Don't 对比 → API 说明
 
@@ -209,7 +210,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 **桑基的 L3 例外**（截至 2026-08-13 唯一一例，接新图型前先读）：上面第 4 步的常态是「只改 `demos/`」，
 但桑基另加了 `playground/sankey-preview.html` 独立面，并在 `index.html` / `playground/preview.html` 里
 保留专属外框与旋钮接线；两个入口重复的播放区 DOM、刻度模板和视觉已分别收敛到
-`demos/chart-playback.js` / `demos/chart-playback.css`。原因是 SANKEY-23 要求
+`demos/playback/view.js` / `demos/playback/playback.css`。原因是 SANKEY-23 要求
 **812px 横版财报验收框**，且播放序列须以所有周期最大所需高度建立统一视口，
 三主题并排卡片网格表达不了。代价要认清：**该独立面自带节点与季度输入、不 import `demos/examples.js`**，
 是全库唯一脱离单一示例源的展示面，改示例时需要两处同步；SANKEY-25 的 P = B + D 业务公式

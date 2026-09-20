@@ -6,7 +6,7 @@
   <title>SankeyChart · 独立预览</title>
   <link rel="stylesheet" href="../tokens/tokens.css" />
   <link rel="stylesheet" href="../charts/styles.css" />
-  <link rel="stylesheet" href="../demos/chart-playback.css" />
+  <link rel="stylesheet" href="../demos/playback/playback.css" />
   <style>
     /* 与 cartesian-preview.html 保持一致：这里只放 Playground 外壳样式，
        桑基图生产样式由 charts/styles.css 的 .dv-sankey 命名空间提供。 */
@@ -173,8 +173,8 @@
       display: none;
     }
 
-    /* 播放区视觉与 DOM 模板统一由 demos/chart-playback.* 提供。 */
-    /* [SANKEY-28] Ainvest playback: PC Figma Uv36h0PXzZG7ZhuHBHQ3qz / 110:2941
+    /* 播放区视觉与 DOM 模板统一由 demos/playback/* 提供。 */
+    /* [PLAYBACK-12] Ainvest playback: PC Figma Uv36h0PXzZG7ZhuHBHQ3qz / 110:2941
        经产品确认复用于移动端；只覆盖播放区，不改变桑基视口或图形计算。 */
     .sankey-preview__complex-card[data-theme="ainvest"] .sankey-preview__complex-layout {
       --chart-playback-bar-height: 110px;
@@ -484,7 +484,7 @@
       playbackMarkup,
       playbackRangeTheme,
       playbackTicksMarkup,
-    } from '../demos/chart-playback.js';
+    } from '../demos/playback/view.js';
     import { buildFinancialDifferencePair } from '../demos/sankey-financial.js';
 
     const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });

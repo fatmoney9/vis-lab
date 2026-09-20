@@ -6,7 +6,7 @@
   <title>Vis Lab · 可视化组件库</title>
   <link rel="stylesheet" href="./tokens/tokens.css" />
   <link rel="stylesheet" href="./charts/styles.css" />
-  <link rel="stylesheet" href="./demos/chart-playback.css" />
+  <link rel="stylesheet" href="./demos/playback/playback.css" />
   <style>
     /* ⚠️ 本文件的 `--shell-*` 只管**外壳**（导航、卡片、面板）。演示区里图表自己的
        颜色 / 字号 / 圆角一律来自 tokens.css 的三套主题，外壳换皮不许波及它们——
@@ -480,7 +480,7 @@
       --chart-playback-timeline-height: 46px;
       --chart-playback-control-height: 36px;
     }
-    /* 播放区视觉与 DOM 模板统一由 demos/chart-playback.* 提供，状态机在 demos/playback-controller.js。 */
+    /* 播放区视觉与 DOM 模板统一由 demos/playback/* 提供，状态机在 demos/playback/controller.js。 */
 
     /* 参数面板与侧栏同形态：贴边、实心浅灰、无圆角无投影，只用一条左发丝线收边 */
     .settings {
@@ -638,12 +638,12 @@
   <script type="module">
     import { mountExample } from './demos/registry.js';
     import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
-    import { createPlaybackController } from './demos/playback-controller.js';
+    import { createPlaybackController } from './demos/playback/controller.js';
     import {
       playbackCopy,
       applyPlaybackViewport,
       playbackMarkup as sharedPlaybackMarkup,
-    } from './demos/chart-playback.js';
+    } from './demos/playback/view.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -935,7 +935,7 @@
       return instance;
     }
 
-    /* 播放状态机住在 demos/playback-controller.js（三面共用）。这里只注入「怎么画一期」
+    /* 播放状态机住在 demos/playback/controller.js（三面共用）。这里只注入「怎么画一期」
        与宿主侧回显：控制器不认识 SankeyChart，也不认识 state 长什么样。 */
     function mountPlayback(surface, example, chart) {
       const periods = playbackPeriodsOf(example, { theme: state.theme });

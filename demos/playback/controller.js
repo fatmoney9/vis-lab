@@ -17,7 +17,7 @@
  * 两个旗标在循环条件里自然退出，所以不需要 clear。宿主只要在销毁时调 dispose()。
  */
 
-import { assertPlaybackCopy, playbackRangeTheme, runPlaybackUpdate } from './chart-playback.js';
+import { assertPlaybackCopy, playbackRangeTheme, runPlaybackUpdate } from './view.js';
 
 /*
  * surface —— 播放区所在的容器（内部按 .chart-playback__* 查控件）
@@ -96,7 +96,7 @@ export function createPlaybackController(surface, {
   };
 
   /* 先把序号推到目标、先回显控件，**再** await 图表动画——这正是
-     「滑块切换开始时直接跳到目标刻度，不随图形中间帧滑动」（SANKEY-24）的实现方式：
+     「滑块切换开始时直接跳到目标刻度，不随图形中间帧滑动」（PLAYBACK-03）的实现方式：
      滑块与图形解耦、不共享进度。失败时回滚序号。 */
   const goTo = async (targetIndex, animate = true) => {
     if (disposed) return false;

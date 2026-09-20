@@ -36,8 +36,8 @@
 | HBAR-16 | **暂停 = 冻结当前帧，不落终态**；恢复从冻结处继续。<br>这正是不能用 `core/motion.js` 的 `runGrowth` 的唯一理由——那个驱动被取消时会 `settle()` 到终态，而播放的暂停必须停在看到的那一帧。判例与 SANKEY-24 同源 | `charts/hbar/index.js` → `cancelMotion` | ✅ |
 | HBAR-17 | **从当前显示态起补，不从上一期原值重来**：拖时间轴快速连点时不闪回。实现上是 `from` 取当前显示态（可能是被冻结的中间帧），先例是 [pie.md](pie.md) 的强调态补间。<br>由此产生一条**模型不变量**：`interpolateRanking` 的输出必须能原样再喂给它自己（每行都带 `seat`），否则链式插值算出 `NaN` | `charts/hbar/index.js` → `update()`；`model.js` | ✅ |
 | HBAR-18 | **首次挂载仍按 MOTION-01 播一次入场生长**（条自左向右长）；**`update()` 的每一次补间都不是入场，不重放生长**。这是对 MOTION-04「只在首次挂载播一次」的 scope 澄清：那条约束的是入场，期间推进属于另一类动效 | `charts/hbar/index.js` → `firstBuild` | ✅ |
-| HBAR-19 | **降级**：`prefers-reduced-motion: reduce` 或 `animation:false` 时，入场不播、**每期直接切到该期终态**，且**不自动起播**。<br>口径一句话：**关闭的是动画，不是播放；终态永远是「当前这一期」的终态，不是最后一期。** 一进页面就看到若干次硬切，对前庭功能障碍用户比连续位移更糟 | `charts/hbar/index.js` → `update()`；`demos/playback-controller.js` 的 `autoplay:false` | ✅ |
-| HBAR-20 | **实例 API 与 `SankeyChart` 同形**：`update(config, { animate, onProgress }) => Promise<boolean>` / `pause()` / `destroy()`。这是硬要求——两个会播放的图表若形状不同，L3 的播放控制器就要为每个图型分叉，而那正是把它收敛成 `demos/playback-controller.js` 想消掉的东西 | `charts/hbar/index.js` | ✅ |
+| HBAR-19 | **降级**：`prefers-reduced-motion: reduce` 或 `animation:false` 时，入场不播、**每期直接切到该期终态**，且**不自动起播**。<br>口径一句话：**关闭的是动画，不是播放；终态永远是「当前这一期」的终态，不是最后一期。** 一进页面就看到若干次硬切，对前庭功能障碍用户比连续位移更糟 | `charts/hbar/index.js` → `update()`；`demos/playback/controller.js` 的 `autoplay:false` | ✅ |
+| HBAR-20 | **实例 API 与 `SankeyChart` 同形**：`update(config, { animate, onProgress }) => Promise<boolean>` / `pause()` / `destroy()`。这是硬要求——两个会播放的图表若形状不同，L3 的播放控制器就要为每个图型分叉，而那正是把它收敛成 `demos/playback/controller.js` 想消掉的东西 | `charts/hbar/index.js` | ✅ |
 
 ## Do / Don't
 
