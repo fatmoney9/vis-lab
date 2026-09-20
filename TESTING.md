@@ -72,7 +72,7 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `charts/core/split.js`：Y 轴刻度三件套（`niceSplit` / `niceSplitDual`）——分割线恒 5 条、interval 必取自 `INTERVAL_STEPS × 10ⁿ`、**0 恒精确落线**、轴值域完整覆盖数据、占比最大化（与穷举所有负值段数方案对拍）、退化值域不产生零宽轴、双轴 0 对齐同一条线；以及 **LABEL-10 呼吸位上限 `headroom`**——缺省 / 传 0 与旧签名逐值等价、有数据的一侧必留够、顶格数据加了上限后不再顶格、上限大到一格塞不下时退回不留（不产生荒谬间隔）、不破坏 SCALE-01 两条硬约束。其中「占比下限约 80%」一条兼做**护栏**：改了 `INTERVAL_STEPS` 就会红，提醒同步 SCALE-01。**与 `scale.js` 分开只为可测**：那边 import d3、`node --test` 加载不了。
 - `charts/core/format.js`：主题数值格式边界；
 - `charts/charts/cartesian/series.js`：默认值和固定系列槽位；
-- `charts/charts/cartesian/layout.js`：分组、单柱、普通堆叠和百分比堆叠；
+- `core/bar-geometry.js`：① 排布与累计——分组、单柱、普通堆叠和百分比堆叠（`tests/layout.test.mjs`，从 `cartesian/layout.js` 下沉时断言一行未改，这本身就是「纯搬迁」的证据）；② 图元路径与圆角（`tests/bar-geometry.test.mjs`）——**纵向两档用 golden value 逐字符锁死**（串取自下沉前的旧实现，是「没动 cartesian 一个像素」的可执行证据），横向两档改断言**成品形状**（包围盒、哪端尖角哪端圆角、圆角按方向换轴夹取），不锁字符串：新方向锁串等于把实现抄一遍当测试；
 - `charts/charts/cartesian/domain.js`：单轴值域、隐藏策略、柱线独立累计；
 - `charts/core/label.js`：省略号截断（`truncateBatch`——**测量函数经参数注入**，故无需伪造 DOM，同 `motion.js` 注入时钟的做法）：装得下原样返回、超宽截到**最长**可行前缀（不保守多截）、连「1 字 + `…`」都放不下则回落丢弃、一批混合各归各位、**按轮批量测量**（调用次数随轮数而非标签数增长）、按码点切不劈开代理对。
 - `charts/charts/radar/geometry.js`：轴角均分与首轴方位、值域两条路（给 `max` 则定死、否则注入 `niceSplit` 求 nice 上界）、网格环与最少 2 段、画布几何（半径先按容器定、标签带吃剩下的、横竖分开、收缩下限与最小高度）、绕圆标签的八向锚点与可读弧线（下半圈反向）、多边形扇形热区、扇区命中（含圆心与跨 0 度两处边界）、可调节手柄的轴向投影与步长吸附（`axisAngles` / `radarDomain` / `radarFrame` / `ringRadii` / `gridPath` / `seriesPoints` / `labelAnchor` / `labelArc` / `sectorAt` / `sectorCorners` / `radarValueAt` / `snapRadarValue`）。

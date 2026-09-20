@@ -6,9 +6,9 @@
  * 并上**线子集**（stack:none → extent；堆叠折线 → 可见线累计总高，与柱各自独立累计），
  * 且始终包含 0（柱从 0 基线长）。
  *
- * 不碰 DOM / 比例尺；堆叠总高借用 layout.js 的 stackBars（同一份累计逻辑，不重复实现）。
+ * 不碰 DOM / 比例尺；堆叠总高借用 core/bar-geometry.js 的 stackBars（同一份累计逻辑，不重复实现）。
  */
-import { stackBars } from './layout.js';
+import { stackBars } from '../../core/bar-geometry.js';
 
 /* 一组系列里所有非 null 数据的 [min, max]（空则 [0,0]） */
 export function extentOf(rows) {

@@ -4,7 +4,7 @@
  * 为什么单开一个文件、不留在 legend.js 里：那边顶部 `import { select } from 'd3'`，
  * 而 `node --test` 环境没有 d3——**只要住在那个文件里就一行测不了**。
  * LEGEND-06 的模式分流与 LEGEND-12 的「最后一项不可关」都是有真实分支的判定，
- * 却因此长期零覆盖。本模块与 pie/geometry.js、cartesian/layout.js 同一条纪律：
+ * 却因此长期零覆盖。本模块与 pie/geometry.js、core/bar-geometry.js 同一条纪律：
  * 纯函数模块不碰第三方依赖，故可被测试直接加载。
  *
  * 两条互不相干的状态线，各自一个纯函数：
