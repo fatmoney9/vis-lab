@@ -48,8 +48,8 @@
   主轴识别与各期所需高度都复用 `layout.js` 的校验和布局结果，不包含 DOM，也不复制布局公式。
 - L2 `config.js`：跨主题不变的桑基几何、字号范围与播放参数，并把主题色解析为全局 token 引用。
 - L3：演示数据与配置装配放在 `demos/`；两个预览入口共用
-  `demos/chart-playback.js` 的播放区 DOM 与动态刻度模板，以及
-  `demos/chart-playback.css` 的播放区视觉。独立财报验收场景仍放在
+  `demos/playback/view.js` 的播放区 DOM 与动态刻度模板，以及
+  `demos/playback/playback.css` 的播放区视觉。独立财报验收场景仍放在
   `playground/sankey-preview.html`，页面只保留各自的画板外框和状态接线；组件目录不保存业务样例
   或页面控制逻辑。
 - 全局结构样式：`charts/styles.css` 的 `.dv-sankey` 命名空间。

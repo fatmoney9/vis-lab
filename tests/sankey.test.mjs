@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { truncateBatch } from '../charts/core/label.js';
 import { easeOutCubic } from '../charts/core/motion.js';
 import {
@@ -30,26 +30,16 @@ import {
 import {
   financialSankeyPresentation,
 } from '../demos/sankey-presentation.js';
-import { playbackCopy } from '../demos/chart-playback.js';
+import { playbackCopy } from '../demos/playback/view.js';
 import { buildFinancialDifferencePair } from '../demos/sankey-financial.js';
 import { makeFinancialSankeyQuarter } from '../demos/examples.js';
-import {
-  resolvePlaybackChartHeight,
-  runPlaybackUpdate,
-  playbackMarkup,
-  playbackRangeTheme,
-  playbackTicksMarkup,
-} from '../demos/chart-playback.js';
+import { resolvePlaybackChartHeight } from '../demos/playback/view.js';
 const THEME_TOKENS = Object.fromEntries(
   ['ths', 'ifind-pc', 'ainvest'].map((theme) => [
     theme,
     JSON.parse(readFileSync(new URL(`../tokens/${theme}.json`, import.meta.url), 'utf8')),
   ]),
 );
-const THEME_BEHAVIOR = JSON.parse(
-  readFileSync(new URL('../tokens/behavior.json', import.meta.url), 'utf8'),
-);
-
 const STYLE = {
   geometry: {
     'primary-node-width': 24,
@@ -374,68 +364,6 @@ test('SANKEY-27：Ainvest 只翻译展示文案，稳定拓扑与适配输入不
   assert.equal(presented.statusLabel, 'Loss');
   assert.strictEqual(financialSankeyPresentation(source, { theme: 'ths' }), source);
   assert.equal(playbackCopy({ theme: 'ainvest' }).previous, 'Previous');
-});
-
-test('SANKEY-28：Ainvest 播放区的主题合同与方向资源完整', () => {
-  assert.equal(THEME_BEHAVIOR.ainvest['datazoom-handle'].w, 32);
-  assert.equal(THEME_BEHAVIOR.ainvest['datazoom-handle'].grip.h, 10);
-  assert.equal(THEME_TOKENS.ths['radius-playback-step'], '{radius-4}');
-  assert.equal(THEME_TOKENS['ifind-pc']['radius-playback-step'], '{radius-4}');
-  assert.equal(THEME_TOKENS.ainvest['radius-playback-step'], '18px');
-  assert.equal(
-    existsSync(new URL('../assets/playback/ainvest-period-arrow-prev.svg', import.meta.url)),
-    true,
-  );
-  assert.equal(
-    existsSync(new URL('../assets/playback/ainvest-period-arrow-next.svg', import.meta.url)),
-    true,
-  );
-});
-
-test('SANKEY-24/28：两个 L3 入口复用同一份播放区 DOM 与动态刻度模板', () => {
-  const periods = [
-    { period: '2025 一季报', timelinePeriod: '2025 一季报', shortPeriod: '一季' },
-    { period: '2025 半年报', timelinePeriod: '2025 半年报', shortPeriod: '半年' },
-  ];
-  const copy = playbackCopy({ theme: 'ths' });
-  const ticks = playbackTicksMarkup(periods, 1);
-  const markup = playbackMarkup({
-    periods,
-    currentIndex: 1,
-    copy,
-    playIconSrc: '../assets/playback/play.svg',
-    idPrefix: 'test-playback',
-  });
-
-  assert.match(ticks, /style="left:100%"/);
-  assert.match(ticks, /class="chart-playback__tick is-current"/);
-  assert.match(markup, /id="test-playback-range"/);
-  assert.match(markup, /--chart-playback-interval-count:1/);
-  assert.match(markup, /2025 半年报/);
-});
-
-test('SANKEY-24：播放更新拒绝时统一回落并执行状态恢复', async () => {
-  const failure = new Error('invalid period');
-  let reported = null;
-  let recovered = null;
-  const completed = await runPlaybackUpdate(
-    async () => { throw failure; },
-    {
-      onError: (error) => { reported = error; },
-      onFailure: (error) => { recovered = error; },
-    },
-  );
-
-  assert.equal(completed, false);
-  assert.strictEqual(reported, failure);
-  assert.strictEqual(recovered, failure);
-});
-
-test('SANKEY-29：iFinD 全端播放滑块复用 THS token 作用域', () => {
-  assert.equal(playbackRangeTheme('ifind'), 'ths');
-  assert.equal(playbackRangeTheme('ifind-pc'), 'ths');
-  assert.equal(playbackRangeTheme('ths'), 'ths');
-  assert.equal(playbackRangeTheme('ainvest'), 'ainvest');
 });
 
 test('SANKEY-20：节点看板为单行项目名与有符号值', () => {

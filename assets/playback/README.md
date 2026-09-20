@@ -1,6 +1,6 @@
 # Playback assets
 
-Shared by every chart family that exposes a playback timeline (`demos/chart-playback.*`).
+Shared by every chart family that exposes a playback timeline (`demos/playback/*`).
 They were first drawn for the Sankey report timeline, hence the Figma sources below,
 but nothing here is Sankey-specific — the control is generic.
 

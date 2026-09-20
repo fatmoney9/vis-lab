@@ -2,7 +2,7 @@
  * L3 · 播放区的 DOM 模板与宿主接线工具，**所有带时间轴的图型共用**。
  *
  * 这里只收敛模板、主题图例占位换算与异步更新兜底：不持有播放状态，
- * 也不认识任何具体图型——「怎么画一期」由调用方注入（见 demos/playback-controller.js）。
+ * 也不认识任何具体图型——「怎么画一期」由调用方注入（见 demos/playback/controller.js）。
  *
  * ⚠️ **命名必须保持中性**。本文件 2026-09-20 之前叫 sankey-playback.js、类名带 sankey 前缀，
  * 于是第二个要播放的图型接进来时，第一反应是「这是桑基的，我再写一份」——
@@ -10,7 +10,7 @@
  * 往这里加东西时先问：它是不是只有某一个图型需要？是就别放进来。
  */
 
-import { tokenNum } from '../charts/core/tokens.js';
+import { tokenNum } from '../../charts/core/tokens.js';
 
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
@@ -21,13 +21,13 @@ const escapeHtml = (value) => String(value ?? '')
 
 const idAttribute = (id) => (id ? ` id="${escapeHtml(id)}"` : '');
 
-/* [SANKEY-29] iFinD 播放轴的 range 把手沿用 THS 形态；只切换把手自身的 token 作用域，
+/* [PLAYBACK-13] iFinD 播放轴的 range 把手沿用 THS 形态；只切换把手自身的 token 作用域，
  * 不改变播放区其余 iFinD 样式。规则由桑基立，但对所有播放轴一视同仁。 */
 export function playbackRangeTheme(theme = 'ths') {
   return theme === 'ifind' || theme === 'ifind-pc' ? 'ths' : theme;
 }
 
-/* [SANKEY-23] 调用方提供序列画布高与跨主题最低图例兜底；真实图例占位由当前
+/* [PLAYBACK-10] 调用方提供序列画布高与跨主题最低图例兜底；真实图例占位由当前
  * L3 主题 token 决定。首次挂载前先算准外框，布局事件仍会在真实 DOM 换行时校正。
  * `legendFallbackHeight === null` 表示**本图型没有图例带**，整段图例预留跳过；
  * `undefined` 仍走既有分支（桑基不声明即原行为）。 */

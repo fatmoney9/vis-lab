@@ -1,17 +1,18 @@
 /*
- * [SANKEY-24] 播放区的**跨族合同**：`demos/chart-playback.*` + `demos/playback-controller.js`。
+ * [PLAYBACK-01..13] 播放区的**跨族合同**：`demos/playback/*` + `demos/playback/controller.js`。
  *
  * 这份文件和按图型组织的合同不同：它不验桑基画得对不对，而验**播放这件事本身**——
  * 推进 / 暂停 / 冻结 / 跳期 / 回卷，以及控件与图形的联动口径。当前唯一的消费方是桑基，
  * 但断言里没有一行认识桑基的数据；接第二个会播放的图型时，把 `ENTRY` 换掉即可复用。
  *
  * ── 为什么非要有这一份 ────────────────────────────────────────────
- * 2026-09-20 把播放件从 `sankey-playback.*` 中性化提取成 `chart-playback.*`，
+ * 2026-09-20 把播放件从 `sankey-playback.*` 中性化提取，同日收进 `demos/playback/`、
+ * 规则拆进 `specs/playback.md`，
  * 并把同一套状态机（此前在 index.html 与 playground/sankey-preview.html 里**逐行重复两遍**）
- * 收敛进 `playback-controller.js`。那次重构 `charts/` 一行没动、门禁 11/11 全绿，
+ * 收敛进 `playback/controller.js`。那次重构 `charts/` 一行没动、门禁 11/11 全绿，
  * 但门禁一个像素都不渲染、也不派发任何事件——**播放坏没坏，只有这里能回答**。
  *
- * ⚠️ 最值钱的是「暂停 = 冻结当前帧」那条。它是 SANKEY-24 的原文要求，
+ * ⚠️ 最值钱的是「暂停 = 冻结当前帧」那条。它是 PLAYBACK-05 的原文要求，
  * 也正是当年宁可在 L2 手写 rAF 也不用 `core/motion.js` 的 `runGrowth` 的唯一理由
  * （那个驱动被取消时会落终态）。只断言「暂停后画面没变」是不够的——
  * 「已经落到终态然后不动了」同样满足，所以必须同时断言**它不等于目标期的终态**。
@@ -94,7 +95,7 @@ try {
   assert.equal(paused.playing, false, '再点一次退出播放态');
   assert.ok(Number(paused.range) > 1, `播放期间确实推进了，实际停在第 ${paused.range} 期`);
 
-  /* ④ [SANKEY-24] 暂停 = **冻结当前帧**，不是落终态。
+  /* ④ [PLAYBACK-05] 暂停 = **冻结当前帧**，不是落终态。
         两条断言缺一不可：画面不再变化，且**不等于该期终态**（后者才排除「落完终态才停」）。
 
      ⚠️ 必须在**动画中途**按暂停，时机不能碰运气。一期是 120ms 文字提前量 + 720ms 几何补间、
@@ -136,7 +137,7 @@ try {
   assert.equal(ticked.range, '0', '点刻度跳回第 0 期');
   assert.equal(ticked.currentTicks, 1, '当前刻度仍唯一');
 
-  /* ⑥ [SANKEY-28][SANKEY-29] 三主题 × 明暗：播放键必须**真的看得见**，且底色取各自的
+  /* ⑥ [PLAYBACK-11][PLAYBACK-12] 三主题 × 明暗：播放键必须**真的看得见**，且底色取各自的
         控件强调色。
         ⚠️ 只断言「节点存在」是不够的——Ainvest 曾用 `display: none` 把它藏掉，
         节点一直都在、`querySelector` 一直为真，断言照样全绿。所以这里读的是

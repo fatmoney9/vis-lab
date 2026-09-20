@@ -152,7 +152,7 @@
 </style>
 <link rel="stylesheet" href="../tokens/tokens.css" />
 <link rel="stylesheet" href="../charts/styles.css" />
-<link rel="stylesheet" href="../demos/chart-playback.css" />
+<link rel="stylesheet" href="../demos/playback/playback.css" />
 </head>
 <body>
 <div class="app">
@@ -428,8 +428,8 @@
 <script type="module">
   import { mountExample } from '../demos/registry.js';
   import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, buildConfig, playbackPeriodsOf, clampPeriodIndex, activePeriodExample } from '../demos/examples.js';
-  import { playbackCopy, playbackMarkup } from '../demos/chart-playback.js';
-  import { createPlaybackController } from '../demos/playback-controller.js';
+  import { playbackCopy, playbackMarkup } from '../demos/playback/view.js';
+  import { createPlaybackController } from '../demos/playback/controller.js';
 
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
@@ -619,7 +619,7 @@
     activePeriodExample(cat, { periodIndex: index, theme: themeId });
 
   /* ── 卡外播放条：一条轴同时驱动三张卡 ─────────────────────────────
-   * 状态机在 demos/playback-controller.js（与首页、桑基独立预览面同一份）。
+   * 状态机在 demos/playback/controller.js（与首页、桑基独立预览面同一份）。
    * 本面只注入「怎么画一期」——而这里的一期是**三张卡一起画**：
    *   applyPeriod → 三个 instance.update() 并发 → Promise.all → 全部完成才算这一期完成。
    * 于是三卡同时起跑、同时收束；任一卡被暂停（返回 false）整条播放循环就停，
