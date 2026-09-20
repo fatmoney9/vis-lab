@@ -7,6 +7,7 @@
 |---|---|
 | `axis` | 用 |
 | `axis-title` | 不用：时间标题是瀑布专属内容区，不是坐标轴标题 |
+| `bar-geometry` | 不用：柱宽走 Figma 固定尺寸（geometry.js），不读 bar 一族 token |
 | `callout` | 不用：柱顶已有数值与百分比徽标，尚未接入批注能力 |
 | `chart-text` | 不用：项目名、期间与轴标签全部来自配置，组件不写固定文案 |
 | `crosshair` | 用 |

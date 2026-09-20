@@ -4,7 +4,7 @@
  * 干什么：直角坐标图（x-y 轴）的**拼装编排**。它自己几乎不算东西——而是把
  * L1 构件（frame/scale/grid/axis/legend/format/theme + palette 取色 + mark 画柱/线）
  * 按顺序拼起来，具体的「值域怎么算 / 柱怎么排 / 堆叠怎么累 / hover 怎么接」分别派发给
- * 同目录的 domain.js / layout.js / series.js / hover.js，本文件只负责串流程 + 接图例。
+ * 同目录的 domain.js / series.js / hover.js 与 core/bar-geometry.js，本文件只负责串流程 + 接图例。
  *
  * 组合形态靠三旋钮（≠ 样式；样式走 token/主题）：
  *   ① stack（none/normal/percent）· ② 每系列 type（bar/line）· ③ 每系列 axis（primary/secondary）
@@ -46,7 +46,7 @@ import { runGrowth, reducedMotion } from '../../core/motion.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
-import { groupedBars, singleBar, stackBars } from './layout.js';
+import { groupedBars, singleBar, stackBars } from '../../core/bar-geometry.js';
 import { resolveCalloutAnchors, barObstacles, lineObstacles } from './callout-anchor.js';
 
 export function CartesianChart(host, cfg) {
@@ -299,7 +299,7 @@ export function CartesianChart(host, cfg) {
        柱竖向、线横向同时起跑同时到达，节奏天然一致。 */
     const grow = [];
 
-    /* ── 柱（所有柱共享 band；布局见 layout.js。各柱用 yOf(axis) 选比例尺）── */
+    /* ── 柱（所有柱共享 band；布局见 core/bar-geometry.js。各柱用 yOf(axis) 选比例尺）── */
     const barMax = tokenNum(plotHost, '--size-bar-max') || 16;
     const gap = tokenNum(plotHost, '--size-bar-group-inner-gap-max') || 2;
     const groupMaxRaw = tokenNum(plotHost, '--size-bar-group-container-max');     /* [BAR-02] 分组容器上限 */
