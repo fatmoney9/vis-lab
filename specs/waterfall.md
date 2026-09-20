@@ -15,7 +15,7 @@
 | WATERFALL-06 | 不显示 Y 轴标签与常规网格，只保留加深的 0 轴；比例尺仍覆盖所有区间端点并由 `niceSplit` 留出标签呼吸位。Y 标签虽然不渲染，X 标签带仍读取主题 `y-label-form`，与柱状图使用同一套 AXIS-04 纵向口径：`inside` 从 0 轴留 4px，`outside` 先避让半个轴行盒再留 4px；常态标签与点击贴片因此在同主题下等距。 | `tokens/behavior.json`；`core/frame.js`；`core/split.js` / `scale.js` / `grid.js`；`index.js` | ✅ |
 | WATERFALL-07 | 常规柱数值标签必显并位于柱的上边界之外；可选百分比使用 10px 语义色徽标。数据柱标签放在段内，段高小于 36px 时整段标签隐藏。 | `geometry.js`；`render.js`；`index.js` | ✅ |
 | WATERFALL-08 | 百分比不参与累计数学，只是附加读数；柱上徽标正负分别使用涨 / 跌语义色。Tooltip 数据看板中数值与涨幅必须合成单一 value，形如 `7.8B(5%)` / `1.2亿(5%)`，不拆成额外字段或列。合并读数实测最宽 228px（Ainvest），已由 TOOLTIP-01 的通用封顶（280px + 视口安全边距）覆盖，**本族不再需要专属的宽度覆盖**——2026-09-15 前通用值是 160px，本族曾为此单写一条 CSS，现已删除。THS 移动端另受 TOOLTIP-01 ③ 的容器封顶（343px 容器 → 171.5px），本族是该条的**触发用例**：合并读数自然宽 183–187px 会被收窄、名称换行。名称仍按 TOOLTIP-03 换行，值不换行、两列不得重叠。 | `index.js`；`core/tooltip.js`；`charts/styles.css` | ✅ |
-| WATERFALL-09 | Ainvest 增减项使用主题独占箭头柱：20% 浅底、从累计起点指向终点的箭头、起点侧 2px 端线；像素高 ≤4px 时只隐藏箭头，浅底和端线仍保留。THS / iFinD 回退为实心增减柱、无箭头。 | `tokens/behavior.json`；`tokens/*.json`；`index.js` | ✅ |
+| WATERFALL-09 | 三主题增减项统一使用箭头柱：20% 主题色浅底、从累计起点指向终点的同主题色箭头、起点侧 2px 端线；像素高 ≤4px 时只隐藏箭头，浅底和端线仍保留。形态是跨主题通则，不进入 `behavior.json`；颜色与透明度由三份同键 token / `currentColor` 链路随主题切换。 | `tokens/*.json`；`index.js`；`charts/styles.css` | ✅ |
 | WATERFALL-10 | 颜色模式是语义配置：`primary` 全部使用主题单系列主色；`semantic` 中增减项 / 中间汇总按有符号值取涨跌色，首末总计仍为主色。两套验收面按 Figma 只提供“主色 / 语义色”两档并默认主色；L2 被外部直接调用且未传时仍按主题 profile 兼容兜底：Ainvest 为 primary，THS / iFinD 为 semantic。 | `behavior.json`；`core/palette.js` / `visual-color.js`；`index.js`；`demos/examples.js` | ✅ |
 | WATERFALL-11 | 时间标题占独立 22px 带，右对齐；绘图区默认高度继续由主题 `size-chart-region-height` 决定（Ainvest 200px），容器明确给高时跟随容器。 | `core/frame.js`；`index.js` | ✅ |
 | WATERFALL-12 | X 轴是完整的等式叙事区，不套用普通轴图的 `segment3 / hide` 省项策略，也不加省略号。`xAxisContent:'name' \| 'name-value'` 配置仅显示名称或名称＋汇总值；值行复用数字字体并按 Figma 使用 bold。`showRelations` 配置是否显示节点间关系，具体符号由每项 `operatorBefore` 显式提供，二者只影响表达、不参与累计数学。名称按 Figma 节点宽（常规 64px、数据柱 110px；窄槽再收缩）经 L1 真实 SVG 测量，优先按词自动折为最多两行，长词 / 无空格文案才按字符兜底；数据显式分行仍可覆盖。多行带高复用 `frame.xBandLines`，常态与高亮态逐行 DOM 复用 `renderXLabels` / `renderAxisLabelLines`。 | `core/frame.js` / `axis.js` / `measure.js` / `crosshair.js`；`index.js` | ✅ |
@@ -52,4 +52,4 @@ WaterfallChart(host, {
 ## Do / Don't
 
 - Do：显式声明有符号贡献、汇总类型和等式运算符；连接线恒显示；分组段和值可校验。
-- Don't：从名称猜增减类型；把瀑布图塞进普通堆叠柱；显示常规 Y 网格 / Y 标签；让 Ainvest 箭头形态泄漏到其他主题。
+- Don't：从名称猜增减类型；把瀑布图塞进普通堆叠柱；显示常规 Y 网格 / Y 标签；把跨主题箭头形态误建模为某一主题专属行为。

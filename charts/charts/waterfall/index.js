@@ -5,7 +5,7 @@
  *   { name?, period?, variant='standard', items,
  *     colorMode?, xAxisContent='name', showRelations=true,
  *     platform='pc', animation=true }
- * 主题独占形态由 behavior.json 解析；像素、颜色、字体与透明度不从实例传入。
+ * 主题默认色彩模式由 behavior.json 解析；像素、颜色、字体与透明度不从实例传入。
  */
 import { pointer, select } from 'd3';
 import {
@@ -48,10 +48,7 @@ import {
 const COLOR_MODES = ['primary', 'semantic'];
 
 function validateProfile(profile) {
-  if (!profile || !['solid', 'arrow'].includes(profile['delta-form'])) {
-    throw new TypeError('WaterfallChart：waterfall-profile.delta-form 仅支持 solid / arrow');
-  }
-  if (!COLOR_MODES.includes(profile['default-color-mode'])) {
+  if (!profile || !COLOR_MODES.includes(profile['default-color-mode'])) {
     throw new TypeError('WaterfallChart：waterfall-profile.default-color-mode 仅支持 primary / semantic');
   }
 }
@@ -215,7 +212,8 @@ export function WaterfallChart(host, cfg) {
     itemGroups.each(function (item, itemIndex) {
       const itemLayer = select(this);
       const center = centers[itemIndex];
-      const light = profile['delta-form'] === 'arrow' && item.kind === 'delta';
+      /* [WATERFALL-09] 三主题的增减项共用浅底箭头形态，currentColor 决定主题色。 */
+      const light = item.kind === 'delta';
       const arrow = variant === 'standard' && light;
       const segments = itemLayer.selectAll('g.dv-waterfall-segment')
         .data(item.segments, (segment) => segment.id)
@@ -303,7 +301,7 @@ export function WaterfallChart(host, cfg) {
           renderWaterfallDataSegmentLabel(annotationLayer, plotHost, segment, {
             x: centers[itemIndex] - barWidth / 2,
             top, width: barWidth, height,
-          }, format, profile['delta-form'] === 'arrow' && item.kind === 'delta');
+          }, format, item.kind === 'delta');
         });
       });
     }

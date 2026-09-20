@@ -119,7 +119,7 @@
   - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
   - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
 - **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
-- **WaterfallChart**（`charts/charts/waterfall/`，见 `specs/waterfall.md` WATERFALL-01..15）：常规累计桥接与分组数据柱共用一套有符号累计模型；`kind`、`operatorBefore` 与 `segments` 均由数据显式声明。累计公式、分段守恒和 Ainvest 箭头复合图元留在 L2；画布、比例尺、零轴、X 标签碰撞、文字测量、Tooltip / 十字线、水印、格式化、取色与动效均复用 L1。Ainvest / THS / iFinD 的柱形分叉只存在于 `behavior.json`，尺寸与视觉值不进实例 API。
+- **WaterfallChart**（`charts/charts/waterfall/`，见 `specs/waterfall.md` WATERFALL-01..15）：常规累计桥接与分组数据柱共用一套有符号累计模型；`kind`、`operatorBefore` 与 `segments` 均由数据显式声明。累计公式、分段守恒和三主题共用的浅底箭头复合图元留在 L2，箭头通过 `currentColor` 使用各自主题色；画布、比例尺、零轴、X 标签碰撞、文字测量、Tooltip / 十字线、水印、格式化、取色与动效均复用 L1。主题默认色彩模式仍在 `behavior.json`，尺寸与视觉值不进实例 API。
 
 - **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..18）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用；既有通用构件继续复用，分区形态通过 L1 `visual-color.js` 取得通用表现色阶。要点：
   - **极坐标 ≠ 雷达**：饼环也画在极坐标里，但两者做的是**相反**的事——饼环「值 → 角度、半径恒定」，雷达「角度均分（`360/n`）、值 → 半径」。真正共享的只有 `(角度,半径)→(x,y)` 那个三角公式，故**没有 `core/polar.js`**；极坐标几何在 `radar/geometry.js` 标 `[L2-LOCAL]`。**将来三个下沉点的判断条件写在 `specs/radar.md` 的「分层边界」与 `geometry.js` 文件头**——做仪表盘的人先读那两处，它会命中「下沉点 ②」（绕圆标签几何 `labelAnchor` / `labelArc`），正确做法是提到 L1 两边共用，**不是照抄一份**

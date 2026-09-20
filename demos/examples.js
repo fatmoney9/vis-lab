@@ -1006,7 +1006,7 @@ export const EXAMPLES = [
   {
     id: 'waterfall-bridge', group: '瀑布图', chart: 'waterfall',
     title: '累计桥接瀑布图', spec: 'WATERFALL-01 / WATERFALL-09', surfaces: BOTH,
-    description: '从营业收入经过成本与费用的有符号增减，得到净利润；Ainvest 使用主题独占箭头柱。',
+    description: '从营业收入经过成本与费用的有符号增减，得到净利润；三主题均使用各自主题色的浅底箭头柱。',
     summary: '5 个叙事项 · 累计守恒',
     preferredWidth: 630,
     logicNote: 'kind 与有符号 value 决定累计公式；operatorBefore 只负责等式叙事，颜色模式、箭头形态和格式化分别由语义配置、behavior 与 L1 构件解析。',

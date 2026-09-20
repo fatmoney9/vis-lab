@@ -100,6 +100,28 @@ const inspectHover = (index) => `(() => {
   };
 })()`;
 
+const inspectDeltaArrow = `(() => {
+  const item = [...document.querySelectorAll('.dv-waterfall-item')][1];
+  const bar = item?.querySelector('.dv-waterfall-bar--delta-arrow');
+  const cap = item?.querySelector('.dv-waterfall-delta-cap');
+  const line = item?.querySelector('.dv-waterfall-direction-line');
+  const head = item?.querySelector('.dv-waterfall-direction-head');
+  if (!item || !bar || !cap || !line || !head) {
+    throw new Error('增减项缺少浅底、端线或箭头复合图元');
+  }
+  return {
+    barFill: getComputedStyle(bar).fill,
+    barOpacity: getComputedStyle(bar).fillOpacity,
+    capStroke: getComputedStyle(cap).stroke,
+    lineStroke: getComputedStyle(line).stroke,
+    headFill: getComputedStyle(head).fill,
+    lineOpacity: getComputedStyle(line).opacity,
+    headOpacity: getComputedStyle(head).opacity,
+    lineVisible: getComputedStyle(line).display !== 'none',
+    headVisible: getComputedStyle(head).display !== 'none',
+  };
+})()`;
+
 function assertHover(result, context, { expectPercent = false } = {}) {
   assert.equal(result.normalY, result.selectedY, `${context}：点击态文字 y 发生变化`);
   assert.equal(result.normalBaseline, result.selectedBaseline, `${context}：点击态基线发生变化`);
@@ -234,6 +256,7 @@ async function main() {
     const platforms = ['pc', 'mobile'];
     const modes = ['light', 'dark'];
     let checks = 0;
+    const lightThemeArrowColors = new Map();
     /* [TOOLTIP-01] THS 移动端容器封顶真正「撞上」的次数。本合同 hover 的第 3 根柱读数
        自然宽 186.6px > 半容器 171.5px，是这条规则的触发用例；若将来数据变窄、再没有一次
        撞上封顶，下面的「≤ 半宽」断言就会空跑通过，故另立一道守卫要求至少撞上一次。 */
@@ -242,6 +265,16 @@ async function main() {
         for (const mode of modes) {
           await evaluate(cdp, setMainState({ theme, platform, mode }));
           await waitFor(cdp, "document.querySelectorAll('.dv-waterfall-hit').length === 5");
+          const arrow = await evaluate(cdp, inspectDeltaArrow);
+          assert.equal(Number(arrow.barOpacity), 0.2, `${theme}/${platform}/${mode}：增减柱不是 20% 浅底`);
+          assert.equal(Number(arrow.lineOpacity), 0.2, `${theme}/${platform}/${mode}：箭头线透明度错误`);
+          assert.equal(Number(arrow.headOpacity), 0.2, `${theme}/${platform}/${mode}：箭头头部透明度错误`);
+          assert.equal(arrow.lineVisible, true, `${theme}/${platform}/${mode}：箭头线未显示`);
+          assert.equal(arrow.headVisible, true, `${theme}/${platform}/${mode}：箭头头部未显示`);
+          assert.equal(arrow.capStroke, arrow.barFill, `${theme}/${platform}/${mode}：端线未使用柱主题色`);
+          assert.equal(arrow.lineStroke, arrow.barFill, `${theme}/${platform}/${mode}：箭头线未使用柱主题色`);
+          assert.equal(arrow.headFill, arrow.barFill, `${theme}/${platform}/${mode}：箭头头部未使用柱主题色`);
+          if (platform === 'pc' && mode === 'light') lightThemeArrowColors.set(theme, arrow.barFill);
           for (const index of [3, 4]) {
             const result = await evaluate(cdp, inspectHover(index));
             assertHover(result, `${theme}/${platform}/${mode}/item-${index}`, {
@@ -261,6 +294,8 @@ async function main() {
         }
       }
     }
+    assert.equal(new Set(lightThemeArrowColors.values()).size, themes.length,
+      `三主题箭头应使用不同主题色：${JSON.stringify(Object.fromEntries(lightThemeArrowColors))}`);
 
 for (const [theme, platform, expectCapped] of [
       ['ths', 'mobile', true],
