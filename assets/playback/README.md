@@ -1,4 +1,8 @@
-# Sankey playback assets
+# Playback assets
+
+Shared by every chart family that exposes a playback timeline (`demos/chart-playback.*`).
+They were first drawn for the Sankey report timeline, hence the Figma sources below,
+but nothing here is Sankey-specific — the control is generic.
 
 The SVG files in this directory are exact exports from Figma node `0:28082` in
 `RviSlVW7lNx9BacoSApBA0` (20230711 Sankey landscape).

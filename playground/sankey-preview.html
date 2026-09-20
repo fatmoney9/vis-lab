@@ -6,7 +6,7 @@
   <title>SankeyChart · 独立预览</title>
   <link rel="stylesheet" href="../tokens/tokens.css" />
   <link rel="stylesheet" href="../charts/styles.css" />
-  <link rel="stylesheet" href="../demos/sankey-playback.css" />
+  <link rel="stylesheet" href="../demos/chart-playback.css" />
   <style>
     /* 与 cartesian-preview.html 保持一致：这里只放 Playground 外壳样式，
        桑基图生产样式由 charts/styles.css 的 .dv-sankey 命名空间提供。 */
@@ -126,11 +126,11 @@
       --sankey-demo-frame-width: 812px;
       --sankey-demo-header-height: 44px;
       --sankey-demo-chart-height: 243px;
-      --sankey-playback-height: 88px;
+      --chart-playback-bar-height: 88px;
       --sankey-demo-frame-height: calc(
         var(--sankey-demo-header-height)
         + var(--sankey-demo-chart-height)
-        + var(--sankey-playback-height)
+        + var(--chart-playback-bar-height)
       );
       display: grid;
       grid-template-columns: minmax(0, var(--sankey-demo-frame-width)) calc(var(--spacing-24) * 12);
@@ -143,7 +143,7 @@
       grid-template-rows:
         var(--sankey-demo-header-height)
         var(--sankey-demo-chart-height)
-        var(--sankey-playback-height);
+        var(--chart-playback-bar-height);
       width: min(100%, var(--sankey-demo-frame-width));
       max-width: var(--sankey-demo-frame-width);
       height: var(--sankey-demo-frame-height);
@@ -173,11 +173,11 @@
       display: none;
     }
 
-    /* 播放区视觉与 DOM 模板统一由 demos/sankey-playback.* 提供。 */
+    /* 播放区视觉与 DOM 模板统一由 demos/chart-playback.* 提供。 */
     /* [SANKEY-28] Ainvest playback: PC Figma Uv36h0PXzZG7ZhuHBHQ3qz / 110:2941
        经产品确认复用于移动端；只覆盖播放区，不改变桑基视口或图形计算。 */
     .sankey-preview__complex-card[data-theme="ainvest"] .sankey-preview__complex-layout {
-      --sankey-playback-height: 110px;
+      --chart-playback-bar-height: 110px;
     }
 
 
@@ -306,7 +306,7 @@
       grid-template-rows:
         var(--sankey-demo-header-height)
         auto
-        var(--sankey-playback-height);
+        var(--chart-playback-bar-height);
       width: 100%;
       max-width: none;
       height: auto;
@@ -479,12 +479,12 @@
       sankeyPlaybackCopy,
     } from '../demos/sankey-presentation.js';
     import {
-      applySankeyPlaybackViewport,
-      runSankeyPlaybackUpdate,
-      sankeyPlaybackMarkup,
-      sankeyPlaybackRangeTheme,
-      sankeyPlaybackTicksMarkup,
-    } from '../demos/sankey-playback.js';
+      applyPlaybackViewport,
+      runPlaybackUpdate,
+      playbackMarkup,
+      playbackRangeTheme,
+      playbackTicksMarkup,
+    } from '../demos/chart-playback.js';
     import { buildFinancialDifferencePair } from '../demos/sankey-financial.js';
 
     const node = (id, name, role, extra = {}) => ({ id, name, role, ...extra });
@@ -637,7 +637,7 @@
     ]));
     const complexLayout = document.querySelector('.sankey-preview__complex-layout');
     const applySequenceViewport = (platform) => {
-      applySankeyPlaybackViewport(
+      applyPlaybackViewport(
         complexLayout,
         complexCard,
         SEQUENCE_VIEWPORTS[platform],
@@ -646,10 +646,10 @@
     };
     applySequenceViewport('mobile');
 
-    document.getElementById('complex-playback-mount').outerHTML = sankeyPlaybackMarkup({
+    document.getElementById('complex-playback-mount').outerHTML = playbackMarkup({
       periods: QUARTER_DATA,
       copy: sankeyPlaybackCopy({ theme: 'ths' }),
-      playIconSrc: '../assets/sankey/play.svg',
+      playIconSrc: '../assets/playback/play.svg',
       idPrefix: 'complex-playback',
     });
 
@@ -717,7 +717,7 @@
     });
     const renderPlaybackTicks = () => {
       const displayedPeriods = QUARTER_DATA.map(displayQuarter);
-      complexPlaybackTicks.innerHTML = sankeyPlaybackTicksMarkup(
+      complexPlaybackTicks.innerHTML = playbackTicksMarkup(
         displayedPeriods,
         Math.round(clampPeriod(periodPosition)),
       );
@@ -764,7 +764,7 @@
       transitionTargetIndex = target;
       periodPosition = target;
       renderPlaybackState();
-      const completed = await runSankeyPlaybackUpdate(
+      const completed = await runPlaybackUpdate(
         () => complexChart.update({
           ...displayQuarter(QUARTER_DATA[target]),
           platform: complexState.platform,
@@ -821,7 +821,7 @@
       const isAinvest = complexState.theme === 'ainvest';
       const copy = sankeyPlaybackCopy({ theme: complexState.theme });
       const tokenTheme = complexState.theme === 'ifind' ? 'ifind-pc' : complexState.theme;
-      const playbackTokenTheme = sankeyPlaybackRangeTheme(tokenTheme);
+      const playbackTokenTheme = playbackRangeTheme(tokenTheme);
       configDescription.textContent = isAinvest
         ? 'Ainvest · English labels use the theme font; fitting rules remain unchanged.'
         : complexState.theme === 'ifind'
@@ -853,7 +853,7 @@
           ? '负值不反转流向；角色色保持不变，负数文字使用正文色'
           : '终止分支按实际阶段收口，主利润链继续向右';
       renderPlaybackTicks();
-      void runSankeyPlaybackUpdate(
+      void runPlaybackUpdate(
         () => complexChart.update({
           ...scenario,
           platform: complexState.platform,
