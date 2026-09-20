@@ -334,6 +334,8 @@
   "opacity-line-stack-fill": 0.2,
   "$section-19": "横向柱状图 HBar",
   "size-hbar-row-max": "24px",
+  "size-hbar-row-container-max": "36px",
+  "size-hbar-row-gap-ratio": "2:1",
   "size-hbar-y-label-max": "80px",
   "size-hbar-data-label-max": "40px",
   "$section-20": "环形图 Donut",

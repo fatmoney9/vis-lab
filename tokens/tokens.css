@@ -180,6 +180,8 @@
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
+  --size-hbar-row-container-max: 36px;
+  --size-hbar-row-gap-ratio: 2:1;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
   --size-donut-container: 160px;
@@ -489,6 +491,8 @@
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
+  --size-hbar-row-container-max: 36px;
+  --size-hbar-row-gap-ratio: 2:1;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
   --size-donut-container: 160px;
@@ -800,6 +804,8 @@
   --opacity-line-area-to: 0;
   --opacity-line-stack-fill: 0.2;
   --size-hbar-row-max: 24px;
+  --size-hbar-row-container-max: 36px;
+  --size-hbar-row-gap-ratio: 2:1;
   --size-hbar-y-label-max: 80px;
   --size-hbar-data-label-max: 40px;
   --size-donut-container: 160px;

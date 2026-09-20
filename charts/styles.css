@@ -1159,3 +1159,11 @@
   font-family: var(--font-family-number);
   font-variant-numeric: tabular-nums;
 }
+
+/* [HBAR-01][HBAR-04][HBAR-05] 横向条形图。条色走系列槽位（行 <g> 上的 color，
+   fill:currentColor），名称列复用轴标签字体、数值列复用数据标签字体——两者都是
+   既有语义的横向形态，不新开字体 token。
+   整行不声明 pointer-events：画廊卡片靠继承关掉交互，显式值会把鼠标要回来。 */
+.dv-hbar__bar { fill: currentColor; }
+.dv-hbar__name { fill: var(--color-text-secondary); }
+.dv-hbar__value { fill: currentColor; }
