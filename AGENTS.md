@@ -2,14 +2,14 @@
 
 ## 定位
 
-这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、饼 / 环、桑基、矩形树图、雷达图、瀑布图与弦图七族）。
+这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、排名对比图、饼 / 环、桑基、矩形树图、雷达图、瀑布图与弦图八族）。
 
 ## 运行与验证
 
 - 启动预览：`python3 -m http.server 8123`。对外站点 `http://localhost:8123/`；开发验收面 `http://localhost:8123/playground/preview.html`（三主题并排、旋钮更全）。
 - 线上预览：`https://fatmoney9.github.io/vis-lab/`；GitHub Pages 从 `main` 分支根目录发布。
 - 质量门禁：`sh hooks/check.sh`（等价 `npm run check`）。这是**唯一一份检查清单**——token 重建、
-  水印资源重建、语法、单测，外加分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约等守卫；`hooks/pre-commit` 与 CI 调的都是它。**条数与逐项顺序只看该脚本，文档一律不复述。**
+  水印资源重建、语法、单测，外加分层、Spec ID、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文等守卫；`hooks/pre-commit` 与 CI 调的都是它。**条数与逐项顺序只看该脚本，文档一律不复述。**
   **新增检查项只改 `hooks/check.sh`，禁止在文档、PR 模板或 CI 里另抄一份命令。**
 - 只跑单元测试：`node --test "tests/**/*.test.mjs"`（**引号不能去**，去掉后 `tests/` 子目录里的
   测试会被静默跳过）。只重建 token：`node tokens/build.mjs`。
@@ -63,6 +63,21 @@
 `charts/charts/cartesian/README.md`、`charts/charts/pie/README.md` 或 `charts/charts/radar/README.md`；
 模块总数由门禁读取 `charts/core/` 实时校验，文档不另存计数。
 
+**接新图族还有两条硬要求，都由门禁拦（13/13 里的最后两条）**：
+
+1. **必须配分类图标**（`demos/nav-icons.js`）。首页左栏的取法是
+   `NAV_ICONS[分类名] ?? NAV_ICONS[族名] ?? ''`——**两级都取不到就渲染空串**，不报错、不留痕。
+   建议两个键都加：只配分类名的话，将来改一次分类名图标就又静默消失。
+   由 `hooks/lint-nav-icon.mjs` 校验。
+2. **Ainvest 主题下图表内容必须是英文**。业务词加进 `demos/chart-presentation.js` 的 `AINVEST_TEXT`。
+   由 `hooks/lint-ainvest-english.mjs` 校验**静态配置与逐期播放配置两条路**。
+   ⚠️ 该守卫查的是「词表翻得出来」，**查不到「某条路径绕开了 `buildConfig`」**——
+   翻译只发生在装配线上，手拼 cfg 就会在那条路径上失效，而数据本身仍可翻译、守卫照样全绿。
+   那一层由渲染断言兜（`tests/browser/hbar.browser.mjs` 的 Ainvest 段）。
+
+这两条 2026-09-20 补进门禁，起因是两者当时都真的漏了：`排名变化` 族上线时左栏是个空位，
+而首页播放的 `applyPeriod` 手拼 cfg，导致竞赛图「静止时是 Banking，一点播放就变回银行」。
+
 ## 技术栈
 
 原生 ES Modules、D3 v7（预览页 import map）、SVG、CSS 自定义属性、Node.js token 构建脚本；无打包器。
@@ -72,9 +87,11 @@
 
 - `tokens/` 是主题值、行为和系列色板的权威源；不要手改生成的 `tokens/tokens.css`。
 - `charts/core/` 是 L1 共享构件，`charts/charts/` 是 L2 图表编排，`specs/` 是规则 ID 权威定义。
-- `demos/` 是各预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）与
-  `registry.js`（图表类型 → L2 组件）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
-  `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头。
+- `demos/` 是各预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）、
+  `registry.js`（图表类型 → L2 组件）、`nav-icons.js`（首页左栏分类图标，门禁要 import 它核对）、
+  `chart-presentation.js`（Ainvest 英文词表），以及 `playback/`（带时间轴图型共用的播放件，
+  规则见 `specs/playback.md`）。**加示例、加图表类型只改 `demos/`**，`index.html` 与
+  `playground/` 都不用动；具体步骤见 `demos/examples.js` 文件头（**五步，后两步由门禁拦**）。
   Ainvest 的**图表内部示例内容统一为英文**，由 `demos/chart-presentation.js` 在最终配置装配时转换；
   站点导航与配置面板仍保持中文。语言属于 L3 展示数据，不得把品牌或中英文判断写进 L2 组件。
   组件自己写死的文案（无障碍描述、看板固定行名）配置里没有、翻译够不着，走 L1 `core/chart-text.js`：
@@ -95,11 +112,18 @@
 
 ## 当前状态与下一步
 
-当前有**七个 L2 图表组件**：
+当前有**八个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、图表标注（callout，见 `specs/callout.md`，默认不显示，位置自动选、不移动任何下层元素）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
 **直角坐标系与饼环两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14；**桑基不适用**——其图例是静态色卡，见下）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
+- **HBarChart**（`charts/charts/hbar/`，见 `specs/hbar.md` HBAR-01..20）：横向条形图，**排名竞赛是它的一种形态而非另一个组件**——不给时间序列就是静态横向条，给了就能逐期播放。要点：
+  - **插值的是名次本身，不是只插值数值**：行位置是排序名次、即值的**离散函数**，若每帧对插值后的值重新排序，两条交叉那一帧会整行瞬跳。正解是名次也线性插值得到**小数名次**（HBAR-12），于是交叉时平滑对穿。这与桑基相反——那边节点位置是流量的连续函数，插值后重跑布局天然平滑
+  - **Top-N 进出榜由同一条 t 顺带解决**，不需要第二套时序：进榜者起点取榜底外一行、`alpha` 0→1，掉榜者反向
+  - **keyed join 的键是实体、不是名次**，颜色只在 `build()` 写一次——这是「颜色跟随实体、不跟随排名」的物理保证
+  - 两层渲染：`build()` 读 token 与建结构，`paint()` 逐帧只写几何。逐帧重跑 token 读取会撞 `specs/motion.md` 的 Don't
+  - 几何复用 L1 `core/bar-geometry.js`（`barPath` 的 `right`/`left` 方向档 + `singleBar`）；补间驱动复用 L1 `runTween`（MOTION-08）；播放控件复用 `demos/playback/`（见 `specs/playback.md`）
+  - **本族不提供 tooltip 与指示线**（HBAR-09）：读数已由条端常驻数值承担，浮层只会遮住正在滑动的相邻行
 - **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
   - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
   - 半径 = `clamp(默认半径 × 0.5, 短边/2, 默认半径)`——token 是上限，**收缩有底**（THS/iFinD 35、Ainvest 40）；触底后环溢出画布而非继续变小（PIE-02）

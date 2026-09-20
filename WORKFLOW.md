@@ -233,7 +233,8 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 ## 八、当前状态与后续里程碑
 
 截至 2026-09-11，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
-**七个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+**八个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
+`HBarChart`（横向条；**给了时间序列就是排名竞赛形态**——名次与数值同时插值、Top-N 进出榜，见 `specs/hbar.md` HBAR-01..20）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
@@ -242,7 +243,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 与 `ChordChart`（实体间相互流动，n×n 方阵 · 角度∝流量 · 无向 / 有向两档槽位模型 · 环绕 / 横排两档实体标签，见 `specs/chord.md` CHORD-01..19）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
-外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）。
+外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）。
 **这里有意不写条数**——条数曾在 5 份文档 8 处各写一份，漂过两次（八→九那轮漏了 README 与本文件）。
 完整且唯一的清单在 `hooks/check.sh`，完整测试流程见 `TESTING.md`。
 

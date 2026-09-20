@@ -86,6 +86,29 @@ try {
   ck(JSON.stringify(last) !== JSON.stringify(first), '末期名次与首期不同——名次真的互换了');
   ck(new Set(last).size === last.length, '末期无重复实体');
 
+  /* ── Ainvest 主题：图表内容必须是英文，**播放全程都是** ────────────────
+     hooks/lint-ainvest-english.mjs 查的是「词表翻不翻得出来」，查不到这一条：
+     翻译只发生在 buildConfig 里，**哪条路径手拼 cfg，翻译就在那条路径上失效**，
+     而数据本身仍然是可翻译的、那个守卫照样全绿。
+     2026-09-20 首页播放的 applyPeriod 就是这么绕过去的，症状是
+     「静止时是 Banking，一点播放就变回银行」。只有渲染层能回答这件事。 */
+  const CJK = /[\u4e00-\u9fff]/;
+  const rowNames = () => evaluate(cdp, `[...document.querySelectorAll('.dv-hbar__name')].map((n) => n.textContent)`);
+
+  await click('[data-segment="theme"] [data-value="ainvest"]');
+  await sleep(2000);
+  const idleNames = await rowNames();
+  ck(idleNames.length > 0 && !idleNames.some((n) => CJK.test(n)),
+     `Ainvest 静止态行名为英文（实测 ${JSON.stringify(idleNames.slice(0, 3))}）`);
+
+  await click('.chart-playback__primary');
+  await sleep(2200);
+  await click('.chart-playback__primary');
+  await sleep(700);
+  const playedNames = await rowNames();
+  ck(playedNames.length > 0 && !playedNames.some((n) => CJK.test(n)),
+     `Ainvest 播放推进后行名仍为英文（实测 ${JSON.stringify(playedNames.slice(0, 3))}）`);
+
   if (cdp.errors.length) { console.log('页面报错', cdp.errors.slice(0, 2)); bad += 1; }
   await cdp.close();
 } finally {
@@ -93,5 +116,5 @@ try {
   server.close();
   await rm(dir, { recursive: true, force: true });
 }
-if (bad) { console.error(`✗ HBar 竞赛合同失败 ${bad} 项`); } else { console.log('✓ HBar 竞赛合同通过：keyed join / 连续补间 / 暂停冻结 / 名次互换'); }
+if (bad) { console.error(`✗ HBar 竞赛合同失败 ${bad} 项`); } else { console.log('✓ HBar 竞赛合同通过：keyed join / 连续补间 / 暂停冻结 / 名次互换 / Ainvest 播放全程英文'); }
 process.exit(bad ? 1 : 0);

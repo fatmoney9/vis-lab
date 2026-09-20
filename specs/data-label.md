@@ -85,5 +85,5 @@
       落在 [pie.md](pie.md) **PIE-12 / PIE-13 / PIE-14**。当初预估的「左右分栏的纵向避让算法」**没有发生**——
       定案是重叠即隐藏、不做位移，于是它退化成 LABEL-06② 那条贪心换个轴，只需把 `dropCollisions`
       从 `{left,width}` 泛化成 `{start,size}`，未新增任何算法。
-- [ ] 横向条形图右侧标签（`size-hbar-data-label-max` 40px 已备好）——待 HBar 骨架。
+- [ ] 横向条形图右侧标签（`size-hbar-data-label-max` 40px 已备好）。HBar 组件 2026-09-20 已落地，但条端数值目前由该族自己绘制（`.dv-hbar__value`，只借用 `dv-data-label` 的样式），**没有走本页的碰撞过滤与超界回收**；接进来才算本条完成。
 - [ ] 移动端触碰 / hover / 选中态下的标签高亮与临时显形（原体系未定，随 tooltip 选中切片一并明确）。

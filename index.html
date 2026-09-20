@@ -637,8 +637,10 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
+    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, buildConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
     import { createPlaybackController } from './demos/playback/controller.js';
+    /* 分类图标住在 demos/nav-icons.js（门禁要 import 它核对缺图标的族，见 hooks/lint-nav-icon.mjs）。 */
+    import { NAV_ICONS } from './demos/nav-icons.js';
     import {
       playbackCopy,
       applyPlaybackViewport,
@@ -740,49 +742,6 @@
       return matchedExamples().filter((example) => state.group === ALL || example.group === state.group);
     }
 
-    /* 分类图标：**按分类名取、取不到回落到族的图表类型**。
-       只按名字取的话，改一个分类名图标就静默消失；回落到 chart 后最差也只是同族共用一枚，
-       不会开天窗。图标一律 currentColor + fill:none，跟着字色走，不自带颜色。 */
-    const ICON = (d, extra = '') =>
-      `<svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor"
-        stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}${extra}</svg>`;
-    const NAV_ICONS = {
-      /* 柱：三根不等高的竖条 */
-      '柱状图': ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
-      /* 堆叠：一根竖条被分成三段 */
-      '堆叠图': ICON('<rect x="4" y="3" width="8" height="10" rx="1"/><path d="M4 6.5h8M4 9.5h8"/>'),
-      /* 折线：一条折线 */
-      '折线图': ICON('<path d="M2.5 11l3.5-4 3 2.5L13.5 4"/>'),
-      /* 组合：两根柱 + 一条线 */
-      '组合图': ICON('<path d="M3.5 13V8.5M12.5 13V6"/><path d="M2.5 5.5l4 2 3-2.5 4 1.5"/>'),
-      /* 瀑布：三个**逐级悬空**的块拼成阶梯。
-         ⚠️ 两条都是试出来的，别退回去：
-         ① **不画三根等底的竖条**——那就是柱状图的图标，两族会撞；瀑布的辨识点是「柱不落在同一条底线上」。
-         ② **不画虚线连接线**——语义上对，但 svg 继承了 stroke-linecap:round，
-            1.5 长的 dash 在 16px 下被磨成一串灰点，整个图标糊成一团。
-         悬空这一点由块的错位表达就够了，不需要连接线。 */
-      '瀑布图': ICON('<rect x="2.8" y="9" width="3" height="4" rx=".6"/><rect x="6.5" y="6" width="3" height="4" rx=".6"/><rect x="10.2" y="3" width="3" height="4" rx=".6"/>'),
-      /* 桑基：左右两侧节点 + 中间流带 */
-      '桑基图': ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
-      /* 树图：一个矩形被切成大小不等的块 */
-      '矩形树图': ICON('<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M8.5 3v10M8.5 8h5"/>'),
-      /* 雷达：正五边形 + 中心辐条 */
-      '雷达图': ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/><path d="M8 2.5v5.4M8 7.9l5.2-1.6M8 7.9l-5.2-1.6M8 7.9l3.2 4.6M8 7.9l-3.2 4.6" stroke-opacity=".45"/>'),
-      /* 饼环：圆 + 一条切分线 */
-      '饼图与环形图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
-      /* 弦图：圆环 + 两条向心收束的弦 */
-      '弦图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M3.6 5.1C7.2 8.4 8.8 8.4 12.4 5.1M4.4 11.4C7 8 9.6 7.2 13.2 9.2" stroke-opacity=".55"/>'),
-      /* 族级回落 */
-      cartesian: ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
-      sankey: ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
-      treemap: ICON('<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M8.5 3v10M8.5 8h5"/>'),
-      radar: ICON('<path d="M8 2.5l5.2 3.8-2 6.2H4.8l-2-6.2z"/>'),
-      pie: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8h5.5"/>'),
-      waterfall: ICON('<rect x="2.8" y="9" width="3" height="4" rx=".6"/><rect x="6.5" y="6" width="3" height="4" rx=".6"/><rect x="10.2" y="3" width="3" height="4" rx=".6"/>'),
-      chord: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M3.6 5.1C7.2 8.4 8.8 8.4 12.4 5.1"/>'),
-      /* 跨族入口：田字格 */
-      __all: ICON('<rect x="2.5" y="2.5" width="5" height="5" rx="1"/><rect x="8.5" y="2.5" width="5" height="5" rx="1"/><rect x="2.5" y="8.5" width="5" height="5" rx="1"/><rect x="8.5" y="8.5" width="5" height="5" rx="1"/>'),
-    };
 
     function renderNavigation() {
       const pool = matchedExamples();
@@ -876,8 +835,8 @@
       sharedClampPeriodIndex(example, index, { theme: state.theme })
     );
 
-    function activeExample(example) {
-      const active = activePeriodExample(example, { periodIndex: state.periodIndex, theme: state.theme });
+    function activeExample(example, periodIndex = state.periodIndex) {
+      const active = activePeriodExample(example, { periodIndex, theme: state.theme });
       const seriesControl = indexSeriesControlOf(active);
       if (!seriesControl) return active;
       const sourceCfg = active.cfg;
@@ -946,12 +905,13 @@
         getIndex: () => state.periodIndex,
         setIndex: (i) => { state.periodIndex = i; },
         pause: () => chart.pause(),
-        /* 逐期的 cfg 走**示例自己声明的** playback.cfg（activePeriodExample 同一条路），
-           于是数据量旋钮对播放示例照样生效；未声明的示例（桑基）原样返回该期，零回归。 */
+        /* 逐期同样走 **buildConfig**——与首屏挂载、与 playground 三卡是同一条装配线。
+           ⚠️ 这里曾经手拼 cfg 绕开 buildConfig，于是**整条主题内容适配在播放时失效**：
+           chartContentPresentation（Ainvest 全英文）只在 buildConfig 里跑，
+           症状是「静止时是 Banking，一播放就变回银行」。2026-09-20 实测如此。
+           绕开装配线就会漏掉装配线上的每一道工序，不只是翻译这一道。 */
         applyPeriod: (index, { animate }) => chart.update(
-          { ...activePeriodExample(example, { periodIndex: index, theme: state.theme })
-              .cfg(clampDensity(example, typeof state.density === 'number' ? state.density : defaultDensityCountOf(example))),
-            platform: state.platform },
+          buildConfig(activeExample(example, index), state),
           { animate },
         ),
         onRender: ({ period }) => {
