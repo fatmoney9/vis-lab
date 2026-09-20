@@ -380,6 +380,42 @@ const financialSankeyPlayback = () => {
   };
 };
 
+/*
+ * ── 播放示例的三个共享读取器 ──────────────────────────────────────
+ * 住在这里而不是各预览面里，是因为「面不自己拼配置」（铁律3）：
+ * 从示例读出当前期、夹取序号、把当前期伪装成普通示例，三面都要做同一件事。
+ */
+
+/* 取全部期并按主题做文案适配。**每次读取都重跑 presentation**，所以切 Ainvest 时期数文案一起变。 */
+export const playbackPeriodsOf = (example, { theme = 'ths' } = {}) => (
+  (example?.playback?.periods ?? []).map((period) => example?.presentation?.(period, { theme }) ?? period)
+);
+
+export const clampPeriodIndex = (example, index = 0, { theme = 'ths' } = {}) => {
+  const periods = playbackPeriodsOf(example, { theme });
+  return periods.length ? Math.max(0, Math.min(periods.length - 1, Math.round(index))) : 0;
+};
+
+/*
+ * 把「当前期」伪装成普通示例，混进统一的 buildConfig 管线——下游完全不知道有播放这回事。
+ *
+ * ⚠️ **cfg 必须把密度参数透传下去**。2026-09-20 之前这里是 `cfg: () => period`，**形参为空**，
+ * 于是播放示例的密度滑杆完全失效。桑基没暴露，只因为它声明了 `density: false`、根本没有滑杆；
+ * 第一个同时要「数据量旋钮」和「播放」的图型会当场踩到。
+ * 示例可声明 `playback.cfg(period, count)` 来消费数量；不声明则原样返回该期（桑基即此，零回归）。
+ */
+export const activePeriodExample = (example, { periodIndex = 0, theme = 'ths' } = {}) => {
+  const periods = playbackPeriodsOf(example, { theme });
+  if (!periods.length) return example;
+  const period = periods[clampPeriodIndex(example, periodIndex, { theme })];
+  const perPeriodCfg = example.playback?.cfg;
+  return {
+    ...example,
+    presentation: undefined,
+    cfg: (count) => perPeriodCfg?.(period, count) ?? period,
+  };
+};
+
 /* AInvest 演示数据在 L3 适配为 Treemap 的通用 presentation 合同；charts/ 不认识这些业务字段。 */
 const AINVEST_TICKERS = [
   'AAPL', 'WSM', 'DOLE', 'YSG', 'VKTX', 'YMM', 'CSCO', 'MAR', 'TEAM', 'ADMA', 'BTSG', 'GLTO',

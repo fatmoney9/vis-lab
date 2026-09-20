@@ -209,7 +209,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 **桑基的 L3 例外**（截至 2026-08-13 唯一一例，接新图型前先读）：上面第 4 步的常态是「只改 `demos/`」，
 但桑基另加了 `playground/sankey-preview.html` 独立面，并在 `index.html` / `playground/preview.html` 里
 保留专属外框与旋钮接线；两个入口重复的播放区 DOM、刻度模板和视觉已分别收敛到
-`demos/sankey-playback.js` / `demos/sankey-playback.css`。原因是 SANKEY-23 要求
+`demos/chart-playback.js` / `demos/chart-playback.css`。原因是 SANKEY-23 要求
 **812px 横版财报验收框**，且播放序列须以所有周期最大所需高度建立统一视口，
 三主题并排卡片网格表达不了。代价要认清：**该独立面自带节点与季度输入、不 import `demos/examples.js`**，
 是全库唯一脱离单一示例源的展示面，改示例时需要两处同步；SANKEY-25 的 P = B + D 业务公式

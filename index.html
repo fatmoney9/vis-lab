@@ -6,7 +6,7 @@
   <title>Vis Lab · 可视化组件库</title>
   <link rel="stylesheet" href="./tokens/tokens.css" />
   <link rel="stylesheet" href="./charts/styles.css" />
-  <link rel="stylesheet" href="./demos/sankey-playback.css" />
+  <link rel="stylesheet" href="./demos/chart-playback.css" />
   <style>
     /* ⚠️ 本文件的 `--shell-*` 只管**外壳**（导航、卡片、面板）。演示区里图表自己的
        颜色 / 字号 / 圆角一律来自 tokens.css 的三套主题，外壳换皮不许波及它们——
@@ -446,13 +446,13 @@
     .stage__surface[data-playback="true"] { display: block; }
     .chart-playback-layout {
       --chart-playback-chart-height: 243px;
-      --sankey-playback-height: 88px;
-      --sankey-playback-timeline-height: calc(var(--spacing-20) + var(--spacing-16));
-      --sankey-playback-control-height: calc(var(--spacing-20) + var(--spacing-8));
-      --sankey-playback-label-gap: var(--spacing-8);
-      --sankey-playback-label-max-width: calc(var(--spacing-24) * 4);
+      --chart-playback-bar-height: 88px;
+      --chart-playback-timeline-height: calc(var(--spacing-20) + var(--spacing-16));
+      --chart-playback-control-height: calc(var(--spacing-20) + var(--spacing-8));
+      --chart-playback-label-gap: var(--spacing-8);
+      --chart-playback-label-max-width: calc(var(--spacing-24) * 4);
       display: grid;
-      grid-template-rows: var(--chart-playback-chart-height) var(--sankey-playback-height);
+      grid-template-rows: var(--chart-playback-chart-height) var(--chart-playback-bar-height);
       width: 100%;
       min-width: 0;
     }
@@ -467,15 +467,15 @@
     }
     .chart-playback-layout > .chart-host::-webkit-scrollbar { display: none; }
     .stage__surface[data-playback="true"].is-resized .chart-playback-layout {
-      grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--sankey-playback-height);
+      grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--chart-playback-bar-height);
       height: 100%;
     }
     .stage__surface[data-theme="ainvest"] .chart-playback-layout {
-      --sankey-playback-height: 110px;
-      --sankey-playback-timeline-height: 46px;
-      --sankey-playback-control-height: 36px;
+      --chart-playback-bar-height: 110px;
+      --chart-playback-timeline-height: 46px;
+      --chart-playback-control-height: 36px;
     }
-    /* 播放区视觉与 DOM 模板统一由 demos/sankey-playback.* 提供。 */
+    /* 播放区视觉与 DOM 模板统一由 demos/chart-playback.* 提供，状态机在 demos/playback-controller.js。 */
 
     /* 参数面板与侧栏同形态：贴边、实心浅灰、无圆角无投影，只用一条左发丝线收边 */
     .settings {
@@ -632,14 +632,13 @@
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
-    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf } from './demos/examples.js';
+    import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
     import { sankeyPlaybackCopy } from './demos/sankey-presentation.js';
+    import { createPlaybackController } from './demos/playback-controller.js';
     import {
-      applySankeyPlaybackViewport,
-      runSankeyPlaybackUpdate,
-      sankeyPlaybackMarkup as sharedSankeyPlaybackMarkup,
-      sankeyPlaybackRangeTheme,
-    } from './demos/sankey-playback.js';
+      applyPlaybackViewport,
+      playbackMarkup as sharedPlaybackMarkup,
+    } from './demos/chart-playback.js';
 
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
@@ -865,22 +864,15 @@
         `<button class="segment__item${value === id ? ' segment__item--active' : ''}" type="button" data-value="${id}"${disabled ? ' disabled' : ''}>${label}</button>`).join('')}</div>`;
     }
 
-    const playbackPeriodsOf = (example) => (example.playback?.periods ?? []).map((period) => (
-      example.presentation?.(period, { theme: state.theme }) ?? period
-    ));
-
-    function clampPeriodIndex(example, index = state.periodIndex) {
-      const periods = playbackPeriodsOf(example);
-      return periods.length ? Math.max(0, Math.min(periods.length - 1, Math.round(index))) : 0;
-    }
+    /* 三个读取器住在 demos/examples.js（三面共用，铁律3：面不自己拼配置）；
+       这里只是把本页的 state 绑上去的薄包装。 */
+    const playbackPeriodsOf = (example) => sharedPlaybackPeriodsOf(example, { theme: state.theme });
+    const clampPeriodIndex = (example, index = state.periodIndex) => (
+      sharedClampPeriodIndex(example, index, { theme: state.theme })
+    );
 
     function activeExample(example) {
-      const periods = playbackPeriodsOf(example);
-      let active = example;
-      if (periods.length) {
-        const period = periods[clampPeriodIndex(example)];
-        active = { ...example, presentation: undefined, cfg: () => period };
-      }
+      const active = activePeriodExample(example, { periodIndex: state.periodIndex, theme: state.theme });
       const seriesControl = indexSeriesControlOf(active);
       if (!seriesControl) return active;
       const sourceCfg = active.cfg;
@@ -896,11 +888,11 @@
       const currentIndex = clampPeriodIndex(example);
       return `<div class="chart-playback-layout">
         <div class="chart-host"></div>
-        ${sharedSankeyPlaybackMarkup({
+        ${sharedPlaybackMarkup({
           periods,
           currentIndex,
           copy,
-          playIconSrc: './assets/sankey/play.svg',
+          playIconSrc: './assets/playback/play.svg',
         })}
       </div>`;
     }
@@ -920,145 +912,44 @@
       };
     }
 
+    /* 详情页的一次装配：**图表实例与播放接线同生同灭**。
+       ⚠️ 三个调用点（首次渲染 / 旋钮重渲 / 滑杆重挂）都必须走这里。
+       2026-09-20 之前 remountDetailFromSlider 只挂图不挂播放——它先 destroyCharts()
+       抽干 chartCleanups（播放接线一并 dispose），之后只 mountChart，
+       于是拖一次数据量滑杆播放按钮就永久失灵。今天看不见，只因为唯一的播放示例
+       桑基声明了 density:false、根本没有滑杆；第一个同时要滑杆和播放的图型会当场踩到。 */
+    function mountStage(host, example, overrides = {}) {
+      const { instance } = mountChart(host, activeExample(example), overrides);
+      const surface = main.querySelector('.stage__surface');
+      if (surface && playbackPeriodsOf(example).length) {
+        chartCleanups.push(mountPlayback(surface, example, instance));
+      }
+      return instance;
+    }
+
+    /* 播放状态机住在 demos/playback-controller.js（三面共用）。这里只注入「怎么画一期」
+       与宿主侧回显：控制器不认识 SankeyChart，也不认识 state 长什么样。 */
     function mountPlayback(surface, example, chart) {
-      const periods = playbackPeriodsOf(example);
-      const copy = sankeyPlaybackCopy({ theme: state.theme });
-      const range = surface.querySelector('.sankey-playback__range');
-      const ticks = surface.querySelector('.sankey-playback__ticks');
-      const toggle = surface.querySelector('.sankey-playback__primary');
-      const output = surface.querySelector('.sankey-playback__period');
-      const previous = surface.querySelector('.sankey-playback__step--prev');
-      const next = surface.querySelector('.sankey-playback__step--next');
-      range.dataset.theme = sankeyPlaybackRangeTheme(state.theme);
-      range.dataset.mode = state.mode;
-      range.dataset.platform = state.platform;
-      let isPlaying = false;
-      let disposed = false;
-      let transitionTargetIndex = null;
-
-      const renderPlaybackState = () => {
-        if (disposed) return;
-        const currentIndex = clampPeriodIndex(example);
-        const currentPeriod = periods[currentIndex];
-        range.value = `${currentIndex}`;
-        output.value = currentPeriod.period;
-        surface.dataset.period = currentPeriod.period;
-        const stagePeriod = main.querySelector('[data-stage-period]');
-        if (stagePeriod) stagePeriod.textContent = `${currentPeriod.period} · ${currentPeriod.statusLabel}`;
-        toggle.classList.toggle('is-playing', isPlaying);
-        toggle.setAttribute('aria-label', isPlaying ? copy.pause : copy.play);
-        toggle.title = isPlaying ? copy.pauseTitle : copy.playTitle;
-        previous.disabled = currentIndex <= 0;
-        next.disabled = currentIndex >= periods.length - 1;
-        ticks.querySelectorAll('[data-period-index]').forEach((tick) => {
-          const isCurrent = Number(tick.dataset.periodIndex) === currentIndex;
-          tick.classList.toggle('is-current', isCurrent);
-          tick.setAttribute('aria-current', isCurrent ? 'true' : 'false');
-        });
-        const logicConfig = document.getElementById('logic-config');
-        if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
-      };
-
-      const stopPlayback = () => {
-        isPlaying = false;
-        chart.pause();
-        renderPlaybackState();
-      };
-
-      const goToPeriod = async (targetIndex, animate = true) => {
-        if (disposed) return false;
-        const previousIndex = state.periodIndex;
-        const target = clampPeriodIndex(example, targetIndex);
-        transitionTargetIndex = target;
-        state.periodIndex = target;
-        renderPlaybackState();
-        const completed = await runSankeyPlaybackUpdate(
-          () => chart.update({
-            ...periods[target],
-            platform: state.platform,
-          }, { animate }),
-          {
-            onError: (error) => console.error('主站桑基图播放更新失败', error),
-            onFailure: () => {
-              state.periodIndex = previousIndex;
-              transitionTargetIndex = null;
-              isPlaying = false;
-              renderPlaybackState();
-            },
-          },
-        );
-        if (disposed) return false;
-        if (completed) {
-          transitionTargetIndex = null;
-          renderPlaybackState();
-        }
-        return completed;
-      };
-
-      const playPeriods = async () => {
-        if (isPlaying) {
-          stopPlayback();
-          return;
-        }
-        isPlaying = true;
-        renderPlaybackState();
-        try {
-          if (transitionTargetIndex !== null) {
-            const completed = await goToPeriod(transitionTargetIndex, true);
-            if (!completed || !isPlaying || disposed) return;
-          }
-          if (state.periodIndex >= periods.length - 1) await goToPeriod(0, false);
-          while (!disposed && isPlaying && state.periodIndex < periods.length - 1) {
-            const completed = await goToPeriod(state.periodIndex + 1, true);
-            if (!completed || !isPlaying || disposed) break;
-            await new Promise((resolve) => setTimeout(resolve, 120));
-          }
-        } catch (error) {
-          console.error('主站桑基图播放流程失败', error);
-        } finally {
-          isPlaying = false;
-          renderPlaybackState();
-        }
-      };
-
-      const onToggle = () => { void playPeriods(); };
-      const onRange = () => {
-        const requestedIndex = Number(range.value);
-        stopPlayback();
-        void goToPeriod(requestedIndex);
-      };
-      const onPrevious = () => {
-        stopPlayback();
-        void goToPeriod(state.periodIndex - 1);
-      };
-      const onNext = () => {
-        stopPlayback();
-        void goToPeriod(state.periodIndex + 1);
-      };
-      const onTick = (event) => {
-        const tick = event.target.closest('[data-period-index]');
-        if (!tick) return;
-        stopPlayback();
-        void goToPeriod(Number(tick.dataset.periodIndex));
-      };
-
-      toggle.addEventListener('click', onToggle);
-      range.addEventListener('input', onRange);
-      previous.addEventListener('click', onPrevious);
-      next.addEventListener('click', onNext);
-      ticks.addEventListener('click', onTick);
-      renderPlaybackState();
-
-      return () => {
-        disposed = true;
-        isPlaying = false;
-        chart.pause();
-        toggle.removeEventListener('click', onToggle);
-        range.removeEventListener('input', onRange);
-        previous.removeEventListener('click', onPrevious);
-        next.removeEventListener('click', onNext);
-        ticks.removeEventListener('click', onTick);
-      };
+      const periods = playbackPeriodsOf(example, { theme: state.theme });
+      const controller = createPlaybackController(surface, {
+        periods,
+        copy: sankeyPlaybackCopy({ theme: state.theme }),
+        scope: { theme: state.theme, mode: state.mode, platform: state.platform },
+        getIndex: () => state.periodIndex,
+        setIndex: (i) => { state.periodIndex = i; },
+        pause: () => chart.pause(),
+        applyPeriod: (index, { animate }) => chart.update(
+          { ...periods[index], platform: state.platform },
+          { animate },
+        ),
+        onRender: ({ period }) => {
+          const stagePeriod = main.querySelector('[data-stage-period]');
+          if (stagePeriod && period) stagePeriod.textContent = `${period.period} · ${period.statusLabel}`;
+          const logicConfig = document.getElementById('logic-config');
+          if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
+        },
+      });
+      return controller.dispose;
     }
 
     function renderDetail() {
@@ -1185,7 +1076,7 @@
         ? example.playback?.viewport?.[state.platform]
         : null;
       if (playbackViewport) {
-        applySankeyPlaybackViewport(
+        applyPlaybackViewport(
           stageHost.closest('.chart-playback-layout'),
           surface,
           playbackViewport,
@@ -1200,8 +1091,7 @@
           );
         });
       }
-      const { instance } = mountChart(stageHost, activeExample(example));
-      if (hasPlayback) chartCleanups.push(mountPlayback(main.querySelector('.stage__surface'), example, instance));
+      mountStage(stageHost, example);
       /* 外壳默认「高度由图表撑开」，用户一旦从右下角拖动就切成「容器说了算」——
          host 转 height:100%，组件的 ResizeObserver 接手重排。与 playground 的卡片同一套。
          判定用右下 18px 热区：resize 手柄本身不派发独立事件，只能靠这个位置推断。 */
@@ -1241,7 +1131,7 @@
         if (!host) return;
         destroyCharts();
         host.innerHTML = '';
-        mountChart(host, activeExample(example), { animation: false });
+        mountStage(host, example, { animation: false });
         const logicConfig = document.getElementById('logic-config');
         if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
       });
