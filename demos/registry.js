@@ -12,6 +12,7 @@
  *   3. examples.js 的 CHART_CAPABILITIES 声明它支持哪些语义旋钮 + 加示例
  */
 import { CartesianChart } from '../charts/charts/cartesian/index.js';
+import { HBarChart } from '../charts/charts/hbar/index.js';
 import { ChordChart } from '../charts/charts/chord/index.js';
 import { PieChart } from '../charts/charts/pie/index.js';
 import { RadarChart } from '../charts/charts/radar/index.js';
@@ -22,6 +23,7 @@ import { buildConfig } from './examples.js';
 
 export const CHARTS = {
   cartesian: CartesianChart,
+  hbar: HBarChart, /* 横向条；给了时间序列就是排名竞赛形态（见 specs/hbar.md） */
   chord: ChordChart, /* 两档 variant 与两档标签排列由旋钮分形态，不分组件（见 specs/chord.md） */
   pie: PieChart, /* 饼 + 环（variant 旋钮分形态，见 specs/pie.md） */
   radar: RadarChart, /* 网格形状 / 闭合形状分示例，不分组件（见 specs/radar.md） */

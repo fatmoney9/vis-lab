@@ -466,6 +466,11 @@
       touch-action: pan-x pan-y;
     }
     .chart-playback-layout > .chart-host::-webkit-scrollbar { display: none; }
+    /* 行数可变的图型（排名竞赛）：图表那一格由内容撑，不写死。
+       ⚠️ 必须排在上面那条通用规则**之后**——两者特异性相同，靠顺序取胜。
+       高度仍由 L2 按行数算，这里只是让出这一行（demos/*.js 里一个 height 都没写，守卫 ① 绿）。 */
+    .chart-playback-layout--auto { grid-template-rows: auto var(--chart-playback-bar-height); }
+    .chart-playback-layout--auto > .chart-host { height: auto; }
     .stage__surface[data-playback="true"].is-resized .chart-playback-layout {
       grid-template-rows: minmax(calc(var(--spacing-24) * 5), 1fr) var(--chart-playback-bar-height);
       height: 100%;
@@ -886,7 +891,10 @@
       if (!periods.length) return '<div class="chart-host"></div>';
       const copy = sankeyPlaybackCopy({ theme: state.theme });
       const currentIndex = clampPeriodIndex(example);
-      return `<div class="chart-playback-layout">
+      /* 声明了 viewport 的图型（桑基：SANKEY-23 的固定外框）用算好的固定高；
+         没声明的按内容撑高——否则会沿用桑基那档 243px，行数少时下方留出大片空白。 */
+      const autoHeight = !example.playback?.viewport;
+      return `<div class="chart-playback-layout${autoHeight ? ' chart-playback-layout--auto' : ''}">
         <div class="chart-host"></div>
         ${sharedPlaybackMarkup({
           periods,
@@ -938,13 +946,20 @@
         getIndex: () => state.periodIndex,
         setIndex: (i) => { state.periodIndex = i; },
         pause: () => chart.pause(),
+        /* 逐期的 cfg 走**示例自己声明的** playback.cfg（activePeriodExample 同一条路），
+           于是数据量旋钮对播放示例照样生效；未声明的示例（桑基）原样返回该期，零回归。 */
         applyPeriod: (index, { animate }) => chart.update(
-          { ...periods[index], platform: state.platform },
+          { ...activePeriodExample(example, { periodIndex: index, theme: state.theme })
+              .cfg(clampDensity(example, typeof state.density === 'number' ? state.density : defaultDensityCountOf(example))),
+            platform: state.platform },
           { animate },
         ),
         onRender: ({ period }) => {
           const stagePeriod = main.querySelector('[data-stage-period]');
-          if (stagePeriod && period) stagePeriod.textContent = `${period.period} · ${period.statusLabel}`;
+          /* statusLabel 是桑基特有的业务状态（「已发布」之类），别的图型没有 —— 缺就只显示期数 */
+          if (stagePeriod && period) {
+            stagePeriod.textContent = period.statusLabel ? `${period.period} · ${period.statusLabel}` : period.period;
+          }
           const logicConfig = document.getElementById('logic-config');
           if (logicConfig) logicConfig.textContent = JSON.stringify(currentConfig(example), null, 2);
         },
@@ -1000,7 +1015,7 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.period} · ${currentPeriod.statusLabel}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${playbackCopy.mobile} ${MOBILE_VIEWPORT.label}`} · ${state.mode === 'light' ? playbackCopy.light : playbackCopy.dark} · ${caps.density ? `<span data-stage-density>${densityLabel}</span>` : (exampleSummary ?? densityLabel)}</span>
+              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.statusLabel ? `${currentPeriod.period} · ${currentPeriod.statusLabel}` : currentPeriod.period}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${playbackCopy.mobile} ${MOBILE_VIEWPORT.label}`} · ${state.mode === 'light' ? playbackCopy.light : playbackCopy.dark} · ${caps.density ? `<span data-stage-density>${densityLabel}</span>` : (exampleSummary ?? densityLabel)}</span>
             </div>
             <div class="stage__canvas">
               <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-playback="${hasPlayback}"${surfaceStyle}>

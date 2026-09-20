@@ -105,14 +105,32 @@ export function assertPlaybackCopy(copy, owner = '播放区') {
   return copy;
 }
 
+/*
+ * 带文字的刻度最多显示 LABELLED_TICKS 个：8 期时每期都带字，24 期时糊成一片。
+ * **抽稀的只是文字，不是刻度本身**——每一期仍是一个可点的按钮（跳期能力不能因为期数多就残掉），
+ * 只是不带文字的那些收窄成细标记。首期与末期恒带字，否则读者不知道轴的两端是什么。
+ */
+const LABELLED_TICKS = 8;
+
+export const labelledTickCount = (count) => Math.min(count, LABELLED_TICKS);
+
+const labelledAt = (count) => {
+  if (count <= LABELLED_TICKS) return () => true;
+  const step = (count - 1) / (LABELLED_TICKS - 1);
+  const keep = new Set(Array.from({ length: LABELLED_TICKS }, (_, i) => Math.round(i * step)));
+  return (index) => keep.has(index);
+};
+
 export function playbackTicksMarkup(periods, currentIndex = 0) {
   const lastIndex = Math.max(0, periods.length - 1);
+  const labelled = labelledAt(periods.length);
   return periods.map((period, index) => {
     const isCurrent = index === currentIndex;
+    const showLabel = labelled(index);
     const left = lastIndex ? index / lastIndex * 100 : 0;
     return `
       <button
-        class="chart-playback__tick${isCurrent ? ' is-current' : ''}"
+        class="chart-playback__tick${isCurrent ? ' is-current' : ''}${showLabel ? '' : ' chart-playback__tick--bare'}"
         type="button"
         data-period-index="${index}"
         style="left:${left}%"
@@ -138,6 +156,8 @@ export function playbackMarkup({
   const safeIndex = safePeriods.length
     ? Math.max(0, Math.min(safePeriods.length - 1, Math.round(currentIndex)))
     : 0;
+  /* 标签可用宽按**带字的刻度数**算，不是按总期数：24 期时按 23 分母会把每个标签压成「2..」。
+     刻度本身仍是 24 个（抽稀的只是文字，见 playbackTicksMarkup）。 */
   const lastIndex = Math.max(0, safePeriods.length - 1);
   const id = (suffix = '') => idAttribute(idPrefix ? `${idPrefix}${suffix ? `-${suffix}` : ''}` : '');
   const currentPeriod = safePeriods[safeIndex]?.period ?? '';
@@ -145,7 +165,7 @@ export function playbackMarkup({
   return `<div
     class="chart-playback"
     ${id()}
-    style="--chart-playback-interval-count:${Math.max(1, lastIndex)}"
+    style="--chart-playback-interval-count:${Math.max(1, labelledTickCount(safePeriods.length) - 1)}"
     aria-label="${escapeHtml(copy.timeline)}"
   >
     <div class="chart-playback__timeline">

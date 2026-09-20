@@ -410,3 +410,11 @@
     display: block;
   }
 }
+
+/* 期数多时抽稀掉文字的刻度：按钮仍在、仍可点（跳期能力不因期数多而残掉），
+   只是收窄成细标记，不占据文字的横向空间。 */
+.chart-playback__tick--bare {
+  width: var(--spacing-8);
+  min-width: 0;
+}
+.chart-playback__tick--bare .chart-playback__tick-label { display: none; }

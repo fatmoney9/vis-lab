@@ -13,6 +13,11 @@
  */
 
 const AINVEST_TEXT = new Map([
+  /* 行业市值排名（HBar 竞赛形态）——行业名与季度标签 */
+  ['银行', 'Banking'], ['白酒', 'Liquor'], ['半导体', 'Semiconductors'],
+  ['新能源', 'New Energy'], ['医药', 'Pharma'], ['地产', 'Real Estate'],
+  ['券商', 'Brokerage'], ['保险', 'Insurance'], ['汽车', 'Automotive'],
+  ['煤炭', 'Coal'], ['光伏', 'Solar'], ['军工', 'Defense'],
   /* 图表标注（CALLOUT-03：文案由调用方写死，故经本词表整句替换） */
   ['若人人都按这个水平消耗资源，一年需要八个地球才够', 'If everyone consumed at this level, we would need eight Earths a year'],
   ['基准线', 'Baseline'],
