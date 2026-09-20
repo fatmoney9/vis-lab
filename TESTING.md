@@ -33,7 +33,7 @@ CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份
 
 ```sh
 node --test "tests/**/*.test.mjs"    # 等价 npm test
-npm run test:browser                        # 全部浏览器合同（瀑布 + 弦图 + 跨族高亮），三份逐个串跑
+npm run test:browser                        # 全部浏览器合同（瀑布 / 弦图 / 跨族高亮 / 播放 / 竞赛 / 三卡同步），逐个串跑
 node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中一份
 ```
 
@@ -45,7 +45,8 @@ node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中�
 不是像 `npm test` 那样的通配入口，接下一个图型就得改 CI 与 `package.json`；
 ② 放在必需检查的 job 里，单个图型的验收一红就拦下整个 PR。
 重新接回 CI 前应先通用化。进度：共用的服务器 / Chrome / CDP 外壳 `tests/browser/harness.mjs` 与第一份按规则组织的跨图型合同
-`highlight-state.browser.mjs` 已就位；**仍差两件**——`test:browser` 仍是手工串联三份文件而非通配 `tests/browser/*.browser.mjs`，
+`highlight-state.browser.mjs` 已就位；**仍差两件**——`test:browser` 仍是手工串联各份文件而非通配 `tests/browser/*.browser.mjs`
+（每加一份合同就要改一次 `package.json`，本轮又改了两次），
 TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成的 `tooltip.browser.mjs`。
 在那之前，**改动 hover、Tooltip、轴贴片相关代码时，请在本地手动跑一次上面那条命令**。
 
@@ -88,6 +89,8 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `tests/browser/highlight-state.browser.mjs`：`core/highlight-state.js` 的**跨族合同**——桑基 / 矩形树图 / 弦图三个消费方各跑同一组 8 条迁移，验的是「同一套状态机在三个 L2 身上表现一致」，而不是某一个图型。纯逻辑那半由 `tests/highlight-state.test.mjs` 覆盖，这里补的是 L2 把状态翻译成 DOM 时有没有接错线；事件用合成 Event 派发，与容器尺寸、滚动位置和图元疏密无关。
 - `tests/browser/chord.browser.mjs`：三主题 × 明暗 × 两档 variant × 两档标签 × 实体数 4/10 共 48 组，断言**每个实体标签都不是空串**（横排档的标签带曾被容器高度决定、四个汉字放不下而整层渲染成空，当时门禁与单测全绿）、画布不溢出容器、实体色写进 `--dv-series-N`、弦透明度取自 token；另含邻域高亮 / 钉住回落、大弧标志（合成一个跨度超半圈的实体）与减弱动效三项专项。
 - `tests/browser/playback.browser.mjs`：播放区的**跨族合同**（`demos/chart-playback.*` + `demos/playback-controller.js`）——不验某个图型画得对不对，而验播放这件事本身：单步推进、播放/暂停、跳刻度、拖时间轴、切主题后控件仍在。当前唯一消费方是桑基，但断言里没有一行认识桑基的数据，接第二个会播放的图型时换掉入口常量即可复用。<br>⚠️ 最值钱的是 **[SANKEY-24]「暂停 = 冻结当前帧」**那条，它正是当年宁可在 L2 手写 rAF 也不用 `runGrowth` 的唯一理由（那个驱动被取消时会落终态）。**只断言「暂停后画面没变」不够**——「已经落到终态然后不动了」同样满足，所以同时断言它**不等于该期终态**；且暂停必须打在**动画中途**（起播后 300ms），否则会落在两期之间的间隙上、几何本就是终态，第二条断言假红。
+- `tests/browser/hbar.browser.mjs`：竞赛形态的合同——keyed join（每行绑到实体 key 而不是名次）、补间过程中几何连续变化、暂停冻结、末期名次确实与首期不同。<br>⚠️ 两个坑写在这里免得再踩：① 「正在补间」**不能**用「行 y 是小数」来证——静态布局下行 y 本来就是小数，那条断言恒真；要用**两个时刻的指纹差**。② 指纹必须**聚合全体行并排序**：DOM 顺序不等于名次顺序，跨帧比「第一根条」会比到不同的行上。
+- `tests/browser/playground-playback.browser.mjs`：playground 三主题面的**多实例同步**合同——一条轴驱动三个实例。<br>⚠️ 断言「三卡名次序列相同」**不够**：某张卡落后一期时，若那两期恰好没发生名次互换，三卡照样完全相同、断言照样全绿。真正的同步证据是**每张卡跟自己比**、在同一时间窗内三张都必须在变（跨主题不能直接比几何，三主题字号与边距本就不同）。该断言已做负对照验证：把 `applyPeriod` 改成只驱动第一张卡，它给出 `[true, false, false]`。
 - `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；另断言 **THS 移动端 Tooltip 宽 ≤ 图表根宽的 1/2**（TOOLTIP-01 ③）。封顶是否生效不靠示例读数「碰巧」宽过半宽来验——
 那取决于运行环境的字体（macOS 苹方下第 3 根柱 186.6px 会触发，Ubuntu 字体更窄则不会）——
 而是人为塞入超长名称让封顶必然生效，断言宽度**恰等于**半宽，并以 THS PC / iFinD 移动端 / Ainvest 移动端作不收紧的反向对照；不读取源码或 CSS 文本、不手写生产 SVG。

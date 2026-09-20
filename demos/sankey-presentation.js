@@ -85,35 +85,3 @@ export function financialSankeyPresentation(config, { theme = 'ths' } = {}) {
     statusLabel: AINVEST_STATUS_LABELS[config.statusLabel] ?? config.statusLabel,
   };
 }
-
-const ZH_PLAYBACK_COPY = {
-  timeline: '季度数据播放轴',
-  progress: '季度进度',
-  play: '播放季度变化',
-  pause: '暂停季度变化',
-  playTitle: '播放',
-  pauseTitle: '暂停',
-  previous: '上一期',
-  next: '下一期',
-  mobile: '移动端',
-  light: '浅色',
-  dark: '深色',
-};
-
-const EN_PLAYBACK_COPY = {
-  timeline: 'Quarterly data playback',
-  progress: 'Quarter progress',
-  play: 'Play quarterly changes',
-  pause: 'Pause quarterly changes',
-  playTitle: 'Play',
-  pauseTitle: 'Pause',
-  previous: 'Previous',
-  next: 'Next',
-  mobile: 'Mobile',
-  light: 'Light',
-  dark: 'Dark',
-};
-
-export const sankeyPlaybackCopy = ({ theme = 'ths' } = {}) => (
-  theme === 'ainvest' ? EN_PLAYBACK_COPY : ZH_PLAYBACK_COPY
-);

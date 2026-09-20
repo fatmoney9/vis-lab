@@ -236,6 +236,11 @@
   "size-slider-handle-border": "1px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-4}",
+  "color-playback-primary-bg": {
+    "light": "#1B63D9",
+    "dark": "#3371FF"
+  },
+  "color-playback-primary-paused-bg": "{color-grey-05}",
   "radius-playback-step": "{radius-4}",
   "$section-14": "中性灰阶",
   "color-grey-01": {

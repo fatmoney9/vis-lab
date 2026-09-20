@@ -8,7 +8,7 @@ import { makeFormatter } from '../../core/format.js';
 import { truncateBatch } from '../../core/label.js';
 import { renderLegend } from '../../core/legend.js';
 import { createTextMeasurer } from '../../core/measure.js';
-import { easeOutCubic, reducedMotion } from '../../core/motion.js';
+import { reducedMotion, runTween } from '../../core/motion.js';
 import { resolveBehavior } from '../../core/theme.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { tokenNum } from '../../core/tokens.js';
@@ -44,8 +44,7 @@ const LEGEND_ROLES = [
 export function SankeyChart(host, initialConfig) {
   let config = initialConfig;
   let resizeFrame = 0;
-  let motionFrame = 0;
-  let motionResolve = null;
+  let motionTween = null;
   let destroyed = false;
   /* [SANKEY-10][SANKEY-20] hover / 钉住的状态迁移收在 L1（core/highlight-state.js）：
      钉位只有一个，跨类互斥由类型保证；本层只管「把当前状态画出来」。 */
@@ -70,12 +69,9 @@ export function SankeyChart(host, initialConfig) {
     clearTooltipHide();
     tooltip.hide();
   };
-  const cancelMotion = () => {
-    cancelAnimationFrame(motionFrame);
-    motionFrame = 0;
-    if (motionResolve) motionResolve(false);
-    motionResolve = null;
-  };
+  /* [SANKEY-24] 暂停 = 冻结当前几何帧、不落终态。驱动器在 L1（MOTION-08），
+     本族不再自己写 rAF 循环——那份手写实现 2026-09-20 迁走，行为逐条不变。 */
+  const cancelMotion = () => { motionTween?.pause(); motionTween = null; };
 
   function build() {
     if (destroyed) return;
@@ -598,7 +594,7 @@ export function SankeyChart(host, initialConfig) {
       const motion = resolveSankeySettings(platform).motion;
       const duration = motion['playback-duration'];
       const labelLeadDuration = motion['playback-label-lead-duration'];
-      const startedAt = performance.now() + labelLeadDuration;
+
       displayValueByNodeId = new Map(
         nextGraph.nodes.map((node) => [node.id, node.value]),
       );
@@ -606,34 +602,21 @@ export function SankeyChart(host, initialConfig) {
       options.onProgress?.(0, 0);
       build();
 
-      return new Promise((resolve) => {
-        motionResolve = resolve;
-        const tick = (now) => {
-          if (now < startedAt) {
-            motionFrame = requestAnimationFrame(tick);
-            return;
-          }
-          const linearProgress = Math.min(1, (now - startedAt) / duration);
-          const easedProgress = easeOutCubic(linearProgress);
-          config = interpolateSankeyConfig(fromConfig, nextConfig, easedProgress);
-          if (linearProgress === 1) {
-            config = nextConfig;
-            displayValueByNodeId = null;
-            displayValueByLinkIndex = null;
-          }
-          options.onProgress?.(easedProgress, linearProgress);
-          build();
-
-          if (linearProgress < 1) {
-            motionFrame = requestAnimationFrame(tick);
-            return;
-          }
-          motionFrame = 0;
-          motionResolve = null;
-          resolve(true);
-        };
-        motionFrame = requestAnimationFrame(tick);
-      });
+      /* [MOTION-08] 补间驱动在 L1。本族 2026-08-26 曾判定「不能用 runGrowth：
+         它的取消语义是立即落终态，而 SANKEY-24 的暂停要求冻结当前几何帧」——
+         那条判断仍然成立，runTween 正是为此加的：同一条曲线、相反的取消语义。
+         120ms 文字提前量走它的 delay（期间不调 onFrame，几何保持上一期）。 */
+      motionTween = runTween(duration, (easedProgress, linearProgress) => {
+        config = interpolateSankeyConfig(fromConfig, nextConfig, easedProgress);
+        if (linearProgress === 1) {
+          config = nextConfig;
+          displayValueByNodeId = null;
+          displayValueByLinkIndex = null;
+        }
+        options.onProgress?.(easedProgress, linearProgress);
+        build();
+      }, { delay: labelLeadDuration });
+      return motionTween.promise;
     },
     pause() {
       cancelMotion();

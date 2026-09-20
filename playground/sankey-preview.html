@@ -476,9 +476,9 @@
     } from '../charts/charts/sankey/model.js';
     import {
       financialSankeyPresentation,
-      sankeyPlaybackCopy,
     } from '../demos/sankey-presentation.js';
     import {
+      playbackCopy,
       applyPlaybackViewport,
       runPlaybackUpdate,
       playbackMarkup,
@@ -648,7 +648,7 @@
 
     document.getElementById('complex-playback-mount').outerHTML = playbackMarkup({
       periods: QUARTER_DATA,
-      copy: sankeyPlaybackCopy({ theme: 'ths' }),
+      copy: playbackCopy({ theme: 'ths' }),
       playIconSrc: '../assets/playback/play.svg',
       idPrefix: 'complex-playback',
     });
@@ -727,7 +727,7 @@
       const displayQuarterIndex = Math.round(clampPeriod(periodPosition));
       const progress = displayQuarterIndex / (QUARTER_DATA.length - 1) * 100;
       const displayedQuarter = displayQuarter(QUARTER_DATA[displayQuarterIndex]);
-      const copy = sankeyPlaybackCopy({ theme: complexState.theme });
+      const copy = playbackCopy({ theme: complexState.theme });
       complexPlaybackRange.value = `${displayQuarterIndex}`;
       complexPlaybackRange.style.setProperty('--playback-progress', `${progress}%`);
       complexPlaybackPeriod.value = displayedQuarter.period;
@@ -819,7 +819,7 @@
     const updateComplexPreview = () => {
       const scenario = displayQuarter(QUARTER_DATA[Math.round(clampPeriod(periodPosition))]);
       const isAinvest = complexState.theme === 'ainvest';
-      const copy = sankeyPlaybackCopy({ theme: complexState.theme });
+      const copy = playbackCopy({ theme: complexState.theme });
       const tokenTheme = complexState.theme === 'ifind' ? 'ifind-pc' : complexState.theme;
       const playbackTokenTheme = playbackRangeTheme(tokenTheme);
       configDescription.textContent = isAinvest

@@ -27,7 +27,7 @@ import { resolveSeriesColors } from '../../core/palette.js';
 import { barPath, barRadius, singleBar } from '../../core/bar-geometry.js';
 import { measureTexts } from '../../core/measure.js';
 import { truncateBatch } from '../../core/label.js';
-import { easeOutCubic, reducedMotion, runGrowth } from '../../core/motion.js';
+import { reducedMotion, runGrowth, runTween } from '../../core/motion.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { rankItems, interpolateRanking, visibleRows, rowGeometry } from './model.js';
 import { HBAR_SETTINGS, validateHBarSettings, clampTopN } from './config.js';
@@ -37,8 +37,7 @@ export function HBarChart(host, cfg) {
   let config = cfg;
   let destroyed = false;
   let firstBuild = true;
-  let motionFrame = 0;
-  let motionResolve = null;
+  let tween = null;
   /* 当前**显示态**（可能是被冻结的中间帧，不等于 config 的排名）。
      HBAR-17：拖时间轴要从这里起补，不是从上一期原值重来，否则快速连拖会闪回。 */
   let display = null;
@@ -49,14 +48,9 @@ export function HBarChart(host, cfg) {
      containerDrivesHeight 口径对不上。 */
   host.classList.add('dv-chart', 'dv-hbar');
 
-  /* [HBAR-16] 暂停 = 冻结当前帧，**不落终态**。与 core/motion.js 的 runGrowth 相反
-     （那个被取消时会 settle 到 1），理由成文于 specs/sankey.md 的同一条判例。 */
-  const cancelMotion = () => {
-    cancelAnimationFrame(motionFrame);
-    motionFrame = 0;
-    if (motionResolve) motionResolve(false);
-    motionResolve = null;
-  };
+  /* [HBAR-16][MOTION-08] 暂停 = 冻结当前帧，**不落终态**——这正是不能用 runGrowth 的
+     唯一理由（那个被取消时会 settle 到 1）。驱动器在 L1，本族不自己写 rAF 循环。 */
+  const cancelMotion = () => { tween?.pause(); tween = null; };
 
   /*
    * ⚠️ **build() 不得取消补间**。它同时是 ResizeObserver 的回调，而补间过程中
@@ -210,26 +204,17 @@ export function HBarChart(host, cfg) {
         return Promise.resolve(true);
       }
 
-      const duration = HBAR_SETTINGS['playback-duration'];
-      const startedAt = performance.now();
       /* 先按目标帧重建结构（名称列宽、颜色槽位、行数可能都变了），再逐帧只重画 */
       display = from;
       build();
 
-      return new Promise((resolve) => {
-        motionResolve = resolve;
-        const tick = (now) => {
-          const linear = Math.min(1, (now - startedAt) / duration);
-          display = linear === 1 ? to : interpolateRanking(from, to, easeOutCubic(linear), topN);
-          paint(display);
-          options.onProgress?.(easeOutCubic(linear), linear);
-          if (linear < 1) { motionFrame = requestAnimationFrame(tick); return; }
-          motionFrame = 0;
-          motionResolve = null;
-          resolve(true);
-        };
-        motionFrame = requestAnimationFrame(tick);
+      tween = runTween(HBAR_SETTINGS['playback-duration'], (eased, linear) => {
+        /* 末帧用目标帧原值收尾，不用 eased 结果——eased 在 1 附近精度不可靠 */
+        display = linear === 1 ? to : interpolateRanking(from, to, eased, topN);
+        paint(display);
+        options.onProgress?.(eased, linear);
       });
+      return tween.promise;
     },
     pause() { cancelMotion(); },
     destroy() {

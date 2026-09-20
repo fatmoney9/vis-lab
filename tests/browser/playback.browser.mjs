@@ -136,17 +136,69 @@ try {
   assert.equal(ticked.range, '0', '点刻度跳回第 0 期');
   assert.equal(ticked.currentTicks, 1, '当前刻度仍唯一');
 
-  /* ⑥ 切主题后播放区仍在（文案与把手 token 随主题走，但控件不该消失） */
-  await evaluate(cdp, clickOn('[data-segment="theme"] [data-value="ainvest"]'));
-  await sleep(1800);
-  assert.ok(
-    await evaluate(cdp, `!!document.querySelector('.chart-playback__primary')`),
-    '切到 Ainvest 后播放区仍然存在',
-  );
+  /* ⑥ [SANKEY-28][SANKEY-29] 三主题 × 明暗：播放键必须**真的看得见**，且底色取各自的
+        控件强调色。
+        ⚠️ 只断言「节点存在」是不够的——Ainvest 曾用 `display: none` 把它藏掉，
+        节点一直都在、`querySelector` 一直为真，断言照样全绿。所以这里读的是
+        computed display 与实际盒子尺寸。
+        ⚠️ 底色也必须逐主题断言：它曾直接引用 `--color-price-up`，于是跟着「涨」色走，
+        iFinD 的涨色是红的、播放键就是红的——而那在三主题下都「有颜色」，
+        任何「底色非空」式的断言都验不到。 */
+  const PAUSED_BG = 'rgb(133, 133, 133)';   /* color-grey-05 #858585，三主题同值 */
+  const PRIMARY_BG = {
+    ths: { light: 'rgb(255, 36, 54)', dark: 'rgb(255, 36, 54)' },
+    'ifind-pc': { light: 'rgb(27, 99, 217)', dark: 'rgb(51, 113, 255)' },
+    ainvest: { light: 'rgb(22, 93, 255)', dark: 'rgb(51, 113, 255)' },
+  };
+  for (const [theme, byMode] of Object.entries(PRIMARY_BG)) {
+    for (const [mode, expected] of Object.entries(byMode)) {
+      await evaluate(cdp, clickOn(`[data-segment="theme"] [data-value="${theme}"]`));
+      await sleep(900);
+      await evaluate(cdp, clickOn(`[data-segment="mode"] [data-value="${mode}"]`));
+      await sleep(1400);
+      const button = await evaluate(cdp, `(() => {
+        const node = document.querySelector('.chart-playback__primary');
+        if (!node) return null;
+        const style = getComputedStyle(node);
+        const box = node.getBoundingClientRect();
+        return { display: style.display, visibility: style.visibility,
+                 bg: style.backgroundColor, w: Math.round(box.width), h: Math.round(box.height) };
+      })()`);
+      assert.ok(button, `${theme}/${mode}：播放键节点存在`);
+      assert.notEqual(button.display, 'none', `${theme}/${mode}：播放键不得被 display:none 藏掉`);
+      assert.notEqual(button.visibility, 'hidden', `${theme}/${mode}：播放键不得被 visibility 藏掉`);
+      assert.ok(button.w > 0 && button.h > 0, `${theme}/${mode}：播放键要有实际尺寸（实测 ${button.w}×${button.h}）`);
+      assert.equal(button.bg, expected, `${theme}/${mode}：播放键底色取本主题控件强调色`);
+
+      /* 播放中 = 按钮此刻的动作是「暂停」，底色转中性灰（三主题共用 `color-grey-05`）。
+         ⚠️ 同时断言**图标也换了**：只看底色的话，一个「底色变灰但图标还是播放三角」的
+         半截实现照样全绿。 */
+      await evaluate(cdp, clickOn('.chart-playback__primary'));
+      await sleep(350);
+      const playing = await evaluate(cdp, `(() => {
+        const node = document.querySelector('.chart-playback__primary');
+        return {
+          bg: getComputedStyle(node).backgroundColor,
+          isPlaying: node.classList.contains('is-playing'),
+          pauseIcon: getComputedStyle(node.querySelector('.chart-playback__pause-icon')).display,
+          playIcon: getComputedStyle(node.querySelector('.chart-playback__play-icon')).display,
+        };
+      })()`);
+      assert.equal(playing.isPlaying, true, `${theme}/${mode}：点击后进入播放态`);
+      assert.equal(playing.bg, PAUSED_BG, `${theme}/${mode}：播放中底色转中性灰`);
+      assert.notEqual(playing.bg, expected, `${theme}/${mode}：两态底色必须不同`);
+      assert.notEqual(playing.pauseIcon, 'none', `${theme}/${mode}：播放中要显示暂停图标`);
+      assert.equal(playing.playIcon, 'none', `${theme}/${mode}：播放中要隐藏播放图标`);
+
+      /* 停回去，别把播放态带进下一轮主题 */
+      await evaluate(cdp, clickOn('.chart-playback__primary'));
+      await sleep(400);
+    }
+  }
 
   assert.deepEqual(cdp.errors, [], '播放全程不得有页面报错');
   await cdp.close();
-  console.log('✓ 播放合同通过：推进 / 暂停冻结 / 跳期 / 拖轴 / 切主题');
+  console.log('✓ 播放合同通过：推进 / 暂停冻结 / 跳期 / 拖轴 / 三主题×明暗 播放键两态配色与图标');
 } finally {
   await stopProcess(chrome);
   server.close();

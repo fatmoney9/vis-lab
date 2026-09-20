@@ -224,6 +224,8 @@
   "size-slider-handle-border": "0.5px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-6}",
+  "color-playback-primary-bg": "#FF2436",
+  "color-playback-primary-paused-bg": "{color-grey-05}",
   "radius-playback-step": "{radius-4}",
   "$section-14": "中性灰阶",
   "color-grey-01": {

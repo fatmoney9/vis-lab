@@ -29,8 +29,8 @@ import {
 } from '../charts/charts/sankey/model.js';
 import {
   financialSankeyPresentation,
-  sankeyPlaybackCopy,
 } from '../demos/sankey-presentation.js';
+import { playbackCopy } from '../demos/chart-playback.js';
 import { buildFinancialDifferencePair } from '../demos/sankey-financial.js';
 import { makeFinancialSankeyQuarter } from '../demos/examples.js';
 import {
@@ -373,7 +373,7 @@ test('SANKEY-27：Ainvest 只翻译展示文案，稳定拓扑与适配输入不
   assert.equal(presented.shortPeriod, 'FY');
   assert.equal(presented.statusLabel, 'Loss');
   assert.strictEqual(financialSankeyPresentation(source, { theme: 'ths' }), source);
-  assert.equal(sankeyPlaybackCopy({ theme: 'ainvest' }).previous, 'Previous');
+  assert.equal(playbackCopy({ theme: 'ainvest' }).previous, 'Previous');
 });
 
 test('SANKEY-28：Ainvest 播放区的主题合同与方向资源完整', () => {
@@ -397,7 +397,7 @@ test('SANKEY-24/28：两个 L3 入口复用同一份播放区 DOM 与动态刻�
     { period: '2025 一季报', timelinePeriod: '2025 一季报', shortPeriod: '一季' },
     { period: '2025 半年报', timelinePeriod: '2025 半年报', shortPeriod: '半年' },
   ];
-  const copy = sankeyPlaybackCopy({ theme: 'ths' });
+  const copy = playbackCopy({ theme: 'ths' });
   const ticks = playbackTicksMarkup(periods, 1);
   const markup = playbackMarkup({
     periods,
