@@ -59,7 +59,13 @@ node hooks/lint-font-literals.mjs
 # 10/11 L1 复用声明守卫（每个 L2 图型必须逐条交代 charts/core/ 下每个 L1 模块用不用、为什么）
 node hooks/lint-l1-declaration.mjs
 
-# 11/11 预览面契约守卫（L3 不许给宿主写高度；两个预览面的容器下限必须一致）
+# 11/13 预览面契约守卫（L3 不许给宿主写高度；两个预览面的容器下限必须一致）
 node hooks/lint-preview-contract.mjs
 
-echo "✓ 质量门禁 11/11 全部通过"
+# 12/13 分类图标守卫（新增图族必须配图标，否则首页左栏静默留空位）
+node hooks/lint-nav-icon.mjs
+
+# 13/13 Ainvest 英文守卫（该主题下图表内容不得残留中文；含逐期播放配置）
+node hooks/lint-ainvest-english.mjs
+
+echo "✓ 质量门禁 13/13 全部通过"

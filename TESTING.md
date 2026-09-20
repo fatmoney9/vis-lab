@@ -9,7 +9,7 @@
 
 | 层级 | 验证内容 | 当前状态 | 执行位置 |
 |---|---|---|---|
-| 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
+| 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
 | DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
 | 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |

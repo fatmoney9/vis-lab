@@ -8,7 +8,7 @@
 
 一套 design token 驱动的图表组件：用 D3 做计算、项目代码显式装配 SVG、样式全部走 CSS 变量，
 同一份组件代码横跨 **THS / iFinD-PC / Ainvest 三个主题** × PC/移动端 × 明暗。
-当前有七族图表：**直角坐标图**（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）、**饼 / 环**、**桑基**（流向流量、季度播放）、**矩形树图**（入口 / 通用 / 全局）、**雷达图**（标准 / 多数据 / 分区示例，圆形 / 多边形网格 · 直线 / 曲线闭合 · 横排 / 环绕标签 · 可调节单系列输入）、**瀑布图**（累计桥接 / 分组数据柱）与**弦图**（实体间相互流动，无向 / 有向 · 环绕 / 横排实体标签）。
+当前有八族图表：**直角坐标图**（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）、**排名对比图**（横向条；给了时间序列即排名竞赛形态，可播放 / 暂停 / 拖时间轴）、**饼 / 环**、**桑基**（流向流量、季度播放）、**矩形树图**（入口 / 通用 / 全局）、**雷达图**（标准 / 多数据 / 分区示例，圆形 / 多边形网格 · 直线 / 曲线闭合 · 横排 / 环绕标签 · 可调节单系列输入）、**瀑布图**（累计桥接 / 分组数据柱）与**弦图**（实体间相互流动，无向 / 有向 · 环绕 / 横排实体标签）。
 
 核心约定是**「每条规范只有一个家」**：`specs/` 里每条规则有稳定 ID（`BAR-02`、`LABEL-05`…），
 实现处的代码注释回引该 ID，提交前守卫校验回引有效。改规范时代码只该改一个地方。
@@ -67,7 +67,7 @@ sh hooks/check.sh
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 分支、提交、PR 与质量门禁 |
 | [TESTING.md](TESTING.md) | 测试分层、覆盖矩阵、视觉基线规则 |
 | [AGENTS.md](AGENTS.md) | 给 AI 会话的项目约定 |
-| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [瀑布](specs/waterfall.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图表标注](specs/callout.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) |
+| [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [横向条 / 排名竞赛](specs/hbar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [瀑布](specs/waterfall.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图表标注](specs/callout.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) · [播放轴](specs/playback.md) |
 
 当前进度与后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)；
 各规范页末尾的「待办」是未完成能力的权威清单——未验证的能力不标为完成。

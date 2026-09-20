@@ -2,7 +2,8 @@
 
 > 本页职责：给每条规则一个稳定 ID + 指向实现位置，供代码注释回引与修订检索。
 > 适用范围：**纵向柱系图表**（基础柱 / 分组 / 堆叠 / 归一化 / 折柱组合）。横向柱状图（HBar）
-> 因类目轴逻辑与数值 Y 轴两套，**单独一篇 + 单独组件**，后续再做。
+> 因类目轴逻辑与数值 Y 轴两套，**单独一篇 + 单独组件**——2026-09-20 已落地，见 [hbar.md](hbar.md)。
+> 两族共用 L1 的 `core/bar-geometry.js`（排布、路径与圆角），纵横差别只在 `barPath` 的方向档。
 >
 > 柱系变体不按名字分体，而是三个旋钮的组合（见 `CartesianChart` API）：
 > **① `stack`**（none / normal / percent，作用于 bar 系列）· **② 每系列 `type`**（bar / line，混用=折柱组合）·
@@ -50,7 +51,7 @@
 - [x] **堆叠 + 归一化**（`stack: normal / percent`）→ BAR-05 / BAR-06。
 - [ ] **归一化正负混合**：BAR-06 当前假设正值（负值按 0 计入占比）；真正正负混合的归一化语义待定。
 - [x] **折柱组合 + 双 Y**（`type: line` + `axis: secondary`）→ BAR-07 + [line.md](line.md)。主测 `stack:none`；`percent + 组合`、per-轴 unit（% 后缀）、折线数据点密度隐藏/数据标签见各篇待办。
-- [ ] **横向柱状图 HBar** 独立组件（类目轴、`size-hbar-*`）。
+- [x] **横向柱状图 HBar** 独立组件（类目轴、`size-hbar-*`）→ [hbar.md](hbar.md)（含排名竞赛形态）。
 - [x] `size-bar-group-container-max` 上限接入（groupedBars 受限区域 + band 内居中）→ BAR-02。
 - [x] 分组柱间距改为**柱与间距同比缩小**（间距上限 `size-bar-group-inner-gap-max`，仅柱顶到 `size-bar-max` 时取满值）；容器内左右留白比接入 `size-bar-group-gap-ratio`：内容块(柱+间距) : 两侧留白 = 三主题 `2:1`（内容块占 container 的 2/3；初版 THS/iFinD 曾为 `0`，后统一）→ BAR-02。
 - [x] `size-bar-container-max`（单柱容器）+ 新增 `size-bar-gap-ratio`（柱:两侧留白，三主题 `2:1`）接入：**基础单柱 + 堆叠单列**在 container 内留侧白居中、窄 band 等比收缩（宽/常规 band 因 `container-max·2/3 = bar-max` 仍满宽、视觉同旧）→ BAR-03/05 `singleBar()`。分组柱（≥2 声明）仍走 `size-bar-group-*`，隐藏到 1 根不切单柱容器。

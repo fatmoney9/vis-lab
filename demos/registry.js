@@ -6,10 +6,12 @@
  *
  * 依赖方向 L3 → L2（WORKFLOW §三）。示例数据在 examples.js，本文件只管「谁来画」。
  *
- * 新增一种图表（饼 / 环 / 横向条形 / K 线…）：
+ * 新增一种图表（K 线 / 散点…）：
  *   1. import 它的 L2 组件
  *   2. 在 CHARTS 里登记类型键
  *   3. examples.js 的 CHART_CAPABILITIES 声明它支持哪些语义旋钮 + 加示例
+ *   4. nav-icons.js 配分类图标、chart-presentation.js 补 Ainvest 英文词
+ *      （两者都由门禁拦；完整清单见 examples.js 文件头）
  */
 import { CartesianChart } from '../charts/charts/cartesian/index.js';
 import { HBarChart } from '../charts/charts/hbar/index.js';

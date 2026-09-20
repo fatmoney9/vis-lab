@@ -21,7 +21,7 @@
 | HBAR-07 | **系列色按 `items` 的声明序取槽位，与当前名次无关**。颜色只在结构级写进行 `<g>` 的 `color`，逐帧不动——这是「颜色跟随实体、不跟随排名」的物理保证。名次一变颜色就跟着变的话，读者会以为换了一个实体 | `charts/hbar/index.js`；`charts/hbar/model.js` → `slot` | ✅ |
 | HBAR-08 | **画布高由行数推导**（行数 × 行容器上限）；容器给出高度时随容器，判据走 `core/frame.js` 的 `containerDrivesHeight`（三族共用，不另抄阈值） | `charts/hbar/index.js` → `build()` | ✅ |
 | HBAR-09 | **本族不提供 tooltip 与指示线**：读数已由条端常驻数值承担，浮层只会遮住正在滑动的相邻行。这是判断不是遗漏；将来引入多指标再议 | —（`charts/hbar/README.md` 声明为「不用」） | ✅ |
-| HBAR-03 | **行排布复用纵向柱系的单列几何**：条厚 = `singleBar(行高, 条厚上限, 容器上限, 条厚:留白比)`，条在行内垂直居中。band 传行高、返回的 `{offset, width}` 读作「行内纵向偏移 / 条厚」——**函数一行不用改**，这正是它从 `charts/charts/cartesian/layout.js` 下沉到 L1 的直接原因（`WORKFLOW.md` 第三节「两种以上图表都要遵守的规范 → 沉到 L1」机械触发）。<br>token 换成 `size-hbar-row-*` 一族；`size-hbar-row-max`(24px) 已备好，容器上限与留白比待 HBar 组件落地时补齐 | `core/bar-geometry.js` → `singleBar()` | ⏳ |
+| HBAR-03 | **行排布复用纵向柱系的单列几何**：条厚 = `singleBar(行高, 条厚上限, 容器上限, 条厚:留白比)`，条在行内垂直居中。band 传行高、返回的 `{offset, width}` 读作「行内纵向偏移 / 条厚」——**函数一行不用改**，这正是它从 `charts/charts/cartesian/layout.js` 下沉到 L1 的直接原因（`WORKFLOW.md` 第三节「两种以上图表都要遵守的规范 → 沉到 L1」机械触发）。<br>token 换成 `size-hbar-row-*` 一族，三主题均已备齐：`size-hbar-row-max`(24px) / `size-hbar-row-container-max`(36px) / `size-hbar-row-gap-ratio`(2:1)，由组件在 `build()` 里读取 | `core/bar-geometry.js` → `singleBar()`；`charts/hbar/index.js` | ✅ |
 
 ## 排名播放（竞赛形态）
 
