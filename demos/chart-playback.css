@@ -219,7 +219,11 @@
   padding: var(--spacing-0);
   border: 0;
   border-radius: 50%;
-  background: var(--color-price-up);
+  /* [SANKEY-29] 播放键底色是**控件强调色**，按主题各自取值：
+     iFinD 取其品牌蓝、Ainvest 取其强调蓝、THS 沿用原有红。
+     ⚠️ 这里曾直接写 var(--color-price-up)，于是播放键跟着「涨」色走——
+     iFinD 的涨色是红的，播放键就成了红的；而涨跌色与「能不能点」没有任何语义关系。 */
+  background: var(--color-playback-primary-bg);
   cursor: pointer;
 }
 
@@ -242,6 +246,13 @@
   border-radius: var(--radius-1);
   background: var(--color-text-inverse);
   content: '';
+}
+
+/* 播放中 = 按钮此刻的动作是「暂停」，底色转中性灰：强调色留给「可以开始播」这一个动作，
+   正在播时它不该继续抢注意力。三主题共用同一阶中性灰（`color-grey-05`），
+   与明暗无关——它在两种模式下都压得住白色的暂停竖条。 */
+.chart-playback__primary.is-playing {
+  background: var(--color-playback-primary-paused-bg);
 }
 
 .chart-playback__primary.is-playing .chart-playback__play-icon {
@@ -371,10 +382,6 @@
 
 :where([data-theme='ainvest']) .chart-playback__tick.is-current {
   font-weight: var(--font-weight-regular);
-}
-
-:where([data-theme='ainvest']) .chart-playback__primary {
-  display: none;
 }
 
 :where([data-theme='ainvest']) .chart-playback__steps {

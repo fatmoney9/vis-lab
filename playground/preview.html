@@ -70,6 +70,13 @@
     display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
   }
 
+  /* 播放条：主栏底部常驻一条，不随卡片滚动。示例没有时间轴时整条隐藏。 */
+  .canvas-playback {
+    flex: none; padding: 14px 28px 18px;
+    border-top: 1px solid var(--shell-border-soft); background: var(--shell-panel);
+  }
+  .canvas-playback[hidden] { display: none; }
+
   /* 每个主题一张卡：首次展示按端提供默认画布（PC 736 / mobile 390），高度由
      --size-chart-region-height 自然撑开；从右下角拖动后才切容器填充，CartesianChart 随之重排。 */
   .theme-card {
@@ -145,6 +152,7 @@
 </style>
 <link rel="stylesheet" href="../tokens/tokens.css" />
 <link rel="stylesheet" href="../charts/styles.css" />
+<link rel="stylesheet" href="../demos/chart-playback.css" />
 </head>
 <body>
 <div class="app">
@@ -164,6 +172,8 @@
       <p id="cat-desc">—</p>
     </div>
     <div class="canvas-body" id="canvas"></div>
+    <!-- 一条轴驱动三张卡：播放条不在任何一张卡里，否则三卡各有一条、各播各的 -->
+    <div class="canvas-playback" id="playback" hidden></div>
   </main>
 
   <!-- 右：端 / 明暗 -->
@@ -417,12 +427,14 @@
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf } from '../demos/examples.js';
+  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, buildConfig, playbackPeriodsOf, clampPeriodIndex, activePeriodExample } from '../demos/examples.js';
+  import { playbackCopy, playbackMarkup } from '../demos/chart-playback.js';
+  import { createPlaybackController } from '../demos/playback-controller.js';
 
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: CATEGORIES[0].id, periodIndex: 0, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -442,6 +454,10 @@
     btn.addEventListener('click', () => {
       state.category = cat.id;
       state.density = defaultDensityOf(cat);
+      /* 换示例要回到第一期：期序是**跨示例共享的一个数**，不清零就会拿上一个图播到的
+         第 20 期去落在只有 8 期的图上（clampPeriodIndex 会夹住，于是一进去就停在末期，
+         看起来像「这个图不会动」）。密度同理，就在上一行。 */
+      state.periodIndex = 0;
       render();
     });
     navEl.appendChild(btn);
@@ -449,6 +465,7 @@
 
   /* ── 中栏：三主题卡片骨架（一次性建，重绘只换 chart-host）────────── */
   const canvasEl = document.getElementById('canvas');
+  const playbackEl = document.getElementById('playback');
   const cards = {};
   const chartInstances = {};
   THEMES.forEach((t) => {
@@ -558,34 +575,94 @@
       mount.appendChild(host);
       /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
          两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
-      chartInstances[t.id] = mountExample(host, cat, {
-        theme: t.id,
-        density: state.density,
-        treemapColor: state.treemapColor,
-        waterfallColor: state.waterfallColor,
-        platform: state.platform,
-        zoom: state.zoom === 'on',
-        area: state.area === 'on',
-        dataLabel: state.label,
-        legend: state.legend, /* [PIE-09] 'auto' = 用示例自己声明的布局，见 buildConfig */
-        /* [PIE-12][PIE-13] 'auto' = 走组件默认（外侧引线 + 就近），同 legend 的口径 */
-        labelLayout: state.labelLayout,
-        labelAlign: state.labelAlign,
-        legendSelect: state.legendSelect, /* [LEGEND-06][LEGEND-14] 多选 / 单选 / 强调 */
-        axisTitle: state.axisTitle === 'on',
-        axisValue: state.axisValue === 'on', /* [RADAR-07] 轴标签数值，与交互无关 */
-        radarGridShape: state.radarGridShape, /* [RADAR-03] 圆形 / 多边形网格 */
-        radarShape: state.radarShape, /* [RADAR-05] 直线 / 曲线轮廓 */
-        radarEditable: state.radarEditable, /* [RADAR-18] 可叠加的编辑能力 */
-        ratingStyle: state.ratingStyle, /* [RADAR-15] 分区背景：渐变 / 分段 */
-        ratingBandCount: state.ratingBandCount, /* [RADAR-15] 5 / 6 段，同步图面与说明 */
-        axisLabelLayout: state.axisLabelLayout, /* [RADAR-07/14] 横排 / 环绕；auto 保留示例默认 */
-        chordVariant: state.chordVariant, /* [CHORD-05/06] 无向一条带 / 有向每向一条 */
-        chordLabelLayout: state.chordLabelLayout, /* [CHORD-11] 环绕弧字 / 径向横排 */
-        yIndicator: state.yIndicator === 'on', /* [TOOLTIP-12] Y 横线 + Y 值徽标，默认关 */
-        animation: state.animation === 'on',
-      }).instance;
+      chartInstances[t.id] = mountExample(host, periodExample(cat, t.id), knobs(t.id)).instance;
     });
+    renderPlayback(cat);
+  }
+
+  /* 旋钮状态 → buildConfig 的入参。**一份实现两个出口**：首屏挂载走 mountExample，
+     播放逐期走 instance.update()，两边必须读同一份旋钮，否则播着播着图例位置就变了。 */
+  function knobs(themeId) {
+    return {
+      theme: themeId,
+      density: state.density,
+      treemapColor: state.treemapColor,
+      waterfallColor: state.waterfallColor,
+      platform: state.platform,
+      zoom: state.zoom === 'on',
+      area: state.area === 'on',
+      dataLabel: state.label,
+      legend: state.legend, /* [PIE-09] 'auto' = 用示例自己声明的布局，见 buildConfig */
+      /* [PIE-12][PIE-13] 'auto' = 走组件默认（外侧引线 + 就近），同 legend 的口径 */
+      labelLayout: state.labelLayout,
+      labelAlign: state.labelAlign,
+      legendSelect: state.legendSelect, /* [LEGEND-06][LEGEND-14] 多选 / 单选 / 强调 */
+      axisTitle: state.axisTitle === 'on',
+      axisValue: state.axisValue === 'on', /* [RADAR-07] 轴标签数值，与交互无关 */
+      radarGridShape: state.radarGridShape, /* [RADAR-03] 圆形 / 多边形网格 */
+      radarShape: state.radarShape, /* [RADAR-05] 直线 / 曲线轮廓 */
+      radarEditable: state.radarEditable, /* [RADAR-18] 可叠加的编辑能力 */
+      ratingStyle: state.ratingStyle, /* [RADAR-15] 分区背景：渐变 / 分段 */
+      ratingBandCount: state.ratingBandCount, /* [RADAR-15] 5 / 6 段，同步图面与说明 */
+      axisLabelLayout: state.axisLabelLayout, /* [RADAR-07/14] 横排 / 环绕；auto 保留示例默认 */
+      chordVariant: state.chordVariant, /* [CHORD-05/06] 无向一条带 / 有向每向一条 */
+      chordLabelLayout: state.chordLabelLayout, /* [CHORD-11] 环绕弧字 / 径向横排 */
+      yIndicator: state.yIndicator === 'on', /* [TOOLTIP-12] Y 横线 + Y 值徽标，默认关 */
+      animation: state.animation === 'on',
+    };
+  }
+
+  /* 有时间轴的示例：把「当前期」伪装成普通示例喂给同一条 buildConfig 管线。
+     **按卡片主题各取各的期**——期次文案（Ainvest 走英文）由 presentation 按主题产出，
+     三张卡的数据同期、语言各自正确。没有时间轴的示例原样返回，零回归。 */
+  const periodExample = (cat, themeId, index = state.periodIndex) =>
+    activePeriodExample(cat, { periodIndex: index, theme: themeId });
+
+  /* ── 卡外播放条：一条轴同时驱动三张卡 ─────────────────────────────
+   * 状态机在 demos/playback-controller.js（与首页、桑基独立预览面同一份）。
+   * 本面只注入「怎么画一期」——而这里的一期是**三张卡一起画**：
+   *   applyPeriod → 三个 instance.update() 并发 → Promise.all → 全部完成才算这一期完成。
+   * 于是三卡同时起跑、同时收束；任一卡被暂停（返回 false）整条播放循环就停，
+   * 不会出现「桑基还在走、Ainvest 那张已经停了」的错位。
+   *
+   * 播放条的文案用本面外壳的语言（中文），**不跟卡片主题走**：它是工具面的控件，
+   * 不是图表的一部分；而每张卡的期次数据仍按各自主题取（见 periodExample）。 */
+  let disposePlayback = null;
+
+  function renderPlayback(cat) {
+    disposePlayback?.();
+    disposePlayback = null;
+
+    const copy = playbackCopy({ theme: 'ths' });
+    const periods = playbackPeriodsOf(cat, { theme: 'ths' });
+    playbackEl.hidden = periods.length === 0;
+    playbackEl.textContent = '';
+    if (!periods.length) return;
+
+    state.periodIndex = clampPeriodIndex(cat, state.periodIndex, { theme: 'ths' });
+    playbackEl.innerHTML = playbackMarkup({
+      periods,
+      currentIndex: state.periodIndex,
+      copy,
+      playIconSrc: '../assets/playback/play.svg',
+    });
+
+    disposePlayback = createPlaybackController(playbackEl, {
+      periods,
+      copy,
+      scope: { theme: 'ths', mode: state.mode, platform: state.platform },
+      getIndex: () => state.periodIndex,
+      setIndex: (i) => { state.periodIndex = i; },
+      pause: () => THEMES.forEach((t) => chartInstances[t.id]?.pause?.()),
+      /* 三卡并发推进。**读 chartInstances 而不是闭包捕获实例**：旋钮重渲会整批换实例，
+         捕获会让播放继续驱动已经 destroy 掉的那一批。 */
+      applyPeriod: (index, { animate }) => Promise.all(
+        THEMES.map((t) => chartInstances[t.id]?.update?.(
+          buildConfig(periodExample(cat, t.id, index), knobs(t.id)),
+          { animate },
+        ) ?? true),
+      ).then((results) => results.every(Boolean)),
+    }).dispose;
   }
 
   /* ── 右栏：端 / 明暗 分段控件 ───────────────────────────────────── */

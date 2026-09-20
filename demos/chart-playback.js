@@ -93,6 +93,49 @@ export async function runPlaybackUpdate(update, {
  * CHARTTEXT-01/02：宁可渲染时炸，也不要在英文面上残留半截中文或渲染出 `undefined`。
  * 文案内容本身仍留在各图型自己的 presentation 模块（那是业务文案，不上公用件）。
  */
+/*
+ * 播放条**自身的 chrome 文案**（播放 / 暂停 / 上一期…）住在这里，按主题语言切换。
+ * 它不是业务文案：读者在任何图型上看到的都是同一个「播放」按钮，没有哪个图型
+ * 需要把它叫成别的。**业务文案仍留在各图型自己的 presentation 模块**——
+ * 期次怎么称呼（`period` / `statusLabel` / `timelinePeriod`）由示例数据自带，
+ * 本件只负责把它显示出来，不认识它的含义。
+ *
+ * ⚠️ 2026-09-20 之前这块叫 sankeyPlaybackCopy、住在 demos/sankey-presentation.js，
+ * 于是第二个图型要播放时，接线第一反应是 import 桑基的展示模块——那正是本件被提取出来
+ * 要消除的那种误解（见文件头）。
+ */
+const ZH_PLAYBACK_COPY = {
+  timeline: '季度数据播放轴',
+  progress: '季度进度',
+  play: '播放季度变化',
+  pause: '暂停季度变化',
+  playTitle: '播放',
+  pauseTitle: '暂停',
+  previous: '上一期',
+  next: '下一期',
+  mobile: '移动端',
+  light: '浅色',
+  dark: '深色',
+};
+
+const EN_PLAYBACK_COPY = {
+  timeline: 'Quarterly data playback',
+  progress: 'Quarter progress',
+  play: 'Play quarterly changes',
+  pause: 'Pause quarterly changes',
+  playTitle: 'Play',
+  pauseTitle: 'Pause',
+  previous: 'Previous',
+  next: 'Next',
+  mobile: 'Mobile',
+  light: 'Light',
+  dark: 'Dark',
+};
+
+export const playbackCopy = ({ theme = 'ths' } = {}) => (
+  theme === 'ainvest' ? EN_PLAYBACK_COPY : ZH_PLAYBACK_COPY
+);
+
 const COPY_KEYS = Object.freeze([
   'timeline', 'progress', 'play', 'pause', 'playTitle', 'pauseTitle', 'previous', 'next',
 ]);

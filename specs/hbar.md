@@ -46,14 +46,14 @@
 
 ## 待办
 
-- [ ] **`HBarChart` 组件本体**：类目列（`size-hbar-y-label-max` 80px 已备好，超长按 `truncateBatch` 截断）、
-      值域与条长比例尺（`linearY(split, 右, 左)` 的反向 range，先例见 `specs/radar.md` 的「值→半径」）、
-      条端数值标签（`size-hbar-data-label-max` 40px 已备好，见 [data-label.md](data-label.md) 那条同名待办）、
-      画布高度按行数推导。
-- [ ] **条厚相关 token**：容器上限与条厚:留白比（喂 HBAR-03 的 `singleBar`）。
-      建议保持纵向柱系的不变式「容器上限 × ratio/(ratio+1) = 条厚上限」，于是「行少→容器封顶、行多→容器缩」
-      的行为与纵向同构。
-- [ ] **排名播放形态（条形图竞赛）**：按值排序、Top-N 截断、名次与数值同时插值（**小数名次**，
-      于是交叉时两条平滑对穿而不是整行瞬跳）、进出榜的滑入滑出与淡入淡出、可暂停的时间轴。
-      这一组需要一个可冻结的补间驱动（`runGrowth` 的取消语义是落终态，播放的暂停要冻结当前帧）。
-- [ ] **本族的 L1 复用声明**：`charts/charts/hbar/README.md` 随组件落地时建。
+- [ ] **静态横向条形态尚无示例**：组件不给时间轴就是静态横向条（HBAR-20 的自然结果），
+      但两面目前只接了竞赛示例，静态形态没有任何一处在跑，等于没被验收过。
+      接一个静态示例即可，无需改组件。
+- [ ] **数据标签 / 轴标题 / 图例尚未接入本族**：当前条端数值由本族自己画
+      （`.dv-hbar__value`，走 `dv-data-label` 的样式），没有经过 [data-label.md](data-label.md)
+      的碰撞过滤与超界回收，也没有轴标题与图例。
+      [bar.md](bar.md)、[data-label.md](data-label.md)、[axis-title.md](axis-title.md)
+      三页里以 HBar 为例的欠账指的就是这一项。
+- [ ] **类目列宽目前是定值**：`size-hbar-y-label-max` 80px 封顶 + `truncateBatch` 截断，
+      不按实际最长名称收窄。名称都很短时左侧会留出空白。纵向柱系的 Y 轴列宽同样是定值，
+      两边要改一起改，别只改一族。

@@ -799,7 +799,7 @@ const RADAR_ALL_SURFACES = [...BOTH, ...RADAR_REGRESSION];
 export const EXAMPLES = [
   {
     id: 'market-cap-race', group: '排名变化', chart: 'hbar',
-    title: '行业市值排名', spec: 'HBAR-10 / HBAR-12', surfaces: ['index'],
+    title: '行业市值排名', spec: 'HBAR-10 / HBAR-12', surfaces: BOTH,
     description: '横向条按市值排名，随季度推进名次互换；只显示前 N 名，进出榜有滑入滑出。',
     densityRange: { min: 5, max: 12 }, densityValues: { few: 6, mid: 8, many: 12 }, densityUnit: '名',
     /* 数据量旋钮在本族的语义是 **Top-N**，不是类目数——所以 cfg 的入参叫 count。 */

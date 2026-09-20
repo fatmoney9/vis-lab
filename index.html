@@ -638,9 +638,9 @@
   <script type="module">
     import { mountExample } from './demos/registry.js';
     import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
-    import { sankeyPlaybackCopy } from './demos/sankey-presentation.js';
     import { createPlaybackController } from './demos/playback-controller.js';
     import {
+      playbackCopy,
       applyPlaybackViewport,
       playbackMarkup as sharedPlaybackMarkup,
     } from './demos/chart-playback.js';
@@ -889,7 +889,7 @@
     function playbackMarkup(example) {
       const periods = playbackPeriodsOf(example);
       if (!periods.length) return '<div class="chart-host"></div>';
-      const copy = sankeyPlaybackCopy({ theme: state.theme });
+      const copy = playbackCopy({ theme: state.theme });
       const currentIndex = clampPeriodIndex(example);
       /* 声明了 viewport 的图型（桑基：SANKEY-23 的固定外框）用算好的固定高；
          没声明的按内容撑高——否则会沿用桑基那档 243px，行数少时下方留出大片空白。 */
@@ -941,7 +941,7 @@
       const periods = playbackPeriodsOf(example, { theme: state.theme });
       const controller = createPlaybackController(surface, {
         periods,
-        copy: sankeyPlaybackCopy({ theme: state.theme }),
+        copy: playbackCopy({ theme: state.theme }),
         scope: { theme: state.theme, mode: state.mode, platform: state.platform },
         getIndex: () => state.periodIndex,
         setIndex: (i) => { state.periodIndex = i; },
@@ -973,7 +973,7 @@
       const theme = THEMES.find((item) => item.id === state.theme);
       const hasPlayback = playbackPeriodsOf(example).length > 0;
       const currentPeriod = hasPlayback ? playbackPeriodsOf(example)[state.periodIndex] : null;
-      const playbackCopy = sankeyPlaybackCopy({ theme: state.theme });
+      const metaCopy = playbackCopy({ theme: state.theme });
       const densitySlider = densitySliderOf(example);
       const densityLabel = `${state.density} ${densitySlider.unit}`;
       const seriesControl = indexSeriesControlOf(example);
@@ -1015,7 +1015,7 @@
           <section class="stage">
             <div class="stage__bar">
               <span class="stage__theme">${theme.label}</span>
-              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.statusLabel ? `${currentPeriod.period} · ${currentPeriod.statusLabel}` : currentPeriod.period}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${playbackCopy.mobile} ${MOBILE_VIEWPORT.label}`} · ${state.mode === 'light' ? playbackCopy.light : playbackCopy.dark} · ${caps.density ? `<span data-stage-density>${densityLabel}</span>` : (exampleSummary ?? densityLabel)}</span>
+              <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.statusLabel ? `${currentPeriod.period} · ${currentPeriod.statusLabel}` : currentPeriod.period}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${metaCopy.mobile} ${MOBILE_VIEWPORT.label}`} · ${state.mode === 'light' ? metaCopy.light : metaCopy.dark} · ${caps.density ? `<span data-stage-density>${densityLabel}</span>` : (exampleSummary ?? densityLabel)}</span>
             </div>
             <div class="stage__canvas">
               <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-playback="${hasPlayback}"${surfaceStyle}>

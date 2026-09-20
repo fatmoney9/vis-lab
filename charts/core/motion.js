@@ -71,3 +71,73 @@ export function runGrowth(duration, onFrame, opts = {}) {
     settle();
   };
 }
+
+/*
+ * [MOTION-08] 可冻结的补间驱动：给**播放 / 数据更新**用，与 runGrowth 并存。
+ *
+ * 与 runGrowth 同一条 cubicOut、同一套注入式时钟，**差别只在取消语义**——
+ * 而这条差别是契约本身，不能做成布尔开关：
+ *   runGrowth 的 cancel = 立即落终态（一次性入场被打断不该半途回退，MOTION-04）
+ *   runTween  的 pause  = **就地冻结当前帧**（播放的暂停必须停在看到的那一帧）
+ * 把它做成 runGrowth 的一个参数，调用方就得看参数才知道被打断后画面停在哪；
+ * 而这正是 2026-08-26 桑基宁可在 L2 手写一份 rAF 也不用 runGrowth 的唯一理由
+ * （见 specs/sankey.md 待办）。两个具名函数、各一条契约。
+ *
+ *   duration  毫秒；≤ 0 或环境无 rAF → 同步落终态、resolve(true)
+ *   onFrame   (eased, linear) => void —— **两个进度都给**：linear 用于判 ===1 收尾
+ *             （eased 在 1 附近精度不可靠），eased 用于几何
+ *   opts      { delay, raf, cancel, now }
+ *             delay —— 起跑前的静默期（桑基的 120ms 文字提前量），期间不调 onFrame
+ * → { promise: Promise<boolean>, pause: () => void }
+ *     promise resolve(true)  跑完
+ *     promise resolve(false) 被 pause 冻结（**不是 reject**：暂停不是失败，
+ *                            调用方据此停止播放循环而不回滚业务状态）
+ * 两条不变量：
+ *   ① onFrame 的最后一次调用恒为 (1, 1) 且恰一次；
+ *   ② pause() 后不再有任何回调，**且不补终帧**。
+ */
+export function runTween(duration, onFrame, opts = {}) {
+  const {
+    delay = 0,
+    raf = globalThis.requestAnimationFrame,
+    cancel = globalThis.cancelAnimationFrame,
+    now = () => globalThis.performance?.now() ?? Date.now(),
+  } = opts;
+
+  let done = false;
+  let id = 0;
+  let resolveWith = () => {};
+  const promise = new Promise((resolve) => { resolveWith = resolve; });
+
+  const finish = (completed) => {
+    if (done) return;
+    done = true;
+    if (completed) onFrame(1, 1);
+    resolveWith(completed);
+  };
+
+  if (!(duration > 0) || typeof raf !== 'function') {
+    finish(true);
+    return { promise, pause: () => {} };
+  }
+
+  const startAt = now() + Math.max(0, delay);
+  id = raf(function step() {
+    if (done) return;
+    const at = now();
+    if (at < startAt) { id = raf(step); return; }        /* delay 期间空转，不调 onFrame */
+    const linear = Math.min(1, (at - startAt) / duration);
+    if (linear >= 1) { finish(true); return; }
+    onFrame(easeOutCubic(linear), linear);
+    id = raf(step);
+  });
+
+  return {
+    promise,
+    pause: () => {
+      if (done) return;
+      if (typeof cancel === 'function') cancel(id);
+      finish(false);                                      /* 注意：不补终帧 */
+    },
+  };
+}
