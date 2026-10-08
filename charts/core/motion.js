@@ -78,7 +78,9 @@ export function runGrowth(duration, onFrame, opts = {}) {
  * 与 runGrowth 同一条 cubicOut、同一套注入式时钟，**差别只在取消语义**——
  * 而这条差别是契约本身，不能做成布尔开关：
  *   runGrowth 的 cancel = 立即落终态（一次性入场被打断不该半途回退，MOTION-04）
- *   runTween  的 pause  = **就地冻结当前帧**（播放的暂停必须停在看到的那一帧）
+ *   runTween  的 pause  = **就地冻结当前帧**（需要「停在看到的那一帧」的场景用它）
+ * ⚠️ 不是每个播放都要冻结：消费方可以干脆不调 pause，让那一跳自然播完
+ *   （竞赛图即如此，见 specs/hbar.md HBAR-16）。本驱动器只提供能力，不规定用法。
  * 把它做成 runGrowth 的一个参数，调用方就得看参数才知道被打断后画面停在哪；
  * 而这正是 2026-08-26 桑基宁可在 L2 手写一份 rAF 也不用 runGrowth 的唯一理由
  * （见 specs/sankey.md 待办）。两个具名函数、各一条契约。

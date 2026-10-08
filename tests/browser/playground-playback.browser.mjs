@@ -110,13 +110,16 @@ try {
   assert.deepEqual(moved, [true, true, true],
     '同一时间窗内三张卡各自都在补间——没有哪张是静止或已经跑完的');
 
-  /* ④ 暂停：三张卡一起冻结 */
+  /* ④ 暂停：三张卡**一起**把当前这一期播完，然后一起停住。
+     ⚠️ 2026-10-08 起本族的暂停不再是「冻结当前帧」而是「播完当前这一期再停」
+     （[HBAR-16]），所以按下暂停后还会动约一期的补间时长——**采样必须等它收完尾**，
+     否则会把正常的收尾动作读成「没停住」。 */
   await evaluate(cdp, clickPlay);
-  await sleep(500);
+  await sleep(1500);                                  /* > 一期补间时长 */
   const frozen = await evaluate(cdp, perCard);
   await sleep(700);
   assert.deepEqual(await evaluate(cdp, perCard), frozen,
-    '暂停后三张卡一起冻结（700ms 内三份指纹都不变）');
+    '收尾后三张卡一起停住（700ms 内三份指纹都不变）');
 
   const after = await evaluate(cdp, periodOf);
   assert.notEqual(after, before, '播放确实推进了期次');
@@ -125,7 +128,7 @@ try {
 
   assert.deepEqual(cdp.errors, [], '三卡同步播全程不得有页面报错');
   await cdp.close();
-  console.log('✓ 三卡同步播合同通过：一轴驱动三实例 / 各自在动 / 一起冻结 / 跨示例切换不残留');
+  console.log('✓ 三卡同步播合同通过：一轴驱动三实例 / 各自在动 / 一起收尾停住 / 跨示例切换不残留');
 } finally {
   await stopProcess(chrome);
   server.close();

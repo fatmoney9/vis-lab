@@ -7,7 +7,8 @@
 >
 > 状态图例：✅ 已落地并验收 · ⏳ 已有地基、组件未落地 · 空 = 待办。
 >
-> 号段分区：**HBAR-01..09 几何与排布**（静态横向条也吃这几条）· **HBAR-10..20 排名播放形态**。
+> 号段分区：**HBAR-01..09 几何与排布**（静态横向条也吃这几条）· **HBAR-10..20 排名播放形态** ·
+> **HBAR-21..23 读数参照系**（竖向分割线、顶部轴标签、条端数值的预留宽度）。
 
 ## 几何与排布
 
@@ -15,13 +16,13 @@
 |---|---|---|---|
 | HBAR-01 | **横向条渲染**：名称在左列、条自左侧基线向右生长、数值贴条端右侧。`null` / 非数按 0 计——**仍占一个名次**，避免它凭空消失又出现（与 LABEL-07「null 不画」不同：那里丢的是标签，这里丢的会是一整行的身份） | `charts/hbar/model.js` → `rankItems` | ✅ |
 | HBAR-02 | **圆角只在远离基线的那一端**：正值横条圆角在右端（`side:'right'`）、负值在左端（`'left'`），另一端保持尖角；`r=0` 退化为直角矩形，且与纵向共用同一行退化路径。<br>**圆角夹取按方向换轴**：竖向 `min(r, 柱宽/2, 柱高)`、横向 `min(r, 条厚/2, 条长)`——同一条规则「圆角不得超过厚度的一半，也不得超过长度」的两个方向。<br>**分档 token 沿用纵向柱系**（`radius-bar-top` / `-reduced` 与两档阈值），不新开 `radius-hbar-*`：这几个 token 表达的语义是「远离基线端的圆角 + 按条厚分档」，**方向无关**，名字带 `top` 是历史命名。新开一组等于宣称「横条可以与竖柱圆角不同」，没有任何设计源这么说。将来设计真的分叉了再加也只是一行 | `core/bar-geometry.js` → `barPath()` / `barRadius()` | ✅ |
-| HBAR-04 | **名称列**宽封顶 `size-hbar-y-label-max`(80px)，超长按 `truncateBatch` 截断加省略号；右对齐、与条垂直居中、挂 `.dv-axis-label`——它就是类目轴标签的横向形态，字号字色随轴标签 token，不新开一套 | `charts/hbar/index.js` → `build()` | ✅ |
+| HBAR-04 | **名称列**宽封顶 `size-hbar-y-label-max`(80px)，超长按 `truncateBatch` 截断加省略号；右对齐、与条垂直居中、挂 `.dv-axis-label`——它就是类目轴标签的横向形态，字号字色随轴标签 token，不新开一套。<br>**列宽按「全体成员」的最长名称算，不是按当前可见的前 N 行**：只量可见行的话，Top-N 成员一换、最长名字就换，**条的起点每期左右跳**，而读者正是靠那条起点在比长度。代价是名字都短时左侧留白——基准线不动比省那几像素重要 | `charts/hbar/index.js` → `build()` | ✅ |
 | HBAR-05 | **数值列**宽封顶 `size-hbar-data-label-max`(40px)，贴条端外侧 `spacing-data-label-gap`，挂 `.dv-data-label`。带宽只用于**预留右边距**，不做逐帧测量与碰撞过滤——每行独占一行，LABEL-06② 的「一次调用 = 同一行」前提不成立 | 同上 | ✅ |
-| HBAR-06 | **值域 `niceSplit(0, max)`**，条长走 `linearY(split, 右, 左)` 的**反向 range**（`linearY` 的数学与方向无关，先例见 [radar.md](radar.md) 的「值→半径」）。**不画数值轴、不画网格线**——读数由条端常驻数值承担，再画一套刻度是同一份信息的第二遍 | `charts/hbar/index.js` → `build()` | ✅ |
+| HBAR-06 | **值域是 `[0, 当前 max]` 的连续线性映射，逐帧重算**；`niceSplit` 只用来取「漂亮步长」，**它的量化上界不要**。<br>⚠️ 原先吃 `niceSplit` 的上界、且只在 `build()` 里算一次：于是整段补间比例尺纹丝不动，等下一次 `update` 重建时才一次性换掉——而上界是量化的（某两期之间从 100 万跳到 120 万），所有条在那一瞬同时缩短 17%。连续域 + 逐帧重算后跳变消失，分割线也随之能滑动（HBAR-21/22）。**不画数值轴标签**——读数由条端常驻数值承担，再画一套刻度数字是同一份信息的第二遍；但**竖向分割线要画**，见 HBAR-21 | `charts/hbar/index.js` → `build()` | ✅ |
 | HBAR-07 | **系列色按 `items` 的声明序取槽位，与当前名次无关**。颜色只在结构级写进行 `<g>` 的 `color`，逐帧不动——这是「颜色跟随实体、不跟随排名」的物理保证。名次一变颜色就跟着变的话，读者会以为换了一个实体 | `charts/hbar/index.js`；`charts/hbar/model.js` → `slot` | ✅ |
 | HBAR-08 | **画布高由行数推导**（行数 × 行容器上限）；容器给出高度时随容器，判据走 `core/frame.js` 的 `containerDrivesHeight`（三族共用，不另抄阈值） | `charts/hbar/index.js` → `build()` | ✅ |
 | HBAR-09 | **本族不提供 tooltip 与指示线**：读数已由条端常驻数值承担，浮层只会遮住正在滑动的相邻行。这是判断不是遗漏；将来引入多指标再议 | —（`charts/hbar/README.md` 声明为「不用」） | ✅ |
-| HBAR-03 | **行排布复用纵向柱系的单列几何**：条厚 = `singleBar(行高, 条厚上限, 容器上限, 条厚:留白比)`，条在行内垂直居中。band 传行高、返回的 `{offset, width}` 读作「行内纵向偏移 / 条厚」——**函数一行不用改**，这正是它从 `charts/charts/cartesian/layout.js` 下沉到 L1 的直接原因（`WORKFLOW.md` 第三节「两种以上图表都要遵守的规范 → 沉到 L1」机械触发）。<br>token 换成 `size-hbar-row-*` 一族，三主题均已备齐：`size-hbar-row-max`(24px) / `size-hbar-row-container-max`(36px) / `size-hbar-row-gap-ratio`(2:1)，由组件在 `build()` 里读取 | `core/bar-geometry.js` → `singleBar()`；`charts/hbar/index.js` | ✅ |
+| HBAR-03 | **行排布复用纵向柱系的单列几何**：条厚 = `singleBar(行高, 条厚上限, 容器上限, 条厚:留白比)`，条在行内垂直居中。band 传行高、返回的 `{offset, width}` 读作「行内纵向偏移 / 条厚」——**函数一行不用改**，这正是它从 `charts/charts/cartesian/layout.js` 下沉到 L1 的直接原因（`WORKFLOW.md` 第三节「两种以上图表都要遵守的规范 → 沉到 L1」机械触发）。<br>token 走 `size-hbar-row-*` 一族，三主题**各自别名到本主题的纵向柱 token**：`size-hbar-row-max` = `{size-bar-max}`（THS 16px / iFinD 32px / Ainvest 32px）、`size-hbar-row-container-max` = `{size-bar-container-max}`、`size-hbar-row-gap-ratio` = `{size-bar-gap-ratio}`，由组件在 `build()` 里读取。<br>⚠️ **别名不是偷懒，是口径**：横向条和纵向柱是同一种图元的两个方向，粗细本该同源。2026-10-08 之前这三个键三主题都写死 24/36/2:1，于是 THS 的横条比它自己的竖柱粗 50%，而主题改柱粗细时横条纹丝不动 | `core/bar-geometry.js` → `singleBar()`；`charts/hbar/index.js` | ✅ |
 
 ## 排名播放（竞赛形态）
 
@@ -33,11 +34,14 @@
 | HBAR-13 | **进出榜是同一条 t 的副产品，不需要第二套时序**：某一端缺席的实体，在那端取「榜底外一行 + alpha 0 + 值 0」⇒ 进榜者名次自榜底滑入且淡入、掉榜者反向。渲染取 `rank <= topN`（含正在滑出那一行），行层挂 `clip-path` 裁到绘图区，滑动不越界 | `charts/hbar/model.js` → `visibleRows`；`index.js` 的 clipPath | ✅ |
 | HBAR-14 | **数值滚动**：条端数值随插值后的值逐帧重排版，末帧精确落到目标期原值。<br>**本条显式覆盖 SANKEY-24 的「不做数字跳动」**，两条方向相反但都成立——[motion.md](motion.md) 页首允许图表页覆盖本页默认。分歧是真实的设计判断：桑基的数字是**节点标注**，读者要在拓扑上对账收支守恒，滚动会让「这个数现在是多少」全程不可读；竞赛图的数值是**叙事主体**，「谁涨上去了」就是由数字和条长一起说的，不滚动等于把叙事砍掉一半 | `charts/hbar/index.js` → `paint()` | ✅ |
 | HBAR-15 | **一期时长 760ms、缓动 `cubicOut`**，不按名次变化幅度分档（同 MOTION-02 的节奏统一）。比入场的 480ms 长，因为这一帧里同时在变的东西更多（条长 + 行位置 + 数值 + 进出场透明度），太快看不清谁超过了谁。时长是**规范值常量**不是 token——三主题同值，且 [motion.md](motion.md) 的 480ms 只约束入场生长 | `charts/hbar/config.js` → `HBAR_SETTINGS` | ✅ |
-| HBAR-16 | **暂停 = 冻结当前帧，不落终态**；恢复从冻结处继续。<br>这正是不能用 `core/motion.js` 的 `runGrowth` 的唯一理由——那个驱动被取消时会 `settle()` 到终态，而播放的暂停必须停在看到的那一帧。判例与 SANKEY-24 同源 | `charts/hbar/index.js` → `cancelMotion` | ✅ |
+| HBAR-16 | **暂停 = 把当前这一期播完再停，不冻结在半路**。按下暂停时正在跑的那一期自然收尾、落到真实数据上，然后停住。<br>理由：横向条的长度**就是数值本身**，停在两期之间的那根条不对应任何一个季度的真实值，读者却会照着它读数。<br>⚠️ **与 [sankey.md](sankey.md) SANKEY-24 相反，两条都成立**：桑基的中间帧仍是一张拓扑正确、流量守恒的流向图，冻结它没有歧义；本族的中间帧是一个**不存在的排名**。[motion.md](motion.md) 页首允许图表页覆盖通用默认，这是第二例（第一例是 HBAR-14 的数值滚动）。<br>**实现**：`runTween` 的「取消即冻结」语义不变（MOTION-08），本族只是**不去调它的 pause**——`pause()` 是空操作，停不停由控制器的 `playing` 旗标决定。<br>**拖滑块 / 点刻度仍是立即打断**：那条路走 `update()`，它一进来就取消 in-flight 补间——那是「我要看别的一期」，不是「停下来看这一期」。<br>⚠️ 连带要求：控制器必须能挡住**复活的旧循环**。暂停后那一跳还在跑，用户若在它结束前又点播放，旧循环醒来会看到 `playing` 重新为 true 而继续推进，表现为双倍速跳期——故控制器按「播放代数」隔离每一轮 | `charts/hbar/index.js` → `pause()`；`demos/playback/controller.js` → `playEpoch` | ✅ |
 | HBAR-17 | **从当前显示态起补，不从上一期原值重来**：拖时间轴快速连点时不闪回。实现上是 `from` 取当前显示态（可能是被冻结的中间帧），先例是 [pie.md](pie.md) 的强调态补间。<br>由此产生一条**模型不变量**：`interpolateRanking` 的输出必须能原样再喂给它自己（每行都带 `seat`），否则链式插值算出 `NaN` | `charts/hbar/index.js` → `update()`；`model.js` | ✅ |
 | HBAR-18 | **首次挂载仍按 MOTION-01 播一次入场生长**（条自左向右长）；**`update()` 的每一次补间都不是入场，不重放生长**。这是对 MOTION-04「只在首次挂载播一次」的 scope 澄清：那条约束的是入场，期间推进属于另一类动效 | `charts/hbar/index.js` → `firstBuild` | ✅ |
 | HBAR-19 | **降级**：`prefers-reduced-motion: reduce` 或 `animation:false` 时，入场不播、**每期直接切到该期终态**，且**不自动起播**。<br>口径一句话：**关闭的是动画，不是播放；终态永远是「当前这一期」的终态，不是最后一期。** 一进页面就看到若干次硬切，对前庭功能障碍用户比连续位移更糟 | `charts/hbar/index.js` → `update()`；`demos/playback/controller.js` 的 `autoplay:false` | ✅ |
 | HBAR-20 | **实例 API 与 `SankeyChart` 同形**：`update(config, { animate, onProgress }) => Promise<boolean>` / `pause()` / `destroy()`。这是硬要求——两个会播放的图表若形状不同，L3 的播放控制器就要为每个图型分叉，而那正是把它收敛成 `demos/playback/controller.js` 想消掉的东西 | `charts/hbar/index.js` | ✅ |
+| HBAR-21 | **画竖向分割线，不画横向网格线**。本族的数值轴是**横轴**，所以读数参照系是竖线：横向条之间长度差几个百分点，肉眼很难判断，等距竖线是唯一的量尺。走 [axes.md](axes.md) GRID-02 预留的 `showXSplit` 特例通道（那条规则原文即「X 轴分割线默认不显示，仅特例经 `showXSplit` 显式开启」），刻度位置取 HBAR-06 的 `split.ticks`。<br>**横向网格线一条不画**：行与行之间已由间距区分，再加横线会把每行框起来、读成表格。<br>分割线先于行层绘制 ⇒ 画在条的**下面**，不压图元 | `charts/hbar/index.js` → `build()`；`core/grid.js` → `renderGrid()` | ✅ |
+| HBAR-22 | **顶部横轴标签**：刻度值画在绘图区上方的轴标签带里（带高 = `line-height-axis` + 轴标签间距），居中对齐每条分割线，随分割线一起滑动。<br>**键取刻度「值」而不是序号**：滑动时同一个数值始终是同一个 DOM 节点，新刻度进场、旧刻度出场才各自独立；按序号做键会让数字在换挡时整排乱跳。<br>**比例尺必须在 `paint` 里逐帧算**，不能留在 `build()`——这既是跳变的根因（见 HBAR-06），也是分割线能动起来的前提。逐帧只做算术，**不读 token**（[motion.md](motion.md) 的 Don't 第一条）：轴带高度等 token 在 `build()` 读一次 | `charts/hbar/index.js` → `paint()` | ✅ |
+| HBAR-23 | **右侧给条端数值的预留宽度按「同位数下的最坏情况」实测，不是写死的 token**。`size-hbar-data-label-max`(40px) 只作下限兜底：真实文案「121.28万」要 55px 上下，按 40px 预留会把最长那条的数值顶出画布右缘、切掉半个字。<br>⚠️ **也不能按当前这几个数值量**：`.dv-data-label` 虽声明 `tabular-nums`，但数字字体不提供等宽数字字形、该特性实际空转（实测「120.07万」40.3px vs「120.53万」40.8px，同样 7 字符差半像素），而 HBAR-14 的数值逐帧滚动——按某一帧量，别的帧照样越界。做法是先找出最宽的数字字形，把标签里的数字全替换成它再量。<br>**起止两期都量**：中间帧的值介于两端之间、位数单调，故最大位数必在某一端。<br>量的是**全体成员**（同 HBAR-04）：只量可见行的话 Top-N 一换预留就变，`dataR` 跟着动 ⇒ 所有条重新缩放，又是一次跳变 | `charts/hbar/index.js` → `build()` | ✅ |
 
 ## Do / Don't
 
@@ -54,6 +58,7 @@
       的碰撞过滤与超界回收，也没有轴标题与图例。
       [bar.md](bar.md)、[data-label.md](data-label.md)、[axis-title.md](axis-title.md)
       三页里以 HBar 为例的欠账指的就是这一项。
-- [ ] **类目列宽目前是定值**：`size-hbar-y-label-max` 80px 封顶 + `truncateBatch` 截断，
-      不按实际最长名称收窄。名称都很短时左侧会留出空白。纵向柱系的 Y 轴列宽同样是定值，
-      两边要改一起改，别只改一族。
+- [ ] **类目列宽按「全体成员」的最长名称算，于是可见行都短时左侧会留白**（HBAR-04）。
+      这是**有意的取舍**不是缺陷——按可见行算的话 Top-N 一换列宽就变、条的起点每期左右跳，
+      而读者正是靠那条起点比长度。若将来要消掉这段留白，得先想清楚起点怎么保持不动
+      （例如：列宽只在换示例 / 换数据集时重算，播放期间锁死）。

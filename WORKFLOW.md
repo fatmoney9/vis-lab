@@ -234,7 +234,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 
 截至 2026-09-11，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
 **八个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
-`HBarChart`（横向条；**给了时间序列就是排名竞赛形态**——名次与数值同时插值、Top-N 进出榜，见 `specs/hbar.md` HBAR-01..20）、
+`HBarChart`（横向条；**给了时间序列就是排名竞赛形态**——名次与数值同时插值、Top-N 进出榜，见 `specs/hbar.md` HBAR-01..23）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
 、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）

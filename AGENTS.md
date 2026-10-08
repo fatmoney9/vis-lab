@@ -117,12 +117,15 @@
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、图表标注（callout，见 `specs/callout.md`，默认不显示，位置自动选、不移动任何下层元素）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
 **直角坐标系与饼环两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14；**桑基不适用**——其图例是静态色卡，见下）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
-- **HBarChart**（`charts/charts/hbar/`，见 `specs/hbar.md` HBAR-01..20）：横向条形图，**排名竞赛是它的一种形态而非另一个组件**——不给时间序列就是静态横向条，给了就能逐期播放。要点：
+- **HBarChart**（`charts/charts/hbar/`，见 `specs/hbar.md` HBAR-01..23）：横向条形图，**排名竞赛是它的一种形态而非另一个组件**——不给时间序列就是静态横向条，给了就能逐期播放。要点：
   - **插值的是名次本身，不是只插值数值**：行位置是排序名次、即值的**离散函数**，若每帧对插值后的值重新排序，两条交叉那一帧会整行瞬跳。正解是名次也线性插值得到**小数名次**（HBAR-12），于是交叉时平滑对穿。这与桑基相反——那边节点位置是流量的连续函数，插值后重跑布局天然平滑
   - **Top-N 进出榜由同一条 t 顺带解决**，不需要第二套时序：进榜者起点取榜底外一行、`alpha` 0→1，掉榜者反向
   - **keyed join 的键是实体、不是名次**，颜色只在 `build()` 写一次——这是「颜色跟随实体、不跟随排名」的物理保证
   - 两层渲染：`build()` 读 token 与建结构，`paint()` 逐帧只写几何。逐帧重跑 token 读取会撞 `specs/motion.md` 的 Don't
   - 几何复用 L1 `core/bar-geometry.js`（`barPath` 的 `right`/`left` 方向档 + `singleBar`）；补间驱动复用 L1 `runTween`（MOTION-08）；播放控件复用 `demos/playback/`（见 `specs/playback.md`）
+  - **读数参照系是竖向分割线 + 顶部横轴标签**（HBAR-21/22），横向网格线一条不画（行间距已经分行，再加横线会读成表格）。比例尺**逐帧重算、域是连续的插值 max**——吃 `niceSplit` 的量化上界会让所有条在换挡那一帧同时缩放（HBAR-06）
+  - **暂停 = 把当前这一期播完再停，与桑基相反**（HBAR-16 vs SANKEY-24）：横向条的长度就是数值本身，停在两期之间的条不对应任何真实值。实现上 `pause()` 是空操作、不去调 `runTween` 的 pause
+  - **条粗细别名到本主题的纵向柱 token**（HBAR-03）：横条与竖柱是同一图元的两个方向，粗细同源
   - **本族不提供 tooltip 与指示线**（HBAR-09）：读数已由条端常驻数值承担，浮层只会遮住正在滑动的相邻行
 - **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
   - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
