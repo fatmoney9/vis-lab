@@ -16,7 +16,7 @@
 | `frame.js` | 绘制区几何与 SVG 骨架、容器自适应（`observeResize` 供各图型统一复用；`xBand:false` 即无轴画布，`xBandLines` 声明多行 X 轴带，`minGridHeight:0` 关掉轴图的最小高兜底，供饼环用）。另导出 **`containerDrivesHeight()` / `containerTookOver()`**——「容器高够不够用」与「这次变高是不是外部造成的」两条判据，**全库唯一出处**（曾三族各写一份、treemap 用 `> 0` 而另两族 `>= 40`）；基线由调用方给，那里有个逐帧坍缩的坑，见模块注释。另导出 `verticalGeometry()`：上下留白与绘图区高度的**纯计算**，与刻度无关故可在算刻度前先问出来（LABEL-10 的呼吸位需要它），`createFrame` 内部也调它、公式只此一份 | axes.md（AXIS-01/04、GRID-03）、pie.md（PIE-02/PIE-08）、data-label.md（LABEL-10）、sankey.md（SANKEY-23）、waterfall.md（WATERFALL-11/12） |
 | `split.js` | **刻度三件套的纯数学**（min/max/interval、0 恒落线、占比最大化、双轴共享分割线）。零依赖，故可被 node 加载、有单测 | axes.md（SCALE-01/03/04） |
 | `scale.js` | 值 → 像素的比例尺（`linearY` / `bandX`，依赖 d3）。**刻度数学不在这里**——见 `split.js`，拆开只为可测 | axes.md（SCALE-02） |
-| `grid.js` | 网格线与 0 轴基线 | axes.md（GRID-01/02） |
+| `grid.js` | 网格线与 0 轴基线；`showXSplit` 走竖向分割线（横向条系用它当读数参照系） | axes.md（GRID-01/02）、hbar.md（HBAR-21） |
 | `axis.js` | X / Y 轴标签、列宽与碰撞；`wrapAxisLabel` 按真实测量结果做通用两行折行，`axisLabelLines` / `renderAxisLabelLines` 是常态 X 标签与高亮贴片共用的逐行内容结构；多行标签按每一行最终类名测量，以最宽行参与碰撞 | axes.md（AXIS-01..08）、tooltip.md（TOOLTIP-09） |
 | `axis-title.js` | 轴标题带高、锚点与同带内让位（默认不显示） | axis-title.md（AXISTITLE-01..06） |
 | `measure.js` | 文本测量，全库唯一测量源（零 import，可被 node 加载）。`measureTexts` 批量量宽，`createTextMeasurer` 支持反复拟合字号；两者走隐藏 SVG + 真实类名。`measureTexts` 可按行接收类名函数，避免多行异字重被当成同一字体；`measureInk` 量**墨迹上下边**，走 Canvas（字体仍从 `getComputedStyle` 读，不猜） | axes.md（AXIS-01 / AXIS-08）、treemap.md（TREEMAP-05）、sankey.md（SANKEY-18） |

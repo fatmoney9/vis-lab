@@ -1,5 +1,5 @@
 /*
- * L2 · HBarChart —— 横向条形图。权威规范见 specs/hbar.md（HBAR-01..20）。
+ * L2 · HBarChart —— 横向条形图。权威规范见 specs/hbar.md（HBAR-01..23）。
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内）
  *   cfg   { items:[{ key?, name, value }], topN=10, platform='pc', dataLabel=true, animation=true }
@@ -20,11 +20,11 @@ import { select } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight } from '../../core/frame.js';
 import { tokenNum } from '../../core/tokens.js';
 import { modeOf, resolveBehavior } from '../../core/theme.js';
-import { linearY } from '../../core/scale.js';
 import { niceSplit } from '../../core/split.js';
 import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { barPath, barRadius, singleBar } from '../../core/bar-geometry.js';
+import { renderGrid } from '../../core/grid.js';
 import { measureTexts } from '../../core/measure.js';
 import { truncateBatch } from '../../core/label.js';
 import { reducedMotion, runGrowth, runTween } from '../../core/motion.js';
@@ -48,9 +48,11 @@ export function HBarChart(host, cfg) {
      containerDrivesHeight 口径对不上。 */
   host.classList.add('dv-chart', 'dv-hbar');
 
-  /* [HBAR-16][MOTION-08] 暂停 = 冻结当前帧，**不落终态**——这正是不能用 runGrowth 的
-     唯一理由（那个被取消时会 settle 到 1）。驱动器在 L1，本族不自己写 rAF 循环。 */
+  /* 取消 in-flight 补间。**只在三处用**：update 开始、destroy。
+     ⚠️ `pause()` 不走这里——本族的暂停要求是「把当前这一期播完再停」（HBAR-16），
+     见下方实例 API 的 pause()。 */
   const cancelMotion = () => { tween?.pause(); tween = null; };
+
 
   /*
    * ⚠️ **build() 不得取消补间**。它同时是 ResizeObserver 的回调，而补间过程中
@@ -76,6 +78,8 @@ export function HBarChart(host, cfg) {
     const valueMax = tokenNum(host, '--size-hbar-data-label-max') || 40;
     const gap = tokenNum(host, '--spacing-axis-y-label-gap') || 8;
     const valueGap = tokenNum(host, '--spacing-data-label-gap') || 4;
+    const axisLh = tokenNum(host, '--line-height-axis') || 12;
+    const axisBand = axisLh + gap;            /* [HBAR-22] 顶部轴标签带 */
     const rMax = tokenNum(host, '--radius-bar-top');
     const rReduced = tokenNum(host, '--radius-bar-top-reduced');
     const rFullMin = tokenNum(host, '--size-bar-radius-full-min-width') || 8;
@@ -84,49 +88,82 @@ export function HBarChart(host, cfg) {
     /* [HBAR-08] 画布高按行数推导；容器给了高度就随容器（与三族共用同一条判据）。 */
     const rows = Math.max(1, Math.min(topN, target.rows.length));
     const usesContainer = containerDrivesHeight(host.clientHeight);
-    const wantedHeight = rows * rowContainerMax;
+    const wantedHeight = rows * rowContainerMax + axisBand;
     const frame = createFrame(host, {
       height: usesContainer ? undefined : wantedHeight,
       xBand: false,
       minGridHeight: 0,
     });
-    const rowHeight = frame.grid.bottom > frame.grid.top
-      ? (frame.grid.bottom - frame.grid.top) / rows
+    /* 行区从轴标签带**下面**开始；行高按剩余高度分。 */
+    const rowsTop = frame.grid.top + axisBand;
+    const rowHeight = frame.grid.bottom > rowsTop
+      ? (frame.grid.bottom - rowsTop) / rows
       : rowContainerMax;
     const { offset: rowOffset, width: thickness } = singleBar(rowHeight, rowMax, rowContainerMax, rowRatio);
     const radius = barRadius(thickness, rMax, rReduced, rFullMin, rReducedMin);
 
-    /* [HBAR-04] 名称列：先量再截，列宽封顶 size-hbar-y-label-max */
-    const names = target.rows.slice(0, rows).map((r) => r.name);
+    /* [HBAR-04] 名称列：先量再截，列宽封顶 size-hbar-y-label-max。
+       ⚠️ **量的是全体成员，不是当前可见的前 N 行**。只量可见行的话，列宽 = 这一帧最长的
+       那个名字——而播放时 Top-N 成员在换，最长名字跟着换，于是**条的起点每期都在左右跳**。
+       按全体成员取最大值，同一份数据从头到尾只有一个列宽，起点恒定。
+       代价是名字都短时左侧会留白，这是有意的：读者对比的是条长，基准线必须不动。 */
     const measured = truncateBatch(
-      names.map((text) => ({ text, maxWidth: nameMax })),
+      target.rows.map((r) => ({ text: r.name, maxWidth: nameMax })),
       (list) => measureTexts(host, list, 'dv-axis-label'),
     );
     const nameWidth = Math.min(nameMax, Math.max(0, ...measured.map((m) => m.width)));
-    const labelByKey = new Map(target.rows.slice(0, rows).map((r, i) => [r.key, measured[i]?.text ?? r.name]));
-
-    const dataL = frame.grid.left + nameWidth + gap;
-    const dataR = frame.grid.right - valueMax;
-
-    /* [HBAR-06] 值域 niceSplit(0, max)；条长走**反向 range** 的通用比例尺
-       （linearY 的数学与方向无关，先例见 radar 的「值→半径」）。不画数值轴、不画网格。 */
-    const split = niceSplit(0, Math.max(1, display.max || target.max));
-    const x = linearY(split, dataR, dataL);
+    const labelByKey = new Map(target.rows.map((r, i) => [r.key, measured[i]?.text ?? r.name]));
 
     const b = resolveBehavior(host, config.platform ?? 'pc');
     const format = makeFormatter(b['number-format']);
+
+    const dataL = frame.grid.left + nameWidth + gap;
+
+    /* [HBAR-05] 右侧给条端数值预留的宽度 = **实测最宽的那条数值**，不是写死的 token。
+       ⚠️ `size-hbar-data-label-max`(40px) 只是个上限兜底：真实文案「121.28万」要 55px 上下，
+       按 40px 预留的话最长那条的数值会顶出画布右缘、被 SVG 裁掉半个字。
+       量的是**全体成员**（同 HBAR-04 的理由）：只量可见行的话，Top-N 一换预留宽就变，
+       dataR 跟着动 ⇒ 所有条重新缩放，又是一次跳变。
+       再往上取 4px 网格，避免数值末位跳动引起的亚像素抖动。 */
+    /* measureTexts 收**纯字符串**、返回**数字数组**（不是 {width} 对象）——
+       传对象会被 String() 成 "[object Object]"，量出来的宽度与真实文案无关。 */
+    /* 预留必须按**同位数下的最坏情况**量，不能按当前这几个数值量。
+       ⚠️ `.dv-data-label` 虽然写了 `tabular-nums`，但数字字体并不提供等宽数字字形，
+       该特性实际是空转的——实测「120.07万」40.3px、「120.53万」40.8px，同样 7 个字符差半像素。
+       而 HBAR-14 的数值是**逐帧滚动**的，按某一帧的宽度定预留，别的帧就会顶出画布
+       （实测切掉 0.8px，正好是一个字的边）。
+       做法：先找出最宽的那个数字字形，把标签里的数字全替换成它再量。
+       两端都量：中间帧的值介于起止之间，位数单调，故最大位数必在某一端。 */
+    const digitWidths = measureTexts(host, ['0','1','2','3','4','5','6','7','8','9'], 'dv-data-label');
+    const widestDigit = String(digitWidths.indexOf(Math.max(...digitWidths)));
+    const valueWidths = measureTexts(
+      host,
+      [...target.rows, ...(display?.rows ?? [])]
+        .map((r) => format(r.value).replace(/\d/g, widestDigit)),
+      'dv-data-label',
+    );
+    const valueReserve = Math.ceil(
+      (Math.max(valueMax, 0, ...valueWidths) + valueGap) / 4,
+    ) * 4;
+    const dataR = frame.grid.right - valueReserve;
     const colors = resolveSeriesColors(host, {
       series: target.rows.map((r) => ({ name: r.name, type: 'bar', seriesIndex: r.slot })),
     });
     colors.forEach((hex, i) => host.style.setProperty(`--dv-series-${i + 1}`, hex));
 
+    /* [HBAR-21][HBAR-22] 分割线与轴标签的图层：**先于行层 append ⇒ 画在条的下面**。
+       内容逐帧由 paint 重写（比例尺每帧都在变），这里只建壳。 */
+    const gridFrame = { ...frame, grid: { ...frame.grid, top: rowsTop } };
+    const gridLayer = frame.svg.append('g').attr('class', 'dv-hbar__grid');
+    const axisLayer = frame.svg.append('g').attr('class', 'dv-hbar__axis');
+
     /* 行层裁剪到绘图区：掉榜的行滑到榜外一行时不得越出画布（HBAR-13） */
     const clipId = `dv-hbar-clip-${Math.random().toString(36).slice(2, 8)}`;
     frame.svg.append('defs').append('clipPath').attr('id', clipId)
       .append('rect')
-      .attr('x', frame.grid.left).attr('y', frame.grid.top)
+      .attr('x', frame.grid.left).attr('y', rowsTop)
       .attr('width', Math.max(0, frame.grid.right - frame.grid.left))
-      .attr('height', Math.max(0, frame.grid.bottom - frame.grid.top));
+      .attr('height', Math.max(0, frame.grid.bottom - rowsTop));
     const layer = frame.svg.append('g')
       .attr('class', 'dv-hbar__rows')
       .attr('clip-path', `url(#${clipId})`);
@@ -136,8 +173,48 @@ export function HBarChart(host, cfg) {
 
     /* ── 逐帧：只写几何与文本，一个 token 都不读 ── */
     paint = (state, grow = 1) => {
-      const list = visibleRows(state.rows, topN);
-      const sel = layer.selectAll('g.dv-hbar__row').data(list, (d) => d.key);
+      /* [HBAR-06][HBAR-22] **比例尺逐帧算，域是连续的插值 max**。
+         ⚠️ 这里曾经在 build() 里算一次 x 并整段补间复用：于是整个补间过程比例尺纹丝不动，
+         等下一次 update 重新 build 时才一次性换掉——而 niceSplit 的上界是**量化**的
+         （20Q1→20Q2 从 100 万跳到 120 万），所有条在那一瞬间同时缩短 17%。
+         那就是「20Q1–20Q4 区间跳变」的真凶。域改成连续的 state.max 后，
+         条长与分割线都随 max 平滑伸缩，跳变消失。
+         只取 niceSplit 的**步长**（漂亮数字），上界不要。 */
+      /* ⚠️ 不能只用 state.max。它是两期 max 的**插值**，而榜首互换时
+         「插值后各行的最大值」会略大于「两期 max 的插值」——max(lerp(aᵢ)) ≥ lerp(max(aᵢ))，
+         argmax 换人时取严格大于。差额虽只有零点几 px，却足以把最长那条顶出 dataR、
+         数值标签被画布切掉一角。故取两者的大者，保证比例尺顶端恒覆盖最长的条。 */
+      const visible = visibleRows(state.rows, topN);
+      const liveMax = Math.max(1, state.max || 1, ...visible.map((d) => d.value));
+      const step = (() => {
+        const t = niceSplit(0, liveMax).ticks;
+        return t.length > 1 ? t[1] - t[0] : liveMax;
+      })();
+      const span = dataR - dataL;
+      const x = (v) => dataL + (Math.max(0, v) / liveMax) * span;
+      const ticks = [];
+      for (let k = 0; k * step <= liveMax + step * 1e-9 && k < 64; k += 1) ticks.push(k * step);
+
+      /* 分割线：位置逐帧重写 ⇒ 随 max 连续滑动（HBAR-21） */
+      renderGrid(gridLayer, gridFrame, [], () => 0, {
+        showXSplit: true,
+        xPositions: ticks.map(x),
+      });
+
+      /* [HBAR-22] 轴标签：键取刻度**值**，于是同一个数值的标签在滑动时是同一个节点，
+         新刻度进场 / 旧刻度出场才各自独立，不会串成「数字乱跳」。 */
+      const tick = axisLayer.selectAll('text.dv-hbar__axis-label').data(ticks, (d) => d);
+      tick.exit().remove();
+      tick.enter().append('text')
+        .attr('class', 'dv-hbar__axis-label dv-axis-label')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .merge(tick)
+        .attr('x', (d) => x(d))
+        .attr('y', frame.grid.top + axisLh / 2)
+        .text((d) => format(d));
+
+      const sel = layer.selectAll('g.dv-hbar__row').data(visible, (d) => d.key);
       const enter = sel.enter().append('g').attr('class', 'dv-hbar__row');
       enter.append('path').attr('class', 'dv-hbar__bar');
       enter.append('text').attr('class', 'dv-hbar__name dv-axis-label').attr('text-anchor', 'end').attr('dominant-baseline', 'central');
@@ -148,7 +225,7 @@ export function HBarChart(host, cfg) {
       merged
         .attr('opacity', (d) => d.alpha)
         .style('color', (d) => `var(--dv-series-${d.slot + 1})`)
-        .attr('transform', (d) => `translate(0,${rowGeometry(d.rank, rowHeight, 0, thickness).y})`);
+        .attr('transform', (d) => `translate(0,${rowGeometry(d.rank, rowHeight, rowsTop, thickness).y})`);
       merged.select('path.dv-hbar__bar')
         .attr('d', (d) => {
           const len = Math.max(0, (x(d.value) - dataL) * grow);
@@ -216,7 +293,20 @@ export function HBarChart(host, cfg) {
       });
       return tween.promise;
     },
-    pause() { cancelMotion(); },
+    /*
+     * [HBAR-16] **暂停 = 把当前这一期播完再停，不冻结在半路。**
+     * 条停在两期之间是个读不出含义的状态——横向条的长度就是数值本身，
+     * 停在 60% 处的那根条不对应任何一个季度的真实数值，读者却会去读它。
+     * 故这里**不取消**补间：那一期自然收尾、落到真实数据上。
+     * 「跑完之后别再往下走」由控制器负责——它在调本方法前就把 playing 置 false 了
+     * （并推进播放代数，挡住旧循环复活，见 demos/playback/controller.js）。
+     * **拖滑块 / 点刻度仍然是立即打断**：那条路走 update()，它一进来就 cancelMotion。
+     *
+     * ⚠️ 与桑基相反（SANKEY-24 要求冻结当前几何帧），两条都成立：
+     * 桑基的中间帧仍是一张拓扑正确的流向图，而本族的中间帧是一个不存在的排名。
+     * 驱动器 runTween 的「取消即冻结」语义没变（MOTION-08），本族只是不去调它的 pause。
+     */
+    pause() { /* 故意什么都不做，理由见上 */ },
     destroy() {
       destroyed = true;
       cancelMotion();

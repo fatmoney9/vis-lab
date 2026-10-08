@@ -8,7 +8,8 @@
  *
  * ── 职责边界（写在这里，否则半年后它又会长回 html 里）──────────────
  * 本模块**管**：查播放区 DOM、接五个监听、`isPlaying` / `disposed` /
- *   `transitionTargetIndex` 三态、await 链播放循环与帧间隔、UI 回显
+ *   `transitionTargetIndex` 三态、**播放代数 `playEpoch`**（隔离每一轮播放，
+ *   挡住消费方不取消补间时复活的旧循环）、await 链播放循环与帧间隔、UI 回显
  *   （range.value · ticks 的 is-current · output · prev/next 禁用 · toggle 的 is-playing）。
  * 本模块**不管**：图表实例、怎么拼配置、主题文案怎么选、宿主 state 长什么样、
  *   图表高度、舞台标题。这些全部经参数注入——**它不认识任何具体图型**。
@@ -27,7 +28,9 @@ import { assertPlaybackCopy, playbackRangeTheme, runPlaybackUpdate } from './vie
  *   getIndex    () => number        宿主持有当前期序（index.html 是 state.periodIndex）
  *   setIndex    (i) => void
  *   applyPeriod (index, { animate }) => Promise<boolean>   **唯一的「怎么画一期」出口**
- *   pause       () => void          冻结当前帧（单图转调 chart.pause()，多图转调多次）
+ *   pause       () => void          通知消费方「停止推进」（单图转调 chart.pause()，多图转调多次）。
+ *                                   **那一跳怎么收场由消费方定**：冻在半路，或自然播完——
+ *                                   本件不规定，见 specs/playback.md PLAYBACK-05
  *   onRender    ({ index, period, isPlaying }) => void     宿主侧回显（舞台标题 / 逻辑面板）
  *   scope       { theme, mode, platform } → 写进 range 的 dataset，供 CSS 分主题
  *   frameGap    期间帧间隔毫秒，缺省 120
@@ -66,6 +69,13 @@ export function createPlaybackController(surface, {
   let playing = false;
   let disposed = false;
   let transitionTargetIndex = null;
+  /* 播放「代数」：每次起播 +1，stop / dispose 也 +1。
+     ⚠️ 用来挡住**复活的旧循环**：消费方的 pause 若不取消 in-flight 的那一跳
+     （排名图就是这样——它要把当前这一期播完再停，见 specs/hbar.md HBAR-16），
+     那一跳会在暂停后继续跑；用户若在它结束前又点播放，旧循环醒来时看到
+     playing 已经重新为 true，就会和新循环一起推进，表现为双倍速跳期。
+     每个循环只认自己那一代，过期的立即退出。 */
+  let playEpoch = 0;
 
   const clamp = (i) => Math.max(0, Math.min(list.length - 1, Number.isFinite(i) ? Math.round(i) : 0));
 
@@ -91,6 +101,7 @@ export function createPlaybackController(surface, {
 
   const stop = () => {
     playing = false;
+    playEpoch += 1;
     pause?.();
     render();
   };
@@ -128,25 +139,30 @@ export function createPlaybackController(surface, {
   const play = async () => {
     if (playing) { stop(); return; }
     playing = true;
+    const epoch = (playEpoch += 1);
+    const live = () => !disposed && playing && epoch === playEpoch;
     render();
     try {
       /* 上次被暂停在半途 → 先把那一跳补完，再继续往后走 */
       if (transitionTargetIndex !== null) {
         const done = await goTo(transitionTargetIndex, true);
-        if (!done || !playing || disposed) return;
+        if (!done || !live()) return;
       }
       /* 已经在末期 → 回卷到第 0 期，且这一跳不动画（那是重置不是播放） */
       if (getIndex() >= list.length - 1) await goTo(0, false);
-      while (!disposed && playing && getIndex() < list.length - 1) {
+      while (live() && getIndex() < list.length - 1) {
         const done = await goTo(getIndex() + 1, true);
-        if (!done || !playing || disposed) break;
+        if (!done || !live()) break;
         await new Promise((resolve) => setTimeout(resolve, frameGap));
       }
     } catch (error) {
       console.error('播放流程失败', error);
     } finally {
-      playing = false;
-      render();
+      /* 只有**当代**循环才有权收尾：过期循环退出时不得把新一轮播放关掉 */
+      if (epoch === playEpoch) {
+        playing = false;
+        render();
+      }
     }
   };
 
@@ -178,6 +194,7 @@ export function createPlaybackController(surface, {
     dispose: () => {
       disposed = true;
       playing = false;
+      playEpoch += 1;
       pause?.();
       toggle.removeEventListener('click', onToggle);
       range.removeEventListener('input', onRange);

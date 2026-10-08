@@ -7,8 +7,9 @@
  * ⚠️ 两条踩过的坑写在断言旁边，别再踩：
  *   ① 「正在补间」不能看行 y 是不是小数——**静态布局下 y 本来就是小数**，那是空转检查。
  *      要用两个时刻的指纹差。
- *   ② 「暂停 = 冻结」不能只证「暂停前后不同」——暂停可能正好打在两期之间的间隙上，
- *      那时几何本就是某期终态。要证的是**冻结帧 ≠ 该期终态**。
+ *   ② 「暂停 = 把当前这一期播完再停」（HBAR-16，2026-10-08 由原「冻结当前帧」改成这样）
+ *      要证两件事：**停下来之后不再动**，且**停的位置正是该期终态**。
+ *      只证「不再动」是不够的——冻结在半路同样不动；必须拿该期终态逐字符比对。
  *   指纹必须**聚合全体行并排序**：DOM 顺序不等于名次顺序，跨帧比「第一根条」会比到不同的行上。
  */
 import { spawn } from 'node:child_process';
@@ -62,23 +63,32 @@ try {
   const t2 = await fingerprint();
   ck(t1 !== t2, '补间过程中几何确实在连续变化');
 
-  /* [HBAR-16] 暂停 = 冻结当前帧。
-     ⚠️ 不能用「暂停前后指纹不同」来证「停在半路」——暂停可能正好打在两期之间的间隙上，
-     那时几何本就是某期终态、前后自然相同，断言会假红。
-     真正要证的是：**冻结帧 ≠ 该期终态**。终态由「再跳一次同一期并等它跑完」取得。 */
-  const atIndex = await evaluate(cdp, `+document.querySelector('.chart-playback__range').value`);
+  /* [HBAR-16] 暂停 = **把当前这一期播完再停**，不冻结在半路。
+     打在动画中途按下（起播后 200ms），然后给足剩余补间时长让它自己收尾。 */
   await click('.chart-playback__primary');
   await sleep(200);
-  const f1 = await fingerprint();
-  await sleep(700);
-  const f2 = await fingerprint();
-  ck(!(await playing()), '暂停后退出播放态');
-  ck(f1 === f2 && !!f1, '暂停后几何冻结：间隔 700ms 两次指纹相同');
+  ck(!(await playing()), '按下暂停即退出播放态（控件立刻回显，不等动画）');
+  await sleep(1400);                                   /* > 一期补间时长，留足收尾 */
 
-  await click(`.chart-playback__tick[data-period-index="${atIndex}"]`);
-  await sleep(1600);
+  const restIndex = await evaluate(cdp, `+document.querySelector('.chart-playback__range').value`);
+  const rest1 = await fingerprint();
+  await sleep(700);
+  const rest2 = await fingerprint();
+  ck(rest1 === rest2 && !!rest1, '收尾后不再变化：间隔 700ms 两次指纹相同');
+
+  /* 关键一条：停下来的位置必须**正是该期终态**。
+     终态由「再跳一次同一期并等它跑完」独立取得，逐字符比对——
+     只断言「不再动」是验不到「冻在半路然后不动」的。 */
+  await click(`.chart-playback__tick[data-period-index="${Math.max(0, restIndex - 1)}"]`);
+  await sleep(1500);
+  await click(`.chart-playback__tick[data-period-index="${restIndex}"]`);
+  await sleep(1800);
   const settled = await fingerprint();
-  ck(settled !== f1, '冻结帧 ≠ 该期终态——排除「已经落到终态然后不动了」');
+  ck(settled === rest1, `停住的那一帧 === 第 ${restIndex} 期的终态（不是半路冻结）`);
+
+  /* 暂停不得顺带再推一期：停在按下时正在走的那一期上 */
+  const afterIdle = await evaluate(cdp, `+document.querySelector('.chart-playback__range').value`);
+  ck(afterIdle === restIndex, '暂停后期序不再自行推进');
 
   await click('.chart-playback__tick[data-period-index="23"]');
   await sleep(1800);
@@ -116,5 +126,5 @@ try {
   server.close();
   await rm(dir, { recursive: true, force: true });
 }
-if (bad) { console.error(`✗ HBar 竞赛合同失败 ${bad} 项`); } else { console.log('✓ HBar 竞赛合同通过：keyed join / 连续补间 / 暂停冻结 / 名次互换 / Ainvest 播放全程英文'); }
+if (bad) { console.error(`✗ HBar 竞赛合同失败 ${bad} 项`); } else { console.log('✓ HBar 竞赛合同通过：keyed join / 连续补间 / 暂停落在整期 / 名次互换 / Ainvest 播放全程英文'); }
 process.exit(bad ? 1 : 0);

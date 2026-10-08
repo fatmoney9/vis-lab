@@ -806,21 +806,6 @@ const RADAR_ALL_SURFACES = [...BOTH, ...RADAR_REGRESSION];
 
 export const EXAMPLES = [
   {
-    id: 'market-cap-race', group: '排名变化', chart: 'hbar',
-    title: '行业市值排名', spec: 'HBAR-10 / HBAR-12', surfaces: BOTH,
-    description: '横向条按市值排名，随季度推进名次互换；只显示前 N 名，进出榜有滑入滑出。',
-    densityRange: { min: 5, max: 12 }, densityValues: { few: 6, mid: 8, many: 12 }, densityUnit: '名',
-    /* 数据量旋钮在本族的语义是 **Top-N**，不是类目数——所以 cfg 的入参叫 count。 */
-    cfg: (count) => marketCapPresentation({ ...marketCapPeriods().at(-1), topN: count }),
-    presentation: marketCapPresentation,
-    /* [HBAR-12] 播放：每期一帧。cfg(period, count) 让 Top-N 滑杆对播放示例也生效
-       （activePeriodExample 会把数量透传进来）。 */
-    playback: {
-      periods: marketCapPeriods(),
-      cfg: (period, count) => ({ ...period, topN: count }),
-    },
-  },
-  {
     id: 'basic', group: '柱状图', chart: 'cartesian',
     title: '基础柱状图', spec: 'BAR-01 / BAR-03', surfaces: BOTH,
     description: '单系列正值柱状图，展示基础柱宽、间距、圆角与数据标签。',
@@ -956,6 +941,21 @@ export const EXAMPLES = [
         { name: '营收增速', data: growth(n), type: 'line', axis: 'secondary' },
       ],
     }),
+  },
+  {
+    id: 'market-cap-race', group: '排名变化', chart: 'hbar',
+    title: '行业市值排名', spec: 'HBAR-10 / HBAR-12', surfaces: BOTH,
+    description: '横向条按市值排名，随季度推进名次互换；只显示前 N 名，进出榜有滑入滑出。',
+    densityRange: { min: 5, max: 12 }, densityValues: { few: 6, mid: 8, many: 12 }, densityUnit: '名',
+    /* 数据量旋钮在本族的语义是 **Top-N**，不是类目数——所以 cfg 的入参叫 count。 */
+    cfg: (count) => marketCapPresentation({ ...marketCapPeriods().at(-1), topN: count }),
+    presentation: marketCapPresentation,
+    /* [HBAR-12] 播放：每期一帧。cfg(period, count) 让 Top-N 滑杆对播放示例也生效
+       （activePeriodExample 会把数量透传进来）。 */
+    playback: {
+      periods: marketCapPeriods(),
+      cfg: (period, count) => ({ ...period, topN: count }),
+    },
   },
   {
     id: 'donut', group: '饼图与环形图', chart: 'pie',
