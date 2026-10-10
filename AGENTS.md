@@ -2,7 +2,7 @@
 
 ## 定位
 
-这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、排名对比图、饼 / 环、桑基、矩形树图、雷达图、瀑布图与弦图八族）。
+这是一个以 design token 驱动的可视化规范原型：用 D3 辅助计算和 SVG DOM 装配，实现跨 THS、iFinD-PC、Ainvest 三主题的图表组件（当前有直角坐标图、排名对比图、饼 / 环、桑基、矩形树图、雷达图、瀑布图、弦图与全球热力图九族）。
 
 ## 运行与验证
 
@@ -112,7 +112,7 @@
 
 ## 当前状态与下一步
 
-当前有**八个 L2 图表组件**：
+当前有**九个 L2 图表组件**：
 
 - **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、图表标注（callout，见 `specs/callout.md`，默认不显示，位置自动选、不移动任何下层元素）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
 
@@ -166,5 +166,7 @@
   - `entityLabelLayout: 'arc'（默认）| 'horizontal'` 两档**共用 L1 `core/polar-label.js`**，本族一份都不复制。⚠️ **两档的画布形状不同**：arc 档四周等宽是正方形，horizontal 档照雷达**横竖分开**（横向带由**容器宽度**决定）——两档共用 `min(宽,高)` 会让横排档的带宽被高度饿死、标签整层渲染成空串，而门禁与单测全绿
   - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
   - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
+
+- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..08）：全球国家分级设色图。国家以 ISO 3166-1 alpha-2 或规范列明的底图地区码标识，几何固定来自 Figma 规范节点；有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

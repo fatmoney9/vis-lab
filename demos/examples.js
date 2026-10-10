@@ -783,6 +783,8 @@ export const CHART_CAPABILITIES = {
   /* 瀑布图固定少量叙事项，不提供密度旋钮；仅颜色提供预览旋钮。
      X 轴内容与节点关系仍是实例语义配置，直接写在示例 cfg 中，不进入预览菜单。 */
   waterfall: { density: false, animation: true, waterfallColor: true },
+  /* 全球热力图是固定完整世界视图；当前规范只开放数据与色调语义，不提供样式旋钮。 */
+  'world-heatmap': { density: false },
 };
 
 /*
@@ -1036,6 +1038,32 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'world-heatmap-market', group: '全球热力图', chart: 'world-heatmap',
+    title: '全球市场热力图', spec: 'WORLD-HEATMAP-01 / WORLD-HEATMAP-06', surfaces: BOTH,
+    description: '按国家市场热度分五档着色；hover 国家时显示国旗、名称与读数。',
+    summary: '12 个国家 · 五档强度',
+    summaryByTheme: { ainvest: '12 countries · five intensity levels' },
+    preferredWidth: 700,
+    logicNote: '实例只提供 ISO 国家码、名称与数值；底图几何、五档透明度、国界、主题色与 Tooltip 形态由组件和 token 统一决定。',
+    cfg: () => ({
+      name: '全球市场热度',
+      regions: [
+        { id: 'US', name: '美国', value: 4.82 },
+        { id: 'CN', name: '中国', value: 2.13 },
+        { id: 'JP', name: '日本', value: 3.64 },
+        { id: 'DE', name: '德国', value: 3.12 },
+        { id: 'RU', name: '俄罗斯', value: 2.78 },
+        { id: 'IN', name: '印度', value: 2.26 },
+        { id: 'SA', name: '沙特阿拉伯', value: 1.94 },
+        { id: 'AU', name: '澳大利亚', value: 1.62 },
+        { id: 'CA', name: '加拿大', value: 1.48 },
+        { id: 'ZA', name: '南非', value: 1.21 },
+        { id: 'BR', name: '巴西', value: 1.03 },
+        { id: 'AR', name: '阿根廷', value: 0.82 },
+      ],
+    }),
+  },
+  {
     id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
     title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
     description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
@@ -1234,6 +1262,7 @@ export const CHART_FAMILIES = {
   sankey: '流向图',
   treemap: '层级占比图',
   waterfall: '过程变化图',
+  'world-heatmap': '地理空间图',
 };
 
 /* 某个面要展示的示例（surfaces 缺省 = 两面都进） */

@@ -42,6 +42,8 @@ export const NAV_ICONS = {
   /* 排名变化：三根**左对齐、逐级变短**的横条——竞赛图读的是「谁更长、谁在上」。
      ⚠️ 不能画成竖条：那是柱状图的图标，两族会撞（同 瀑布图 那条的教训）。 */
   '排名变化': ICON('<rect x="2.5" y="3" width="11" height="2.6" rx=".6"/><rect x="2.5" y="6.7" width="7.5" height="2.6" rx=".6"/><rect x="2.5" y="10.4" width="4.5" height="2.6" rx=".6"/>'),
+  /* 全球热力图：经纬网语义的地球轮廓 */
+  '全球热力图': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M2.8 8h10.4M8 2.5c2 1.7 2.8 3.5 2.8 5.5S10 11.8 8 13.5C6 11.8 5.2 10 5.2 8S6 4.2 8 2.5"/>'),
   /* 族级回落 */
   cartesian: ICON('<path d="M3.5 13V7M8 13V3.5M12.5 13V9.5"/>'),
   sankey: ICON('<path d="M2.5 3.5v3M2.5 9.5v3M13.5 5.5v5"/><path d="M2.5 5C6 5 7 8 13.5 8M2.5 11C6 11 7 8 13.5 8"/>'),
@@ -51,6 +53,7 @@ export const NAV_ICONS = {
   waterfall: ICON('<rect x="2.8" y="9" width="3" height="4" rx=".6"/><rect x="6.5" y="6" width="3" height="4" rx=".6"/><rect x="10.2" y="3" width="3" height="4" rx=".6"/>'),
   hbar: ICON('<rect x="2.5" y="3" width="11" height="2.6" rx=".6"/><rect x="2.5" y="6.7" width="7.5" height="2.6" rx=".6"/><rect x="2.5" y="10.4" width="4.5" height="2.6" rx=".6"/>'),
   chord: ICON('<circle cx="8" cy="8" r="5.5"/><path d="M3.6 5.1C7.2 8.4 8.8 8.4 12.4 5.1"/>'),
+  'world-heatmap': ICON('<circle cx="8" cy="8" r="5.5"/><path d="M2.8 8h10.4M8 2.5c2 1.7 2.8 3.5 2.8 5.5S10 11.8 8 13.5C6 11.8 5.2 10 5.2 8S6 4.2 8 2.5"/>'),
   /* 跨族入口：田字格 */
   __all: ICON('<rect x="2.5" y="2.5" width="5" height="5" rx="1"/><rect x="8.5" y="2.5" width="5" height="5" rx="1"/><rect x="2.5" y="8.5" width="5" height="5" rx="1"/><rect x="8.5" y="8.5" width="5" height="5" rx="1"/>'),
 };
