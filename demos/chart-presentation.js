@@ -63,6 +63,22 @@ const AINVEST_TEXT = new Map([
   ['增速（%）', 'Growth (%)'],
   ['交易日', 'Trading Day'],
 
+  /* 全球热力图 */
+  ['全球市场热度', 'Global Market Heat'],
+  ['市场热度', 'Market Heat'],
+  ['美国', 'United States'],
+  ['中国', 'China'],
+  ['日本', 'Japan'],
+  ['德国', 'Germany'],
+  ['俄罗斯', 'Russia'],
+  ['印度', 'India'],
+  ['沙特阿拉伯', 'Saudi Arabia'],
+  ['澳大利亚', 'Australia'],
+  ['加拿大', 'Canada'],
+  ['南非', 'South Africa'],
+  ['巴西', 'Brazil'],
+  ['阿根廷', 'Argentina'],
+
   /* 雷达图 */
   ['盈利能力', 'Performance'],
   ['资产质量', 'Safety'],

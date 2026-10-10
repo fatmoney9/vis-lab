@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布与全球热力图关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移，以及热力图 hover / focus / 滚动清理 / Tab 顺序已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 
@@ -33,7 +33,7 @@ CONTRIBUTING / TESTING / AGENTS / PR 模板 / pre-commit / CI 七处各抄一份
 
 ```sh
 node --test "tests/**/*.test.mjs"    # 等价 npm test
-npm run test:browser                        # 全部浏览器合同（瀑布 / 弦图 / 跨族高亮 / 播放 / 竞赛 / 三卡同步），逐个串跑
+npm run test:browser                        # 全部浏览器合同，逐个串跑
 node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中一份
 ```
 
@@ -83,9 +83,11 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
 - `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
 - `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
+- `charts/charts/world-heatmap/model.js`：有限数输入合同（拒绝空值与隐式数字转换，保留真实 0 / 负数 / 空数组）、国家码归一化与重复校验、复用强度分档；另检查固定底图的每个地区均有可读取的本地国旗 SVG（`tests/world-heatmap.test.mjs`）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
 - `tests/browser/harness.mjs`：服务器 / Chrome / CDP 这层**与图表无关的壳**，各图型的合同共用一份。抄第二份的代价不是行数，是两份壳会各自长出细节差异（超时、端口、Chrome 路径回落），到时候「瀑布过了弦图没过」分不清是图的问题还是壳的问题。
+- `tests/browser/world-heatmap.browser.mjs`：三主题 × PC / 移动端尺寸 × 明暗，调用公开地图组件验证有 / 无数据、完整等比底图、0.5px 描边副本和固定国家 DOM / Tab 顺序、本地国旗与失败回退、滚动清理、长名称与共享气泡封顶、resize / destroy 清理以及画廊禁用命中。移动端尺寸测试不等于真实触摸设备验收；触摸与跨浏览器验证仍未完成，也没有截图差异基线。
 - `tests/browser/highlight-state.browser.mjs`：`core/highlight-state.js` 的**跨族合同**——桑基 / 矩形树图 / 弦图三个消费方各跑同一组 8 条迁移，验的是「同一套状态机在三个 L2 身上表现一致」，而不是某一个图型。纯逻辑那半由 `tests/highlight-state.test.mjs` 覆盖，这里补的是 L2 把状态翻译成 DOM 时有没有接错线；事件用合成 Event 派发，与容器尺寸、滚动位置和图元疏密无关。
 - `tests/browser/chord.browser.mjs`：三主题 × 明暗 × 两档 variant × 两档标签 × 实体数 4/10 共 48 组，断言**每个实体标签都不是空串**（横排档的标签带曾被容器高度决定、四个汉字放不下而整层渲染成空，当时门禁与单测全绿）、画布不溢出容器、实体色写进 `--dv-series-N`、弦透明度取自 token；另含邻域高亮 / 钉住回落、大弧标志（合成一个跨度超半圈的实体）与减弱动效三项专项。
 - `tests/browser/playback.browser.mjs`：播放区的**跨族合同**（`demos/playback/*` + `demos/playback/controller.js`）——不验某个图型画得对不对，而验播放这件事本身：单步推进、播放/暂停、跳刻度、拖时间轴、切主题后控件仍在。当前唯一消费方是桑基，但断言里没有一行认识桑基的数据，接第二个会播放的图型时换掉入口常量即可复用。<br>⚠️ 最值钱的是 **[SANKEY-24]「暂停 = 冻结当前帧」**那条，它正是当年宁可在 L2 手写 rAF 也不用 `runGrowth` 的唯一理由（那个驱动被取消时会落终态）。**只断言「暂停后画面没变」不够**——「已经落到终态然后不动了」同样满足，所以同时断言它**不等于该期终态**；且暂停必须打在**动画中途**（起播后 300ms），否则会落在两期之间的间隙上、几何本就是终态，第二条断言假红。

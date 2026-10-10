@@ -426,6 +426,40 @@
   --dv-image-content-value-weight: var(--font-weight-data-label);
 }
 
+/* [WORLD-HEATMAP-02..06] 全球热力图：几何固定、主题与明暗全部由 token 注入。 */
+.dv-chart--world-heatmap { width: 100%; }
+.dv-chart--world-heatmap > .dv-chart__plot { width: 100%; }
+.dv-chart__plot > .dv-world-heatmap { overflow: hidden; }
+.dv-world-heatmap__shape {
+  fill: var(--dv-world-heatmap-fill);
+  fill-opacity: var(--dv-world-heatmap-opacity);
+  stroke: var(--color-world-heatmap-border);
+  stroke-width: var(--size-world-heatmap-border);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.dv-world-heatmap__country.has-data { cursor: pointer; }
+.dv-world-heatmap__country:focus { outline: none; }
+.dv-world-heatmap__highlight { pointer-events: none; }
+.dv-world-heatmap__outline {
+  fill: none;
+  stroke: var(--color-world-heatmap-highlight);
+  stroke-width: var(--size-world-heatmap-border);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.dv-chart--world-heatmap .dv-tooltip__title {
+  padding-bottom: var(--spacing-0);
+  border-bottom-width: 0;
+  margin-bottom: var(--spacing-0);
+}
+.dv-chart--world-heatmap .dv-tooltip__title-icon,
+.dv-chart--world-heatmap .dv-tooltip__title-icon-fallback {
+  width: var(--size-world-heatmap-flag);
+  height: var(--size-world-heatmap-flag);
+  border-radius: var(--radius-full);
+}
+
 /* [WATERFALL-03..15] 瀑布图专属结构。几何由 L2 装配；所有颜色、字体、线宽与透明度走 token。 */
 .dv-chart--waterfall { width: 100%; }
 .dv-chart--waterfall > .dv-chart__plot { width: 100%; }
@@ -630,6 +664,22 @@
   font-family: var(--font-family-cn);
   font-size: var(--font-size-tooltip);
   font-weight: var(--font-weight-bold);
+}
+/* [TOOLTIP-02/03] 单实体标题同样只折名称，不压缩数值；不为某个图型扩大封顶。 */
+.dv-tooltip__title.has-value { align-items: flex-start; }
+.dv-tooltip__title-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dv-tooltip__title-value {
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--spacing-tooltip-row-gap);
+  color: var(--color-text-tooltip-value);
+  font-weight: var(--font-weight-tooltip-value);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .dv-tooltip__rows { display: flex; flex-direction: column; gap: var(--spacing-tooltip-row); }
 

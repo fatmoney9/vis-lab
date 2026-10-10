@@ -54,17 +54,24 @@ export function createTooltip(plotHost) {
     .attr('class', 'dv-tooltip__title-icon-fallback')
     .attr('aria-hidden', 'true');
   const titleLabel = title.append('span').attr('class', 'dv-tooltip__title-label');
+  const titleValue = title.append('span').attr('class', 'dv-tooltip__title-value');
   const rowsHost = root.append('div').attr('class', 'dv-tooltip__rows');
   const markerSize = tokenNum(plotHost, '--size-legend-marker') || 12;
 
   /*
    * [TOOLTIP-02] 内容：标题行 + 数据行（marker + 系列名左 / 数值右）。
    * 行序由调用方保证 = 图例序（声明序）；marker 与图例同源（legend.js 同一份规格与渲染）。
-   * titleIcon / titleIconFallback 可选；
+   * titleIcon / titleIconFallback / titleValue 可选；titleValue 用于地图这类单行实体读数；
    * rows = [{ key, label, type, colorVar, value, showMarker? }]
    * （value 已由调用方完整格式化，null 已转 "-"；showMarker=false 时不画 marker）。
    */
-  function show({ title: titleText, titleIcon: iconUrl, titleIconFallback: iconFallback, rows }, marker) {
+  function show({
+    title: titleText,
+    titleIcon: iconUrl,
+    titleIconFallback: iconFallback,
+    titleValue: titleValueText,
+    rows,
+  }, marker) {
     root.classed('is-visible', true);
     /* [TOOLTIP-02] 标题行**可省**：无标题维度的图（饼 / 环等无坐标系图，见 specs/pie.md PIE-05）
        不传 title 时整行不渲染——渲染成空行并不等于没有，它仍占 spacing-tooltip-row 的下间距
@@ -72,7 +79,8 @@ export function createTooltip(plotHost) {
     const hasTitle = titleText != null && titleText !== '';
     const hasIcon = hasTitle && Boolean(iconUrl);
     const hasIconFallback = hasTitle && Boolean(iconFallback);
-    title.style('display', hasTitle ? null : 'none');
+    title.style('display', hasTitle ? null : 'none')
+      .classed('has-value', hasTitle && titleValueText != null);
     titleIconFallback
       /* 兜底只表达图片缺失 / 失败，不充当加载中占位。 */
       .style('display', hasIconFallback && !hasIcon ? null : 'none')
@@ -90,6 +98,9 @@ export function createTooltip(plotHost) {
       .style('display', hasIcon ? null : 'none')
       .attr('src', hasIcon ? iconUrl : null);
     titleLabel.text(hasTitle ? titleText : '');
+    titleValue
+      .style('display', hasTitle && titleValueText != null ? null : 'none')
+      .text(hasTitle && titleValueText != null ? titleValueText : '');
     const row = rowsHost.selectAll('div.dv-tooltip__row').data(rows, (d) => d.key)
       .join((enter) => {
         const r = enter.append('div').attr('class', 'dv-tooltip__row');

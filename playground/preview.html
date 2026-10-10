@@ -434,7 +434,8 @@
   /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 index.html 同一份数据源，
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
-  const state = { category: CATEGORIES[0].id, periodIndex: 0, platform: 'pc', mode: 'light', density: 'few', treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const initialCategory = CATEGORIES.find(({ id }) => id === window.location.hash.slice(1)) ?? CATEGORIES[0];
+  const state = { category: initialCategory.id, periodIndex: 0, platform: 'pc', mode: 'light', density: defaultDensityOf(initialCategory), treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -452,15 +453,25 @@
     btn.textContent = cat.title;
     btn.dataset.id = cat.id;
     btn.addEventListener('click', () => {
-      state.category = cat.id;
-      state.density = defaultDensityOf(cat);
-      /* 换示例要回到第一期：期序是**跨示例共享的一个数**，不清零就会拿上一个图播到的
-         第 20 期去落在只有 8 期的图上（clampPeriodIndex 会夹住，于是一进去就停在末期，
-         看起来像「这个图不会动」）。密度同理，就在上一行。 */
-      state.periodIndex = 0;
-      render();
+      if (window.location.hash === `#${cat.id}`) selectCategory(cat);
+      else window.location.hash = cat.id;
     });
     navEl.appendChild(btn);
+  });
+
+  function selectCategory(cat) {
+    state.category = cat.id;
+    state.density = defaultDensityOf(cat);
+    /* 换示例要回到第一期：期序是**跨示例共享的一个数**，不清零就会拿上一个图播到的
+       第 20 期去落在只有 8 期的图上（clampPeriodIndex 会夹住，于是一进去就停在末期，
+       看起来像「这个图不会动」）。密度同理，就在上一行。 */
+    state.periodIndex = 0;
+    render();
+  }
+
+  window.addEventListener('hashchange', () => {
+    const cat = CATEGORIES.find(({ id }) => id === window.location.hash.slice(1));
+    if (cat && cat.id !== state.category) selectCategory(cat);
   });
 
   /* ── 中栏：三主题卡片骨架（一次性建，重绘只换 chart-host）────────── */

@@ -19,7 +19,7 @@ import { join } from 'node:path';
 import {
   LOOPBACK, sleep, chromeBinary, createStaticServer, listen, freePort,
   waitForJson, openCdp, evaluate, waitFor, stopProcess,
-} from 'file:///Users/qianyunan/202605%20DataVis/Vis-demo/tests/browser/harness.mjs';
+} from './harness.mjs';
 
 const server = createStaticServer();
 const port = await listen(server);
