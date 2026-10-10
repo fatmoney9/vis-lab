@@ -3,7 +3,7 @@
  *
  * API 只接收国家语义数据：
  *   { name, regions:[{id,name,value}], tone='primary', platform='pc' }
- * id 使用 ISO 3166-1 alpha-2 或规范列明的底图地区码；几何来自 Figma 节点 177:3142。
+ * id 使用规范收录的国家 / 地区码；几何为 Figma 基础图加离线地区校准（WORLD-HEATMAP-09）。
  * 五档强度、主题色、无数据底色、国界与 hover 描边全部由 L1 / token 决定。
  */
 import { pointer, select } from 'd3';

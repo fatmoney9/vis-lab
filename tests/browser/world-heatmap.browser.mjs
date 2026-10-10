@@ -7,13 +7,27 @@
  */
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   LOOPBACK, sleep, chromeBinary, createStaticServer, listen, freePort,
   waitForJson, openCdp, evaluate, waitFor, stopProcess,
 } from './harness.mjs';
+
+/* 固定底图坐标独立于构建投影/裁切代码；留出国界距离，避免描边或浮点误差冒充归属。
+   藏南西/中/东分别验证区域覆盖，南侧与邻国控制点验证没有粗暴矩形归并。 */
+const CHINA_MAP_SAMPLES = [
+  { name: '台湾内陆', point: [812, 358], id: 'CN', mouse: true },
+  { name: '香港内部', point: [794.6, 361.9], id: 'CN' },
+  { name: '澳门内部', point: [792.94, 362.5], id: 'CN' },
+  { name: '藏南西部', point: [733, 348], id: 'CN', mouse: true },
+  { name: '藏南中部', point: [737.5, 347], id: 'CN', mouse: true },
+  { name: '藏南东部', point: [743, 345], id: 'CN' },
+  { name: '边界南侧印度', point: [737.5, 350], id: 'IN' },
+  { name: '不丹控制', point: [728, 347.5], id: 'BT' },
+  { name: '缅甸控制', point: [748, 349], id: 'MM' },
+];
 
 /* 普通 HTML 外壳属于测试夹具，国家与描边 SVG 只能由 WorldHeatmapChart 生成。 */
 async function setupFixture() {
@@ -91,8 +105,13 @@ async function setupFixture() {
     outlines: host.querySelectorAll('.dv-world-heatmap__outline').length,
     order: order(),
   });
+  const clientPoint = ([x, y]) => {
+    const matrix = host.querySelector('.dv-world-heatmap__map').getScreenCTM();
+    const screen = new DOMPoint(x, y).matrixTransform(matrix);
+    return { x: screen.x, y: screen.y };
+  };
   window.__worldHeatmapContract = {
-    host, scroller, before, after, regions, order, dataOrder, enter, state, listenerState,
+    host, scroller, before, after, regions, order, dataOrder, enter, state, listenerState, clientPoint,
     mount({ theme = 'ths', platform = 'pc', mode = 'light', customRegions, width, height } = {}) {
       chart?.destroy();
       scroller.scrollTop = 0;
@@ -113,6 +132,44 @@ async function setupFixture() {
           .map((node) => getComputedStyle(node).strokeWidth),
         listeners: listenerState(),
       };
+    },
+    ownership(mapPoint) {
+      /* 独立世界坐标通过浏览器原生填充命中验证，不能只比较描边副本与资产本身。
+         遍历所有 path，能抓住邻国任意重复路径未同步裁切造成的覆盖。 */
+      const screen = clientPoint(mapPoint);
+      const hits = [...host.querySelectorAll('.dv-world-heatmap__country')]
+        .map((country) => ({
+          id: country.dataset.region,
+          count: [...country.querySelectorAll('.dv-world-heatmap__shape')]
+            .filter((shape) => shape.isPointInFill(
+              new DOMPoint(screen.x, screen.y).matrixTransform(shape.getScreenCTM().inverse()),
+            )).length,
+        }))
+        .filter(({ count }) => count > 0);
+      return { ids: hits.map(({ id }) => id), hits, screen };
+    },
+    mouseState() {
+      const active = host.querySelector('.dv-world-heatmap__country.is-active');
+      const cn = host.querySelector('[data-region="CN"]');
+      const fill = (country) => [...country.querySelectorAll('.dv-world-heatmap__shape')]
+        .map((shape) => ({ fill: getComputedStyle(shape).fill, opacity: getComputedStyle(shape).fillOpacity }));
+      return {
+        ...state(), activeId: active?.dataset.region ?? null,
+        title: tip()?.querySelector('.dv-tooltip__title-label')?.textContent,
+        value: tip()?.querySelector('.dv-tooltip__title-value')?.textContent,
+        iconSrc: tip()?.querySelector('img')?.src,
+        chinaFills: fill(cn), activeFills: active ? fill(active) : [],
+      };
+    },
+    rejectRegion(id) {
+      try {
+        WorldHeatmapChart(host, {
+          name: 'Unsupported standalone region', regions: [{ id, name: id, value: 1 }],
+        });
+        return null;
+      } catch (error) {
+        return error.message;
+      }
     },
     geometry() {
       const svg = host.querySelector('.dv-world-heatmap');
@@ -230,6 +287,13 @@ async function setupFixture() {
         fallback: fallback.textContent,
       };
     },
+    async captureBounds() {
+      fixture.style.width = '1220px';
+      scroller.style.height = '760px';
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const box = host.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height, scale: 1 };
+    },
     resize(width) { enter('CN'); host.style.width = width + 'px'; },
     destroy() {
       chart.destroy(); chart = null;
@@ -260,6 +324,45 @@ function assertGeometry({ viewport, matrix, mapped }, context) {
   `${context}：完整底图视框必须水平和垂直居中`);
 }
 
+function assertChinaMouseState(result, context) {
+  assert.equal(result.activeId, 'CN', `${context}：真实命中应激活统一的 CN`);
+  assert.equal(result.visible, true, `${context}：应显示中国 Tooltip`);
+  assert.equal(result.title, 'China', `${context}：不得使用地区独立名称`);
+  assert.equal(result.value, '5', `${context}：应读取 CN 的同一个数值`);
+  assert.match(result.iconSrc, /\/assets\/country-flags\/cn\.svg$/, `${context}：应使用中国国旗`);
+  assert.ok(result.chinaFills.length > 0, `${context}：中国图元必须包含几何`);
+  const firstFill = result.chinaFills[0];
+  assert.ok(result.chinaFills.every((fill) => fill.fill === firstFill.fill && fill.opacity === firstFill.opacity),
+    `${context}：中国大陆、台湾和藏南的颜色与透明度必须统一`);
+  assert.deepEqual(result.activeFills, result.chinaFills, `${context}：命中区域不得激活另一份地区图元`);
+}
+
+async function assertCountrySamples(cdp, call, context, empty = false) {
+  for (const sample of CHINA_MAP_SAMPLES) {
+    const where = `${context}/${sample.name}`;
+    const ownership = await call(`ownership(${JSON.stringify(sample.point)})`);
+    assert.deepEqual(ownership.ids, [sample.id], `${where}：固定坐标必须唯一命中预期国家`);
+    if (sample.id === 'CN') {
+      assert.equal(ownership.hits[0].count, 1, `${where}：中国自身路径不得重叠加深透明度`);
+    }
+    if (!sample.mouse) continue;
+    /* 真实 CDP 鼠标命中，与合成事件 enter('CN') 分开；后者不能证明台湾/藏南归属。 */
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved', x: ownership.screen.x, y: ownership.screen.y,
+    });
+    const mouse = await call('mouseState()');
+    if (empty) {
+      assert.equal(mouse.activeId, null, `${where}：无 CN 数据不得激活任何地区`);
+      assert.equal(mouse.visible, false, `${where}：无 CN 数据不得显示 Tooltip`);
+      assert.equal(mouse.outlines, 0, `${where}：无 CN 数据不得显示选中描边`);
+      assert.ok(mouse.chinaFills.every(({ opacity }) => opacity === '1'), `${where}：无数据仅使用中性底色`);
+    } else {
+      assertChinaMouseState(mouse, where);
+    }
+  }
+}
+
 async function main() {
   const server = createStaticServer();
   const port = await listen(server);
@@ -284,7 +387,7 @@ async function main() {
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
     await cdp.send('Page.navigate', { url: `http://${LOOPBACK}:${port}/index.html` });
     const gallerySelector = '.example-card[data-chart="world-heatmap"] .dv-world-heatmap__country';
-    await waitFor(cdp, `document.querySelectorAll(${JSON.stringify(gallerySelector)}).length === 256`, 25000);
+    await waitFor(cdp, `document.querySelectorAll(${JSON.stringify(gallerySelector)}).length === 253`, 25000);
     const gallery = await evaluate(cdp, `([...document.querySelectorAll(${JSON.stringify(gallerySelector)})]
       .every((node) => getComputedStyle(node).pointerEvents === 'none'
         && [...node.querySelectorAll('path')].every((path) => getComputedStyle(path).pointerEvents === 'none')))`);
@@ -297,13 +400,19 @@ async function main() {
         for (const mode of ['light', 'dark']) {
           const where = `${theme}/${platform}/${mode}`;
           const mounted = await call(`mount(${JSON.stringify({ theme, platform, mode })})`);
-          assert.equal(mounted.countries, 256, `${where}：底图国家数`);
+          assert.equal(mounted.countries, 253, `${where}：底图国家数`);
           assert.equal(mounted.dataOrder.length, 3, `${where}：有数据 Tab 数`);
           assert.equal(mounted.emptyTabs, 0, `${where}：无数据国家不得进入 Tab`);
           assert.equal(mounted.zeroHasData, true, `${where}：真实 0 应保留`);
           assertGeometry(await call('geometry()'), where);
           assert.ok(mounted.normalWidths.every((width) => width === '0.5px'), `${where}：常态国界必须 0.5px`);
           assert.ok(mounted.listeners.count > 0 && mounted.listeners.capture, `${where}：scroll 监听须使用 capture`);
+          await assertCountrySamples(cdp, call, where);
+          for (const id of ['TW', 'HK', 'MO']) {
+            const error = await call(`rejectRegion(${JSON.stringify(id)})`);
+            assert.match(error, new RegExp(`地图中不存在国家码 ${id}`), `${where}：旧地区 ID 不得静默聚合 CN 读数`);
+          }
+          await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
           await call('enter("DE")');
           assert.equal((await call('state()')).visible, false, `${where}：无数据国家不得触发 Tooltip`);
 
@@ -341,12 +450,27 @@ async function main() {
     await call('mount({ width: 600, height: 260 })');
     assertGeometry(await call('geometry()'), '非标准 600×260 容器');
 
+    /* 可选 PR 证据：从真实 L2 夹具生成三主题截图，不把截图当像素 golden baseline。 */
+    if (process.env.VIS_LAB_BROWSER_ARTIFACTS) {
+      await mkdir(process.env.VIS_LAB_BROWSER_ARTIFACTS, { recursive: true });
+      for (const theme of ['ths', 'ifind-pc', 'ainvest']) {
+        await call(`mount(${JSON.stringify({ theme, width: 1200, height: 720 })})`);
+        const clip = await call('captureBounds()');
+        await call('enter("CN")');
+        await waitFor(cdp, 'window.__worldHeatmapContract.flagState().loaded');
+        assertChinaMouseState(await call('mouseState()'), `${theme}/截图夹具`);
+        const screenshot = await cdp.send('Page.captureScreenshot', { format: 'png', clip });
+        await writeFile(join(process.env.VIS_LAB_BROWSER_ARTIFACTS, `${theme}-china.png`),
+          Buffer.from(screenshot.data, 'base64'));
+      }
+    }
+
     for (const theme of ['ths', 'ifind-pc', 'ainvest']) {
       for (const mode of ['light', 'dark']) {
         await call(`mount(${JSON.stringify({ theme, mode, customRegions: [] })})`);
         const empty = await call('emptyData()');
         const where = `${theme}/${mode}/空数据`;
-        assert.equal(empty.countries, 256, `${where}：空数据仍保留完整底图`);
+        assert.equal(empty.countries, 253, `${where}：空数据仍保留完整底图`);
         assert.equal(empty.hasData, 0, `${where}：不能标记有数据国家`);
         assert.equal(empty.tabs, 0, `${where}：不能包含国家 Tab 入口`);
         assert.equal(empty.visible, false, `${where}：hover 不得显示 Tooltip`);
@@ -355,6 +479,7 @@ async function main() {
         assert.ok(empty.fills.length > 0 && empty.fills.every((shape) =>
           shape.fill === empty.expectedFill && shape.opacity === '1'),
         `${where}：所有国家应使用主题中性底色，不叠加强度透明度`);
+        await assertCountrySamples(cdp, call, where, true);
       }
     }
 
@@ -414,7 +539,7 @@ async function main() {
     assert.equal(destroyed.listeners.count, 0, 'destroy 应移除 scroll 监听');
     await call('cleanup()');
     assert.deepEqual(cdp.errors, [], `浏览器未处理异常：${cdp.errors.join('\n')}`);
-    console.log(`✓ 全球热力图浏览器合同通过：${checks} 个主题×端×明暗状态 + 等比居中 / 非标准容器 / 空数据 / Tab / 长名 / 国旗 / 生命周期 / 画廊`);
+    console.log(`✓ 全球热力图浏览器合同通过：${checks} 个主题×端×明暗状态 + 台湾/藏南统一命中 / 邻国控制 / 旧地区 ID 拒绝 / 等比居中 / 空数据 / Tab / 长名 / 国旗 / 生命周期 / 画廊`);
   } catch (error) {
     if (cdp) {
       try {

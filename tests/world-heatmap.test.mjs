@@ -11,6 +11,9 @@ import {
   WORLD_MAP_FEATURES,
   WORLD_MAP_VIEWBOX,
 } from '../charts/charts/world-heatmap/world-map-data.js';
+import {
+  WORLD_MAP_FEATURES as FIGMA_WORLD_MAP_FEATURES,
+} from '../charts/charts/world-heatmap/figma-world-map-data.js';
 
 test('WORLD-HEATMAP-01/03：国家数据归一化并复用五档强度秩', () => {
   const regions = normalizeWorldRegions([
@@ -61,11 +64,17 @@ test('WORLD-HEATMAP-01/05：零值、负值和无数据地图保持有效', () =
   assert.deepEqual(normalizeWorldRegions([]), []);
 });
 
-test('WORLD-HEATMAP-02/06：Figma 世界底图与圆形国旗缩略图完整', () => {
+test('WORLD-HEATMAP-02/06：中国境内使用口径的世界底图与圆形国旗缩略图完整', () => {
   assert.deepEqual(WORLD_MAP_VIEWBOX, [0, 0, 1000, 600]);
-  assert.equal(WORLD_MAP_FEATURES.length, 256);
+  assert.equal(WORLD_MAP_FEATURES.length, 253);
   assert.equal(new Set(WORLD_MAP_FEATURES.map(({ id }) => id)).size, WORLD_MAP_FEATURES.length);
   assert.ok(WORLD_MAP_FEATURES.every(({ paths }) => paths.length > 0));
+  for (const id of ['TW', 'HK', 'MO']) {
+    assert.equal(WORLD_MAP_FEATURES.some((feature) => feature.id === id), false,
+      `${id} 不得作为与 CN 重叠的独立国家图元`);
+  }
+  assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'CN'), '中国必须保持单一国家图元');
+  assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'IN'), '邻国应保留独立图元');
   const assetRoot = new URL('../assets/country-flags/', import.meta.url);
   for (const { id } of WORLD_MAP_FEATURES) {
     const url = new URL(countryFlagThumbnail(id));
@@ -79,4 +88,14 @@ test('WORLD-HEATMAP-02/06：Figma 世界底图与圆形国旗缩略图完整', (
   assert.equal(countryFlagThumbnail('JU'), new URL('tf.svg', assetRoot).href);
   assert.equal(countryFlagThumbnail('UM-DQ'), new URL('um.svg', assetRoot).href);
   assert.equal(countryFlagThumbnail('invalid'), null);
+});
+
+test('WORLD-HEATMAP-02：局部校准保留世界其余国家精度并消除印度重复图元', () => {
+  const revisedIds = new Set(['CN', 'IN', 'TW', 'HK', 'MO']);
+  const originalOtherFeatures = FIGMA_WORLD_MAP_FEATURES.filter(({ id }) => !revisedIds.has(id));
+  const correctedOtherFeatures = WORLD_MAP_FEATURES.filter(({ id }) => !revisedIds.has(id));
+  assert.deepEqual(correctedOtherFeatures, originalOtherFeatures,
+    '中国和印度的局部边界校准不得替换、简化、重排或改变世界其余国家的既有路径');
+  const india = WORLD_MAP_FEATURES.find(({ id }) => id === 'IN');
+  assert.equal(india.paths.length, 1, '印度只能保留单份大陆/离岛路径，不能由重复原路径覆盖校准');
 });

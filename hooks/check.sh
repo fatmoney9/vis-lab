@@ -24,48 +24,52 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-# 1/11 token 合同、分叉与悬空-循环别名校验，并重建 tokens.css（坏 JSON → 退出码 1）
+# 1/14 token 合同、分叉与悬空-循环别名校验，并重建 tokens.css（坏 JSON → 退出码 1）
 node tokens/build.mjs
 if [ "$VERIFY" = 1 ]; then git diff --exit-code -- tokens/tokens.css; fi
 
-# 2/11 由 assets/watermarks/*.svg 重建水印 data URI 模块（缺资源 / 缺尺寸 → 退出码 1）
+# 2/14 由 assets/watermarks/*.svg 重建水印 data URI 模块（缺资源 / 缺尺寸 → 退出码 1）
 node assets/build-watermark-assets.mjs
 if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/core/watermark-assets.js; fi
 
-# 3/11 语法检查——单测 import 不到的文件（渲染构件、预览外壳）只能靠它兜住
+# 3/14 固定底图的离线地区校准；本地重建，CI 额外核对提交内容，避免源与生成物漂移。
+node assets/world-map/build.mjs
+if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/charts/world-heatmap/world-map-corrections.js; fi
+
+# 4/14 语法检查——单测 import 不到的文件（渲染构件、预览外壳）只能靠它兜住
 find charts hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
   | xargs -0 -n1 node --check
 
-# 4/11 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20.10/24）
+# 5/14 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20.10/24）
 # 引号不能去：让 node 自己展开 **，shell 展开只匹配一层。写成 tests/*.mjs 时
 # tests/ 子目录里的测试会被**静默跳过**——不报错、不警告，只是那些用例从此不再跑。
 node --test "tests/**/*.test.mjs"
 
-# 5/11 分层守卫（L1 不依赖 L2；L2 调 L1 或标 [L2-LOCAL]；L2 不重写 L1 已有能力）
+# 6/14 分层守卫（L1 不依赖 L2；L2 调 L1 或标 [L2-LOCAL]；L2 不重写 L1 已有能力）
 sh hooks/lint-layers.sh
 
-# 6/11 Spec ID 回引守卫（代码引用的 [ID] 必须在 specs 有定义）
+# 7/14 Spec ID 回引守卫（代码引用的 [ID] 必须在 specs 有定义）
 node hooks/lint-spec-ids.mjs
 
-# 7/11 测试卫生守卫（tests/ 不许把源码 / 样式当文本断言，见 TESTING.md 第三节）
+# 8/14 测试卫生守卫（tests/ 不许把源码 / 样式当文本断言，见 TESTING.md 第三节）
 node hooks/lint-test-hygiene.mjs
 
-# 8/11 色值字面量守卫（charts/ 下不许写死颜色，拼接铁律 1）
+# 9/14 色值字面量守卫（charts/ 下不许写死颜色，拼接铁律 1）
 node hooks/lint-color-literals.mjs
 
-# 9/11 字体引用守卫（组件侧字体必须是 token 引用；字体名只许出现在三个主题文件里，拼接铁律 1）
+# 10/14 字体引用守卫（组件侧字体必须是 token 引用；字体名只许出现在三个主题文件里，拼接铁律 1）
 node hooks/lint-font-literals.mjs
 
-# 10/11 L1 复用声明守卫（每个 L2 图型必须逐条交代 charts/core/ 下每个 L1 模块用不用、为什么）
+# 11/14 L1 复用声明守卫（每个 L2 图型必须逐条交代 charts/core/ 下每个 L1 模块用不用、为什么）
 node hooks/lint-l1-declaration.mjs
 
-# 11/13 预览面契约守卫（L3 不许给宿主写高度；两个预览面的容器下限必须一致）
+# 12/14 预览面契约守卫（L3 不许给宿主写高度；两个预览面的容器下限必须一致）
 node hooks/lint-preview-contract.mjs
 
-# 12/13 分类图标守卫（新增图族必须配图标，否则首页左栏静默留空位）
+# 13/14 分类图标守卫（新增图族必须配图标，否则首页左栏静默留空位）
 node hooks/lint-nav-icon.mjs
 
-# 13/13 Ainvest 英文守卫（该主题下图表内容不得残留中文；含逐期播放配置）
+# 14/14 Ainvest 英文守卫（该主题下图表内容不得残留中文；含逐期播放配置）
 node hooks/lint-ainvest-english.mjs
 
-echo "✓ 质量门禁 13/13 全部通过"
+echo "✓ 质量门禁 14/14 全部通过"
