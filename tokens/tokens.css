@@ -1,5 +1,6 @@
 /* ⚠️ 生成文件，请勿手改——改 tokens/<theme>.json 后运行 node tokens/build.mjs 重新生成。
-   作用域开关：主题 [data-theme=ths|ifind-pc|ainvest] · 端 [data-platform=mobile]（默认 pc） · 明暗 [data-mode=dark]（默认 light）。
+   作用域开关：主题 [data-theme=ths|ifind-pc|ainvest] · 端 [data-platform=mobile]（默认 pc） · 明暗 [data-mode=dark]（默认 light）
+   · 密度 [data-density=compact]（仅 tokens/density.json 声明过的主题生效，须与 data-theme 同一元素）。
    别名 {x} 已转 var(--x)；三主题 key 集合经合同校验一致。源：tokens/*.json */
 
 [data-theme="ths"] {
@@ -160,6 +161,8 @@
   --color-grey-04: #9C9C9C;
   --color-grey-05: #858585;
   --size-chart-region-height: 160px;
+  --size-chart-region-min-height: 0px;
+  --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
   --spacing-leader-line-offset: var(--spacing-8);
@@ -473,6 +476,8 @@
   --color-grey-04: #9C9C9C;
   --color-grey-05: #858585;
   --size-chart-region-height: 200px;
+  --size-chart-region-min-height: 0px;
+  --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
   --spacing-leader-line-offset: var(--spacing-8);
@@ -789,6 +794,8 @@
   --color-grey-04: #9C9C9C;
   --color-grey-05: #858585;
   --size-chart-region-height: 200px;
+  --size-chart-region-min-height: 0px;
+  --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
   --spacing-leader-line-offset: var(--spacing-8);
@@ -964,4 +971,34 @@
 [data-theme="ainvest"][data-platform="mobile"][data-mode="dark"] {
   --color-text-axis: rgba(255, 255, 255, 0.6);
   --color-visualization-divider: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="ainvest"][data-density="compact"] {
+  --size-legend-marker: 6px;
+  --font-size-legend: 11px;
+  --line-height-legend: 14px;
+  --spacing-legend-marker-label: var(--spacing-4);
+  --spacing-legend-item-h: var(--spacing-12);
+  --spacing-legend-container-v-top: var(--spacing-8);
+  --spacing-legend-container-v-bottom: var(--spacing-8);
+  --size-chart-region-height: 140px;
+  --size-chart-region-min-height: 100px;
+  --size-chart-min-width: 300px;
+  --spacing-axis-x-band-top: var(--spacing-2);
+  --spacing-axis-x-band-bottom: var(--spacing-2);
+  --size-bar-max: 24px;
+  --size-bar-group-container-max: 74px;
+  --size-donut-ring-width: 24px;
+  --size-line-point: 6px;
+  --font-size-tooltip: 11px;
+}
+
+[data-theme="ainvest"][data-density="compact"][data-platform="mobile"] {
+  --spacing-legend-container-v-top: var(--spacing-16);
+  --spacing-legend-container-v-bottom: var(--spacing-16);
+}
+
+[data-theme="ainvest"][data-density="compact"][data-platform="mobile"][data-mode="dark"] {
+  --spacing-legend-container-v-top: var(--spacing-16);
+  --spacing-legend-container-v-bottom: var(--spacing-16);
 }

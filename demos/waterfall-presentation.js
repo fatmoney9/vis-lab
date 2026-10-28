@@ -1,4 +1,5 @@
 /* L3 · 瀑布图示例文案映射。只换展示语言，不改变累计值、类型、分段或运算关系。 */
+import { isEnglishContent } from './themes.js';
 const AINVEST_COPY = {
   revenue: { name: 'Revenue', axisLabel: ['Revenue'] },
   cost: { name: 'Cost of sales', axisLabel: ['Cost of', 'sales'] },
@@ -16,7 +17,7 @@ const AINVEST_COPY = {
 };
 
 export function waterfallPresentation(cfg, { theme }) {
-  if (theme !== 'ainvest') return cfg;
+  if (!isEnglishContent(theme)) return cfg;
   return {
     ...cfg,
     name: cfg.variant === 'data' ? 'Balance Sheet Composition' : 'Profit Bridge',

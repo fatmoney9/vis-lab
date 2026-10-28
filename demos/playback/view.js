@@ -11,6 +11,7 @@
  */
 
 import { tokenNum } from '../../charts/core/tokens.js';
+import { isEnglishContent } from '../themes.js';
 
 const escapeHtml = (value) => String(value ?? '')
   .replaceAll('&', '&amp;')
@@ -133,7 +134,7 @@ const EN_PLAYBACK_COPY = {
 };
 
 export const playbackCopy = ({ theme = 'ths' } = {}) => (
-  theme === 'ainvest' ? EN_PLAYBACK_COPY : ZH_PLAYBACK_COPY
+  isEnglishContent(theme) ? EN_PLAYBACK_COPY : ZH_PLAYBACK_COPY
 );
 
 const COPY_KEYS = Object.freeze([

@@ -307,6 +307,8 @@
   "color-grey-05": "#858585",
   "$section-15": "图表公共区域、网格与引导线",
   "size-chart-region-height": "200px",
+  "size-chart-region-min-height": "0px",
+  "size-chart-min-width": "auto",
   "size-grid-line": {
     "mobile": "0.5px",
     "pc": "1px"

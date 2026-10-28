@@ -31,7 +31,7 @@
 | **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05] / [SANKEY-18]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
-| 解析主题 / 端形态 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior` |
+| 解析主题 / 端形态 / 密度档 | `core/theme.js` | `themeOf` · `modeOf` · `densityOf` · `resolveBehavior`（已含密度覆盖层，L2 无需感知密度） |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
 | **组件写死的文案（读屏描述 / 看板固定行名）** | `core/chart-text.js` | `resolveChartText`（缺省表 + `config.text` 整套替换）· `fillText`（`{key}` 模板）（[CHARTTEXT-01..03]）——别在 L2 拼中文模板字符串，Ainvest 的英文由 L3 注入 |
 | 图例（渲染 / 点击状态） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` / `applyToggle` · `applyFocus` |
@@ -70,7 +70,9 @@
    建议两个键都加：只配分类名的话，将来改一次分类名图标就又静默消失。
    由 `hooks/lint-nav-icon.mjs` 校验。
 2. **Ainvest 主题下图表内容必须是英文**。业务词加进 `demos/chart-presentation.js` 的 `AINVEST_TEXT`。
-   由 `hooks/lint-ainvest-english.mjs` 校验**静态配置与逐期播放配置两条路**。
+   由 `hooks/lint-ainvest-english.mjs` 校验**静态配置与逐期播放配置两条路**（遍历 `demos/themes.js` 里所有 `locale: 'en'` 的主题）。
+   **L3 判断「要不要英文」一律走 `contentLocale()` / `isEnglishContent()`（`demos/themes.js`），不写 `theme === 'ainvest'`**——
+   语言是主题的属性、不是主题身份；按 id 比较会在出现第二个英文主题 id 时静默落回中文。
    ⚠️ 该守卫查的是「词表翻得出来」，**查不到「某条路径绕开了 `buildConfig`」**——
    翻译只发生在装配线上，手拼 cfg 就会在那条路径上失效，而数据本身仍可翻译、守卫照样全绿。
    那一层由渲染断言兜（`tests/browser/hbar.browser.mjs` 的 Ainvest 段）。
@@ -86,8 +88,10 @@
 ## 目录与约定
 
 - `tokens/` 是主题值、行为和系列色板的权威源；不要手改生成的 `tokens/tokens.css`。
+  **密度档（如 Ainvest 紧凑）不是新主题**：`data-theme` 不变、同元素加 `data-density`，差异只写在 `tokens/density.json`（理由与合同见 `tokens/README.md`「密度覆盖层」）。
 - `charts/core/` 是 L1 共享构件，`charts/charts/` 是 L2 图表编排，`specs/` 是规则 ID 权威定义。
 - `demos/` 是各预览面共享的示例数据源：`examples.js`（示例清单 + 假数据 + 配置装配）、
+  `themes.js`（主题清单 + 各主题图表内容语言 `locale`，L3 判断要不要英文的唯一出处）、
   `registry.js`（图表类型 → L2 组件）、`nav-icons.js`（首页左栏分类图标，门禁要 import 它核对）、
   `chart-presentation.js`（Ainvest 英文词表），以及 `playback/`（带时间轴图型共用的播放件，
   规则见 `specs/playback.md`）。**加示例、加图表类型只改 `demos/`**，`index.html` 与

@@ -1,6 +1,7 @@
 # Playground · 开发验收面
 
-三主题横向并排的开发预览，用于规范验收和视觉目检。与根目录 `index.html`（对外站点）
+三主题横向并排的开发预览，用于规范验收和视觉目检；声明了密度档的主题在其标准卡下方多一张密度档卡
+（当前为「Ainvest · 紧凑」，见 [tokens/README.md](../tokens/README.md)「密度覆盖层」）。与根目录 `index.html`（对外站点）
 是**同源不同展示**的两个主面：示例定义共用 `demos/examples.js` 一份，本目录只决定「怎么展示」。
 
 - 入口：<http://localhost:8123/playground/preview.html>（需 HTTP 服务，见根 [README](../README.md)）

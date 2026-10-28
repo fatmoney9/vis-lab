@@ -428,6 +428,7 @@
 <script type="module">
   import { mountExample } from '../demos/registry.js';
   import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, buildConfig, playbackPeriodsOf, clampPeriodIndex, activePeriodExample } from '../demos/examples.js';
+  import { densitiesOf } from '../charts/core/theme.js';
   import { playbackCopy, playbackMarkup } from '../demos/playback/view.js';
   import { createPlaybackController } from '../demos/playback/controller.js';
 
@@ -468,10 +469,17 @@
   const playbackEl = document.getElementById('playback');
   const cards = {};
   const chartInstances = {};
-  THEMES.forEach((t) => {
+  /* 卡片 = 主题 + 该主题声明过的密度档（tokens/density.json）。紧凑卡紧跟在本主题标准卡之后，
+     上下对照看差异。key 只是卡片身份；传给 buildConfig 的仍是品牌 id（语言、色板都按品牌走）。 */
+  const CARDS = THEMES.flatMap((t) => [
+    { key: t.id, theme: t.id, label: t.label, dot: t.dot },
+    ...densitiesOf(t.id).map((d) => ({ key: `${t.id}:${d}`, theme: t.id, density: d, label: `${t.label} · 紧凑`, dot: t.dot })),
+  ]);
+  CARDS.forEach((t) => {
     const card = document.createElement('div');
     card.className = 'theme-card';
-    card.dataset.theme = t.id;
+    card.dataset.theme = t.theme;
+    if (t.density) card.dataset.density = t.density;
     card.innerHTML = `
       <div class="theme-card__bar">
         <span class="theme-card__dot" style="background:${t.dot}"></span>
@@ -480,7 +488,7 @@
       </div>
       <div class="chart-mount"></div>`;
     canvasEl.appendChild(card);
-    cards[t.id] = card;
+    cards[t.key] = card;
     card.addEventListener('pointerdown', (e) => {
       const rect = card.getBoundingClientRect();
       if (rect.right - e.clientX <= 18 && rect.bottom - e.clientY <= 18) card.classList.add('is-resized');
@@ -488,7 +496,7 @@
   });
 
   /* ── 渲染：当前分类 × 端 × 明暗 → 三卡整体重绘 ──────────────────── */
-  /* 三张卡片建一次、所有示例复用（见上方 cards[t.id]），而 `resize: both` 把宽高写成
+  /* 卡片建一次、所有示例复用（见上方 cards[t.key]），而 `resize: both` 把宽高写成
      卡片的**行内样式**、`is-resized` 也留在类上——不清就会把上一个图拖出来的尺寸带到下一个图。
      只在**换示例**时清：动明暗 / 端 / 数据量等旋钮不该丢掉用户刚拖好的大小。 */
   let lastCategory = null;
@@ -559,8 +567,8 @@
     document.getElementById('seg-y-indicator').closest('.field').hidden = !caps.yIndicator;
     document.getElementById('seg-animation').closest('.field').hidden = !caps.animation;
 
-    THEMES.forEach((t) => {
-      const card = cards[t.id];
+    CARDS.forEach((t) => {
+      const card = cards[t.key];
       card.dataset.mode = state.mode;         // [data-mode] 明暗
       card.dataset.platform = state.platform; // [data-platform] 端（pc 时匹配空规则、无害）
       card.querySelector('.theme-card__meta').textContent =
@@ -568,14 +576,14 @@
 
       // 重建干净的 host，避免残留 class / --dv-series-* 变量
       const mount = card.querySelector('.chart-mount');
-      chartInstances[t.id]?.destroy();
+      chartInstances[t.key]?.destroy();
       mount.textContent = '';
       const host = document.createElement('div');
       host.className = 'chart-host';
       mount.appendChild(host);
       /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
          两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
-      chartInstances[t.id] = mountExample(host, periodExample(cat, t.id), knobs(t.id)).instance;
+      chartInstances[t.key] = mountExample(host, periodExample(cat, t.theme), knobs(t.theme)).instance;
     });
     renderPlayback(cat);
   }
@@ -653,12 +661,12 @@
       scope: { theme: 'ths', mode: state.mode, platform: state.platform },
       getIndex: () => state.periodIndex,
       setIndex: (i) => { state.periodIndex = i; },
-      pause: () => THEMES.forEach((t) => chartInstances[t.id]?.pause?.()),
+      pause: () => CARDS.forEach((t) => chartInstances[t.key]?.pause?.()),
       /* 三卡并发推进。**读 chartInstances 而不是闭包捕获实例**：旋钮重渲会整批换实例，
          捕获会让播放继续驱动已经 destroy 掉的那一批。 */
       applyPeriod: (index, { animate }) => Promise.all(
-        THEMES.map((t) => chartInstances[t.id]?.update?.(
-          buildConfig(periodExample(cat, t.id, index), knobs(t.id)),
+        CARDS.map((t) => chartInstances[t.key]?.update?.(
+          buildConfig(periodExample(cat, t.theme, index), knobs(t.theme)),
           { animate },
         ) ?? true),
       ).then((results) => results.every(Boolean)),

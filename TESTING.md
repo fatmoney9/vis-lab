@@ -78,6 +78,8 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `charts/core/label.js`：省略号截断（`truncateBatch`——**测量函数经参数注入**，故无需伪造 DOM，同 `motion.js` 注入时钟的做法）：装得下原样返回、超宽截到**最长**可行前缀（不保守多截）、连「1 字 + `…`」都放不下则回落丢弃、一批混合各归各位、**按轮批量测量**（调用次数随轮数而非标签数增长）、按码点切不劈开代理对。
 - `charts/charts/radar/geometry.js`：轴角均分与首轴方位、值域两条路（给 `max` 则定死、否则注入 `niceSplit` 求 nice 上界）、网格环与最少 2 段、画布几何（半径先按容器定、标签带吃剩下的、横竖分开、收缩下限与最小高度）、绕圆标签的八向锚点与可读弧线（下半圈反向）、多边形扇形热区、扇区命中（含圆心与跨 0 度两处边界）、可调节手柄的轴向投影与步长吸附（`axisAngles` / `radarDomain` / `radarFrame` / `ringRadii` / `gridPath` / `seriesPoints` / `labelAnchor` / `labelArc` / `sectorAt` / `sectorCorners` / `radarValueAt` / `snapRadarValue`）。
 - `charts/core/watermark.js`：水印锚点几何（角 × grid 边 × 偏移，`watermarkAnchor`）。
+- `tokens/density.mjs` + `tokens/build.mjs` 的 `densityBlocks`：密度覆盖层合同（只改已有键、形态同构、无同值空覆盖）与作用域输出——只改 pc 的端分叉键必须另发紧凑×mobile 块（`tests/density.test.mjs`）；
+- `demos/themes.js`：主题内容语言登记，未登记 id 回落中文、`examples.js` 的 `THEMES` 是同一份引用（`tests/themes.test.mjs`）。
 - `charts/core/callout.js`：图表标注的全部几何（**不 import d3，故整份可被 node 加载**）——16 个候选的「块最近点到锚点距离恒等于 d」不变量、越界与互撞两条硬约束是淘汰而非 clamp、压住图元时宁可换到偏好更差的方位、多条标注按声明序贪心（首条不因后来者移动，挤不开则第二条整条丢弃）、三次贝塞尔的四点共线、**箭头等腰且尖端在底边中点正前方**（八方位逐一验；这条刻意不断言「底边 ⊥ 末端切线」——那是构造公式本身，照抄成测试则实现怎么错它怎么绿，斜向压扁 45° 就是这样漏过去的）、覆盖率的并集语义（重叠障碍物不重复计数）、定宽折行的幂等与不丢字（`placeCallouts` / `scoreCandidate` / `coverageFraction` / `calloutLeader` / `wrapByWidth`）。
 - `charts/core/legend-state.js`：图例点击的状态迁移——`applyToggle` 两档（multi 独立开关 / single 只留一项）+ LEGEND-12「最后一个可见项不可关」（含「全隐不可达」与承接 multi 遗留 hidden 的判据），`applyFocus` 强调档（选中迁移 + 不产生 hidden）。**这些逻辑此前零覆盖**，因为它们原本住在 import d3 的 `legend.js` 里、`node --test` 加载不了；单开一个纯模块正是为此。
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
@@ -92,7 +94,7 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `tests/playback.test.mjs`：播放件的纯逻辑——模板、刻度抽稀、文案整套校验、主题映射、异步兜底。
   2026-09-20 从 `tests/sankey.test.mjs` 迁出：这四条没有一行碰桑基，测的是 `demos/playback/` 这个中性公用件（规则见 [specs/playback.md](specs/playback.md)）。留在桑基那份里，会让「改播放件」看起来像「改桑基」。
 - `tests/browser/hbar.browser.mjs`：竞赛形态的合同——keyed join（每行绑到实体 key 而不是名次）、补间过程中几何连续变化、暂停后落在整期（2026-10-08 由原「冻结当前帧」改成这样，HBAR-16）、末期名次确实与首期不同、Ainvest 播放全程英文。<br>⚠️ 两个坑写在这里免得再踩：① 「正在补间」**不能**用「行 y 是小数」来证——静态布局下行 y 本来就是小数，那条断言恒真；要用**两个时刻的指纹差**。② 指纹必须**聚合全体行并排序**：DOM 顺序不等于名次顺序，跨帧比「第一根条」会比到不同的行上。
-- `tests/browser/playground-playback.browser.mjs`：playground 三主题面的**多实例同步**合同——一条轴驱动三个实例。<br>⚠️ 断言「三卡名次序列相同」**不够**：某张卡落后一期时，若那两期恰好没发生名次互换，三卡照样完全相同、断言照样全绿。真正的同步证据是**每张卡跟自己比**、在同一时间窗内三张都必须在变（跨主题不能直接比几何，三主题字号与边距本就不同）。该断言已做负对照验证：把 `applyPeriod` 改成只驱动第一张卡，它给出 `[true, false, false]`。
+- `tests/browser/playground-playback.browser.mjs`：playground 面的**多实例同步**合同——一条轴驱动全部卡片（三主题卡 + 密度档卡）。同步断言**逐卡**覆盖、不写死张数；三张主题卡另有显式断言（2026-10-28 加入「Ainvest · 紧凑」卡时，原先写死的 `=== 3` 会直接红）。<br>⚠️ 断言「三卡名次序列相同」**不够**：某张卡落后一期时，若那两期恰好没发生名次互换，三卡照样完全相同、断言照样全绿。真正的同步证据是**每张卡跟自己比**、在同一时间窗内三张都必须在变（跨主题不能直接比几何，三主题字号与边距本就不同）。该断言已做负对照验证：把 `applyPeriod` 改成只驱动第一张卡，它给出 `[true, false, false]`。
 - `tests/browser/waterfall.browser.mjs`：直接打开主站瀑布入口，在真实 Chrome 中覆盖三主题 × PC/移动端 × 明暗，断言 hover 后 Tooltip、指示线、单/双行轴贴片和隐藏的 `name-value` 三行配置；另断言 **THS 移动端 Tooltip 宽 ≤ 图表根宽的 1/2**（TOOLTIP-01 ③）。封顶是否生效不靠示例读数「碰巧」宽过半宽来验——
 那取决于运行环境的字体（macOS 苹方下第 3 根柱 186.6px 会触发，Ubuntu 字体更窄则不会）——
 而是人为塞入超长名称让封顶必然生效，断言宽度**恰等于**半宽，并以 THS PC / iFinD 移动端 / Ainvest 移动端作不收紧的反向对照；不读取源码或 CSS 文本、不手写生产 SVG。
