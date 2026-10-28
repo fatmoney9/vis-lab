@@ -29,9 +29,16 @@ export function verticalGeometry(host, opts = {}) {
     : yForm === 'outside' ? halfLabel : 0) + titleBottomH;
 
   const regionH = tokenNum(host, '--size-chart-region-height') || 160;
+  /* [GRID-04] 图表区高度下限，口径同 --size-chart-region-height（outside 含两端 Y 标签半行高）。
+     token 为 0 = 不设下限，只剩上面那道 48px 可用性兜底（三主题现状）；密度覆盖层可抬高它。
+     minGridHeight 传 0 的调用方（饼环 / 雷达 / 树图 / 横向条）明确表示「我没有 Y 轴图表区」，
+     这条下限一并不适用——它说的是「grid + Y 轴」，套到无轴画布上只会造出死空间。 */
+  const outsideH = yForm === 'outside' ? 2 * halfLabel : 0;
+  const regionMin = minGridHeight > 0 ? tokenNum(host, '--size-chart-region-min-height') : 0;
+  const gridMin = Math.max(minGridHeight, regionMin - outsideH);
   const gridH = height != null
-    ? Math.max(minGridHeight, height - topPad - bottomPad - navH)
-    : Math.max(minGridHeight, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
+    ? Math.max(gridMin, height - topPad - bottomPad - navH)
+    : Math.max(gridMin, regionH - outsideH);
 
   return { lineH, halfLabel, topPad, xGapTop, bottomPad, gridH };
 }

@@ -47,6 +47,7 @@ import { buildFinancialDifferencePair } from './sankey-financial.js';
 import { financialSankeyPresentation } from './sankey-presentation.js';
 import { chartContentPresentation } from './chart-presentation.js';
 import { waterfallPresentation } from './waterfall-presentation.js';
+import { isEnglishContent } from './themes.js';
 
 /* ── 数据生成（示例专用假数据；固定公式、无随机数与当前时间，保证截图可复现）── */
 
@@ -416,7 +417,7 @@ const MARKET_CAP_QUARTERS = 24;
    不让它漏进传给组件的 cfg（「逻辑」面板展示的必须就是真正生效的那份）。 */
 const marketCapPresentation = (period, { theme = 'ths' } = {}) => {
   const { periodEn, ...rest } = period;
-  return theme === 'ainvest' ? { ...rest, period: periodEn } : rest;
+  return isEnglishContent(theme) ? { ...rest, period: periodEn } : rest;
 };
 
 const marketCapPeriods = () => Array.from({ length: MARKET_CAP_QUARTERS }, (_, q) => {
@@ -635,11 +636,8 @@ export const treemapHierarchy = (count = 6) => {
 
 /* ── 两面共用的展示维度 ──────────────────────────────────────── */
 
-export const THEMES = [
-  { id: 'ths', label: 'THS', dot: '#3366FF' },
-  { id: 'ifind-pc', label: 'iFinD PC', dot: '#4D5999' },
-  { id: 'ainvest', label: 'Ainvest', dot: '#265FFC' },
-];
+/* 主题清单与内容语言住在 demos/themes.js（presentation 模块也要读，放这里会成环）；此处 re-export 保持既有 import */
+export { THEMES } from './themes.js';
 
 /* ── 弦图：行业间资金流向（CHORD-01）────────────────────────────
    申万一级行业，按「资金从 i 流向 j」组织成方阵。 */
@@ -1094,7 +1092,7 @@ export const EXAMPLES = [
     preferredWidth: 812,
     logicNote: '节点只接收业务角色、阶段与有符号流量；节点宽高、列距、最小可见粗细和主题语义色均由 Sankey token 解析。',
     presentation: financialSankeyPresentation,
-    summaryByTheme: { ainvest: '15 nodes · 14 flows · 8 periods' },
+    summaryByLocale: { en: '15 nodes · 14 flows · 8 periods' },
     playback: financialSankeyPlayback(),
     cfg: () => financialSankey(),
   },
@@ -1103,7 +1101,7 @@ export const EXAMPLES = [
     title: '行业资金流向', spec: 'CHORD-01 / CHORD-05 / CHORD-11', surfaces: BOTH,
     description: '主力资金在申万一级行业之间的流转：外圈一段弧是一个行业，圈内的带是两个行业之间的往来，带的两端粗细分别是两个方向的量。',
     summary: '6 个行业 · 双向流量',
-    summaryByTheme: { ainvest: '6 sectors · two-way flows' },
+    summaryByLocale: { en: '6 sectors · two-way flows' },
     densityValues: { few: 4, mid: 6, many: 10 },
     densityRange: { min: 4, max: 10 },
     densityUnit: '个行业',

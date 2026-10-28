@@ -4,6 +4,7 @@
  * [SANKEY-27] 业务语言在示例数据层切换：L2 仍只消费稳定 id、通用 name/value 与语义角色，
  * 不识别 Ainvest 或中英文。英文名称进入组件后继续走同一套真实字体测量、96px 截断与字号适配。
  */
+import { isEnglishContent } from './themes.js';
 
 const AINVEST_NODE_NAMES = {
   domestic: 'Domestic Government & Enterprise',
@@ -69,7 +70,7 @@ const englishTimelinePeriod = (period) => {
 };
 
 export function financialSankeyPresentation(config, { theme = 'ths' } = {}) {
-  if (theme !== 'ainvest') return config;
+  if (!isEnglishContent(theme)) return config;
   const period = englishPeriod(config.period);
   return {
     ...config,

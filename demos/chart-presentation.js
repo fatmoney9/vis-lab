@@ -10,7 +10,10 @@
  *
  * 组件自己写死的固定文案（无障碍描述、看板固定行名）不在示例配置里，翻译配置够不着；
  * 它们经 `config.text` 整套注入（CHARTTEXT-01/02，specs/chart-text.md），英文表见 AINVEST_COMPONENT_TEXT。
+ *
+ * 「哪个主题用英文」不在本文件判断：走 demos/themes.js 的 locale 登记（词表仍叫 AINVEST_* 是因为内容出自 Ainvest 设计稿）。
  */
+import { isEnglishContent } from './themes.js';
 
 const AINVEST_TEXT = new Map([
   /* 行业市值排名（HBar 竞赛形态）——行业名与季度标签 */
@@ -234,7 +237,7 @@ export function ainvestComponentText(chart) {
 }
 
 export function chartContentPresentation(config, { theme = 'ths', chart } = {}) {
-  if (theme !== 'ainvest') return config;
+  if (!isEnglishContent(theme)) return config;
   const translated = translateDeep(config, chart);
   const text = ainvestComponentText(chart);
   /* 固定文案在翻译之后挂上：模板里的占位与英文句子不该再过一遍中文词表 */

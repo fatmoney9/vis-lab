@@ -8,6 +8,7 @@
 - `ifind-pc.json`：iFinD-PC 主题的完整值 token；
 - `ainvest.json`：Ainvest 主题的完整值 token；
 - `behavior.json`：需要参与几何计算或逻辑分支的主题形态与行为配置；
+- `density.json` + `density.mjs`：**密度覆盖层**（见下文「密度覆盖层」）——某主题的紧凑档相对该主题改了哪些值 token 与形态键，全部写在这一个文件里；`density.mjs` 是构建器与 `charts/core/theme.js` 共用的解析 / 合并纯函数；
 - `palette.json`：系列色板（`bar-multi` / `line-multi` / `pie-multi` / `single-default` 等），由取色器
   `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；`build.mjs` 只校验其颜色值域，
   不输出为 CSS 变量；
@@ -78,7 +79,39 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
 - `data-theme="ths|ifind-pc|ainvest"`：业务主题；
 - `data-platform="pc|mobile"`：终端；
 - `data-mode="light|dark"`：颜色模式；
-- 默认组合：THS + PC + Light。
+- `data-density="compact"`：密度档（仅 `density.json` 声明过的主题生效，**必须与 `data-theme` 挂在同一元素上**）；
+- 默认组合：THS + PC + Light，无密度档。
+
+## 密度覆盖层
+
+**密度不是主题。** Ainvest 紧凑档与 Ainvest 是同一品牌：色板、水印、字体、播放件样式、L3 英文内容全部照旧，
+只有承载尺寸的两条通道（值 token、形态）不同。所以它不另开 `data-theme` id，而是在同一元素上加
+`data-density="compact"`：
+
+- 色板（`palette.js`）、水印、`demos/playback/playback.css` 的 `[data-theme='ainvest']` 选择器、L3 语言判断都按品牌 id 取值。
+  另开 `ainvest-compact` 会让它们**静默回落**（色板落到 THS、播放件丢掉 Ainvest 样式、内容退回中文），
+  而 CSS 选择器没有「继承」可言；
+- 以后别的主题也要紧凑档时，只在 `density.json` 里加一节，不必让主题 id 按「品牌 × 密度」成倍增长。
+
+`density.json` 的形态：`{ <theme>: { compact: { tokens: {…}, behavior: {…} } } }`。合同（构建器与 `theme.js` 同一套，fail-fast）：
+
+1. **只改已有键、不加键**——拼错的键会被当成新 token 静默生效，所以直接拒绝；
+2. 合并后的完整表照样过形态 / 别名 / 值域校验（覆盖值可以别名到基准里的 token，如 `{spacing-4}`）；
+3. 形态覆盖必须与原值**同构**（同类型、对象子键递归一致），整键替换、不做深合并——覆盖值写全，读的人一眼看到最终形态。
+
+构建器为每个密度档输出 `[data-theme="X"][data-density="D"]` 及其端 / 明暗组合块，只含被覆盖的键；
+特异性恒比主题同角的块高一级，不靠源码顺序。`theme.js` 只读**挂 `data-theme` 的那个元素**上的 `data-density`，
+与 CSS 的同元素复合选择器保持一致——两条通道读同一个元素，不会出现「值已紧凑、形态仍标准」。
+
+**连带效果是有意的**：覆盖的是被别名的源头键时，别名方一起变——`size-bar-max` → 横向条 `size-hbar-row-max`、
+`size-line-point` → 雷达 `size-radar-point`。改动源头键前先 `grep` 别名方。
+
+**两个只为密度档存在的基准 token**（[specs/axes.md](../specs/axes.md) GRID-04）：`size-chart-region-min-height`
+（三主题 `0px` = 不设下限）与 `size-chart-min-width`（三主题 `auto` = CSS 初始值）。三主题取「无约束」值，
+是为了新增这两个键时现有主题逐像素不变；具体下限只由密度档给。
+
+当前唯一的密度档是 **Ainvest 紧凑**（来源：Ainvest 高密度图表修改点，2026-10-28）。预览：`index.html` 选 Ainvest 后出现「版式」开关；
+`playground/preview.html` 在 Ainvest 卡下方多一张「Ainvest · 紧凑」卡上下对照。
 
 ## 行为配置
 

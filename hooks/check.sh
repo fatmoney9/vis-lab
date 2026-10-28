@@ -65,7 +65,7 @@ node hooks/lint-preview-contract.mjs
 # 12/13 分类图标守卫（新增图族必须配图标，否则首页左栏静默留空位）
 node hooks/lint-nav-icon.mjs
 
-# 13/13 Ainvest 英文守卫（该主题下图表内容不得残留中文；含逐期播放配置）
+# 13/13 英文内容守卫（demos/themes.js 中 locale: 'en' 的主题下图表内容不得残留中文；含逐期播放配置）
 node hooks/lint-ainvest-english.mjs
 
 echo "✓ 质量门禁 13/13 全部通过"
