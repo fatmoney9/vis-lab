@@ -109,7 +109,7 @@ export function WaterfallChart(host, cfg) {
     const tooltipMode = behavior['tooltip-position'];
     const marker = behavior['legend-marker'];
     const wm = behavior.watermark;
-    /* [WATERFALL-12/13][AXIS-04/08] Figma 的轴节点宽度与柱宽同口径：常规 64px、
+    /* [WATERFALL-12/13][AXIS-04/08] Figma 的轴节点宽度与柱宽上限同口径：常规 64px、
        数据柱 110px；窄容器再按单槽宽减去轴标签最小净距收缩。名称由 L1 按真实 SVG 字宽
        最多折两行，不省略；常规轴与交互贴片共用最终行数组。 */
     const labelWidthLimit = variant === 'data'

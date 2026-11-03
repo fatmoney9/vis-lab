@@ -68,9 +68,11 @@ test('瀑布守恒：汇总值或分段和值不一致时拒绝配置', () => {
   ]), /有符号和值/);
 });
 
-test('瀑布柱宽：常规柱按 2:1 收缩并封顶，数据柱保持规范宽度', () => {
+test('瀑布柱宽：两种柱都按 2:1 收缩并封顶', () => {
   assert.equal(waterfallBarWidth('standard', 60), 40);
   assert.equal(waterfallBarWidth('standard', 96), 64);
   assert.equal(waterfallBarWidth('standard', 160), 64);
-  assert.equal(waterfallBarWidth('data', 40), 110);
+  assert.equal(waterfallBarWidth('data', 165), 110);
+  assert.equal(waterfallBarWidth('data', 300), 110);
+  assert.equal(waterfallBarWidth('data', 90), 60);
 });

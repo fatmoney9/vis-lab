@@ -3,6 +3,7 @@
  * 调用方提供 layer / frame / 已解析数据，本模块不持有生命周期、主题状态或 hover 状态。
  */
 import { renderXLabels } from '../../core/axis.js';
+import { truncateBatch } from '../../core/label.js';
 import { measureTexts } from '../../core/measure.js';
 import { tokenNum } from '../../core/tokens.js';
 import { WATERFALL_SETTINGS } from './geometry.js';
@@ -55,7 +56,7 @@ export function renderWaterfallPercentBadge(layer, host, {
     .attr('x', left + width / 2).attr('y', y + height / 2)
     .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
     .text(textValue);
-  return { width, height, colorVar };
+  return { width, height, colorVar, node: group.node() };
 }
 
 export function renderWaterfallXAxis(layer, frame, items, centers, rows, showRelations) {
@@ -94,13 +95,23 @@ export function renderWaterfallDataSegmentLabel(
   format,
   light,
 ) {
-  const { x, top, height } = geometry;
+  const { x, top, width, height } = geometry;
   if (height < WATERFALL_SETTINGS['data-label-hide-height']) return;
   const padX = tokenNum(host, '--spacing-6');
+  const textWidth = width - padX * 2;
+  const valueText = format(segment.value);
+  /* [WATERFALL-04] 数值不能截断，放不下就整条退场；名称才允许省略。 */
+  /* 字号挂在外层 g 的类上，测量要带上它，否则按默认字号量会偏大。 */
+  if (measureTexts(host, [valueText], 'dv-waterfall-segment-label dv-waterfall-segment-label__value')[0] > textWidth) return;
   const padY = tokenNum(host, '--spacing-4');
   const lineH = tokenNum(host, '--line-height-extra-small');
-  const nameLines = (Array.isArray(segment.labelLines) ? segment.labelLines : [segment.name])
+  const sourceLines = (Array.isArray(segment.labelLines) ? segment.labelLines : [segment.name])
     .map(String).filter(Boolean).slice(0, 2);
+  const nameLines = truncateBatch(
+    sourceLines.map((text) => ({ text, maxWidth: textWidth })),
+    (values) => measureTexts(host, values, 'dv-waterfall-segment-label dv-waterfall-segment-label__name'),
+  ).map((result) => result.text);
+  if (nameLines.some((line) => line == null)) return;
   const label = layer.append('g')
     .attr('class', `dv-waterfall-segment-label dv-waterfall-segment-label--${light ? 'light' : 'solid'}`)
     .attr('transform', `translate(${x + padX},${top + padY})`);
@@ -112,12 +123,13 @@ export function renderWaterfallDataSegmentLabel(
   const valueY = nameLines.length * lineH;
   label.append('text').attr('class', 'dv-waterfall-segment-label__value')
     .attr('x', 0).attr('y', valueY).attr('dominant-baseline', 'hanging')
-    .text(format(segment.value));
+    .text(valueText);
   const badgeY = valueY + lineH;
   const badgeHeight = tokenNum(host, '--line-height-super-small');
   if (segment.percent != null && badgeY + badgeHeight <= height - padY * 2) {
-    renderWaterfallPercentBadge(label, host, {
+    const badge = renderWaterfallPercentBadge(label, host, {
       x: 0, y: badgeY, value: segment.percent, anchor: 'start',
     });
+    if (badge && badge.width > textWidth) badge.node.remove();
   }
 }
