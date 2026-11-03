@@ -88,6 +88,7 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `charts/charts/world-heatmap/model.js`：有限数输入合同（拒绝空值与隐式数字转换，保留真实 0 / 负数 / 空数组）、国家码归一化与重复校验、复用强度分档；另检查固定底图的每个地区均有可读取的本地国旗 SVG（`tests/world-heatmap.test.mjs`）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
+- `tests/browser/collapse-retry.browser.mjs`：cartesian / pie / radar / treemap 在容器塌陷时进入重试，容器恢复后图表回来且重试停止，塌陷中销毁后不再请求动画帧（`createBuildRetry`，GRID-03）。
 - `tests/browser/harness.mjs`：服务器 / Chrome / CDP 这层**与图表无关的壳**，各图型的合同共用一份。抄第二份的代价不是行数，是两份壳会各自长出细节差异（超时、端口、Chrome 路径回落），到时候「瀑布过了弦图没过」分不清是图的问题还是壳的问题。
 - `tests/browser/world-heatmap.browser.mjs`：三主题 × PC / 移动端尺寸 × 明暗，调用公开地图组件验证有 / 无数据、完整等比底图、0.5px 描边副本和固定国家 DOM / Tab 顺序、本地国旗与失败回退、滚动清理（含 Tab 触发自动滚动时保留键盘焦点展示）、鼠标与键盘展示分离、长名称与共享气泡封顶、resize 保持焦点、resize 排队中销毁、默认高度（三主题 240 / 紧凑 140，改宽度不变）以及画廊禁用命中。移动端尺寸测试不等于真实触摸设备验收；触摸与跨浏览器验证仍未完成，也没有截图差异基线。
 - `tests/browser/highlight-state.browser.mjs`：`core/highlight-state.js` 的**跨族合同**——桑基 / 矩形树图 / 弦图三个消费方各跑同一组 8 条迁移，验的是「同一套状态机在三个 L2 身上表现一致」，而不是某一个图型。纯逻辑那半由 `tests/highlight-state.test.mjs` 覆盖，这里补的是 L2 把状态翻译成 DOM 时有没有接错线；事件用合成 Event 派发，与容器尺寸、滚动位置和图元疏密无关。

@@ -171,6 +171,16 @@ export const containerDrivesHeight = (hostHeight) => Number(hostHeight) >= CONTA
 /* resize 时：这次变高是不是**外部**造成的（1px 容差吸收亚像素抖动） */
 export const containerTookOver = (hostHeight, baseline) => Math.abs(hostHeight - baseline) > 1;
 
+/* [GRID-03] 容器塌陷时「下一帧再 build」的重试。必须持有帧 id：build 开头撤掉排队中的重试，
+ * 否则 resize 与重试会各跑一条循环；destroy 也要撤，否则卸载后容器恒为 0，循环永不停止。 */
+export function createBuildRetry(build) {
+  let raf = 0;
+  return {
+    schedule() { raf = requestAnimationFrame(() => build()); },
+    cancel() { cancelAnimationFrame(raf); },
+  };
+}
+
 /* [GRID-03] 容器尺寸自适应：宽/高变化（rAF 合帧）后回调重建 */
 export function observeResize(host, cb) {
   let raf = 0;

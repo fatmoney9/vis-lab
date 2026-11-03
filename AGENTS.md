@@ -41,7 +41,7 @@
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
-| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高；`xBandLines` 声明多行 X 带）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，三族共用，别再抄阈值） |
+| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高；`xBandLines` 声明多行 X 带）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，别再抄阈值）· `createBuildRetry`（容器塌陷时的下一帧重试，destroy 必须撤销） |
 | 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderXLabels` · `axisLabelLines` / `renderAxisLabelLines` / `xAxisLabelTextLayout`（常态与高亮态共用的逐行内容与文字坐标）· `renderGrid` · `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
