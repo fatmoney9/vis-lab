@@ -5,7 +5,7 @@
 ## 规则
 
 - **WORLD-HEATMAP-01 · 输入**：组件接收 `regions:[{ id, name, value }]`；`id` 使用底图收录的 ISO 3166-1 alpha-2 国家 / 地区码，另兼容底图特殊 ID `XK`、`GO`、`JU`、`UM-DQ`、`UM-FQ`、`UM-HQ`、`UM-JQ`、`UM-MQ`、`UM-WQ`，同一地区不可重复。`value` 必须是有限的 JavaScript `number`，允许 `0` 与负数；不得以 `null`、`undefined`、空串、数字字符串、布尔或对象代替数值，`NaN` / `Infinity` 同样拒绝。数字字符串的解析由 L3 数据适配负责；缺数据地区应从 `regions` 中省略，空数组表示完整无数据地图。
-- **WORLD-HEATMAP-02 · 底图**：世界地图保留设计源的 1000×600 视框及整体矢量几何；地区边界按 WORLD-HEATMAP-09 离线校准。完整等比缩放并居中，不因容器比例拉伸国家形状。
+- **WORLD-HEATMAP-02 · 底图**：世界地图保留设计源的 1000×600 视框及整体矢量几何；地区边界按 WORLD-HEATMAP-09 离线校准。完整等比缩放并居中，不因容器比例拉伸国家形状。容器未给高度时画布高取 `size-world-heatmap-height`（三主题 240px，紧凑档 140px），不随宽度变化；容器给了高度就随容器。地图比容器窄时左右留白。
 - **WORLD-HEATMAP-03 · 强度**：有数据国家按数值秩等距映射至五档透明度；并列值同档，最高值恒为最深档。档位数学复用 L1 `visual-color.intensityLevels`。
 - **WORLD-HEATMAP-04 · 主题**：默认 `tone:'primary'`，THS / iFinD-PC / Ainvest 使用各自地图主题色；另支持 `up` / `down` 两种涨跌语义色。颜色与透明度只能来自 token。
 - **WORLD-HEATMAP-05 · 无数据**：无数据国家保留中性浅底与国界，不触发 Tooltip，也不进入键盘 Tab 顺序。

@@ -523,7 +523,7 @@ const decorateTreemap = (node, siblingIndex = 0) => ({
     : {}),
 });
 
-/* 行业市值层级：一级行业用于全局占比，点击后查看子行业；极小值验证比例压缩，0 值验证尾部剔除。 */
+/* 行业市值层级：一级行业用于全局占比，子行业只参与父节点求和（TREEMAP-06）；极小值验证比例压缩，0 值验证尾部剔除。 */
 const treemapEntryHierarchy = () => decorateTreemap({
   name: '全部行业',
   children: [
@@ -777,7 +777,7 @@ export const CHART_CAPABILITIES = {
      判断不是遗漏），没有图例可点。chordVariant / chordLabelLayout 是本族专属的两档形态语义。 */
   chord: { density: true, animation: true, chordVariant: true, chordLabelLayout: true },
   /* 矩形树图无轴、无图例；入口、通用与全局作为独立示例，共用本族能力。 */
-  treemap: { animation: true, treemapColor: true },
+  treemap: { animation: true, treemapColor: true, treemapImage: true },
   /* 瀑布图固定少量叙事项，不提供密度旋钮；仅颜色提供预览旋钮。
      X 轴内容与节点关系仍是实例语义配置，直接写在示例 cfg 中，不进入预览菜单。 */
   waterfall: { density: false, animation: true, waterfallColor: true },
@@ -1036,32 +1036,6 @@ export const EXAMPLES = [
     }),
   },
   {
-    id: 'world-heatmap-market', group: '全球热力图', chart: 'world-heatmap',
-    title: '全球市场热力图', spec: 'WORLD-HEATMAP-01 / WORLD-HEATMAP-06', surfaces: BOTH,
-    description: '按国家市场热度分五档着色；hover 国家时显示国旗、名称与读数。',
-    summary: '12 个国家 · 五档强度',
-    summaryByTheme: { ainvest: '12 countries · five intensity levels' },
-    preferredWidth: 700,
-    logicNote: '实例只提供 ISO 国家码、名称与数值；底图几何、五档透明度、国界、主题色与 Tooltip 形态由组件和 token 统一决定。',
-    cfg: () => ({
-      name: '全球市场热度',
-      regions: [
-        { id: 'US', name: '美国', value: 4.82 },
-        { id: 'CN', name: '中国', value: 2.13 },
-        { id: 'JP', name: '日本', value: 3.64 },
-        { id: 'DE', name: '德国', value: 3.12 },
-        { id: 'RU', name: '俄罗斯', value: 2.78 },
-        { id: 'IN', name: '印度', value: 2.26 },
-        { id: 'SA', name: '沙特阿拉伯', value: 1.94 },
-        { id: 'AU', name: '澳大利亚', value: 1.62 },
-        { id: 'CA', name: '加拿大', value: 1.48 },
-        { id: 'ZA', name: '南非', value: 1.21 },
-        { id: 'BR', name: '巴西', value: 1.03 },
-        { id: 'AR', name: '阿根廷', value: 0.82 },
-      ],
-    }),
-  },
-  {
     id: 'treemap-entry', group: '矩形树图', chart: 'treemap',
     title: '入口型矩形树图', spec: 'TREEMAP-11 / TREEMAP-13', surfaces: BOTH,
     description: '3–8 个等面积模块组成业务入口，面积不映射业务值。',
@@ -1197,6 +1171,32 @@ export const EXAMPLES = [
      对外站点是画廊，不该摆这些；但它们是改标签 / 图例 / 取色时最先该看的几张图。
      每个示例只推**一个**边界，出问题时能一眼定位是哪条规则塌了。 */
   {
+    id: 'world-heatmap-market', group: '全球热力图', chart: 'world-heatmap',
+    title: '全球市场热力图', spec: 'WORLD-HEATMAP-01 / WORLD-HEATMAP-06', surfaces: BOTH,
+    description: '按国家市场热度分五档着色；hover 国家时显示国旗、名称与读数。',
+    summary: '12 个国家 · 五档强度',
+    summaryByTheme: { ainvest: '12 countries · five intensity levels' },
+    preferredWidth: 700,
+    logicNote: '实例只提供 ISO 国家码、名称与数值；底图几何、五档透明度、国界、主题色与 Tooltip 形态由组件和 token 统一决定。',
+    cfg: () => ({
+      name: '全球市场热度',
+      regions: [
+        { id: 'US', name: '美国', value: 4.82 },
+        { id: 'CN', name: '中国', value: 2.13 },
+        { id: 'JP', name: '日本', value: 3.64 },
+        { id: 'DE', name: '德国', value: 3.12 },
+        { id: 'RU', name: '俄罗斯', value: 2.78 },
+        { id: 'IN', name: '印度', value: 2.26 },
+        { id: 'SA', name: '沙特阿拉伯', value: 1.94 },
+        { id: 'AU', name: '澳大利亚', value: 1.62 },
+        { id: 'CA', name: '加拿大', value: 1.48 },
+        { id: 'ZA', name: '南非', value: 1.21 },
+        { id: 'BR', name: '巴西', value: 1.03 },
+        { id: 'AR', name: '阿根廷', value: 0.82 },
+      ],
+    }),
+  },
+  {
     id: 'edge-long-name', group: '边界与极端情况', chart: 'pie',
     title: '超长名称与数值', spec: 'PIE-16 / LEGEND-13', surfaces: ['playground'],
     description: '扇区名长到必然溢出：外侧标签截名称、图例截标签，数值段两处都恒完整。',
@@ -1307,7 +1307,7 @@ export const capabilitiesOf = (example) => {
     animation: !!caps.animation, area: supportsArea(example), legend: !!caps.legend,
     labelLayout: !!caps.labelLayout, labelAlign: !!caps.labelAlign,
     legendSelect: !!caps.legendSelect, yIndicator: !!caps.yIndicator,
-    treemapColor: !!caps.treemapColor, axisValue: !!caps.axisValue,
+    treemapColor: !!caps.treemapColor, treemapImage: !!caps.treemapImage, axisValue: !!caps.axisValue,
     radarGridShape: !!caps.radarGridShape, radarShape: !!caps.radarShape,
     ratingStyle: !!caps.ratingStyle && ratingRadar,
     ratingBandCount: !!caps.ratingBandCount && ratingRadar,
@@ -1363,7 +1363,7 @@ export function buildConfig(example, state = {}) {
     density = defaultDensityOf(example), theme = 'ths', platform = 'pc', zoom = false, area = false,
     dataLabel = 'auto', axisTitle = false, animation = true, legend = 'auto', callout = false,
     labelLayout = 'off', labelAlign = 'anchor', legendSelect = 'multi', yIndicator = false,
-    treemapColor = 'intensity', axisValue = false,
+    treemapColor = 'intensity', treemapImage = false, axisValue = false,
     radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
     axisLabelLayout = 'auto', radarEditable = 'auto', waterfallColor = 'primary',
     chordVariant = 'undirected', chordLabelLayout = 'arc',
@@ -1423,6 +1423,8 @@ export function buildConfig(example, state = {}) {
   if (caps.yIndicator && yIndicator) cfg.yIndicator = true;
   /* [TREEMAP-17][COLOR-09] 强度是组件默认值；仅切到语义色时显式注入通用颜色策略。 */
   if (caps.treemapColor && treemapColor !== 'intensity') cfg.colorMode = treemapColor;
+  /* [TREEMAP-18] 公司标识：组件默认关，只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。 */
+  if (caps.treemapImage && treemapImage) cfg.showImage = true;
   /* [RADAR-07] 轴标签数值：组件默认关，故只有**开**才落进 cfg（同 zoom / axisTitle 的口径）。
      它不牵动任何交互开关——基线 7.2 的「展示数值时不可交互」已被设计源推翻，见 specs/radar.md。 */
   if (caps.axisValue && axisValue && !effectiveEditable && effectiveAxisLabelLayout === 'horizontal') cfg.axisValue = true;

@@ -151,7 +151,7 @@
   - 主节点中心恒定在画板**垂直中轴**，后续列按流入重心逐级回拉中轴（SANKEY-21）
   - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
   - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
-- **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
+- **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06；公司标识 `showImage` 默认关，只对 `content=image` 的主题生效，TREEMAP-18），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
 - **WaterfallChart**（`charts/charts/waterfall/`，见 `specs/waterfall.md` WATERFALL-01..15）：常规累计桥接与分组数据柱共用一套有符号累计模型；`kind`、`operatorBefore` 与 `segments` 均由数据显式声明。累计公式、分段守恒和三主题共用的浅底箭头复合图元留在 L2，箭头通过 `currentColor` 使用各自主题色；画布、比例尺、零轴、X 标签碰撞、文字测量、Tooltip / 十字线、水印、格式化、取色与动效均复用 L1。主题默认色彩模式仍在 `behavior.json`，尺寸与视觉值不进实例 API。
 
 - **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..18）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用；既有通用构件继续复用，分区形态通过 L1 `visual-color.js` 取得通用表现色阶。要点：
@@ -172,6 +172,6 @@
   - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
   - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
 
-- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以规范收录的国家 / 地区码标识，几何使用 Figma 基础图加可重建的离线地区校准（来源见 `assets/world-map/README.md`）；`CN` 统一包含台湾、港澳及本次校准的藏南区域，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。
+- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以规范收录的国家 / 地区码标识，几何使用 Figma 基础图加可重建的离线地区校准（来源见 `assets/world-map/README.md`）；`CN` 统一包含台湾、港澳及本次校准的藏南区域，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

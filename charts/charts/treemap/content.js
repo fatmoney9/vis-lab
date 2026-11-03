@@ -23,12 +23,14 @@ const finiteOrNull = (value) => {
   return Number.isFinite(number) ? number : null;
 };
 
-export function itemPresentation(item) {
+/* [TREEMAP-18] showImage=false 时连首字母兜底一起去掉：兜底是图片槽的替身，留着仍会占图片的位。 */
+export function itemPresentation(item, { showImage = true } = {}) {
   const node = item?.node ?? {};
   const source = node.presentation && typeof node.presentation === 'object' ? node.presentation : {};
   const content = normalizeImageContent(source, { label: node.name });
   return {
     ...content,
+    ...(showImage ? {} : { image: null, imageFallback: null }),
     colorValue: finiteOrNull(source.colorValue),
   };
 }

@@ -24,7 +24,8 @@
         "size-bar-group-container-max": "74px",
         "size-donut-ring-width": "24px",
         "size-line-point": "6px",
-        "font-size-tooltip": "11px"
+        "font-size-tooltip": "11px",
+        "size-world-heatmap-height": "140px"
       },
       "behavior": {
         "legend-marker": { "mode": "unified", "shape": "dot", "w": 6, "h": 6 },

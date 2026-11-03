@@ -102,6 +102,7 @@ export function TreemapChart(host, cfg) {
     colorThresholds,
     platform = 'pc',
     animation = true,
+    showImage = false,
   } = cfg;
   if (!root || typeof root !== 'object') throw new TypeError('TreemapChart：root 必须是层级对象');
   if (!['squarify', 'horizontal', 'vertical'].includes(direction)) {
@@ -193,7 +194,7 @@ export function TreemapChart(host, cfg) {
     if (!ITEM_COLOR_MODES.includes(activeColorMode)) {
       throw new Error('TreemapChart：treemap-profile.color-mode 不是受支持的颜色模式');
     }
-    items.forEach((item) => { item.presentation = itemPresentation(item); });
+    items.forEach((item) => { item.presentation = itemPresentation(item, { showImage }); });
     const assignments = resolveItemColors({
       mode: activeColorMode,
       values: items.map((item) => item.value),

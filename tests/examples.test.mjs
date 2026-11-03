@@ -92,6 +92,7 @@ test('SANKEY-01：桑基示例使用节点与流向数据，不声明坐标轴�
     /* [TOOLTIP-12] 桑基无 Y 轴，没有「这个高度相当于多少」可言，故恒 false。 */
     yIndicator: false,
     treemapColor: false,
+    treemapImage: false,
     axisValue: false,
     radarGridShape: false,
     radarShape: false,
@@ -507,6 +508,7 @@ test('TREEMAP-01：矩形树图示例使用递归层级数据，深层只参与�
     legendSelect: false,
     yIndicator: false,
     treemapColor: true,
+    treemapImage: true,
     axisValue: false,
     radarGridShape: false,
     radarShape: false,
@@ -554,6 +556,15 @@ test('WATERFALL-01/04：瀑布示例完整透出类型、运算符与分段数�
   const dataCfg = buildConfig(data, { theme: 'ainvest' });
   assert.equal(dataCfg.items[0].segments.length, 2);
   assert.equal(dataCfg.items[0].segments[0].name, 'Current Assets');
+});
+
+test('TREEMAP-18：公司标识默认关，只有打开才写进矩形树图配置', () => {
+  const treemap = EXAMPLES.find((item) => item.id === 'treemap-overall');
+  const bar = EXAMPLES.find((item) => item.id === 'basic');
+  assert.equal(buildConfig(treemap).showImage, undefined);
+  assert.equal(buildConfig(treemap, { treemapImage: false }).showImage, undefined);
+  assert.equal(buildConfig(treemap, { treemapImage: true }).showImage, true);
+  assert.equal(buildConfig(bar, { treemapImage: true }).showImage, undefined);
 });
 
 test('TREEMAP-17/COLOR-09：颜色策略只装进矩形树图配置，强度模式走组件默认', () => {

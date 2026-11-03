@@ -199,6 +199,7 @@
   "opacity-world-heatmap-level-5": 0.6,
   "size-world-heatmap-border": "0.5px",
   "size-world-heatmap-flag": "16px",
+  "size-world-heatmap-height": "240px",
   "$section-11": "提示框 Tooltip",
   "font-size-tooltip": "14px",
   "font-family-tooltip": "Arial",
