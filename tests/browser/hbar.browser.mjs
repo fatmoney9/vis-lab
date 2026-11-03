@@ -155,7 +155,7 @@ try {
 } finally {
   await stopProcess(chrome);
   server.close();
-  await rm(dir, { recursive: true, force: true });
+  await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 if (bad) { console.error(`✗ HBar 竞赛合同失败 ${bad} 项`); } else { console.log('✓ HBar 竞赛合同通过：keyed join / 连续补间 / 暂停落在整期 / 名次互换 / Ainvest 播放全程英文'); }
 process.exit(bad ? 1 : 0);

@@ -25,7 +25,7 @@
  *           true 入场生长 / false 直接终态；系统「减弱动态效果」下恒直接终态（MOTION-07）
  */
 import { select } from 'd3';
-import { createFrame, observeResize, verticalGeometry, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
+import { createFrame, observeResize, verticalGeometry, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
@@ -158,13 +158,15 @@ export function CartesianChart(host, cfg) {
   let stopGrow = () => {};
 
   /* 主流程：值域(domain) → 画布/轴/网格 → 柱布局(layout)+柱 mark → 线 mark → 交互态 → 入场生长 */
+  const buildRetry = createBuildRetry(build);
   function build() {
+    buildRetry.cancel();
     stopHover();
     stopHover = () => {};
     stopGrow();
     stopGrow = () => {};
     drawLegend(); /* 图例先占位，绘图区再按剩余高度算（LEGEND-04） */
-    if (usesContainerHeight && plotHost.clientHeight < 40) return requestAnimationFrame(build);
+    if (usesContainerHeight && !containerDrivesHeight(plotHost.clientHeight)) return buildRetry.schedule();
     plotHost.innerHTML = '';
 
     /* [DATAZOOM-07] 可见窗口切片：主图只吃窗口内类目/数据 → 下游 niceSplit / bandX / mark / hover
@@ -575,5 +577,5 @@ export function CartesianChart(host, cfg) {
     if (!usesContainerHeight && containerTookOver(host.clientHeight, naturalHostHeight)) usesContainerHeight = true;
     build();
   });
-  return { destroy: () => { stopGrow(); stopHover(); stop(); host.innerHTML = ''; } };
+  return { destroy: () => { buildRetry.cancel(); stopGrow(); stopHover(); stop(); host.innerHTML = ''; } };
 }

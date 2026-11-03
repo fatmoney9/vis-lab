@@ -3,8 +3,9 @@
  *
  * API 只接收国家语义数据：
  *   { name, regions:[{id,name,value}], tone='primary', platform='pc' }
- * id 使用规范收录的国家 / 地区码；几何为 Figma 基础图加离线地区校准（WORLD-HEATMAP-09）。
+ * id 使用底图收录的国家 / 地区码；几何运行时取自第三方数据（WORLD-HEATMAP-09）。
  * 五档强度、主题色、无数据底色、国界与 hover 描边全部由 L1 / token 决定。
+ * 底图异步加载：返回值的 ready 在国家画完后兑现，加载失败或国家码不在底图内时拒绝。
  */
 import { pointer, select } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
@@ -12,10 +13,10 @@ import { makeFormatter } from '../../core/format.js';
 import { tokenNum } from '../../core/tokens.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { resolveBehavior } from '../../core/theme.js';
-import { normalizeWorldRegions, assertWorldHeatmapTone, countryFlagThumbnail } from './model.js';
-import { WORLD_MAP_FEATURES, WORLD_MAP_VIEWBOX } from './world-map-data.js';
-
-const FEATURE_BY_ID = new Map(WORLD_MAP_FEATURES.map((feature) => [feature.id, feature]));
+import {
+  normalizeWorldRegions, assertWorldHeatmapTone, countryFlagThumbnail, WORLD_MAP_VIEWBOX, REGIONS_MERGED_INTO_CN,
+} from './model.js';
+import { loadWorldMap } from './world-map-data.js';
 
 const toneColor = (tone) => `var(--color-world-heatmap-${tone})`;
 
@@ -34,8 +35,9 @@ export function WorldHeatmapChart(host, cfg) {
   }
   assertWorldHeatmapTone(tone);
   const normalized = normalizeWorldRegions(regions);
-  const unknown = normalized.filter(({ id }) => !FEATURE_BY_ID.has(id)).map(({ id }) => id);
-  if (unknown.length) throw new TypeError(`WorldHeatmapChart：地图中不存在国家码 ${unknown.join(', ')}`);
+  /* [WORLD-HEATMAP-09] 这几个不必等底图就能拒绝，且不得静默聚合进 CN 的读数。 */
+  const merged = normalized.filter(({ id }) => REGIONS_MERGED_INTO_CN.includes(id)).map(({ id }) => id);
+  if (merged.length) throw new TypeError(`WorldHeatmapChart：地图中不存在国家码 ${merged.join(', ')}`);
 
   const initialHostHeight = host.clientHeight;
   host.replaceChildren();
@@ -77,32 +79,9 @@ export function WorldHeatmapChart(host, cfg) {
   layout();
   const dataById = new Map(normalized.map((region) => [region.id, region]));
 
-  const countries = layer.selectAll('g.dv-world-heatmap__country')
-    .data(WORLD_MAP_FEATURES, ({ id }) => id)
-    .join('g')
-    .attr('class', ({ id }) => `dv-world-heatmap__country${dataById.has(id) ? ' has-data' : ''}`)
-    .attr('data-region', ({ id }) => id)
-    .attr('transform', ({ x, y }) => `translate(${x},${y})`)
-    .style('--dv-world-heatmap-fill', ({ id }) => dataById.has(id)
-      ? toneColor(tone)
-      : 'var(--color-world-heatmap-empty)')
-    .style('--dv-world-heatmap-opacity', ({ id }) => {
-      const region = dataById.get(id);
-      return region ? `var(--opacity-world-heatmap-level-${region.level})` : 1;
-    })
-    .attr('tabindex', ({ id }) => dataById.has(id) ? 0 : null)
-    .attr('role', ({ id }) => dataById.has(id) ? 'graphics-symbol' : null)
-    .attr('aria-label', ({ id }) => {
-      const region = dataById.get(id);
-      return region ? `${region.name}, ${format(region.value)}` : null;
-    });
-  countries.each(function (feature) {
-    select(this).selectAll('path')
-      .data(feature.paths)
-      .join('path')
-      .attr('class', 'dv-world-heatmap__shape')
-      .attr('d', (pathData) => pathData);
-  });
+  /* 底图到达前是空选择集：期间的 resize / 滚动只走布局与空操作。 */
+  const countriesLayer = layer.append('g').attr('class', 'dv-world-heatmap__countries');
+  let countries = countriesLayer.selectAll('g.dv-world-heatmap__country');
 
   /* [WORLD-HEATMAP-06/07] 只把非交互描边副本画在国家层之上。
      原国家节点不移动：重排可聚焦节点会改变 Tab 顺序，甚至导致 focus 丢失。
@@ -119,8 +98,7 @@ export function WorldHeatmapChart(host, cfg) {
     if (activeId !== feature.id) {
       activeId = feature.id;
       countries.classed('is-active', ({ id }) => id === feature.id);
-      highlight.attr('transform', `translate(${feature.x},${feature.y})`)
-        .selectAll('path')
+      highlight.selectAll('path')
         .data(feature.paths)
         .join('path')
         .attr('class', 'dv-world-heatmap__outline')
@@ -178,14 +156,48 @@ export function WorldHeatmapChart(host, cfg) {
     if (node && inView(node)) showAtCountry(node);
     else hide();
   };
-  countries.filter(({ id }) => dataById.has(id))
-    .on('mouseenter', show)
-    .on('mousemove', show)
-    .on('mouseleave', settle)
-    .on('focus', function () {
-      if (this.matches(':focus-visible')) showAtCountry(this);
-    })
-    .on('blur', hide);
+  function renderCountries(features) {
+    const known = new Set(features.map(({ id }) => id));
+    const unknown = normalized.filter(({ id }) => !known.has(id)).map(({ id }) => id);
+    if (unknown.length) throw new TypeError(`WorldHeatmapChart：地图中不存在国家码 ${unknown.join(', ')}`);
+    countries = countries
+      .data(features, ({ id }) => id)
+      .join('g')
+      .attr('class', ({ id }) => `dv-world-heatmap__country${dataById.has(id) ? ' has-data' : ''}`)
+      .attr('data-region', ({ id }) => id)
+      .style('--dv-world-heatmap-fill', ({ id }) => dataById.has(id)
+        ? toneColor(tone)
+        : 'var(--color-world-heatmap-empty)')
+      .style('--dv-world-heatmap-opacity', ({ id }) => {
+        const region = dataById.get(id);
+        return region ? `var(--opacity-world-heatmap-level-${region.level})` : 1;
+      })
+      .attr('tabindex', ({ id }) => dataById.has(id) ? 0 : null)
+      .attr('role', ({ id }) => dataById.has(id) ? 'graphics-symbol' : null)
+      .attr('aria-label', ({ id }) => {
+        const region = dataById.get(id);
+        return region ? `${region.name}, ${format(region.value)}` : null;
+      });
+    countries.each(function (feature) {
+      select(this).selectAll('path')
+        .data(feature.paths)
+        .join('path')
+        .attr('class', 'dv-world-heatmap__shape')
+        .attr('d', (pathData) => pathData);
+    });
+    countries.filter(({ id }) => dataById.has(id))
+      .on('mouseenter', show)
+      .on('mousemove', show)
+      .on('mouseleave', settle)
+      .on('focus', function () {
+        if (this.matches(':focus-visible')) showAtCountry(this);
+      })
+      .on('blur', hide);
+  }
+  let destroyed = false;
+  const ready = loadWorldMap().then((features) => {
+    if (!destroyed) renderCountries(features);
+  });
   /* [TOOLTIP-10] scroll 不冒泡；capture 覆盖页面与任意祖先滚动容器。销毁时必须移除。 */
   window.addEventListener('scroll', settle, { capture: true, passive: true });
 
@@ -195,7 +207,9 @@ export function WorldHeatmapChart(host, cfg) {
     settle();
   });
   return {
+    ready,
     destroy() {
+      destroyed = true;
       window.removeEventListener('scroll', settle, true);
       hide();
       stopResize();

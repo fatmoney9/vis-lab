@@ -34,3 +34,20 @@ jobs:
       # --verify：重建生成物后要求与提交内容零差异——CI 只验不改。
       - name: 运行质量门禁
         run: sh hooks/check.sh --verify
+
+  browser:
+    # 不是 ruleset 的必需检查：只提示、不拦 PR。合同依赖 CDN 与系统字体，先观察稳定性。
+    name: 浏览器合同
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: 运行浏览器合同
+        run: npm run test:browser

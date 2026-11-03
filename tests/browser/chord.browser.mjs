@@ -288,7 +288,7 @@ async function main() {
     if (cdp) await cdp.close();
     await stopProcess(chrome);
     await new Promise((done) => staticServer.close(done));
-    await rm(profile, { recursive: true, force: true });
+    await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
 

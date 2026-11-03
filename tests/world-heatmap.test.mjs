@@ -1,19 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
 
 import {
   assertWorldHeatmapTone,
   countryFlagThumbnail,
   normalizeWorldRegions,
-} from '../charts/charts/world-heatmap/model.js';
-import {
-  WORLD_MAP_FEATURES,
+  projectLonLat,
+  worldMapRegions,
+  WORLD_MAP_URL,
   WORLD_MAP_VIEWBOX,
-} from '../charts/charts/world-heatmap/world-map-data.js';
-import {
-  WORLD_MAP_FEATURES as FIGMA_WORLD_MAP_FEATURES,
-} from '../charts/charts/world-heatmap/figma-world-map-data.js';
+} from '../charts/charts/world-heatmap/model.js';
 
 test('WORLD-HEATMAP-01/03：国家数据归一化并复用五档强度秩', () => {
   const regions = normalizeWorldRegions([
@@ -64,43 +60,39 @@ test('WORLD-HEATMAP-01/05：零值、负值和无数据地图保持有效', () =
   assert.deepEqual(normalizeWorldRegions([]), []);
 });
 
-test('WORLD-HEATMAP-02/06：中国境内使用口径的世界底图与圆形国旗缩略图完整', () => {
-  assert.deepEqual(WORLD_MAP_VIEWBOX, [0, 0, 1000, 600]);
-  assert.equal(WORLD_MAP_FEATURES.length, 253);
-  assert.equal(new Set(WORLD_MAP_FEATURES.map(({ id }) => id)).size, WORLD_MAP_FEATURES.length);
-  assert.ok(WORLD_MAP_FEATURES.every(({ paths }) => paths.length > 0));
-  for (const id of ['TW', 'HK', 'MO']) {
-    assert.equal(WORLD_MAP_FEATURES.some((feature) => feature.id === id), false,
-      `${id} 不得作为与 CN 重叠的独立国家图元`);
-  }
-  assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'CN'), '中国必须保持单一国家图元');
-  assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'IN'), '邻国应保留独立图元');
-  const assetRoot = new URL('../assets/country-flags/', import.meta.url);
-  for (const { id } of WORLD_MAP_FEATURES) {
-    const url = new URL(countryFlagThumbnail(id));
-    assert.ok(url.href.startsWith(assetRoot.href), `${id} 必须使用本地国旗资源`);
-    const svg = readFileSync(url, 'utf8');
-    assert.match(svg, /^<svg\b/, `${id} 必须能读取真实 SVG，不能是符号链接目标字符串`);
-  }
-  /* 反向对账：只查「地区 → 文件」拦不住多余文件，已并入 CN 的地区旗帜会继续随站点发布。 */
-  const referenced = new Set(WORLD_MAP_FEATURES.map(({ id }) => new URL(countryFlagThumbnail(id)).href));
-  const surplus = readdirSync(assetRoot)
-    .filter((file) => file.endsWith('.svg') && !referenced.has(new URL(file, assetRoot).href));
-  assert.deepEqual(surplus, [], '国旗目录不得收录底图用不到的资源');
-  assert.equal(countryFlagThumbnail('cn'), new URL('cn.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('XK'), new URL('xk.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('GO'), new URL('tf.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('JU'), new URL('tf.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('UM-DQ'), new URL('um.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('invalid'), null);
+test('WORLD-HEATMAP-02：投影把世界等比铺进视框，北在上', () => {
+  const [, , width, height] = WORLD_MAP_VIEWBOX;
+  assert.deepEqual(projectLonLat(-180, 84), [0, 0]);
+  const [right, bottom] = projectLonLat(180, -56);
+  assert.equal(right, width);
+  assert.ok(Math.abs(bottom - height) < 1, '南缘落在视框底部');
+  assert.equal(projectLonLat(0, 0)[0], width / 2);
+  assert.ok(projectLonLat(0, 60)[1] < projectLonLat(0, 0)[1], '北纬在上');
+  /* 墨卡托的成品形状：同样 10 度纬差，越靠近高纬拉得越长。 */
+  const span = (lat) => projectLonLat(0, lat)[1] - projectLonLat(0, lat + 10)[1];
+  assert.ok(span(60) > span(0));
 });
 
-test('WORLD-HEATMAP-02：局部校准保留世界其余国家精度并消除印度重复图元', () => {
-  const revisedIds = new Set(['CN', 'IN', 'TW', 'HK', 'MO']);
-  const originalOtherFeatures = FIGMA_WORLD_MAP_FEATURES.filter(({ id }) => !revisedIds.has(id));
-  const correctedOtherFeatures = WORLD_MAP_FEATURES.filter(({ id }) => !revisedIds.has(id));
-  assert.deepEqual(correctedOtherFeatures, originalOtherFeatures,
-    '中国和印度的局部边界校准不得替换、简化、重排或改变世界其余国家的既有路径');
-  const india = WORLD_MAP_FEATURES.find(({ id }) => id === 'IN');
-  assert.equal(india.paths.length, 1, '印度只能保留单份大陆/离岛路径，不能由重复原路径覆盖校准');
+test('WORLD-HEATMAP-09：底图固定第三方提交，南极洲不画，无 ISO 码的争议区只能显示为无数据', () => {
+  assert.match(WORLD_MAP_URL, /^https:\/\/cdn\.jsdelivr\.net\/gh\/.+@[0-9a-f]{40}\/.+\.json$/);
+  const feature = (code, name) => ({ properties: { iso_a2: code, name }, geometry: { type: 'Point', coordinates: [0, 0] } });
+  const regions = worldMapRegions({
+    features: [feature('CN'), feature('AQ'), feature('-99', 'a'), feature('-99', 'b'), feature('IN')],
+  });
+  assert.deepEqual(regions.map(({ id }) => id).slice(0, 1), ['CN']);
+  assert.equal(regions.some(({ id }) => id === 'AQ'), false);
+  assert.equal(new Set(regions.map(({ id }) => id)).size, regions.length, 'id 不得重复');
+  assert.deepEqual(regions.filter(({ id }) => /^[A-Z]{2}$/.test(id)).map(({ id }) => id), ['CN', 'IN']);
+});
+
+test('WORLD-HEATMAP-06：国旗指向固定提交，上游符号链接改取真实文件', () => {
+  /* 固定到完整提交号：浮动版本会让线上国旗随上游变化，也就失去了对账依据。 */
+  const flagFile = /^https:\/\/cdn\.jsdelivr\.net\/gh\/HatScripts\/circle-flags@[0-9a-f]{40}\/flags\/([a-z-]+)\.svg$/;
+  const flagOf = (id) => countryFlagThumbnail(id).match(flagFile)?.[1];
+  assert.equal(flagOf('cn'), 'cn');
+  /* 上游符号链接：CDN 对它们返回目标文件名字符串，图片必然加载失败。 */
+  assert.equal(flagOf('HM'), 'au');
+  assert.equal(flagOf('SH'), 'sh-hl');
+  assert.equal(flagOf('UM'), 'us');
+  assert.equal(countryFlagThumbnail('invalid'), null);
 });

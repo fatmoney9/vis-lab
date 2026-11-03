@@ -93,7 +93,8 @@ export async function freePort() {
   return port;
 }
 
-export async function waitForJson(url, timeout = 10000) {
+/* 30 秒：CI 上第一份合同要等 Chrome 冷启动，10 秒实测会超时。 */
+export async function waitForJson(url, timeout = 30000) {
   const started = Date.now();
   let lastError;
   while (Date.now() - started < timeout) {

@@ -32,13 +32,12 @@ if [ "$VERIFY" = 1 ]; then git diff --exit-code -- tokens/tokens.css; fi
 node assets/build-watermark-assets.mjs
 if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/core/watermark-assets.js; fi
 
-# 3/14 固定底图的离线地区校准；本地重建，CI 额外核对提交内容，避免源与生成物漂移。
-node assets/world-map/build.mjs
-if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/charts/world-heatmap/world-map-corrections.js; fi
-
-# 4/14 语法检查——单测 import 不到的文件（渲染构件、预览外壳）只能靠它兜住
-find charts hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
+# 3/14 语法检查——单测 import 不到的文件（渲染构件、注册表）只能靠它兜住
+find charts demos hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
   | xargs -0 -n1 node --check
+
+# 4/14 预览面 HTML 的内联脚本语法（find 只认 .js / .mjs，这部分单测也加载不了）
+node hooks/lint-inline-scripts.mjs
 
 # 5/14 纯逻辑单测（零第三方依赖；.mjs 显式 ESM，兼容 node 20.10/24）
 # 引号不能去：让 node 自己展开 **，shell 展开只匹配一层。写成 tests/*.mjs 时

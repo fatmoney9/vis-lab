@@ -15,23 +15,24 @@ import {
   waitForJson, openCdp, evaluate, waitFor, stopProcess,
 } from './harness.mjs';
 
-/* 固定底图坐标独立于构建投影/裁切代码；留出国界距离，避免描边或浮点误差冒充归属。
-   藏南西/中/东分别验证区域覆盖，南侧与邻国控制点验证没有粗暴矩形归并。 */
+/* 底图国家数（第三方数据去掉南极洲后）；换固定提交时要一起核对。 */
+const MAP_COUNTRIES = 238;
+
+/* 经纬度独立于投影代码；离国界留出距离，避免低分辨率边界或描边误差冒充归属。 */
 const CHINA_MAP_SAMPLES = [
-  { name: '台湾内陆', point: [812, 358], id: 'CN', mouse: true },
-  { name: '香港内部', point: [794.6, 361.9], id: 'CN' },
-  { name: '澳门内部', point: [792.94, 362.5], id: 'CN' },
-  { name: '藏南西部', point: [733, 348], id: 'CN', mouse: true },
-  { name: '藏南中部', point: [737.5, 347], id: 'CN', mouse: true },
-  { name: '藏南东部', point: [743, 345], id: 'CN' },
-  { name: '边界南侧印度', point: [737.5, 350], id: 'IN' },
-  { name: '不丹控制', point: [728, 347.5], id: 'BT' },
-  { name: '缅甸控制', point: [748, 349], id: 'MM' },
+  { name: '台湾内陆', point: [121, 23.7], id: 'CN', mouse: true },
+  { name: '藏南西部', point: [92.8, 27.9], id: 'CN', mouse: true },
+  { name: '藏南中部', point: [94.5, 28.3], id: 'CN', mouse: true },
+  { name: '藏南东部', point: [96, 28.4], id: 'CN' },
+  { name: '边界南侧印度', point: [94, 26.3], id: 'IN' },
+  { name: '不丹控制', point: [90.5, 27.4], id: 'BT' },
+  { name: '缅甸控制', point: [96.5, 22], id: 'MM' },
 ];
 
 /* 普通 HTML 外壳属于测试夹具，国家与描边 SVG 只能由 WorldHeatmapChart 生成。 */
 async function setupFixture() {
   const { WorldHeatmapChart } = await import('/charts/charts/world-heatmap/index.js');
+  const { projectLonLat, WORLD_MAP_VIEWBOX } = await import('/charts/charts/world-heatmap/model.js');
   const fixture = document.createElement('section');
   fixture.id = 'world-heatmap-contract';
   Object.assign(fixture.style, {
@@ -105,14 +106,15 @@ async function setupFixture() {
     outlines: host.querySelectorAll('.dv-world-heatmap__outline').length,
     order: order(),
   });
-  const clientPoint = ([x, y]) => {
+  const clientPoint = ([lon, lat]) => {
+    const [x, y] = projectLonLat(lon, lat);
     const matrix = host.querySelector('.dv-world-heatmap__map').getScreenCTM();
     const screen = new DOMPoint(x, y).matrixTransform(matrix);
     return { x: screen.x, y: screen.y };
   };
   window.__worldHeatmapContract = {
     host, scroller, before, after, regions, order, dataOrder, enter, state, listenerState, clientPoint,
-    mount({ theme = 'ths', platform = 'pc', mode = 'light', customRegions, width, height } = {}) {
+    async mount({ theme = 'ths', platform = 'pc', mode = 'light', customRegions, width, height } = {}) {
       chart?.destroy();
       scroller.scrollTop = 0;
       Object.assign(fixture.dataset, { theme, platform, mode });
@@ -123,6 +125,7 @@ async function setupFixture() {
       chart = WorldHeatmapChart(host, {
         name: 'World heatmap contract', platform, regions: customRegions ?? regions,
       });
+      await chart.ready;
       return {
         countries: order().length, dataOrder: dataOrder(),
         emptyTabs: [...host.querySelectorAll('.dv-world-heatmap__country:not(.has-data)')]
@@ -161,6 +164,18 @@ async function setupFixture() {
         chinaFills: fill(cn), activeFills: active ? fill(active) : [],
       };
     },
+    async destroyBeforeReady() {
+      const early = WorldHeatmapChart(host, { name: 'Early destroy', regions });
+      early.destroy();
+      await early.ready;
+      return host.querySelectorAll('.dv-world-heatmap__country').length;
+    },
+    async unknownRegion(id) {
+      const unknown = WorldHeatmapChart(host, { name: 'Unknown', regions: [{ id, name: id, value: 1 }] });
+      const message = await unknown.ready.then(() => null, (error) => error.message);
+      unknown.destroy();
+      return message;
+    },
     rejectRegion(id) {
       try {
         WorldHeatmapChart(host, {
@@ -174,11 +189,13 @@ async function setupFixture() {
     geometry() {
       const svg = host.querySelector('.dv-world-heatmap');
       const matrix = host.querySelector('.dv-world-heatmap__map').getCTM();
-      /* [WORLD-HEATMAP-02] 规范视框是 1000×600，验证其四角在真实 SVG viewport 内；
+      /* [WORLD-HEATMAP-02] 验证视框四角在真实 SVG viewport 内；
          不能仅看国家计数或描边副本与原路径是否对齐。 */
-      const corners = [[0, 0], [1000, 0], [1000, 600], [0, 600]]
+      const [, , mapWidth, mapHeight] = WORLD_MAP_VIEWBOX;
+      const corners = [[0, 0], [mapWidth, 0], [mapWidth, mapHeight], [0, mapHeight]]
         .map(([x, y]) => new DOMPoint(x, y).matrixTransform(matrix));
       return {
+        mapWidth, mapHeight,
         viewport: { width: svg.width.baseVal.value, height: svg.height.baseVal.value },
         matrix: { a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d },
         mapped: {
@@ -296,13 +313,14 @@ async function setupFixture() {
     },
     resize(width) { enter('CN'); host.style.width = width + 'px'; },
     /* 容器不给高度：host 真正 height:auto，走 token 默认高。density 与 data-theme 挂同一元素。 */
-    autoHeight({ theme, density, width = 600 }) {
+    async autoHeight({ theme, density, width = 600 }) {
       chart?.destroy();
       fixture.dataset.theme = theme;
       if (density) fixture.dataset.density = density;
       else delete fixture.dataset.density;
       Object.assign(host.style, { width: width + 'px', height: 'auto' });
       chart = WorldHeatmapChart(host, { name: 'World heatmap contract', regions });
+      await chart.ready;
       return { svgH: Number(host.querySelector('svg').getAttribute('height')), hostH: host.clientHeight };
     },
     clearDensity() { delete fixture.dataset.density; },
@@ -383,13 +401,13 @@ async function setupFixture() {
   };
 }
 
-function assertGeometry({ viewport, matrix, mapped }, context) {
+function assertGeometry({ mapWidth, mapHeight, viewport, matrix, mapped }, context) {
   /* SVG transform 底层可存 float32，1e-6 容差避免把正常 0.6 的二进制误差当拉伸。 */
   assert.ok(matrix.a > 0 && Math.abs(matrix.a - matrix.d) < 1e-6
     && Math.abs(matrix.b) < 1e-6 && Math.abs(matrix.c) < 1e-6,
   `${context}：底图必须正向等比缩放，不能拉伸或旋转`);
-  assert.ok(Math.abs(matrix.a - Math.min(viewport.width / 1000, viewport.height / 600)) < 1e-6,
-    `${context}：1000×600 视框应使用完整 contain 缩放`);
+  assert.ok(Math.abs(matrix.a - Math.min(viewport.width / mapWidth, viewport.height / mapHeight)) < 1e-6,
+    `${context}：视框应使用完整 contain 缩放`);
   assert.ok(mapped.left >= -0.01 && mapped.top >= -0.01
     && mapped.right <= viewport.width + 0.01 && mapped.bottom <= viewport.height + 0.01,
   `${context}：完整底图视框不得越出 SVG viewport ${JSON.stringify({ viewport, mapped })}`);
@@ -403,7 +421,7 @@ function assertChinaMouseState(result, context) {
   assert.equal(result.visible, true, `${context}：应显示中国 Tooltip`);
   assert.equal(result.title, 'China', `${context}：不得使用地区独立名称`);
   assert.equal(result.value, '5', `${context}：应读取 CN 的同一个数值`);
-  assert.match(result.iconSrc, /\/assets\/country-flags\/cn\.svg$/, `${context}：应使用中国国旗`);
+  assert.match(result.iconSrc, /\/flags\/cn\.svg$/, `${context}：应使用中国国旗`);
   assert.ok(result.chinaFills.length > 0, `${context}：中国图元必须包含几何`);
   const firstFill = result.chinaFills[0];
   assert.ok(result.chinaFills.every((fill) => fill.fill === firstFill.fill && fill.opacity === firstFill.opacity),
@@ -461,7 +479,7 @@ async function main() {
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
     await cdp.send('Page.navigate', { url: `http://${LOOPBACK}:${port}/index.html` });
     const gallerySelector = '.example-card[data-chart="world-heatmap"] .dv-world-heatmap__country';
-    await waitFor(cdp, `document.querySelectorAll(${JSON.stringify(gallerySelector)}).length === 253`, 25000);
+    await waitFor(cdp, `document.querySelectorAll(${JSON.stringify(gallerySelector)}).length === ${MAP_COUNTRIES}`, 25000);
     const gallery = await evaluate(cdp, `([...document.querySelectorAll(${JSON.stringify(gallerySelector)})]
       .every((node) => getComputedStyle(node).pointerEvents === 'none'
         && [...node.querySelectorAll('path')].every((path) => getComputedStyle(path).pointerEvents === 'none')))`);
@@ -474,7 +492,7 @@ async function main() {
         for (const mode of ['light', 'dark']) {
           const where = `${theme}/${platform}/${mode}`;
           const mounted = await call(`mount(${JSON.stringify({ theme, platform, mode })})`);
-          assert.equal(mounted.countries, 253, `${where}：底图国家数`);
+          assert.equal(mounted.countries, MAP_COUNTRIES, `${where}：底图国家数`);
           assert.equal(mounted.dataOrder.length, 3, `${where}：有数据 Tab 数`);
           assert.equal(mounted.emptyTabs, 0, `${where}：无数据国家不得进入 Tab`);
           assert.equal(mounted.zeroHasData, true, `${where}：真实 0 应保留`);
@@ -520,7 +538,7 @@ async function main() {
       }
     }
 
-    /* 特意打破 1000:600 的容器比例：默认比例可能掩盖非等比/偏心缩放错误。 */
+    /* 特意打破视框的容器比例：默认比例可能掩盖非等比/偏心缩放错误。 */
     await call('mount({ width: 600, height: 260 })');
     assertGeometry(await call('geometry()'), '非标准 600×260 容器');
 
@@ -561,7 +579,7 @@ async function main() {
         await call(`mount(${JSON.stringify({ theme, mode, customRegions: [] })})`);
         const empty = await call('emptyData()');
         const where = `${theme}/${mode}/空数据`;
-        assert.equal(empty.countries, 253, `${where}：空数据仍保留完整底图`);
+        assert.equal(empty.countries, MAP_COUNTRIES, `${where}：空数据仍保留完整底图`);
         assert.equal(empty.hasData, 0, `${where}：不能标记有数据国家`);
         assert.equal(empty.tabs, 0, `${where}：不能包含国家 Tab 入口`);
         assert.equal(empty.visible, false, `${where}：hover 不得显示 Tooltip`);
@@ -625,7 +643,7 @@ async function main() {
     const focusedAfter = await call('focusState()');
     assert.ok(focusedAfter.sameNode && focusedAfter.focused === focusedBefore.focused, 'resize 不得丢失键盘焦点');
     assert.ok(focusedAfter.visible && focusedAfter.outlines > 0, 'resize 后焦点展示应保留');
-    assert.equal(focusedAfter.order.length, 253, 'resize 后国家节点完整');
+    assert.equal(focusedAfter.order.length, MAP_COUNTRIES, 'resize 后国家节点完整');
     assertGeometry(await call('geometry()'), 'resize 后');
     await pressTab();
     assert.equal((await call('focusState()')).focused, keyboard.dataOrder[1], 'resize 后 Tab 应接着走');
@@ -633,7 +651,7 @@ async function main() {
     /* [WORLD-HEATMAP-06] 鼠标与键盘分开：点击不挪气泡；鼠标移开回到键盘焦点国家。 */
     await call('mount()');
     await leavePointer();
-    const hit = (await call('ownership([812, 358])')).screen;
+    const hit = (await call('ownership([121, 23.7])')).screen;
     await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y });
     const hovered = await call('focusState()');
     assert.equal(hovered.title, 'China', '前置：鼠标应命中中国');
@@ -674,12 +692,36 @@ async function main() {
     await call('enter("CN")');
     await waitFor(cdp, 'window.__worldHeatmapContract.flagState().loaded');
     const flag = await call('flagState()');
-    assert.match(flag.src, /\/assets\/country-flags\/cn\.svg$/, '国旗应随本站本地发布');
+    assert.match(flag.src, /^https:\/\/cdn\.jsdelivr\.net\/gh\/HatScripts\/circle-flags@[0-9a-f]{40}\/flags\/cn\.svg$/, '国旗应取自固定提交');
     assert.ok(flag.imageVisible && !flag.fallbackVisible, '成功图片应显示且不占兜底槽');
+    /* [WORLD-HEATMAP-06] 真实加载每个地区的国旗：上游符号链接在 CDN 上是 200 + 文件名字符串，
+       只有解码这一步拦得住，单测与响应状态码都发现不了。 */
+    const brokenFlags = await evaluate(cdp, `(async () => {
+      const [{ countryFlagThumbnail }, { loadWorldMap }] = await Promise.all([
+        import('/charts/charts/world-heatmap/model.js'),
+        import('/charts/charts/world-heatmap/world-map-data.js'),
+      ]);
+      const ids = (await loadWorldMap()).map(({ id }) => id).filter((id) => countryFlagThumbnail(id));
+      const loads = (url) => new Promise((settle) => {
+        const image = new Image();
+        image.onload = () => settle(image.naturalWidth > 0);
+        image.onerror = () => settle(false);
+        image.src = url;
+      });
+      const checked = await Promise.all(ids.map(async (id) => [id, await loads(countryFlagThumbnail(id))]));
+      return checked.filter(([, ok]) => !ok).map(([id]) => id);
+    })()`);
+    assert.deepEqual(brokenFlags, [], '底图每个地区的国旗都必须能真实加载');
+    /* 底图还在路上就销毁：不得把国家画到已卸载的宿主上。 */
+    const afterEarlyDestroy = await call('destroyBeforeReady()');
+    assert.equal(afterEarlyDestroy, 0, '底图加载中销毁后不得再绘制');
+    assert.match(await call('unknownRegion("ZZ")'), /地图中不存在国家码 ZZ/, '不在底图内的国家码应经 ready 拒绝');
+    await call('mount()');
+    await call('enter("CN")');
     assert.equal(await call('switchFlag("IN")'), 'hidden', '换国家时不得让新标题配旧国旗');
     await waitFor(cdp, `getComputedStyle(window.__worldHeatmapContract.host.querySelector('.dv-tooltip img')).visibility === 'visible'`);
     await call(`mount(${JSON.stringify({ customRegions: [
-      { id: 'CN', name: 'China', value: 1, flagUrl: '/assets/country-flags/nonexistent-contract-flag.svg' },
+      { id: 'CN', name: 'China', value: 1, flagUrl: '/nonexistent-contract-flag.svg' },
     ] })})`);
     await call('enter("CN")');
     await waitFor(cdp, 'window.__worldHeatmapContract.flagState().fallbackVisible');

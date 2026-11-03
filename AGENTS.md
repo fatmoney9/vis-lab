@@ -40,8 +40,9 @@
 | Tooltip 气泡 | `core/tooltip.js` | `createTooltip`（`place()` 自己算 clamp 边界，不要传容器尺寸）。**气泡宽度只在 TOOLTIP-01 一处定**（内容 / 视口 / 容器三道封顶）——不要给单个图型另写 `.dv-tooltip` 的 `max-width` 覆盖，内容放不下时先重量全族再调通用值 |
 | 图片内容块（标准化 / 自适应 / SVG / Tooltip） | `core/image-content.js` | `normalizeImageContent` · `fitImageContent` · `renderImageContent` · `imageContentTooltip`（[IMAGECONTENT-01..04]） |
 | 系列取色 | `core/palette.js` | `resolveSeriesColors` |
+| 数据项取色（强度分档 / 涨跌 / 表现色阶） | `core/visual-color.js` | `intensityLevels` · `performanceColorRamp`（[COLOR-09/10]） |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
-| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高；`xBandLines` 声明多行 X 带）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，三族共用，别再抄阈值） |
+| 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高；`xBandLines` 声明多行 X 带）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，别再抄阈值）· `createBuildRetry`（容器塌陷时的下一帧重试，destroy 必须撤销） |
 | 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderXLabels` · `axisLabelLines` / `renderAxisLabelLines` / `xAxisLabelTextLayout`（常态与高亮态共用的逐行内容与文字坐标）· `renderGrid` · `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
@@ -162,7 +163,7 @@
   - **可调节雷达图**是 `editable: true` 的单系列输入能力（RADAR-18），不是新图族也不占 `variant`；手柄沿径向轴拖动、可键盘调值，仍共用 `[0,max]` 标尺。它不渲染常规扇形 hover 热区；多系列直接抛错，避免同轴手柄重叠后编辑对象不明
   - 对外示例分**标准雷达 / 多数据雷达 / 分区雷达**，但组件视觉变体仍只有 `variant: 'basic' | 'rating'`，多数据只由 `series` 数量表达且不开放可调节能力；仅 index 详情页用“数据组数”滑块选择 2–10 条示例系列，它不是 `CHART_CAPABILITIES` 或组件配置。网格形状（圆 / 正多边形）、闭合形状（直线 / 曲线）与维度标签排列（横排 / 环绕）是可正交组合的组件 cfg；可调节能力只用于单系列。主预览面用旋钮组合，专项面对六个典型配置做三主题回归。维度标签用 `axisLabelLayout: 'horizontal' | 'arc'`，常规默认横排、editable 默认环绕，两者均可显式覆盖。分区示例用 `ratingStyle` 在连续渐变（默认）与离散色带间切换；渐变固定取独立五档色阶，离散档支持独立的 5 / 6 段色阶，`ratingBandLabels.length` 同时控制图内色带、环线与底部色块，阈值文案可配置、色值不可配置
 
-- **ChordChart**（`charts/charts/chord/`，见 `specs/chord.md` CHORD-01..19）：同一组实体之间的**相互流动**。与桑基互补——桑基讲纵向拆解、弦图讲横向流转，但**两者不能合成一个组件**：桑基强制 DAG、禁自环、要求流量守恒，而 A→B 与 B→A 同时成环正是弦图的本体，校验规则互为否定。要点：
+- **ChordChart**（`charts/charts/chord/`，见 `specs/chord.md` CHORD-01..20）：同一组实体之间的**相互流动**。与桑基互补——桑基讲纵向拆解、弦图讲横向流转，但**两者不能合成一个组件**：桑基强制 DAG、禁自环、要求流量守恒，而 A→B 与 B→A 同时成环正是弦图的本体，校验规则互为否定。要点：
   - 输入是 `entities` + **n×n 流量方阵**（`matrix[i][j]` = i 流向 j）。对角线一律忽略、负值与非数按 0，全零矩阵只画外圈占位不抛错（CHORD-01）
   - **角度 = 数据、半径 = 常量**，与饼环同列、与雷达相反——这是 `specs/radar.md`「下沉点①」不被弦图触发的依据
   - `variant: 'undirected'（默认）| 'directed'` 的**唯一差异是槽位表**（CHORD-05）：无向档弧长 = 总流出、有向档 = 流出 + 流入。同一份数据两档外圈弧长不同是模型的必然结果，不是 bug。角度分配、路径、取色、交互、动效一概与 variant 无关；方向由目标端**按比例收窄**表达，不用 `<marker>` 箭头
@@ -172,6 +173,6 @@
   - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
   - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
 
-- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以规范收录的国家 / 地区码标识，几何使用 Figma 基础图加可重建的离线地区校准（来源见 `assets/world-map/README.md`）；`CN` 统一包含台湾、港澳及本次校准的藏南区域，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
+- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以 ISO alpha-2 码标识，底图与国旗都经 jsDelivr 加载固定提交的第三方数据（来源见本族 README），不进仓库；底图异步到达，用 `ready` 等待。`CN` 统一包含台湾、港澳，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。

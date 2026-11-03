@@ -38,7 +38,7 @@
  * 没有同类固定外框硬需求的新图型，照上面三步走即可，不要照抄桑基。
  */
 
-import { ainvestCompanyIdentity } from './company-icons.js';
+import { ainvestCompanyFallback } from './company-identity.js';
 import {
   resolveSankeySequenceViewport,
   withSharedSankeyScale,
@@ -500,12 +500,10 @@ const ainvestPresentation = (index) => {
   const price = 38.5 + ((index * 37.11) % 410);
   const cap = index < 18 ? `${(3.48 - index * 0.13).toFixed(2)}T` : `${Math.round(860 - index * 9.4)}B`;
   const colorValue = TREEMAP_SEMANTIC_VALUES[index % TREEMAP_SEMANTIC_VALUES.length];
-  const { image, imageFallback } = ainvestCompanyIdentity(ticker);
   return {
     label: ticker,
     value: formatPercent(colorValue),
-    image,
-    imageFallback,
+    imageFallback: ainvestCompanyFallback(ticker),
     colorValue,
     details: [
       { key: 'price', label: 'Price', value: price.toFixed(2) },
