@@ -250,3 +250,26 @@ test('TREEMAP-17：缺失或非法 colorValue 保持为空，不伪装成平盘'
     node: { name: 'Invalid', presentation: { colorValue: 'not-a-number' } },
   }).colorValue, null);
 });
+
+test('TREEMAP-18：showImage=false 时图片与首字母兜底一起去掉，文字与 Tooltip 其余内容保留', () => {
+  const item = {
+    node: {
+      name: 'Apple',
+      presentation: {
+        label: 'AAPL', value: '+7.23%', image: '/aapl.png', imageFallback: 'A', colorValue: 7.23,
+        details: [{ key: 'metric', label: 'Metric', value: '203.98' }],
+      },
+    },
+    displayValue: '+7.23%',
+  };
+  const hidden = itemPresentation(item, { showImage: false });
+  assert.equal(hidden.image, null);
+  assert.equal(hidden.imageFallback, null);
+  assert.equal(hidden.label, 'AAPL');
+  assert.equal(hidden.value, '+7.23%');
+  assert.equal(hidden.colorValue, 7.23);
+  const tooltip = detailTooltipContent({ ...item, presentation: hidden });
+  assert.equal(tooltip.title, 'AAPL');
+  assert.equal(tooltip.titleIcon, null);
+  assert.equal('titleIconFallback' in tooltip, false);
+});

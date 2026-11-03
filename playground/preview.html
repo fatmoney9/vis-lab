@@ -216,6 +216,14 @@
       </div>
 
       <div class="field">
+        <div class="field-label"><b>公司标识</b><span>showImage · 仅影响 Ainvest 卡片</span></div>
+        <div class="seg" id="seg-treemap-image">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
+      <div class="field">
         <div class="field-label"><b>瀑布颜色</b><span>colorMode</span></div>
         <div class="seg" id="seg-waterfall-color">
           <button data-value="primary" class="is-active">主色</button>
@@ -436,7 +444,7 @@
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
   const initialCategory = CATEGORIES.find(({ id }) => id === window.location.hash.slice(1)) ?? CATEGORIES[0];
-  const state = { category: initialCategory.id, periodIndex: 0, platform: 'pc', mode: 'light', density: defaultDensityOf(initialCategory), treemapColor: 'intensity', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: initialCategory.id, periodIndex: 0, platform: 'pc', mode: 'light', density: defaultDensityOf(initialCategory), treemapColor: 'intensity', treemapImage: 'off', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -548,6 +556,7 @@
       button.classList.toggle('is-active', button.dataset.value === state.density);
     });
     document.getElementById('seg-treemap-color').closest('.field').hidden = !caps.treemapColor;
+    document.getElementById('seg-treemap-image').closest('.field').hidden = !caps.treemapImage;
     document.getElementById('seg-waterfall-color').closest('.field').hidden = !caps.waterfallColor;
     document.getElementById('seg-label').closest('.field').hidden = !caps.dataLabel;
     document.getElementById('seg-label-layout').closest('.field').hidden = !caps.labelLayout;
@@ -608,6 +617,7 @@
       theme: themeId,
       density: state.density,
       treemapColor: state.treemapColor,
+      treemapImage: state.treemapImage === 'on',
       waterfallColor: state.waterfallColor,
       platform: state.platform,
       zoom: state.zoom === 'on',
@@ -711,6 +721,7 @@
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
   wireSeg('seg-treemap-color', 'treemapColor');
+  wireSeg('seg-treemap-image', 'treemapImage');
   wireSeg('seg-waterfall-color', 'waterfallColor');
   wireSeg('seg-label', 'label');
   wireSeg('seg-label-layout', 'labelLayout');

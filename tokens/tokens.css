@@ -124,6 +124,7 @@
   --opacity-world-heatmap-level-5: 0.6;
   --size-world-heatmap-border: 0.5px;
   --size-world-heatmap-flag: 16px;
+  --size-world-heatmap-height: 240px;
   --font-size-tooltip: 12px;
   --font-family-tooltip: var(--font-family-cn);
   --font-weight-tooltip-value: var(--font-weight-medium);
@@ -455,6 +456,7 @@
   --opacity-world-heatmap-level-5: 0.6;
   --size-world-heatmap-border: 0.5px;
   --size-world-heatmap-flag: 16px;
+  --size-world-heatmap-height: 240px;
   --font-size-tooltip: 14px;
   --font-family-tooltip: Arial;
   --font-weight-tooltip-value: var(--font-weight-regular);
@@ -789,6 +791,7 @@
   --opacity-world-heatmap-level-5: 0.6;
   --size-world-heatmap-border: 0.5px;
   --size-world-heatmap-flag: 16px;
+  --size-world-heatmap-height: 240px;
   --font-size-tooltip: 12px;
   --font-family-tooltip: var(--font-family-en);
   --font-weight-tooltip-value: var(--font-weight-regular);
@@ -1040,6 +1043,7 @@
   --size-donut-ring-width: 24px;
   --size-line-point: 6px;
   --font-size-tooltip: 11px;
+  --size-world-heatmap-height: 140px;
 }
 
 [data-theme="ainvest"][data-density="compact"][data-platform="mobile"] {

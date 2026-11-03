@@ -674,6 +674,7 @@
       density: 4,            /* 连续档：本站的项数是一根滑杆，存的是**数**不是档位 id；
                                 进详情时由 defaultDensityCountOf 换成该示例的默认值 */
       treemapColor: 'intensity',
+      treemapImage: false,    /* [TREEMAP-18] 公司标识，默认关 */
       axisValue: false,       /* [RADAR-07] 轴标签数值，默认关；与交互无关 */
       radarGridShape: 'auto', /* [RADAR-03] 圆形 / 多边形网格；auto 保留示例默认 */
       radarShape: 'auto',    /* [RADAR-05] 直线 / 曲线轮廓；auto 保留示例默认 */
@@ -1023,6 +1024,7 @@
               <div class="slider__ends"><span>${seriesControl.min}</span><span>${seriesControl.max}</span></div>
             </div>` : ''}
             ${caps.treemapColor && state.theme === 'ths' ? `<div class="field"><span class="field__label">颜色模式</span><span class="field__hint">THS · 程度五档 / 涨跌三档 / 涨跌无档位</span>${segment('treemapColor', [['intensity', '程度'], ['semantic-binned', '涨跌（分档）'], ['semantic-flat', '涨跌（不分档）']], state.treemapColor)}</div>` : ''}
+            ${caps.treemapImage && state.theme === 'ainvest' ? `<div class="field"><div class="field__row"><div class="field__copy"><span class="field__label">公司标识</span><span class="field__hint">TREEMAP-18 · 默认不显示；开启后单元格与 Tooltip 显示 logo</span></div><label class="switch" aria-label="公司标识"><input id="treemap-image-switch" type="checkbox"${state.treemapImage ? ' checked' : ''}><span class="switch__track"><span class="switch__knob"></span></span></label></div></div>` : ''}
             ${caps.radarGridShape ? `<div class="field"><span class="field__label">网格形态</span><span class="field__hint">RADAR-03 · 圆形或正多边形</span>${segment('radarGridShape', [['circle', '圆形'], ['polygon', '多边形']], effectiveRadarGridShape)}</div>` : ''}
             ${caps.radarShape ? `<div class="field"><span class="field__label">闭合轮廓</span><span class="field__hint">RADAR-05 · 直线或曲线</span>${segment('radarShape', [['straight', '直线'], ['curve', '曲线']], effectiveRadarShape)}</div>` : ''}
             ${caps.ratingStyle ? `<div class="field"><span class="field__label">分区</span><span class="field__hint">RADAR-15 · 默认连续渐变，可切离散色带</span>${segment('ratingStyle', [['gradient', '渐变'], ['bands', '分段']], state.ratingStyle)}</div>` : ''}
@@ -1184,6 +1186,10 @@
         state.animation = event.target.checked;
         rerenderDetail();
       });
+      document.getElementById('treemap-image-switch')?.addEventListener('change', (event) => {
+        state.treemapImage = event.target.checked;
+        rerenderDetail();
+      });
       document.getElementById('axis-value-switch')?.addEventListener('change', (event) => {
         state.axisValue = event.target.checked;
         rerenderDetail();
@@ -1193,7 +1199,7 @@
           theme: 'ths', platform: 'pc', mode: 'light', uiDensity: 'standard', density: defaultDensityCountOf(state.detail),
           dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
           legendSelect: 'multi',
-          treemapColor: 'intensity', axisValue: false,
+          treemapColor: 'intensity', treemapImage: false, axisValue: false,
           radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', seriesCount: defaultIndexSeriesCountOf(state.detail), ratingStyle: 'gradient', ratingBandCount: '6',
           axisLabelLayout: 'auto', waterfallColor: 'primary',
           chordVariant: 'undirected', chordLabelLayout: 'arc',

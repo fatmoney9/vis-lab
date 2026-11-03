@@ -89,8 +89,10 @@ export function HBarChart(host, cfg) {
     const rows = Math.max(1, Math.min(topN, target.rows.length));
     const usesContainer = containerDrivesHeight(host.clientHeight);
     const wantedHeight = rows * rowContainerMax + axisBand;
+    /* ⚠️ 随容器必须把容器高传下去：不传 height 时 createFrame 退到 --size-chart-region-height，
+       行被塞进 160/200 的主题默认高度，一拖动条就变细、再拖高也不跟。 */
     const frame = createFrame(host, {
-      height: usesContainer ? undefined : wantedHeight,
+      height: usesContainer ? host.clientHeight : wantedHeight,
       xBand: false,
       minGridHeight: 0,
     });

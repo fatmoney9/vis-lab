@@ -18,7 +18,7 @@
 | TREEMAP-01 | 数据为递归 `{name,value?,children?}`。叶节点正值参与布局；`null`、非数、负值与 0 不生成面积。父节点由有效子节点递归汇总，声明序号保留用于固定色槽。 | `charts/charts/treemap/geometry.js` → `aggregateValue()` / `displayChildren()` | ✅ |
 | TREEMAP-02 | 当前面积严格按原始正值占比计算，不为长尾节点伪造面积。基线 PDF 另提出“尽量真实”概念，但未给出压缩算法或定量阈值；在设计源补充前不实现、不暴露配置，也不以工程常量代替规范。 | `geometry.js` → `ratioShares()` | ⏳ |
 | TREEMAP-03 | 默认使用 squarify，子节点按权重降序从左上沿短边填充。THS / iFinD 基线 PDF 的内部节点间距为 2px、画板外角为 4px；AInvest Figma 实例的间距为 1px、外角为 6px。内部节点均保持直角且不叠加描边。差异由主题 token 表达，布局器不得硬编码统一值。 | `index.js` → `tileFor()`；`size-treemap-gap` / `radius-treemap-canvas` | ✅ |
-| TREEMAP-04 | 当前层每个节点占一个稳定系列色槽；具体使用调用方配置、系列、强度或有符号语义策略由 `behavior.json` 的 `treemap-profile.color-mode` 决定。无效项过滤、hover 与下钻均不重排同层声明色槽。 | `index.js`；`core/palette.js`；`core/visual-color.js`；`behavior.json` | ✅ |
+| TREEMAP-04 | 当前层每个节点占一个稳定系列色槽；具体使用调用方配置、系列、强度或有符号语义策略由 `behavior.json` 的 `treemap-profile.color-mode` 决定。无效项过滤与 hover 均不重排同层声明色槽。 | `index.js`；`core/palette.js`；`core/visual-color.js`；`behavior.json` | ✅ |
 | TREEMAP-05 | 通用文本树图名称默认 12px、最小 8px，系统字体；数值默认 12px、最小 6px，主题数字字体。四边安全距 4px，标题优先按“单行 → 两行 → 缩小单行 → 缩小两行 → 隐藏”降级；数值从 `clamp(valueMin, 名称字号 - size-treemap-value-font-deviation, valueMax)` 起继续缩小，仍放不下则隐藏。THS / iFinD 依据基线文档取 2px；入口型名称与数值均固定 12px，故钳制后仍同号。AInvest 图片内容按 TREEMAP-18 使用独立范围，该主题 token 为 0。默认整组居中，也支持左下对齐。L2 只决定降级顺序，实际宽度必须由 L1 `createTextMeasurer()` 按真实字体与字号测量。 | `geometry.js` → `fitTreemapLabel()`；`index.js`；`core/measure.js`；`size-treemap-value-font-deviation` | ✅ |
 | TREEMAP-06 | **单层展示，无层级下钻，也没有顶部路径条**。数据仍可以是递归结构，但深层只用于**汇总父节点的值**，不作为可进入的层级；点击矩形只钉住 / 取消钉住 Tooltip（TREEMAP-07）。<br>本条 2026-08-26 由「点击进入下一层 + 顶部路径返回」整体改为无下钻——产品层面不设面包屑，而面包屑是下钻后唯一的返回通道，两者只能同去同留；留下单向下钻会让人进得去出不来。随之退场的还有 `behavior.json` 的 `root-breadcrumb` 键与 `.dv-treemap-breadcrumb*` 样式，**不留残键**。 | `index.js`（点击仅走 `activate` 钉住 Tooltip）；`core/highlight-state.js` → `applyHover` / `applyLeave` / `applyPick` / `activeTarget`（hover 与钉住的状态迁移，与桑基共用一份） | ✅ |
 | TREEMAP-07 | hover 或点击叶节点时只在当前节点叠加共享的 `color-visualization-highlight-block` 遮罩并显示 Tooltip，不压暗其他节点。三主题直接复用 L1 `createTooltip()` 的主体看板骨架，**位置档统一 `follow`**（跟随指针）；这是矩形树图共同的形态规则，不进入主题 behavior，与饼环同属 [tooltip.md](tooltip.md) TOOLTIP-07 的「无坐标系图恒 follow」通则。<br>⚠️ 2026-08-26 前本条写的是「对侧固定式」（`side-fixed`），已按产品决定改为 `follow`。节点可选图片与详情行通过 L1 图片内容合同进入，L2 不适配业务字段。所有节点支持 `Enter` / `Space`。 | `index.js`；`core/image-content.js`；`core/tooltip.js` | ✅ |
@@ -32,19 +32,19 @@
 | TREEMAP-15 | 动态矩形树图属于时间变化形态，应使用稳定的 Resquarified 布局减少节点跳动，并配合时间控制。当前只沿用静态树图的入场动效。 | 待实现时间数据与稳定布局 | ⏳ |
 | TREEMAP-16 | 单元格内名称与数值统一复用 `color-text-inverse-primary`（84% 白色）；名称使用全局中文字体，数值使用全局数字字体，THS 下解析为 `THSJinRongTi`。 | `charts/styles.css`；`color-text-inverse-primary` / `font-family-cn` / `font-family-number` | ✅ |
 | TREEMAP-17 | 矩形树图不维护私有颜色值或私有颜色算法。`intensity` 将当前层面积值按秩映射全局五档透明度，并列值同档，最大值最深且随降序布局位于左上；`semantic-binned` 使用主题最终的三档涨跌色，透明度若存在已包含在颜色 token 内，L1 / L2 均不再叠加；`semantic-flat` 固定使用同方向 `gradient-1`，0 使用 `color-price-even-gradient`。THS 三档是 COLOR-ADR-01 记录的 100% / 75% / 55%；AInvest 使用 Figma 的完整 light / dark 色值。面积只由 `value` 决定，有符号颜色必须消费有限的 `presentation.colorValue`，缺失或非法时不得伪装成平盘。两处分档阈值由调用方按业务口径传入 `colorThresholds`，且必须严格递增；当前 AInvest 演示的 `[1, 2]` 对应 Figma 范围条示例。全部策略由 L1 COLOR-09 实现，L2 只完成参数装配。 | `core/visual-color.js`；`index.js`；`color-price-{up\|down}-gradient-1..3` / `color-price-even-gradient`；`demos/examples.js` | ✅ |
-| TREEMAP-18 | 三主题共用同一份单画布面积布局。AInvest 只通过 `content=image` 与 `semantic-binned` 选择通用图片内容和涨跌色能力；内容根据面积布局产出的实际矩形宽高连续适配，而不直接消费业务数值：四边安全距 4px，图片 64→12px，股票代码 28→11px / semibold，涨跌幅、现价或市值 20→11px / medium（设备无该字重时禁用伪造字重并回落最近的实际字重）。数值优先字号统一按“名称适配后的字号 − `size-treemap-value-font-deviation`”计算，再钳制于数值字号上下限；THS / iFinD 的差值为 2px，AInvest 的差值为 0px。这里的 2px / 0px 是计算差值，不是数值字号。空间不足时由 IMAGECONTENT-02 依次降级，紧凑节点优先保留 12px 企业标识。真实公司图标缺失或加载失败时，不得借用 Apple 等其他企业图标；改用圆形 `color-background-layer1` 页面一级背景 + 企业名称首字母，文字使用主题默认字体、`font-weight-bold` 字重与 `color-text-primary`，明暗模式由 token 自动适配。业务数据由 L3 映射为 `{label,value,image,imageFallback,colorValue,details}`，公司图标及名称首字母由 L3 资源映射提供，组件不识别主题、品牌、股票、行业分组或行情字段。 | [Figma 节点 `0:232`](https://www.figma.com/design/Uv36h0PXzZG7ZhuHBHQ3qz/AInvest%E7%9F%A9%E5%BD%A2%E6%A0%91%E5%9B%BE%E8%A7%84%E8%8C%83?node-id=0-232&t=yGNxXzGoUFEajZTV-4)；`core/image-content.js`；`content.js`；`index.js`；`behavior.json`；`demos/examples.js`；`demos/company-icons.js` | ✅ |
+| TREEMAP-18 | 三主题共用同一份单画布面积布局。AInvest 只通过 `content=image` 与 `semantic-binned` 选择通用图片内容和涨跌色能力；内容根据面积布局产出的实际矩形宽高连续适配，而不直接消费业务数值：四边安全距 4px，图片 64→12px，股票代码 28→11px / semibold，涨跌幅、现价或市值 20→11px / medium（设备无该字重时禁用伪造字重并回落最近的实际字重）。数值优先字号统一按“名称适配后的字号 − `size-treemap-value-font-deviation`”计算，再钳制于数值字号上下限；THS / iFinD 的差值为 2px，AInvest 的差值为 0px。这里的 2px / 0px 是计算差值，不是数值字号。空间不足时由 IMAGECONTENT-02 依次降级，紧凑节点优先保留 12px 企业标识。公司标识**默认不显示**（`showImage: false`）：单元格与 Tooltip 都不出图片和首字母，股票代码与数值的布局同样连续适配；`showImage: true` 才显示。文本内容主题（THS / iFinD）本来就没有标识，不受影响。真实公司图标缺失或加载失败时，不得借用 Apple 等其他企业图标；改用圆形 `color-background-layer1` 页面一级背景 + 企业名称首字母，文字使用主题默认字体、`font-weight-bold` 字重与 `color-text-primary`，明暗模式由 token 自动适配。业务数据由 L3 映射为 `{label,value,image,imageFallback,colorValue,details}`，公司图标及名称首字母由 L3 资源映射提供，组件不识别主题、品牌、股票、行业分组或行情字段。 | [Figma 节点 `0:232`](https://www.figma.com/design/Uv36h0PXzZG7ZhuHBHQ3qz/AInvest%E7%9F%A9%E5%BD%A2%E6%A0%91%E5%9B%BE%E8%A7%84%E8%8C%83?node-id=0-232&t=yGNxXzGoUFEajZTV-4)；`core/image-content.js`；`content.js`；`index.js`；`behavior.json`；`demos/examples.js`；`demos/company-icons.js` | ✅ |
 
 ## 活 demo
 
 `index.html` 与 `playground/preview.html` 的矩形树图分组：
 
-- `#treemap-entry`：默认 6 个等面积入口节点；点击一级行业进入子行业，顶部路径可返回“全部行业”。
+- `#treemap-entry`：默认 6 个等面积入口节点；点击只钉住 / 取消钉住 Tooltip，无下钻（TREEMAP-06）。
 - `#treemap-local`：默认 18 个节点，覆盖真实比例、两行标题和极小值文字隐藏。
 - `#treemap-overall`：默认 42 个节点，覆盖真实比例、左下标签、16/14px 起始字号与长尾隐藏。
 - 标题最多两行并从 12px 缩至 8px；数值从 12px 缩至 6px，空间不足时依次隐藏。
 - hover 或点击节点显示当前节点遮罩与 Tooltip；拖动容器宽高时矩形、标签与水印重排。
 - THS 主题右侧可切换“程度 / 涨跌（分档） / 涨跌（不分档）”；iFinD 保留系列色。
-- AInvest 主题固定为行情涨跌三档：入口型为等分股票块，通用型与全局型均和 THS、iFinD 共用单画布面积布局。
+- AInvest 主题固定为行情涨跌三档：入口型为等分股票块，通用型与全局型均和 THS、iFinD 共用单画布面积布局。右侧「公司标识」开关默认关（TREEMAP-18）。
 
 ## API
 
@@ -59,6 +59,7 @@ TreemapChart(host, {
   colorThresholds,                // semantic-binned 的两个正数业务阈值，如 [1, 2]
   platform = 'pc',
   animation = true,
+  showImage = false,              // 是否显示 presentation.image / imageFallback（TREEMAP-18），仅 content=image 的主题生效
   text,                           // 可选：固定文案整套替换，缺省 content.js 的 TREEMAP_TEXT（CHARTTEXT-01/02）
 })
 ```

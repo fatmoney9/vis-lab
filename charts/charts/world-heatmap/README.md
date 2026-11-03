@@ -27,7 +27,7 @@
 | `scale` | 不用：国家位置由固定矢量坐标决定，数据只映射五档强度 |
 | `split` | 不用：无数值轴刻度，不需要 nice split |
 | `theme` | 用 |
-| `tokens` | 不用：本族只通过 CSS 变量消费值 token，不在 JS 中读取数值 token |
+| `tokens` | 用 |
 | `tooltip` | 用 |
 | `visual-color` | 用 |
 | `watermark` | 不用：Figma 地图规范未展示品牌水印 |

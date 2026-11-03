@@ -119,6 +119,37 @@ try {
   ck(playedNames.length > 0 && !playedNames.some((n) => CJK.test(n)),
      `Ainvest 播放推进后行名仍为英文（实测 ${JSON.stringify(playedNames.slice(0, 3))}）`);
 
+  /* [HBAR-08] 拖动手柄：浏览器的原生 resize 同时写宽高，这里照做。
+     只改宽度时容器高不变，条粗必须不动；拖高后画布必须跟随容器。 */
+  const sizing = `(() => {
+    const surface = document.querySelector('.stage__surface');
+    const host = surface.querySelector('.chart-host');
+    const svg = host.querySelector('svg');
+    return {
+      thick: [...new Set([...host.querySelectorAll('.dv-hbar__row path')].map((p) => +p.getBBox().height.toFixed(2)))],
+      svgH: +svg.getAttribute('height'), hostH: host.clientHeight,
+      w: surface.clientWidth, h: surface.getBoundingClientRect().height,
+    };
+  })()`;
+  const dragTo = (w, h) => evaluate(cdp, `(() => {
+    const s = document.querySelector('.stage__surface');
+    s.classList.add('is-resized');
+    s.style.width = '${w}px';
+    s.style.height = '${h}px';
+  })()`);
+  const initial = await evaluate(cdp, sizing);
+  ck(initial.thick.length === 1, `前置：各行条粗一致（实测 ${initial.thick}）`);
+  await dragTo(initial.w - 60, initial.h);
+  await sleep(700);
+  const narrowed = await evaluate(cdp, sizing);
+  ck(narrowed.w < initial.w, '前置：宽度确实变了');
+  ck(narrowed.thick[0] === initial.thick[0], `只改宽度条粗不得跳变（${initial.thick} → ${narrowed.thick}）`);
+  await dragTo(initial.w - 60, initial.h + 300);
+  await sleep(700);
+  const taller = await evaluate(cdp, sizing);
+  ck(taller.svgH === taller.hostH && taller.svgH > initial.svgH, `拖高后画布应跟随容器（画布 ${taller.svgH} / 容器 ${taller.hostH}）`);
+  ck(taller.thick[0] === initial.thick[0], `拖高后条粗仍封顶（${initial.thick} → ${taller.thick}）`);
+
   if (cdp.errors.length) { console.log('页面报错', cdp.errors.slice(0, 2)); bad += 1; }
   await cdp.close();
 } finally {

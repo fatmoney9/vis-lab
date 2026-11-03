@@ -295,6 +295,21 @@ async function setupFixture() {
       return { x: box.x, y: box.y, width: box.width, height: box.height, scale: 1 };
     },
     resize(width) { enter('CN'); host.style.width = width + 'px'; },
+    /* 容器不给高度：host 真正 height:auto，走 token 默认高。density 与 data-theme 挂同一元素。 */
+    autoHeight({ theme, density, width = 600 }) {
+      chart?.destroy();
+      fixture.dataset.theme = theme;
+      if (density) fixture.dataset.density = density;
+      else delete fixture.dataset.density;
+      Object.assign(host.style, { width: width + 'px', height: 'auto' });
+      chart = WorldHeatmapChart(host, { name: 'World heatmap contract', regions });
+      return { svgH: Number(host.querySelector('svg').getAttribute('height')), hostH: host.clientHeight };
+    },
+    clearDensity() { delete fixture.dataset.density; },
+    svgSize() {
+      const svg = host.querySelector('svg');
+      return { w: Number(svg.getAttribute('width')), h: Number(svg.getAttribute('height')), hostH: host.clientHeight };
+    },
     pushDown(px) { before.style.marginBottom = px + 'px'; },
     focusState() {
       const node = document.activeElement;
@@ -508,6 +523,23 @@ async function main() {
     /* 特意打破 1000:600 的容器比例：默认比例可能掩盖非等比/偏心缩放错误。 */
     await call('mount({ width: 600, height: 260 })');
     assertGeometry(await call('geometry()'), '非标准 600×260 容器');
+
+    /* [WORLD-HEATMAP-02] 默认高度来自 token，不随宽度变；紧凑档只有声明了的主题才生效。 */
+    for (const [theme, density, expected] of [
+      ['ths', null, 240], ['ifind-pc', null, 240], ['ainvest', null, 240], ['ainvest', 'compact', 140],
+    ]) {
+      const where = `${theme}${density ? `/${density}` : ''}`;
+      const auto = await call(`autoHeight(${JSON.stringify({ theme, density })})`);
+      assert.equal(auto.svgH, expected, `${where}：默认画布高`);
+      assert.equal(auto.hostH, expected, `${where}：host 由画布撑开`);
+      assertGeometry(await call('geometry()'), `${where} 默认高度`);
+      await call('setWidth(360)');
+      await waitFor(cdp, 'window.__worldHeatmapContract.svgSize().w === 360');
+      const narrow = await call('svgSize()');
+      assert.equal(narrow.h, expected, `${where}：改宽度不得改默认高`);
+      assert.equal(narrow.hostH, expected, `${where}：改宽度后 host 高不变`);
+    }
+    await call('clearDensity()');
 
     /* 可选 PR 证据：从真实 L2 夹具生成三主题截图，不把截图当像素 golden baseline。 */
     if (process.env.VIS_LAB_BROWSER_ARTIFACTS) {

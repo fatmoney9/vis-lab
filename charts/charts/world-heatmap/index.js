@@ -9,13 +9,13 @@
 import { pointer, select } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
 import { makeFormatter } from '../../core/format.js';
+import { tokenNum } from '../../core/tokens.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { resolveBehavior } from '../../core/theme.js';
 import { normalizeWorldRegions, assertWorldHeatmapTone, countryFlagThumbnail } from './model.js';
 import { WORLD_MAP_FEATURES, WORLD_MAP_VIEWBOX } from './world-map-data.js';
 
 const FEATURE_BY_ID = new Map(WORLD_MAP_FEATURES.map((feature) => [feature.id, feature]));
-const MAP_RATIO = WORLD_MAP_VIEWBOX[3] / WORLD_MAP_VIEWBOX[2];
 
 const toneColor = (tone) => `var(--color-world-heatmap-${tone})`;
 
@@ -57,7 +57,7 @@ export function WorldHeatmapChart(host, cfg) {
     const width = Math.max(1, plotHost.clientWidth || host.clientWidth);
     const height = usesContainerHeight
       ? Math.max(1, host.clientHeight)
-      : Math.max(1, Math.round(width * MAP_RATIO));
+      : tokenNum(host, '--size-world-heatmap-height') || 240; /* [WORLD-HEATMAP-02] */
     frame = createFrame(plotHost, { width, height, xBand: false, minGridHeight: 0, svg: frame?.svg });
     frame.svg
       .attr('class', 'dv-world-heatmap')
