@@ -11,7 +11,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | COLOR-01 | **系列色是第三类主题数据，不进 tokens.css**：一律写死 hex、不走值 token；**light / dark 同色、无深色派生**；整套替换、绝不跨主题混用。原因：取色是**算法**（依赖图型 / 系列数 / 序号 / 柱线归属），CSS 变量表达不了；且设计源明确"写死 hex"。数据在 `tokens/palette.json`，取色器在 `charts/core/palette.js`（`build.mjs` 不读 palette.json，故不会被输出为 CSS 变量） | `tokens/palette.json` + `core/palette.js` | ✅ |
-| COLOR-07 | **禁止引入色板外颜色**作为系列色（组件源码无 hex 字面量——hex 只在 palette.json；组件里只有 `currentColor` / `var(--dv-series-i)`） | 当前由约定与 review 保证；自动 token lint 见 `WORKFLOW.md` 待办 | ⚠️ 规则已满足，自动门禁待接入 |
+| COLOR-07 | **禁止引入色板外颜色**作为系列色（组件源码无 hex 字面量——hex 只在 palette.json；组件里只有 `currentColor` / `var(--dv-series-i)`） | `hooks/lint-color-literals.mjs` | ✅ |
 | COLOR-06 | **涨跌色不在系列色板内**，走值 token `color-price-up` / `color-price-down`（红绿柱、盒须、K 线等语义色） | `tokens/*.json` | ✅ |
 
 ## 取色规则

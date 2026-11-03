@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布与全球热力图关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移，以及热力图 hover / focus / 滚动清理 / Tab 顺序已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布、弦图、桑基、排名图、播放、全球热力图与容器塌陷重试的关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移，排名图与播放控件，以及热力图 hover / focus / 滚动清理 / Tab 顺序已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 

@@ -55,7 +55,7 @@
 `demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理英文主题
 图表内部内容的英文展示。各面 import 同一份、各自决定怎么展示，
 故加示例只加一处、不会漂移；示例用 `surfaces` 字段声明进哪个面（缺省两面都进），
-用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（饼 / 环 / 横向条形…）的步骤写在
+用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（如 K 线）的步骤写在
 `demos/examples.js` 文件头——预览面本身都不用改。
 
 ⚠️ **数据量有两条并存的通道，都由 `buildConfig` 收口**：三档预设 id（`densityValues` +
@@ -203,7 +203,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 1. 在规范文档写该图表的规范条目，分配新 ID
 2. 盘点所需构件：L1 有则复用；通用且缺失则新建 L1 模块
 3. 写 L2 组件，代码注释引用规范 ID
-4. 写 demo（只传数据），嵌入规范页
+4. 在 `demos/` 加示例（只传数据）
 5. 亮/暗两种外观下目检，确认 token 链路贯通
 
 **L1 成本的三个实测点**：`PieChart` 动了 L1 四个文件六处（明细见第八节），`SankeyChart` 与
@@ -236,7 +236,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 
 ## 八、当前状态与后续里程碑
 
-截至 2026-10-10，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
+截至 2026-11-03，当前仓库已完成：三主题 token 构建、L1 轴/网格/图例/tooltip/数据标签/轴标题/动效等共享构件、
 **九个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `HBarChart`（横向条；**给了时间序列就是排名竞赛形态**——名次与数值同时插值、Top-N 进出榜，见 `specs/hbar.md` HBAR-01..23）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
@@ -244,7 +244,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
 、`RadarChart`（标准 / 多数据 / 分区三类示例，角度均分 · 值→半径 · 横排 / 环绕标签 · 连续 / 分段背景 · 单系列可调节输入，见 `specs/radar.md` RADAR-01..18）
 、`WaterfallChart`（累计桥接 / 分组数据柱 · 有符号累计与分段守恒 · 三主题共用浅底箭头柱并使用各自主题色，见 `specs/waterfall.md` WATERFALL-01..15）
-、`ChordChart`（实体间相互流动，n×n 方阵 · 角度∝流量 · 无向 / 有向两档槽位模型 · 环绕 / 横排两档实体标签，见 `specs/chord.md` CHORD-01..19）
+、`ChordChart`（实体间相互流动，n×n 方阵 · 角度∝流量 · 无向 / 有向两档槽位模型 · 环绕 / 横排两档实体标签，见 `specs/chord.md` CHORD-01..20）
 与 `WorldHeatmapChart`（全球国家分级设色 · 五档强度 · 三套主题色 · hover / 键盘 Tooltip，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
@@ -293,12 +293,12 @@ Radar L2 只决定连续渐变或离散色带的消费方式。这个后续扩�
 `core/label.js` 的 `dropCollisions` 同理：字段从 `left/width` 改成 `start/size` 之后，
 「换个轴要不要再抄一份」这个问题就不存在了。
 
-下一个图型（HBar / K 线）可据此估算：真正的成本在 L2 与规范页；**L1 的成本几乎全部来自
+下一个图型（如 K 线）可据此估算：真正的成本在 L2 与规范页；**L1 的成本几乎全部来自
 「为轴图设的隐含假设被无轴图暴露」**——不是缺功能，是缺一个说清楚的边界。
 
 后续按以下顺序推进：
 
-1. **上视觉保险**：Playwright 浏览器 / 视觉测试接入 CI，之后补色板 CVD/对比度校验。
+1. **上视觉保险**：浏览器合同已作为非必需 job 接入 CI，下一步是建立视觉基线，之后补色板 CVD/对比度校验。
    （**色值字面量 lint 已于 2026-08-17 接入**——`hooks/lint-color-literals.mjs`；在此之前
    第四节的拼接铁律 1 一直只靠纪律执行、无人检查。）
    **具体步骤与推进顺序见 `TESTING.md` 第七节「接入路线」，此处不复述。**
@@ -306,7 +306,7 @@ Radar L2 只决定连续渐变或离散色带的消费方式。这个后续扩�
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
 3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
    也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
-4. **接入更多图型**：饼 / 环（[specs/pie.md](specs/pie.md)）与桑基（[specs/sankey.md](specs/sankey.md)）已落；横向条形 HBar、K 线等同法——
+4. **接入更多图型**：现有九族已落；K 线等新图型同法——
    L2 组件 + `demos/registry.js` 登记 + `CHART_CAPABILITIES` 声明能力，两个预览面无需改动。
    ⚠️ 桑基是**目前唯一的例外**：除上述三步外还额外动了 L3（见第七节「新增一种图表」的例外说明）。
 5. **进阶工具**：token 对照表自动生成。
@@ -315,7 +315,7 @@ Radar L2 只决定连续渐变或离散色带的消费方式。这个后续扩�
 
 ## 九、质量保障
 
-测试按六层组织，从静态门禁一路到视觉回归；当前**静态门禁与逻辑单测已接入**，其余待接入。
+测试按六层组织，从静态门禁一路到视觉回归；当前**静态门禁、逻辑单测和浏览器合同已接入**，视觉回归与非功能测试待接入。
 静态门禁的各项检查集中在 `hooks/check.sh`——提交前守卫与 CI 调的是同一个脚本，故本地通过基本等于 CI 通过。
 
 **分层清单、各层现状、覆盖矩阵、基线审批与失败处理一律以 `TESTING.md` 为准；未接入项不得标为自动化覆盖。**
