@@ -48,7 +48,7 @@ git switch -c feat/tooltip-12-touch
 
 ## 提交前验证
 
-所有提交至少运行一次完整门禁（会顺带重建 `tokens.css` 与水印资源模块）：
+所有提交至少运行一次完整门禁（会顺带重建 `tokens.css`、水印资源模块与地图校准模块）：
 
 ```bash
 sh hooks/check.sh        # 等价 npm run check

@@ -57,7 +57,7 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 **引号不能去掉**：要让 node 自己展开 `**`，交给 shell 展开只会匹配一层。写成 `tests/*.mjs` 时，
 `tests/` 子目录里的测试文件会被**静默跳过**——不报错、不警告，只是那些用例从此不再执行。
 
-`hooks/check.sh` 会更新生成文件 `tokens/tokens.css` 与 `charts/core/watermark-assets.js`。CI 侧多带
+`hooks/check.sh` 会更新生成文件 `tokens/tokens.css`、`charts/core/watermark-assets.js` 与 `charts/charts/world-heatmap/world-map-corrections.js`。CI 侧多带
 一个 `--verify`：重建后要求生成物与提交内容零差异，因此**生成物必须与源改动放在同一提交**。
 
 > 项目源码是浏览器原生 ES Modules。根目录 `package.json` 声明 `"type": "module"`，Node 由此把 `.js`

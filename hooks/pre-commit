@@ -1,6 +1,6 @@
 #!/bin/sh
 # 提交前：跑 hooks/check.sh 的全部检查，并把重新生成的产物一并纳入本次提交，
-# 保证 tokens.css / watermark-assets.js 永不与源脱节。
+# 保证 tokens.css / watermark-assets.js / world-map-corrections.js 永不与源脱节。
 #
 # 检查清单本身不在这里——住在 hooks/check.sh（唯一一份，CI 调的是同一个脚本）。
 # 因此「本地过了 CI 挂了」只可能来自环境差异（node 版本、大小写敏感的文件系统）
@@ -13,4 +13,4 @@ set -e
 out=$(sh hooks/check.sh 2>&1) || { printf '%s\n' "$out" >&2; exit 1; }
 
 # 生成物随源一起进提交；CI 侧用 --verify 只验不改，两边合起来才保证不脱节。
-git add tokens/tokens.css charts/core/watermark-assets.js
+git add tokens/tokens.css charts/core/watermark-assets.js charts/charts/world-heatmap/world-map-corrections.js
