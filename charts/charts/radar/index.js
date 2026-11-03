@@ -41,7 +41,7 @@
  *         animation（语义配置）：true 顺时针依次出现 / false 直接终态；减弱动效下恒终态
  */
 import { select, line, curveLinearClosed, curveCardinalClosed } from 'd3';
-import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
+import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { tokenNum, tokenStr } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
@@ -252,7 +252,9 @@ export function RadarChart(host, cfg) {
   /* [MOTION-04] 入场只在实例首次挂载时播一次——build() 同时被 resize / 图例显隐复用。 */
   let firstBuild = true;
 
+  const buildRetry = createBuildRetry(build);
   function build() {
+    buildRetry.cancel();
     stopGrow();
     stopGrow = () => {};
     stopDrag();
@@ -261,7 +263,7 @@ export function RadarChart(host, cfg) {
     drawLegend();                       /* 图例先占位，可用空间再按剩余算（LEGEND-04） */
     /* [RADAR-09] 容器塌到不可用高度时推迟到下一帧、**不抛错**：标签页切换 / 折叠面板展开 /
        懒布局首帧都会让容器高短暂为 0，那不是配置错误，抛异常会把整张图打没且不会自己回来。 */
-    if (usesContainerHeight && host.clientHeight < 40) return requestAnimationFrame(build);
+    if (usesContainerHeight && !containerDrivesHeight(host.clientHeight)) return buildRetry.schedule();
     plotHost.innerHTML = '';
     /* ⚠️ 气泡必须**在清空之后**建：它是 plotHost 的子节点，建在 build 外会被上面那行连根删掉
        （症状很隐蔽——扇形高亮照常，只是气泡再也不出现）。同 pie / treemap 的做法。 */
@@ -777,6 +779,7 @@ export function RadarChart(host, cfg) {
     /* [RADAR-18] 无回调场景也能在提交时读取当前编辑结果；始终返回副本，不泄露内部可变数组。 */
     getData: () => resolved.map((r) => ({ name: r.name, data: [...r.data] })),
     destroy: () => {
+      buildRetry.cancel();
       stopGrow();
       stopDrag();
       clearTimeout(hideTimer);

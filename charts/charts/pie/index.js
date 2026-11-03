@@ -23,7 +23,7 @@
  *         animation（语义配置）：true 入场扫掠 / false 直接终态；系统「减弱动态效果」下恒终态（MOTION-07）
  */
 import { select, arc } from 'd3';
-import { createFrame, observeResize, containerDrivesHeight, containerTookOver } from '../../core/frame.js';
+import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
@@ -175,7 +175,9 @@ export function PieChart(host, cfg) {
   }
 
   /* 主流程：画布 → 扇区（顺带接 hover、收生长闭包）→ 标签 → 水印 → 入场扫掠 */
+  const buildRetry = createBuildRetry(build);
   function build() {
+    buildRetry.cancel();
     stopHover();
     stopHover = () => {};
     stopGrow();
@@ -183,7 +185,7 @@ export function PieChart(host, cfg) {
     stopEmph();
     stopEmph = () => {};
     drawLegend(); /* 图例先占位，可用空间再按剩余算（LEGEND-04） */
-    if (usesContainerHeight && host.clientHeight < 40) return requestAnimationFrame(build);
+    if (usesContainerHeight && !containerDrivesHeight(host.clientHeight)) return buildRetry.schedule();
     plotHost.innerHTML = '';
 
     /* [PIE-02][PIE-09] 可用空间从 **host** 量，不从 plotHost 量：绘图区已改成贴着环成块
@@ -679,6 +681,7 @@ export function PieChart(host, cfg) {
      （CartesianChart 只加一个恒定的 dv-chart，没有这个问题，故那边不需要对称清理。） */
   return {
     destroy: () => {
+      buildRetry.cancel();
       stopGrow();
       stopEmph();
       stopHover();
