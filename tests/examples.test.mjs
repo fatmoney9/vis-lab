@@ -237,7 +237,7 @@ test('AXISTITLE-01：主轴与 X 标题恒有文案（兜底或示例自带）',
  */
 /* ⚠️ **这是全库唯一一处硬编码图表类型清单**（其余判定都按 cfg 形态或能力声明走）。
    接入新的无坐标系图型时必须加进来——**漏了不会报错**，守卫只是静悄悄地不覆盖它。 */
-const AXISLESS_CHARTS = ['pie', 'treemap', 'radar', 'chord'];
+const AXISLESS_CHARTS = ['pie', 'treemap', 'radar', 'chord', 'world-heatmap'];
 
 test('PIE-05/PIE-08/TREEMAP-08/RADAR-07/CHORD-19：无坐标系图不得声明轴相关能力，旋钮开着也装不进 cfg', () => {
   const axisless = EXAMPLES.filter((e) => AXISLESS_CHARTS.includes(e.chart));

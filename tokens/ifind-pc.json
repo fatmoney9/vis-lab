@@ -180,6 +180,25 @@
   "opacity-visualization-intensity-level-3": 0.75,
   "opacity-visualization-intensity-level-4": 0.85,
   "opacity-visualization-intensity-level-5": 1,
+  "color-world-heatmap-primary": "#4D5999",
+  "color-world-heatmap-up": "{color-price-up}",
+  "color-world-heatmap-down": "{color-price-down}",
+  "color-world-heatmap-empty": {
+    "light": "rgba(0, 0, 0, 0.05)",
+    "dark": "rgba(255, 255, 255, 0.06)"
+  },
+  "color-world-heatmap-border": {
+    "light": "#FFFFFF",
+    "dark": "#0F0F0F"
+  },
+  "color-world-heatmap-highlight": "{color-text-primary}",
+  "opacity-world-heatmap-level-1": 0.1,
+  "opacity-world-heatmap-level-2": 0.2,
+  "opacity-world-heatmap-level-3": 0.3,
+  "opacity-world-heatmap-level-4": 0.4,
+  "opacity-world-heatmap-level-5": 0.6,
+  "size-world-heatmap-border": "0.5px",
+  "size-world-heatmap-flag": "16px",
   "$section-11": "提示框 Tooltip",
   "font-size-tooltip": "14px",
   "font-family-tooltip": "Arial",

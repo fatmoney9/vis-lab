@@ -71,6 +71,19 @@ try {
      蒙混过关——那等于什么都没验。 */
   await waitFor(cdp, `document.querySelectorAll('.nav-item').length > 5`, 20000);
 
+  /* 导航路由：无 hash 的默认页也要能「点当前项重置」，后退到无 hash 要回到默认项。 */
+  const activeNav = `document.querySelector('.nav-item.is-active')?.dataset.id`;
+  const activeDensity = `document.querySelector('#seg-density button.is-active')?.dataset.value`;
+  const firstNav = await evaluate(cdp, activeNav);
+  await evaluate(cdp, `document.querySelector('#seg-density button[data-value="many"]').click()`);
+  assert.equal(await evaluate(cdp, activeDensity), 'many', '前置：密度已改动');
+  await evaluate(cdp, `document.querySelector('.nav-item.is-active').click()`);
+  assert.notEqual(await evaluate(cdp, activeDensity), 'many', '无 hash 时点当前项应重置旋钮');
+  await evaluate(cdp, `[...document.querySelectorAll('.nav-item')].find((n) => !n.classList.contains('is-active')).click()`);
+  await waitFor(cdp, `${activeNav} !== ${JSON.stringify(firstNav)}`);
+  await evaluate(cdp, 'history.back()');
+  await waitFor(cdp, `${activeNav} === ${JSON.stringify(firstNav)} && location.hash === ''`);
+
   /* ① 跨示例切换要把上一个控制器收干净：否则旧控制器还挂在已 destroy 的实例上，
         切回来就是两个控制器抢同一条轴（表现为点一次播放跳两期）。 */
   assert.ok(await evaluate(cdp, clickNav(OTHER)), `左栏能切到「${OTHER}」`);
