@@ -37,7 +37,7 @@
 |---|---|---|---|
 | PLAYBACK-08 | **带文字的刻度最多 8 个，首末两期恒带字**。8 期时每期都带字，24 期时糊成一片。<br>⚠️ **抽稀的只是文字，不是刻度本身**——每一期仍是一个可点的按钮，跳期能力不能因为期数多就残掉；不带文字的收窄成细标记。<br>标签可用宽按**带字的刻度数**算、不是按总期数：24 期按 23 做分母会把每个标签压成「2..」 | `demos/playback/view.js` → `playbackTicksMarkup` / `labelledTickCount` | ✅ |
 | PLAYBACK-09 | **控件文案必须整套给全，缺键当场抛错**（口径同 L1 `core/chart-text.js` 的 CHARTTEXT-01/02：宁可渲染时炸，也不要在英文面上残留半截中文或渲染出 `undefined`）。<br>**本件只持有控件自身的 chrome 文案**（播放 / 暂停 / 上一期…），按主题语言切换；<br>**业务文案留在各图型自己的 presentation 模块**——期次怎么称呼由示例数据自带，本件只负责显示，不认识它的含义 | `demos/playback/view.js` → `playbackCopy` / `assertPlaybackCopy` | ✅ |
-| PLAYBACK-10 | **宿主高度换算**：调用方提供序列画布高与跨主题最低图例兜底，真实图例占位由当前 L3 主题 token 决定。<br>`legendFallbackHeight === null` 表示**本图型没有图例带**，整段图例预留跳过。<br>各图型自己的外框尺寸不在本页（桑基的 812px 报表框见 [sankey.md](sankey.md) SANKEY-23） | `demos/playback/view.js` → `resolvePlaybackChartHeight` | ✅ |
+| PLAYBACK-10 | **宿主高度换算**：调用方提供序列画布高与跨主题最低图例兜底，真实图例占位由当前 L3 主题 token 决定。图型可另声明 `canvasHeightToken` 让密度档覆盖画布高（token 为 0 时不覆盖）。<br>`legendFallbackHeight === null` 表示**本图型没有图例带**，整段图例预留跳过。<br>各图型自己的外框尺寸不在本页（桑基的 812px 报表框见 [sankey.md](sankey.md) SANKEY-23） | `demos/playback/view.js` → `resolvePlaybackChartHeight` / `resolvePlaybackCanvasHeight` | ✅ |
 
 ## 三主题视觉
 

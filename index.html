@@ -646,6 +646,7 @@
     import {
       playbackCopy,
       applyPlaybackViewport,
+      resolvePlaybackCanvasHeight,
       playbackMarkup as sharedPlaybackMarkup,
     } from './demos/playback/view.js';
 
@@ -1068,7 +1069,7 @@
           if (!Number.isFinite(legendHeight) || legendHeight <= 0) return;
           stageHost.closest('.chart-playback-layout')?.style.setProperty(
             '--chart-playback-chart-height',
-            `${playbackViewport.canvasHeight + legendHeight}px`,
+            `${resolvePlaybackCanvasHeight(surface, playbackViewport) + legendHeight}px`,
           );
         });
       }

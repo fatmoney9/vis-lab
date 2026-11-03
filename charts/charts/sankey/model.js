@@ -3,7 +3,7 @@
  * 以及复用 layout.js 结果装配序列级比例尺 / 视口；不复制布局公式，不包含 DOM 装配。
  */
 import { resolveSankeySettings } from './config.js';
-import { assertSankeyConfig, layoutSankey } from './layout.js';
+import { assertSankeyConfig, layoutSankey, scaleSankeyStyle } from './layout.js';
 
 function semanticColorVar(role) {
   return `--color-sankey-${role}`;
@@ -92,7 +92,34 @@ export function withSharedSankeyScale(periods) {
   const scaleMax = Math.max(
     ...periods.map((period) => assertSankeyConfig(period).primary.magnitude),
   );
-  return periods.map((period) => ({ ...period, scaleMax }));
+  const scaled = periods.map((period) => ({ ...period, scaleMax }));
+  /* [SANKEY-29] 序列的默认绘图区高也是全序列口径，随 scaleMax 一起声明给每一期。 */
+  const sequenceCanvasHeight = Object.fromEntries(['pc', 'mobile'].map((platform) => [
+    platform,
+    resolveSankeySequenceViewport(scaled, platform).canvasHeight,
+  ]));
+  const sequencePeakLinkValues = Object.fromEntries(['pc', 'mobile'].map((platform) => [
+    platform,
+    peakLinkValues(scaled, platform),
+  ]));
+  return scaled.map((period) => ({ ...period, sequenceCanvasHeight, sequencePeakLinkValues }));
+}
+
+/* [SANKEY-29] 缩到下限时最费空间的那一期的流量：缩放后标签占比最大，这时最容易放不下。 */
+function peakLinkValues(periods, platform) {
+  const style = resolveSankeySettings(platform);
+  const { geometry } = style;
+  const floor = scaleSankeyStyle(
+    style,
+    geometry['primary-node-height-min'] / geometry['primary-node-height'],
+  );
+  const required = periods.map((period) => layoutSankey(
+    period,
+    { width: 1, height: 0, labelSlotWidth: geometry['label-title-width'] },
+    floor,
+  ).requiredHeight);
+  const peak = periods[required.indexOf(Math.max(...required))];
+  return Object.fromEntries(peak.links.map((link) => [`${link.source}->${link.target}`, Number(link.value)]));
 }
 
 /*
@@ -122,6 +149,8 @@ export function resolveSankeySequenceViewport(periods, platform = 'mobile') {
 
   return {
     canvasHeight,
+    /* [SANKEY-29] 密度档可覆盖默认绘图区高；token 只有 L3 按实际作用域才读得到。 */
+    canvasHeightToken: '--size-sankey-canvas-height',
     legendFallbackHeight: geometry['legend-reserved-height'],
     requiredCanvasHeight,
   };

@@ -7,6 +7,8 @@ export const SANKEY_SETTINGS = Object.freeze({
     'primary-node-width': 24,
     'node-width': 12,
     'primary-node-height': Object.freeze({ pc: 240, mobile: 120 }),
+    /* [SANKEY-29] 容器压缩时主节点的下限：要放得进紧凑档 140px 的绘图区。 */
+    'primary-node-height-min': Object.freeze({ pc: 60, mobile: 30 }),
     'node-gap': Object.freeze({ pc: 24, mobile: 12 }),
     'multi-node-span-base-ratio': 0.7,
     'third-node-span-ratio': 0.3,
@@ -82,6 +84,7 @@ function validateSettings() {
     );
     for (const key of [
       'primary-node-height',
+      'primary-node-height-min',
       'node-gap',
       'node-min-height',
       'edge-min-thickness',

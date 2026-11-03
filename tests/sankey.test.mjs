@@ -12,6 +12,8 @@ import {
   fitSankeyValueFontSize,
   layoutSankey,
   resolveSankeyCanvasHeight,
+  resolveSankeyFitFactor,
+  scaleSankeyStyle,
   resolveSankeyColumnMinimumSpan,
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
@@ -45,6 +47,7 @@ const STYLE = {
     'primary-node-width': 24,
     'node-width': 12,
     'primary-node-height': 240,
+    'primary-node-height-min': 60,
     'node-gap': 24,
     'multi-node-span-base-ratio': 0.7,
     'third-node-span-ratio': 0.3,
@@ -80,6 +83,7 @@ const STYLE = {
 const MOBILE_STYLE = structuredClone(STYLE);
 Object.assign(MOBILE_STYLE.geometry, {
   'primary-node-height': 120,
+  'primary-node-height-min': 30,
   'node-gap': 12,
   'canvas-min-height': 168,
   'canvas-recommended-height': 203,
@@ -1141,5 +1145,76 @@ test('SANKEY-22：同列按节点与两行文字联合占位盒保持最小上�
         `第 ${columnIndex + 1} 列的文字联合占位间距不足`,
       );
     });
+  });
+});
+
+test('SANKEY-29：容器恰为默认高度时系数为 1，默认形态不变', () => {
+  assert.equal(resolveSankeyFitFactor(CONFIG, STYLE.geometry['canvas-recommended-height'], STYLE), 1);
+  assert.equal(scaleSankeyStyle(STYLE, 1), STYLE, '系数 1 不复制样式');
+});
+
+test('SANKEY-29：图形随容器高等比缩放，节点比例不变', () => {
+  const natural = layoutSankey(CONFIG, { width: 960, height: 384 }, STYLE);
+  const factor = resolveSankeyFitFactor(CONFIG, 576, STYLE);
+  assert.equal(factor, 1.5);
+  const tall = layoutSankey(CONFIG, { width: 960, height: 576 }, scaleSankeyStyle(STYLE, factor));
+  assert.equal(tall.height, 576, '图形占满容器');
+  assert.equal(tall.primary.height, natural.primary.height * 1.5);
+  natural.nodes.forEach((node, index) => {
+    if (node.height <= STYLE.geometry['node-min-height']) return;
+    assert.ok(Math.abs(tall.nodes[index].height - node.height * 1.5) < 1e-6, `${node.id} 与主节点同比缩放`);
+  });
+  assert.equal(tall.primary.y + tall.primary.height / 2, tall.height / 2, '主节点仍在中轴（SANKEY-21）');
+});
+
+test('SANKEY-29：变矮时放得下就不被裁，缩到下限后停住', () => {
+  const available = 240;
+  const factor = resolveSankeyFitFactor(CONFIG, available, STYLE);
+  assert.ok(factor < 1);
+  const fitted = layoutSankey(CONFIG, { width: 960, height: available }, scaleSankeyStyle(STYLE, factor));
+  assert.ok(fitted.requiredHeight <= available, `所需 ${fitted.requiredHeight} 不超过容器 ${available}`);
+  assert.equal(fitted.height, available);
+  const floor = resolveSankeyFitFactor(CONFIG, 10, STYLE);
+  assert.equal(floor, STYLE.geometry['primary-node-height-min'] / STYLE.geometry['primary-node-height']);
+});
+
+test('SANKEY-29：缩放不动节点宽度，节点间距保持主节点高度的 10%', () => {
+  const scaled = scaleSankeyStyle(STYLE, 0.5).geometry;
+  assert.equal(scaled['primary-node-width'], STYLE.geometry['primary-node-width']);
+  assert.equal(scaled['node-width'], STYLE.geometry['node-width']);
+  assert.equal(scaled['label-title-font-size-max'], STYLE.geometry['label-title-font-size-max']);
+  assert.equal(scaled['node-gap'] / scaled['primary-node-height'], 0.1);
+  assert.equal(STYLE.geometry['primary-node-height'], 240, '不得改到入参');
+});
+
+test('SANKEY-29：序列默认高度比当前期所需更大时系数仍为 1', () => {
+  const declared = STYLE.geometry['canvas-recommended-height'] + 80;
+  assert.equal(resolveSankeyFitFactor(CONFIG, declared, STYLE, { naturalHeight: declared }), 1);
+  const [period] = withSharedSankeyScale([CONFIG, structuredClone(CONFIG)]);
+  assert.deepEqual(Object.keys(period.sequenceCanvasHeight).sort(), ['mobile', 'pc']);
+  assert.ok(period.sequenceCanvasHeight.pc >= STYLE.geometry['canvas-recommended-height']);
+});
+
+test('SANKEY-29：紧凑档 140px 绘图区放得下真实财报序列，比例不变', () => {
+  const periods = withSharedSankeyScale([CONFIG, structuredClone(CONFIG)]);
+  const factor = resolveSankeyFitFactor(periods[0], 140, STYLE, { naturalHeight: periods[0].sequenceCanvasHeight.pc });
+  const compact = layoutSankey(periods[0], { width: 960, height: 140 }, scaleSankeyStyle(STYLE, factor));
+  assert.ok(compact.requiredHeight <= 140, `所需 ${compact.requiredHeight}`);
+  assert.equal(compact.height, 140);
+  assert.ok(compact.primary.height >= STYLE.geometry['primary-node-height-min'] * 0.5, '主节点没有被压成一条线');
+});
+
+test('SANKEY-29：缩放系数按序列最费空间的一期算，每一期都放得下', () => {
+  const larger = structuredClone(CONFIG);
+  larger.links = larger.links.map((link) => ({ ...link, value: link.value * 4 }));
+  larger.nodes = larger.nodes.map((node) => ({ ...node }));
+  const periods = withSharedSankeyScale([CONFIG, larger]);
+  const factor = resolveSankeyFitFactor(periods[0], 150, STYLE, {
+    naturalHeight: periods[0].sequenceCanvasHeight.pc,
+    peakLinkValues: periods[0].sequencePeakLinkValues.pc,
+  });
+  periods.forEach((period, index) => {
+    const graph = layoutSankey(period, { width: 960, height: 150 }, scaleSankeyStyle(STYLE, factor));
+    assert.ok(graph.requiredHeight <= 150, `第 ${index} 期所需 ${graph.requiredHeight}`);
   });
 });
