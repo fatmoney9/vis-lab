@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { statSync } from 'node:fs';
 
 import {
   EXAMPLES,
@@ -582,24 +581,9 @@ test('TREEMAP-18：业务数据在 L3 归一化为通用 presentation 合同', (
   assert.equal(children[0].name, '信息技术');
   assert.equal(children[0].value, 4280);
   assert.equal(children[0].presentation.label, 'AAPL');
-  assert.match(children[0].presentation.image, /\/aapl\.png$/);
+  assert.ok(children.every((node) => node.presentation.image === undefined), '示例不收录真实企业 logo');
   assert.ok(children.every((node) => Number.isFinite(node.presentation.colorValue)
     && node.presentation.details.length === 3));
-  assert.deepEqual(
-    Object.fromEntries(children.map((node) => [
-      node.presentation.label,
-      node.presentation.image
-        ? new URL(node.presentation.image).pathname.split('/').at(-1)
-        : null,
-    ])),
-    {
-      AAPL: 'aapl.png', WSM: 'wsm.png', DOLE: 'dole.png', YSG: 'ysg.png',
-      VKTX: 'vktx.png', YMM: 'ymm.png', CSCO: 'csco.png', MAR: 'mar.png',
-      TEAM: 'team.png', ADMA: 'adma.png', BTSG: 'btsg.png', GLTO: 'glto.png',
-      GSAT: 'gsat.png', MSFT: null, NVDA: null, GOOG: null, AMZN: null, META: null,
-    },
-    '只使用企业自己的真实图标，不借用 Apple 图标占位',
-  );
   assert.deepEqual(
     Object.fromEntries(children.map((node) => [
       node.presentation.label,
@@ -612,9 +596,6 @@ test('TREEMAP-18：业务数据在 L3 归一化为通用 presentation 合同', (
     },
     '首字母必须来自企业名称；例如 Alphabet= A、Atlassian= A、Full Truck Alliance= F',
   );
-  assert.ok(children.filter((node) => node.presentation.image)
-    .every((node) => statSync(new URL(node.presentation.image)).size > 1000),
-    '公司图标不应退化为空白或透明占位文件');
 });
 
 test('TREEMAP-11/12/13：入口、通用与全局树图是三个独立示例', () => {

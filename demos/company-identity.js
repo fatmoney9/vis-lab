@@ -1,26 +1,9 @@
 /*
- * L3 · 公司图标演示资源映射。
+ * L3 · 公司标识演示数据。
  *
- * 图片渲染能力在 core/image-content.js；本模块只保存证券代码到静态资源的业务映射，
- * 供任意图表 demo 复用。无真实图标时返回企业名称首字母，不借用其他企业图标。
+ * 示例不收录真实企业 logo，只提供企业名称首字母，由 core/image-content.js 渲染成圆形占位。
+ * 组件的图片能力不受影响：真实接入时由调用方在 presentation.image 传入有授权的图片地址。
  */
-
-const AINVEST_ICON_ROOT = new URL('../assets/company-icons/ainvest/', import.meta.url);
-const AINVEST_ICON_FILES = {
-  AAPL: 'aapl.png',
-  ADMA: 'adma.png',
-  BTSG: 'btsg.png',
-  CSCO: 'csco.png',
-  DOLE: 'dole.png',
-  GLTO: 'glto.png',
-  GSAT: 'gsat.png',
-  MAR: 'mar.png',
-  TEAM: 'team.png',
-  VKTX: 'vktx.png',
-  WSM: 'wsm.png',
-  YMM: 'ymm.png',
-  YSG: 'ysg.png',
-};
 
 const AINVEST_COMPANY_NAMES = {
   AAPL: 'Apple', WSM: 'Williams-Sonoma', DOLE: 'Dole', YSG: 'Yatsen Holding',
@@ -42,17 +25,7 @@ const AINVEST_COMPANY_NAMES = {
 
 const firstCharacter = (value) => Array.from(String(value ?? '').trim())[0]?.toUpperCase() ?? null;
 
-export function ainvestCompanyIcon(ticker) {
+export function ainvestCompanyFallback(ticker) {
   const symbol = String(ticker ?? '').toUpperCase();
-  const file = AINVEST_ICON_FILES[symbol];
-  return file ? new URL(file, AINVEST_ICON_ROOT).href : null;
-}
-
-export function ainvestCompanyIdentity(ticker) {
-  const symbol = String(ticker ?? '').toUpperCase();
-  const companyName = AINVEST_COMPANY_NAMES[symbol] ?? symbol;
-  return {
-    image: ainvestCompanyIcon(symbol),
-    imageFallback: firstCharacter(companyName),
-  };
+  return firstCharacter(AINVEST_COMPANY_NAMES[symbol] ?? symbol);
 }
