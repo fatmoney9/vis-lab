@@ -85,7 +85,7 @@ TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成
 - `charts/core/axis-title.js`：轴标题带高、贴外缘锚点与同带内主轴优先让位（`axisTitleBand` / `axisTitleAnchor` / `dropCollidingTitles`）。
 - `charts/core/motion.js`：缓动曲线与逐帧循环的收尾不变量——终帧恰为 1、打断后不再回调（`easeOutCubic` / `runGrowth`，rAF 与时钟经参数注入，故无需伪造浏览器环境）。
 - `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
-- `charts/charts/world-heatmap/model.js`：有限数输入合同（拒绝空值与隐式数字转换，保留真实 0 / 负数 / 空数组）、国家码归一化与重复校验、复用强度分档；另检查固定底图的每个地区都映射到固定提交的国旗地址，且上游符号链接已改取真实文件（`tests/world-heatmap.test.mjs`，不联网）。
+- `charts/charts/world-heatmap/model.js`：有限数输入合同（拒绝空值与隐式数字转换，保留真实 0 / 负数 / 空数组）、国家码归一化与重复校验、复用强度分档；另检查投影形状、底图与国旗都指向固定提交、上游符号链接已改取真实文件（`tests/world-heatmap.test.mjs`，不联网）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
 - `tests/browser/harness.mjs`：服务器 / Chrome / CDP 这层**与图表无关的壳**，各图型的合同共用一份。抄第二份的代价不是行数，是两份壳会各自长出细节差异（超时、端口、Chrome 路径回落），到时候「瀑布过了弦图没过」分不清是图的问题还是壳的问题。

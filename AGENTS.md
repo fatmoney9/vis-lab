@@ -172,6 +172,6 @@
   - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
   - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
 
-- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以规范收录的国家 / 地区码标识，几何使用 Figma 基础图加可重建的离线地区校准（来源见 `assets/world-map/README.md`）；`CN` 统一包含台湾、港澳及本次校准的藏南区域，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
+- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以 ISO alpha-2 码标识，底图与国旗都经 jsDelivr 加载固定提交的第三方数据（来源见本族 README），不进仓库；底图异步到达，用 `ready` 等待。`CN` 统一包含台湾、港澳，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
 
 下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
