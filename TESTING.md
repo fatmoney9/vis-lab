@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 静态门禁 | token 合同、生成物、语法，外加一组守卫（分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）——**逐项清单以 `hooks/check.sh` 为准，本表不复述条数** | 已接入 | pre-commit / CI |
 | 逻辑单测 | 格式化、值域、布局、堆叠、系列归一化等纯函数 | 已接入首批 | `tests/*.test.mjs` + CI |
-| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布与全球热力图关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
-| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移，以及热力图 hover / focus / 滚动清理 / Tab 顺序已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· 本地手动（`npm run test:browser`） |
+| DOM 结构 | SVG 节点、属性、图层顺序、隐藏状态 | 瀑布与全球热力图关键合同已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
+| 浏览器交互 | hover、Tooltip、图例、Resize、主题与端切换 | 瀑布 hover / Tooltip / 主题与端切换、弦图标签与邻域高亮、桑基 / 树图 / 弦图的钉住迁移，以及热力图 hover / focus / 滚动清理 / Tab 顺序已接入，其余待接入 | Chrome DevTools Protocol（零依赖）· `npm run test:browser` + CI 非必需 job |
 | 视觉回归 | 三主题关键图型与状态的截图差异 | 待接入 | Playwright + 人工审批 |
 | 非功能测试 | 可访问性、性能、浏览器兼容性 | 待规则明确后接入 | 浏览器测试 / 专项测试 |
 
@@ -40,15 +40,10 @@ node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中�
 浏览器合同**不进 `hooks/check.sh`**：那个脚本是 pre-commit 与 CI 的共用入口，
 把需要 Chrome 的用例放进去，等于让每个人的每次提交都启动一个浏览器，没装 Chrome 的机器更是直接无法提交。
 
-⚠️ **它目前也不在 CI 里，只能本地手动跑**。2026-09-15 起从 `.github/workflows/quality.yml` 移除，原因有二：
-① 入口与步骤名都按单个图型写死（`test:browser` 只跑瀑布一个文件，步骤名叫「浏览器合同（瀑布）」），
-不是像 `npm test` 那样的通配入口，接下一个图型就得改 CI 与 `package.json`；
-② 放在必需检查的 job 里，单个图型的验收一红就拦下整个 PR。
-重新接回 CI 前应先通用化。进度：共用的服务器 / Chrome / CDP 外壳 `tests/browser/harness.mjs` 与第一份按规则组织的跨图型合同
-`highlight-state.browser.mjs` 已就位；**仍差两件**——`test:browser` 仍是手工串联各份文件而非通配 `tests/browser/*.browser.mjs`
-（每加一份合同就要改一次 `package.json`，本轮又改了两次），
-TOOLTIP-01 的宽度检查仍挂在瀑布合同里、应挪进按规则单独成的 `tooltip.browser.mjs`。
-在那之前，**改动 hover、Tooltip、轴贴片相关代码时，请在本地手动跑一次上面那条命令**。
+CI 里它是单独的「浏览器合同」job（`.github/workflows/quality.yml`），**不是必需检查**：红了只提示、不拦 PR，
+因为合同依赖 CDN 和系统字体，稳定性还要观察。改 hover、Tooltip、轴贴片相关代码时，合并前要看一眼这个 job。
+`tests/browser/run.mjs` 自动发现 `tests/browser/*.browser.mjs`，加合同不用改 `package.json` 或 CI。
+遗留一件：TOOLTIP-01 的宽度检查仍挂在瀑布合同里，应挪进按规则单独成的 `tooltip.browser.mjs`。
 
 它会自动查找 macOS Chrome 与 Linux Chrome/Chromium；非标准安装位置通过
 `VIS_LAB_CHROME_BIN` 指向可执行文件。它自行启动临时静态服务与隔离浏览器配置，不依赖已运行的 8123 预览。
