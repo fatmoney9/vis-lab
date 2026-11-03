@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
 
 import {
   assertWorldHeatmapTone,
@@ -75,23 +74,23 @@ test('WORLD-HEATMAP-02/06：中国境内使用口径的世界底图与圆形国�
   }
   assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'CN'), '中国必须保持单一国家图元');
   assert.ok(WORLD_MAP_FEATURES.some(({ id }) => id === 'IN'), '邻国应保留独立图元');
-  const assetRoot = new URL('../assets/country-flags/', import.meta.url);
+  /* 固定到完整提交号：浮动版本会让线上国旗随上游变化，也就失去了对账依据。 */
+  const flagFile = /^https:\/\/cdn\.jsdelivr\.net\/gh\/HatScripts\/circle-flags@[0-9a-f]{40}\/flags\/([a-z-]+)\.svg$/;
+  const flagOf = (id) => countryFlagThumbnail(id).match(flagFile)?.[1];
   for (const { id } of WORLD_MAP_FEATURES) {
-    const url = new URL(countryFlagThumbnail(id));
-    assert.ok(url.href.startsWith(assetRoot.href), `${id} 必须使用本地国旗资源`);
-    const svg = readFileSync(url, 'utf8');
-    assert.match(svg, /^<svg\b/, `${id} 必须能读取真实 SVG，不能是符号链接目标字符串`);
+    assert.ok(flagOf(id), `${id} 必须指向固定提交的国旗资源`);
   }
-  /* 反向对账：只查「地区 → 文件」拦不住多余文件，已并入 CN 的地区旗帜会继续随站点发布。 */
-  const referenced = new Set(WORLD_MAP_FEATURES.map(({ id }) => new URL(countryFlagThumbnail(id)).href));
-  const surplus = readdirSync(assetRoot)
-    .filter((file) => file.endsWith('.svg') && !referenced.has(new URL(file, assetRoot).href));
-  assert.deepEqual(surplus, [], '国旗目录不得收录底图用不到的资源');
-  assert.equal(countryFlagThumbnail('cn'), new URL('cn.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('XK'), new URL('xk.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('GO'), new URL('tf.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('JU'), new URL('tf.svg', assetRoot).href);
-  assert.equal(countryFlagThumbnail('UM-DQ'), new URL('um.svg', assetRoot).href);
+  assert.equal(flagOf('cn'), 'cn');
+  assert.equal(flagOf('XK'), 'xk');
+  assert.equal(flagOf('GO'), 'tf');
+  assert.equal(flagOf('JU'), 'tf');
+  /* 上游符号链接：CDN 对它们返回目标文件名字符串，图片必然加载失败。 */
+  assert.equal(flagOf('BQ'), 'bq-bo');
+  assert.equal(flagOf('BV'), 'no');
+  assert.equal(flagOf('SJ'), 'no');
+  assert.equal(flagOf('HM'), 'au');
+  assert.equal(flagOf('SH'), 'sh-hl');
+  assert.equal(flagOf('UM-DQ'), 'us');
   assert.equal(countryFlagThumbnail('invalid'), null);
 });
 

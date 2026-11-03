@@ -3,9 +3,12 @@ import { intensityLevels } from '../../core/visual-color.js';
 export const WORLD_HEATMAP_TONES = Object.freeze(['primary', 'up', 'down']);
 
 const REGION_ID = /^(?:[A-Z]{2}|XK|UM-[A-Z]{2})$/;
-const FLAG_ROOT = new URL('../../../assets/country-flags/', import.meta.url);
-/* 地图独有地区码：Glorioso / Juan de Nova 同属 French Southern and Antarctic Lands。 */
-const FLAG_ALIASES = { GO: 'TF', JU: 'TF' };
+const FLAG_ROOT = 'https://cdn.jsdelivr.net/gh/HatScripts/circle-flags@379588b5da95482d6bbf10bd45644a35b0609ea6/flags/';
+/* GO / JU：地图独有地区码，Glorioso / Juan de Nova 同属 French Southern and Antarctic Lands。
+ * 其余：上游是 Git 符号链接，CDN 对它返回 200 + 目标文件名字符串而不是 SVG，须直取目标文件。 */
+const FLAG_FILES = {
+  GO: 'tf', JU: 'tf', BQ: 'bq-bo', BV: 'no', SJ: 'no', HM: 'au', SH: 'sh-hl', UM: 'us',
+};
 
 export function normalizeWorldRegions(regions) {
   if (!Array.isArray(regions)) throw new TypeError('WorldHeatmapChart：regions 必须是数组');
@@ -40,12 +43,10 @@ export function assertWorldHeatmapTone(tone) {
   return tone;
 }
 
-/* [WORLD-HEATMAP-06] 本地 Circle Flags（MIT）；复合地区码使用其 alpha-2 主码。
- * 资源地址相对本模块解析，保留 GitHub Pages 的 /vis-lab/ 等部署前缀。 */
+/* [WORLD-HEATMAP-06] 固定提交的 Circle Flags（MIT）；复合地区码使用其 alpha-2 主码。 */
 export function countryFlagThumbnail(id) {
   const regionId = String(id ?? '').toUpperCase();
   if (!REGION_ID.test(regionId)) return null;
   const countryId = regionId.split('-')[0];
-  const code = (FLAG_ALIASES[countryId] ?? countryId).toLowerCase();
-  return new URL(`${code}.svg`, FLAG_ROOT).href;
+  return `${FLAG_ROOT}${FLAG_FILES[countryId] ?? countryId.toLowerCase()}.svg`;
 }

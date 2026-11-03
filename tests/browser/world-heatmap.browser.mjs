@@ -403,7 +403,7 @@ function assertChinaMouseState(result, context) {
   assert.equal(result.visible, true, `${context}：应显示中国 Tooltip`);
   assert.equal(result.title, 'China', `${context}：不得使用地区独立名称`);
   assert.equal(result.value, '5', `${context}：应读取 CN 的同一个数值`);
-  assert.match(result.iconSrc, /\/assets\/country-flags\/cn\.svg$/, `${context}：应使用中国国旗`);
+  assert.match(result.iconSrc, /\/flags\/cn\.svg$/, `${context}：应使用中国国旗`);
   assert.ok(result.chinaFills.length > 0, `${context}：中国图元必须包含几何`);
   const firstFill = result.chinaFills[0];
   assert.ok(result.chinaFills.every((fill) => fill.fill === firstFill.fill && fill.opacity === firstFill.opacity),
@@ -674,12 +674,29 @@ async function main() {
     await call('enter("CN")');
     await waitFor(cdp, 'window.__worldHeatmapContract.flagState().loaded');
     const flag = await call('flagState()');
-    assert.match(flag.src, /\/assets\/country-flags\/cn\.svg$/, '国旗应随本站本地发布');
+    assert.match(flag.src, /^https:\/\/cdn\.jsdelivr\.net\/gh\/HatScripts\/circle-flags@[0-9a-f]{40}\/flags\/cn\.svg$/, '国旗应取自固定提交');
     assert.ok(flag.imageVisible && !flag.fallbackVisible, '成功图片应显示且不占兜底槽');
+    /* [WORLD-HEATMAP-06] 真实加载每个地区的国旗：上游符号链接在 CDN 上是 200 + 文件名字符串，
+       只有解码这一步拦得住，单测与响应状态码都发现不了。 */
+    const brokenFlags = await evaluate(cdp, `(async () => {
+      const [{ countryFlagThumbnail }, { WORLD_MAP_FEATURES }] = await Promise.all([
+        import('/charts/charts/world-heatmap/model.js'),
+        import('/charts/charts/world-heatmap/world-map-data.js'),
+      ]);
+      const loads = (url) => new Promise((settle) => {
+        const image = new Image();
+        image.onload = () => settle(image.naturalWidth > 0);
+        image.onerror = () => settle(false);
+        image.src = url;
+      });
+      const checked = await Promise.all(WORLD_MAP_FEATURES.map(async ({ id }) => [id, await loads(countryFlagThumbnail(id))]));
+      return checked.filter(([, ok]) => !ok).map(([id]) => id);
+    })()`);
+    assert.deepEqual(brokenFlags, [], '底图每个地区的国旗都必须能真实加载');
     assert.equal(await call('switchFlag("IN")'), 'hidden', '换国家时不得让新标题配旧国旗');
     await waitFor(cdp, `getComputedStyle(window.__worldHeatmapContract.host.querySelector('.dv-tooltip img')).visibility === 'visible'`);
     await call(`mount(${JSON.stringify({ customRegions: [
-      { id: 'CN', name: 'China', value: 1, flagUrl: '/assets/country-flags/nonexistent-contract-flag.svg' },
+      { id: 'CN', name: 'China', value: 1, flagUrl: '/nonexistent-contract-flag.svg' },
     ] })})`);
     await call('enter("CN")');
     await waitFor(cdp, 'window.__worldHeatmapContract.flagState().fallbackVisible');

@@ -38,6 +38,23 @@
 - 原始 Figma 底图与离线地区校准分开保存；[来源、许可及重建过程](../../../assets/world-map/README.md)可追溯。`CN` 包含台湾、港澳及本次校准的藏南区域，共用一份语义数据和外边界；不保留独立 `TW` / `HK` / `MO` 图元或内部行政描边，传入这些旧 ID 会明确拒绝，不自动聚合读数。地图归属不随主题切换。
 - `model.js` 校验底图国家 / 地区码（包含规范列明的特殊 ID）与有限 `number`，复用 L1 五档强度算法；数字字符串解析和缺数据筛选由 L3 数据适配完成，不将空值隐式转为零。主题身份通过 CSS token 注入。
 - 无数据国家仍绘制为中性底色，但不进入 Tab 顺序、不触发 Tooltip。
-- 国旗缩略图默认按底图国家 / 地区码读取仓库内的 `assets/country-flags/`（[资源来源与更新说明](../../../assets/country-flags/README.md)）；URL 相对模块解析，兼容部署子路径，不请求外部国旗站点。实例可用 `flagUrl` 覆盖，加载失败时只回退国家名首字，不使用 emoji。
+- 国旗缩略图默认按底图国家 / 地区码经 jsDelivr 加载（见下方「国旗来源」），只在 Tooltip 显示时请求。实例可用 `flagUrl` 覆盖，加载失败时只回退国家名首字，不使用 emoji。
 - hover / focus 的置顶层只包含不参与交互的国家描边副本，原国家 DOM 和 Tab 顺序不变；离开、失焦或滚动时立即清除副本并隐藏共享 Tooltip。
 - Tooltip 名称可换行、数值保持完整，宽度继续遵守 L1 共享封顶；触摸端交互尚未完成跨设备验收。
+
+## 国旗来源
+
+- 上游：[HatScripts/circle-flags](https://github.com/HatScripts/circle-flags)，MIT 许可。
+- 固定提交：[`379588b5da95482d6bbf10bd45644a35b0609ea6`](https://github.com/HatScripts/circle-flags/tree/379588b5da95482d6bbf10bd45644a35b0609ea6/flags)。
+- 文件名默认是小写国家 / 地区码，以下地区例外（`model.js` 的 `FLAG_FILES`）：
+
+| 地图 ID | 使用的文件 | 原因 |
+|---|---|---|
+| `GO` / `JU` | `tf.svg` | 地图独有地区码，同属 French Southern and Antarctic Lands |
+| `BQ` | `bq-bo.svg` | 上游 `bq.svg` 是符号链接 |
+| `BV` / `SJ` | `no.svg` | 同上 |
+| `HM` | `au.svg` | 同上 |
+| `SH` | `sh-hl.svg` | 同上 |
+| `UM-*` | `us.svg` | 同上 |
+
+⚠️ CDN 对上游符号链接返回 200 和目标文件名字符串，不是 SVG。升级固定提交时，要重新核对哪些文件是符号链接，并跑一遍浏览器合同：它会逐个加载底图所有地区的国旗。
