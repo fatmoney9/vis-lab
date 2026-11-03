@@ -28,6 +28,12 @@ export function playbackRangeTheme(theme = 'ths') {
   return theme === 'ifind' || theme === 'ifind-pc' ? 'ths' : theme;
 }
 
+/* 图型可声明一个 token 覆盖序列画布高（如紧凑档）；token 为 0 或未声明时用序列自身的高度。 */
+export function resolvePlaybackCanvasHeight(scope, viewport, readToken = tokenNum) {
+  const override = viewport?.canvasHeightToken ? Number(readToken(scope, viewport.canvasHeightToken)) : 0;
+  return override > 0 ? override : Number(viewport?.canvasHeight);
+}
+
 /* [PLAYBACK-10] 调用方提供序列画布高与跨主题最低图例兜底；真实图例占位由当前
  * L3 主题 token 决定。首次挂载前先算准外框，布局事件仍会在真实 DOM 换行时校正。
  * `legendFallbackHeight === null` 表示**本图型没有图例带**，整段图例预留跳过；
@@ -37,7 +43,7 @@ export function resolvePlaybackChartHeight(
   viewport,
   readToken = tokenNum,
 ) {
-  const canvasHeight = Number(viewport?.canvasHeight);
+  const canvasHeight = resolvePlaybackCanvasHeight(scope, viewport, readToken);
   if (!Number.isFinite(canvasHeight) || canvasHeight < 0) {
     throw new TypeError('播放区：viewport.canvasHeight 必须是非负有限数');
   }

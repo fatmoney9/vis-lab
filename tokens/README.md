@@ -106,7 +106,7 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
 **连带效果是有意的**：覆盖的是被别名的源头键时，别名方一起变——`size-bar-max` → 横向条 `size-hbar-row-max`、
 `size-line-point` → 雷达 `size-radar-point`。改动源头键前先 `grep` 别名方。
 
-**两个只为密度档存在的基准 token**（[specs/axes.md](../specs/axes.md) GRID-04）：`size-chart-region-min-height`
+**只为密度档存在的基准 token**：`size-sankey-canvas-height`（三主题 `0px` = 用桑基按端的默认高，紧凑档别名到 `size-chart-region-height`，[specs/sankey.md](../specs/sankey.md) SANKEY-29）；以及 [specs/axes.md](../specs/axes.md) GRID-04 的 `size-chart-region-min-height`
 （三主题 `0px` = 不设下限）与 `size-chart-min-width`（三主题 `auto` = CSS 初始值）。三主题取「无约束」值，
 是为了新增这两个键时现有主题逐像素不变；具体下限只由密度档给。
 

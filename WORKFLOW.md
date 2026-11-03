@@ -240,7 +240,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 **九个 L2 图表组件**——`CartesianChart`（柱/堆叠/折线/折柱组合/双 Y/缩放轴 datazoom/水印 watermark/数据标签 data label/轴标题 axis title/入场生长动效 motion）、
 `HBarChart`（横向条；**给了时间序列就是排名竞赛形态**——名次与数值同时插值、Top-N 进出榜，见 `specs/hbar.md` HBAR-01..23）、
 `PieChart`（饼 / 环，`variant` 分形态 · 两种图例布局 · 强调态外扩 · 外侧标签与引线，见 `specs/pie.md` PIE-01..17）
-、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..26）
+、`SankeyChart`（流向流量图，显式 `role`/`stage` · 有符号流量按 `abs` 定几何 · 季度播放与统一 `scaleMax`，见 `specs/sankey.md` SANKEY-01..29）
 、`TreemapChart`（入口型 / 通用 / 全局矩形树图 · 三主题共用单画布布局 · 通用图片内容 · L1 数据项取色，见 `specs/treemap.md` TREEMAP-01..18）
 、`RadarChart`（标准 / 多数据 / 分区三类示例，角度均分 · 值→半径 · 横排 / 环绕标签 · 连续 / 分段背景 · 单系列可调节输入，见 `specs/radar.md` RADAR-01..18）
 、`WaterfallChart`（累计桥接 / 分组数据柱 · 有符号累计与分段守恒 · 三主题共用浅底箭头柱并使用各自主题色，见 `specs/waterfall.md` WATERFALL-01..15）

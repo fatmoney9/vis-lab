@@ -94,6 +94,74 @@ export function resolveSankeyCanvasHeight(
 }
 
 /*
+ * [SANKEY-29] 随容器缩放的四个量：主节点基准决定比例尺，节点间距、列最小高与上下留白都按同一系数走
+ * （SANKEY-05/22/23）。标题与数值字号、节点宽度不缩放——那是读数的下限，不是图形。
+ */
+export function scaleSankeyStyle(style, factor) {
+  if (factor === 1) return style;
+  const { geometry } = style;
+  return {
+    ...style,
+    geometry: {
+      ...geometry,
+      'primary-node-height': geometry['primary-node-height'] * factor,
+      'node-gap': geometry['node-gap'] * factor,
+      'canvas-min-height': geometry['canvas-min-height'] * factor,
+      'canvas-padding-y': geometry['canvas-padding-y'] * factor,
+    },
+  };
+}
+
+/*
+ * [SANKEY-29] 容器给的绘图区高 → 缩放系数。基准高 = 未缩放时图形自然占的高度，
+ * 所以容器恰好等于默认高度时系数就是 1，默认形态逐像素不变。
+ * 播放序列的默认高度由最费空间的那一期决定，单看当前期算不出来，由 naturalHeight / peakLinkValues 传入。
+ * 标签不缩放，变矮时所需高度不与系数成正比，放不下就二分求最大可行系数；
+ * 到下限仍放不下则停在下限，不把节点压成不可读。
+ */
+export function resolveSankeyFitFactor(
+  cfg,
+  availableHeight,
+  style,
+  { naturalHeight: declaredHeight = 0, peakLinkValues, ...labels } = {},
+) {
+  const { geometry } = style;
+  /* 系数一次算定、全序列共用，所以要按最费空间的那一期算：按当前期算，后面数据大的期就放不下。 */
+  const fitConfig = peakLinkValues
+    ? {
+      ...cfg,
+      links: cfg.links.map((link) => ({
+        ...link,
+        value: peakLinkValues[`${link.source}->${link.target}`] ?? link.value,
+      })),
+    }
+    : cfg;
+  const requiredAt = (factor) => layoutSankey(
+    fitConfig,
+    { width: 1, height: 0, ...labels },
+    scaleSankeyStyle(style, factor),
+  ).requiredHeight;
+  const naturalHeight = Math.max(
+    geometry['canvas-recommended-height'],
+    requiredAt(1),
+    declaredHeight,
+  );
+  const minFactor = geometry['primary-node-height-min'] / geometry['primary-node-height'];
+  const wanted = Math.max(minFactor, availableHeight / naturalHeight);
+  /* 压缩时留 1px：各期标签字号略有差别，贴着算末期会超出零点几像素。 */
+  const budget = wanted < 1 ? availableHeight - 1 : availableHeight;
+  if (requiredAt(wanted) <= budget) return wanted;
+  let low = minFactor;
+  let high = wanted;
+  for (let step = 0; step < 10; step += 1) {
+    const middle = (low + high) / 2;
+    if (requiredAt(middle) <= budget) low = middle;
+    else high = middle;
+  }
+  return low;
+}
+
+/*
  * [SANKEY-01..03][SANKEY-06][SANKEY-11][SANKEY-13/16]
  * role 只决定收入/支出/利润语义，value 保留符号参与守恒，stage 只决定横向阶段。
  */

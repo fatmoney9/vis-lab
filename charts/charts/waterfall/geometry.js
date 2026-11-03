@@ -26,7 +26,8 @@ export function waterfallBarWidth(variant, slotWidth) {
     throw new TypeError('WaterfallChart：variant 仅支持 standard / data');
   }
   const slot = finitePositive(slotWidth, 'slotWidth');
-  if (variant === 'data') return WATERFALL_SETTINGS['data-bar-width'];
+  /* 数据柱没有单柱容器封顶，110px 只是上限：槽位够宽时恒为 110，窄了同样按 2 : 1 收，否则相邻柱会压住。 */
+  if (variant === 'data') return Math.min(WATERFALL_SETTINGS['data-bar-width'], slot * 2 / 3);
   const container = Math.min(slot, WATERFALL_SETTINGS['standard-bar-container-max-width']);
   return Math.min(WATERFALL_SETTINGS['standard-bar-max-width'], container * 2 / 3);
 }

@@ -328,8 +328,66 @@ for (const [theme, platform, expectCapped] of [
     assert.match(threeLine.classes[2], /dv-waterfall-axis-value/, '数值行应保留数字强调类');
     assert.ok(Math.abs(threeLine.topGap - threeLine.bottomGap) <= 0.75,
       `三行贴片未以文字排版盒上下居中（${threeLine.topGap} / ${threeLine.bottomGap}）`);
+    /* [WATERFALL-03/04] 左右挤压：相邻柱不重叠、柱与柱内标签都不越界。 */
+    const squeezeState = `(() => {
+      const surface = document.querySelector('.stage__surface');
+      const svg = surface.querySelector('svg.dv-waterfall');
+      const box = svg.getBoundingClientRect();
+      const bars = [...svg.querySelectorAll('.dv-waterfall-item')].map((item) => {
+        const rect = item.querySelector('rect').getBoundingClientRect();
+        return { left: rect.left, right: rect.right };
+      });
+      const labelOverflow = [...svg.querySelectorAll('.dv-waterfall-item')].length
+        ? [...svg.querySelectorAll('.dv-waterfall-segment-label')].map((label) => {
+          const rect = label.getBoundingClientRect();
+          const bar = bars.find((b) => rect.left >= b.left - 0.5 && rect.left <= b.right);
+          return bar ? rect.right - bar.right : Infinity;
+        })
+        : [];
+      return {
+        svgW: box.width,
+        barWidth: bars[0].right - bars[0].left,
+        minGap: Math.min(...bars.slice(1).map((b, i) => b.left - bars[i].right)),
+        withinSvg: bars.every((b) => b.left >= box.left - 0.5 && b.right <= box.right + 0.5),
+        labelOverflow: labelOverflow.length ? Math.max(...labelOverflow) : -1,
+        labels: labelOverflow.length,
+      };
+    })()`;
+    /* 这段要从默认宽度往窄挤，先给足视口：无头 Chrome 默认窗口下详情页本身就比 480 窄。 */
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 1500, height: 1100, deviceScaleFactor: 1, mobile: false,
+    });
+    for (const id of ['waterfall-data', 'waterfall-bridge']) {
+      await cdp.send('Page.navigate', { url: 'about:blank' });
+      await cdp.send('Page.navigate', { url: `http://${LOOPBACK}:${sitePort}/index.html#${id}` });
+      await waitFor(cdp, `document.querySelector('.stage__surface svg.dv-waterfall .dv-waterfall-item rect')`);
+      await sleep(900);
+      const wide = await evaluate(cdp, squeezeState);
+      if (id === 'waterfall-data') {
+        assert.ok(Math.abs(wide.barWidth - 110) < 0.01, `默认宽度下数据柱保持 110px（实测 ${wide.barWidth}，画布 ${wide.svgW}）`);
+      }
+      for (const width of [480, 360, 320]) {
+        await evaluate(cdp, `(() => {
+          const s = document.querySelector('.stage__surface');
+          s.classList.add('is-resized');
+          s.style.width = '${width}px';
+          s.style.height = s.getBoundingClientRect().height + 'px';
+        })()`);
+        await sleep(500);
+        const narrow = await evaluate(cdp, squeezeState);
+        const where = `${id}/${width}`;
+        assert.ok(narrow.svgW < wide.svgW, `${where}：前置：画布确实变窄`);
+        assert.ok(narrow.minGap > 0, `${where}：相邻柱不得重叠（最小间距 ${narrow.minGap}）`);
+        assert.ok(narrow.withinSvg, `${where}：柱不得超出画布`);
+        assert.ok(narrow.labelOverflow <= 0.5, `${where}：柱内标签不得超出柱宽（超出 ${narrow.labelOverflow}px）`);
+        if (id === 'waterfall-data' && width === 480) {
+          assert.ok(narrow.barWidth < wide.barWidth, `${where}：前置：柱确实变窄了`);
+        }
+      }
+    }
+
     assert.deepEqual(cdp.errors, [], `浏览器控制台存在错误：\n${cdp.errors.join('\n')}`);
-    console.log(`✓ 瀑布浏览器合同通过：${checks} 个主题×端×明暗×标签状态 + 1 个三行配置`);
+    console.log(`✓ 瀑布浏览器合同通过：${checks} 个主题×端×明暗×标签状态 + 1 个三行配置 + 左右挤压`);
   } catch (error) {
     if (cdp) {
       try {

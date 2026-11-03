@@ -3,7 +3,7 @@
  * 只接收节点、流向与端语义；颜色、节点宽度、间距、透明度和曲率均由规范数据决定。
  */
 import { pointer, select } from 'd3';
-import { observeResize } from '../../core/frame.js';
+import { containerDrivesHeight, observeResize } from '../../core/frame.js';
 import { makeFormatter } from '../../core/format.js';
 import { truncateBatch } from '../../core/label.js';
 import { renderLegend } from '../../core/legend.js';
@@ -31,10 +31,13 @@ import {
   resolveSankeyLabelFontSize,
   resolveSankeyLabelSlot,
   resolveSankeyCanvasHeight,
+  resolveSankeyFitFactor,
+  scaleSankeyStyle,
   resolveSankeyLegendReservedHeight,
   resolveSankeyVisualLinkValues,
 } from './layout.js';
 
+const FIT_FROM_TOKEN = 'token';
 const LEGEND_ROLES = [
   { key: 'income', fallback: '收入' },
   { key: 'expense', fallback: '支出' },
@@ -60,6 +63,7 @@ export function SankeyChart(host, initialConfig) {
     .attr('role', 'img');
   const tooltip = createTooltip(root.node());
   let tooltipHideTimer = 0;
+  let fit = { hostHeight: null, factor: 1 };
 
   const clearTooltipHide = () => {
     clearTimeout(tooltipHideTimer);
@@ -97,6 +101,14 @@ export function SankeyChart(host, initialConfig) {
       resizeFrame = requestAnimationFrame(build);
       return;
     }
+
+    /* [SANKEY-29] host 与上一帧图表等高 = 高度是图表自己撑的（height:auto），或容器尺寸没变，
+       都沿用现有系数。系数按容器高缓存：播放的每一帧都走这里，逐帧重算会让比例尺抖动。 */
+    const containerChanged = containerDrivesHeight(rect.height)
+      && Math.abs(rect.height - root.node().getBoundingClientRect().height) > 1
+      && rect.height !== fit.hostHeight;
+    /* [SANKEY-29] 容器没给高度时，密度档 token 就是目标绘图区高（0 = 用按端默认）。 */
+    const canvasOverride = tokenNum(host, '--size-sankey-canvas-height');
 
     /* [SANKEY-14/23] 先渲染静态图例再量真实高度；40px 只是跨主题最低预留。 */
     const activeRoles = new Set(
@@ -233,15 +245,38 @@ export function SankeyChart(host, initialConfig) {
       valueMeasurer.destroy();
     }
 
+    /* 容器一旦接管（含用户拖动）就不再回到 token；首次渲染 host 撑不出高度时才用 token。 */
+    const firstWithOverride = canvasOverride > 0 && !containerChanged && fit.hostHeight === null;
+    if (containerChanged || firstWithOverride) {
+      fit = {
+        hostHeight: containerChanged ? rect.height : FIT_FROM_TOKEN,
+        factor: resolveSankeyFitFactor(
+          config,
+          containerChanged ? rect.height - legendReservedHeight : canvasOverride,
+          style,
+          {
+            labelSlotWidth,
+            labelMetricsById,
+            naturalHeight: config.sequenceCanvasHeight?.[platform],
+            peakLinkValues: config.sequencePeakLinkValues?.[platform],
+          },
+        ),
+      };
+    }
+    const fittedStyle = scaleSankeyStyle(style, fit.factor);
+
     /* [SANKEY-15/18] 第二次布局用最终文字宽度统一列距，纵向流量几何保持不变。 */
     const graph = layoutSankey(
       config,
       {
-        ...chartBounds,
+        width: rect.width,
+        height: fit.hostHeight === FIT_FROM_TOKEN
+          ? canvasOverride
+          : resolveSankeyCanvasHeight(rect.height, fittedStyle.geometry, legendReservedHeight),
         labelSlotWidth,
         labelMetricsById,
       },
-      style,
+      fittedStyle,
     );
     graph.nodes.forEach((node) => {
       node.displayValue = displayValueByNodeId?.get(node.id) ?? node.value;
