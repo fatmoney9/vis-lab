@@ -13,13 +13,16 @@
  *        [data-theme="X"][data-platform="mobile"][data-mode="dark"]  两维同时分叉时的组合（更高特异性破平手）
  *      端默认 pc、明暗默认 light；只发生分叉的 token 才落进覆盖作用域，其余留在基准。
  *   3. 别名解析——值形如 "{token-name}" → 输出 var(--token-name)，运行时由 CSS 逐级解析（脚本不展开链）。
+ *   4. 密度覆盖层——tokens/density.json 叠在主题之上，作用域 [data-theme="X"][data-density="D"]
+ *      （见 densityBlocks；合并规则与 theme.js 共用 tokens/density.mjs）。
  *
- * 构建期校验（fail-fast）：合同 key 一致 · 分叉两键俱全 · 悬空别名 · 循环别名。
+ * 构建期校验（fail-fast）：合同 key 一致 · 分叉两键俱全 · 悬空别名 · 循环别名 · 覆盖层只改已有键。
  * $meta / $section-* 等 $ 前缀键是文档分节，非 token：既不校验也不输出。
  */
 import { readFileSync, writeFileSync, watch } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { parseDensity, mergeLayer } from './density.mjs';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const THEMES = ['ths', 'ifind-pc', 'ainvest'];
@@ -159,8 +162,35 @@ function themeBlocks(theme, tokens) {
   return out.join('\n\n');
 }
 
+/*
+ * 密度覆盖层 → 四个作用域块，只含被覆盖的键。每块比主题同角的块多一个属性选择器，特异性恒高一级，
+ * 故覆盖不靠源码顺序取胜。端 / 明暗块的发出条件是「合并后分叉 **或** 基准在该角有覆盖」——
+ * 后者不能省：基准 {mobile:16, pc:12} 只把 pc 改成 8 时，若不发紧凑×mobile 块，
+ * 紧凑基准块（0,2,0）会以源码顺序压过主题 mobile 块（0,2,0），mobile 端被错改成 8。
+ */
+export function densityBlocks(theme, density, base, merged, keys) {
+  const pl = [], ml = [], pd = [], md = [];
+  for (const name of keys) {
+    const b = fourCorners(base[name]);
+    const m = fourCorners(merged[name]);
+    const mobile = m.ml !== m.pl || b.ml !== b.pl;
+    const dark = m.pd !== m.pl || b.pd !== b.pl;
+    pl.push(decl(name, m.pl));
+    if (mobile) ml.push(decl(name, m.ml));
+    if (dark) pd.push(decl(name, m.pd));
+    if (mobile || dark) md.push(decl(name, m.md));
+  }
+  const S = (x) => `[data-theme="${theme}"][data-density="${density}"]${x}`;
+  const out = [rule(S(''), pl)];
+  if (ml.length) out.push(rule(S('[data-platform="mobile"]'), ml));
+  if (pd.length) out.push(rule(S('[data-mode="dark"]'), pd));
+  if (md.length) out.push(rule(S('[data-platform="mobile"][data-mode="dark"]'), md));
+  return out.join('\n\n');
+}
+
 const HEADER = `/* ⚠️ 生成文件，请勿手改——改 tokens/<theme>.json 后运行 node tokens/build.mjs 重新生成。
-   作用域开关：主题 [data-theme=ths|ifind-pc|ainvest] · 端 [data-platform=mobile]（默认 pc） · 明暗 [data-mode=dark]（默认 light）。
+   作用域开关：主题 [data-theme=ths|ifind-pc|ainvest] · 端 [data-platform=mobile]（默认 pc） · 明暗 [data-mode=dark]（默认 light）
+   · 密度 [data-density=compact]（仅 tokens/density.json 声明过的主题生效，须与 data-theme 同一元素）。
    别名 {x} 已转 var(--x)；三主题 key 集合经合同校验一致。源：tokens/*.json */`;
 
 /* 全流程：载入 → 合同校验 → 形态/别名校验 → 生成 → 写盘。任一步失败抛错。 */
@@ -198,7 +228,21 @@ function build() {
     }
   }
 
-  const css = [HEADER, ...THEMES.map((t) => themeBlocks(t, data[t]))].join('\n\n') + '\n';
+  /* 密度覆盖层：合并后的完整表必须同样过形态 / 别名 / 值域校验（覆盖值可能引用基准里的 token） */
+  const density = parseDensity(JSON.parse(readFileSync(join(DIR, 'density.json'), 'utf8')), THEMES);
+  const densityCss = [];
+  for (const [t, levels] of Object.entries(density)) {
+    for (const [d, layer] of Object.entries(levels)) {
+      const where = `density:${t}.${d}`;
+      const merged = mergeLayer(data[t], layer.tokens, where);
+      for (const [name, v] of Object.entries(layer.tokens)) assertShape(where, name, v);
+      assertAliases(where, merged);
+      for (const name of Object.keys(layer.tokens)) assertTokenDomain(where, name, merged[name], merged);
+      densityCss.push(densityBlocks(t, d, data[t], merged, Object.keys(layer.tokens)));
+    }
+  }
+
+  const css = [HEADER, ...THEMES.map((t) => themeBlocks(t, data[t])), ...densityCss].join('\n\n') + '\n';
   writeFileSync(join(DIR, 'tokens.css'), css);
   return baseKeys.length;
 }

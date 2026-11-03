@@ -259,6 +259,10 @@
 /* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余）。
    position:relative = tooltip 浮层的定位锚点（TOOLTIP-01，浮层像素与 svg 同坐标系） */
 .dv-chart { display: flex; flex-direction: column; }
+/* [GRID-04] 宽度下限挂在图表根上：各族都从根（或其内的绘图区）量 clientWidth，
+   根不窄于下限，所有图型的布局宽就一并不窄于下限，不必逐族改测量代码；容器更窄时由宿主决定滚动或裁切。
+   三主题 token = auto（CSS 初始值，与不写这行逐像素一致）；密度覆盖层给具体值。 */
+.dv-chart { min-width: var(--size-chart-min-width); }
 .dv-chart__plot { flex: 1; min-height: 0; min-width: 0; position: relative; }
 
 /* [LEGEND-10] 图例方位：DOM 顺序恒为「绘图区 → 图例」（阅读序），方位只由 flex 方向决定，

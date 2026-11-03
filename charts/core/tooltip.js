@@ -79,6 +79,9 @@ export function createTooltip(plotHost) {
     const hasTitle = titleText != null && titleText !== '';
     const hasIcon = hasTitle && Boolean(iconUrl);
     const hasIconFallback = hasTitle && Boolean(iconFallback);
+    /* 换 src 后，旧图会一直绘制到新图加载完成：标题已是新实体、图标还是上一个。
+       用 visibility 而非 display 藏，槽位不塌，load 时标题也不跳。 */
+    const iconChanged = hasIcon && titleIcon.attr('src') !== iconUrl;
     title.style('display', hasTitle ? null : 'none')
       .classed('has-value', hasTitle && titleValueText != null);
     titleIconFallback
@@ -89,13 +92,14 @@ export function createTooltip(plotHost) {
       .on('load', () => {
         if (!hasIcon) return;
         titleIconFallback.style('display', 'none');
-        titleIcon.style('display', null);
+        titleIcon.style('display', null).style('visibility', null);
       })
       .on('error', () => {
         titleIcon.style('display', 'none');
         titleIconFallback.style('display', hasIconFallback ? null : 'none');
       })
       .style('display', hasIcon ? null : 'none')
+      .style('visibility', iconChanged ? 'hidden' : null)
       .attr('src', hasIcon ? iconUrl : null);
     titleLabel.text(hasTitle ? titleText : '');
     titleValue

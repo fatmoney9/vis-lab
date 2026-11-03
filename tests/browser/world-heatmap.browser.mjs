@@ -1,5 +1,5 @@
 /*
- * [WORLD-HEATMAP-01..08][TOOLTIP-01/02/03/10] 全球热力图浏览器合同。
+ * [WORLD-HEATMAP-01..09][TOOLTIP-01/02/03/10] 全球热力图浏览器合同。
  *
  * 复用主站真实 import map / token / 样式，并通过公开 L2 API 挂载隔离夹具；
  * 不读源码文本、不手写 SVG。几何、焦点、图片与滚动生命周期都从真实 DOM 验收。
@@ -295,6 +295,65 @@ async function setupFixture() {
       return { x: box.x, y: box.y, width: box.width, height: box.height, scale: 1 };
     },
     resize(width) { enter('CN'); host.style.width = width + 'px'; },
+    pushDown(px) { before.style.marginBottom = px + 'px'; },
+    focusState() {
+      const node = document.activeElement;
+      window.__worldHeatmapFocused ??= node;
+      const box = tip()?.getBoundingClientRect();
+      return {
+        ...state(), focused: node.dataset.region ?? node.id,
+        sameNode: window.__worldHeatmapFocused === node,
+        scrollTop: scroller.scrollTop, svgWidth: Number(host.querySelector('svg').getAttribute('width')),
+        title: tip()?.querySelector('.dv-tooltip__title-label')?.textContent,
+        tipBox: box && { left: box.left, top: box.top },
+      };
+    },
+    forgetFocus() { window.__worldHeatmapFocused = null; },
+    scrollTo(top) { scroller.scrollTop = top; },
+    setWidth(width) { host.style.width = width + 'px'; },
+    /* 观察者按注册序回调：本回调在组件那个之后，正好落在「rAF 已排队、尚未执行」的窗口里。 */
+    destroyDuringResize() {
+      return new Promise((resolve) => {
+        const observer = new ResizeObserver(() => {
+          observer.disconnect();
+          chart.destroy(); chart = null;
+          const settled = () => requestAnimationFrame(() => requestAnimationFrame(() => resolve({
+            children: host.childElementCount, listeners: listenerState(),
+          })));
+          settled();
+        });
+        host.style.width = (host.clientWidth - 60) + 'px';
+        observer.observe(host);
+      });
+    },
+    /* [GRID-03] L1 自身：stop 之后排队中的回调不得再执行。正向对照防止「回调本来就不会触发」的空验。 */
+    async observeResizeStop(stopEarly) {
+      const { observeResize } = await import('/charts/core/frame.js');
+      const box = document.createElement('div');
+      box.style.width = '100px';
+      document.body.append(box);
+      let calls = 0;
+      const stop = observeResize(box, () => { calls += 1; });
+      await new Promise((resolve) => {
+        const observer = new ResizeObserver(() => {
+          if (box.clientWidth === 100) return;
+          observer.disconnect();
+          if (stopEarly) stop();
+          resolve();
+        });
+        observer.observe(box);
+        box.style.width = '200px';
+      });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      stop();
+      box.remove();
+      return calls;
+    },
+    /* 换国家的同一拍：旧国旗还没被新图替换，此刻必须不绘制。 */
+    switchFlag(id) {
+      enter(id);
+      return getComputedStyle(tip().querySelector('img')).visibility;
+    },
     destroy() {
       chart.destroy(); chart = null;
       window.dispatchEvent(new Event('scroll'));
@@ -484,6 +543,8 @@ async function main() {
     }
 
     /* 不用主动 focus 国家替代 Tab：真实键盘必须按原国家顺序逐个访问，再退出地图。 */
+    /* 先把指针移开：上一轮采样把它停在 CN 上，重挂后 Chrome 会补发 hover，与键盘断言抢气泡。 */
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
     const keyboard = await call(`mount(${JSON.stringify({ theme: 'ths', platform: 'pc', mode: 'light' })})`);
     await call('before.focus()');
     for (const expected of [...keyboard.dataOrder, 'world-heatmap-after']) {
@@ -493,6 +554,74 @@ async function main() {
       assert.equal(focused, expected, '真实 Tab 不得跳过国家或重复焦点');
     }
     assert.equal((await call('state()')).visible, false, 'Tab 离开地图后应隐藏 Tooltip');
+
+    const pressTab = async () => {
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
+    };
+    const leavePointer = () => cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 1, y: 1 });
+
+    /* [WORLD-HEATMAP-06] Tab 到可视区外：浏览器自动滚动不得吞掉焦点指示。
+       ⚠️ 上面的 Tab 断言夹具无需滚动，测不到这条；前置断言 scrollTop 防止退化成同样的空验。 */
+    await call('mount()');
+    await call('pushDown(900)');
+    await call('before.focus()');
+    await pressTab();
+    await sleep(300);
+    const offscreen = await call('focusState()');
+    assert.ok(offscreen.scrollTop > 0, '前置：Tab 必须真的触发了滚动');
+    assert.equal(offscreen.focused, keyboard.dataOrder[0], '焦点应落在首个有数据国家');
+    assert.ok(offscreen.visible && offscreen.active === 1 && offscreen.outlines > 0,
+      `自动滚动后应保留描边与气泡 ${JSON.stringify(offscreen)}`);
+    await call('scrollTo(0)');
+    await sleep(100);
+    const scrolledAway = await call('focusState()');
+    assert.ok(!scrolledAway.visible && scrolledAway.active === 0, '焦点国家滚出可视范围后应清除，气泡不得悬空');
+    await call(`scrollTo(${offscreen.scrollTop})`);
+    await sleep(100);
+    assert.equal((await call('focusState()')).visible, true, '滚回可视范围应恢复焦点展示');
+    await call('pushDown(0)');
+
+    /* [WORLD-HEATMAP-06] resize 不重建节点：焦点与 Tab 位置都要保住。 */
+    await call('mount()');
+    await call('forgetFocus()');
+    await call('before.focus()');
+    await pressTab();
+    const focusedBefore = await call('focusState()');
+    await call('setWidth(420)');
+    await waitFor(cdp, 'window.__worldHeatmapContract.focusState().svgWidth === 420');
+    const focusedAfter = await call('focusState()');
+    assert.ok(focusedAfter.sameNode && focusedAfter.focused === focusedBefore.focused, 'resize 不得丢失键盘焦点');
+    assert.ok(focusedAfter.visible && focusedAfter.outlines > 0, 'resize 后焦点展示应保留');
+    assert.equal(focusedAfter.order.length, 253, 'resize 后国家节点完整');
+    assertGeometry(await call('geometry()'), 'resize 后');
+    await pressTab();
+    assert.equal((await call('focusState()')).focused, keyboard.dataOrder[1], 'resize 后 Tab 应接着走');
+
+    /* [WORLD-HEATMAP-06] 鼠标与键盘分开：点击不挪气泡；鼠标移开回到键盘焦点国家。 */
+    await call('mount()');
+    await leavePointer();
+    const hit = (await call('ownership([812, 358])')).screen;
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y });
+    const hovered = await call('focusState()');
+    assert.equal(hovered.title, 'China', '前置：鼠标应命中中国');
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: hit.x, y: hit.y, button: 'left', clickCount: 1 });
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hit.x, y: hit.y, button: 'left', clickCount: 1 });
+    const clicked = await call('focusState()');
+    assert.equal(clicked.focused, 'CN', '前置：点击应让国家获得焦点');
+    assert.deepEqual(clicked.tipBox, hovered.tipBox, '鼠标点击不得把气泡从指针处挪走');
+    await leavePointer();
+    assert.equal((await call('state()')).visible, false, '鼠标焦点不算键盘焦点，移开应隐藏');
+
+    await call('mount()');
+    await call('before.focus()');
+    await pressTab();
+    const keyed = await call('focusState()');
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hit.x, y: hit.y });
+    assert.equal((await call('focusState()')).title, 'China', '前置：hover 应覆盖键盘焦点的展示');
+    await leavePointer();
+    const restored = await call('focusState()');
+    assert.ok(restored.visible && restored.title === keyed.title, `鼠标移开应回到键盘焦点国家 ${JSON.stringify(restored)}`);
 
     for (const theme of ['ths', 'ifind-pc', 'ainvest']) {
       for (const platform of ['pc', 'mobile']) {
@@ -515,6 +644,8 @@ async function main() {
     const flag = await call('flagState()');
     assert.match(flag.src, /\/assets\/country-flags\/cn\.svg$/, '国旗应随本站本地发布');
     assert.ok(flag.imageVisible && !flag.fallbackVisible, '成功图片应显示且不占兜底槽');
+    assert.equal(await call('switchFlag("IN")'), 'hidden', '换国家时不得让新标题配旧国旗');
+    await waitFor(cdp, `getComputedStyle(window.__worldHeatmapContract.host.querySelector('.dv-tooltip img')).visibility === 'visible'`);
     await call(`mount(${JSON.stringify({ customRegions: [
       { id: 'CN', name: 'China', value: 1, flagUrl: '/assets/country-flags/nonexistent-contract-flag.svg' },
     ] })})`);
@@ -534,6 +665,13 @@ async function main() {
     await waitFor(cdp, 'Number(window.__worldHeatmapContract.host.querySelector("svg").getAttribute("width")) === 420');
     assert.deepEqual(await call('listenerState()'), beforeResize, 'resize 重建不得重复积累 scroll 监听');
     assert.equal((await call('state()')).visible, false, 'resize 应清理旧 Tooltip');
+    assert.equal(await call('observeResizeStop(false)'), 1, '前置：未停止时回调应执行一次');
+    assert.equal(await call('observeResizeStop(true)'), 0, 'observeResize 停止后不得再执行排队中的回调');
+    await call('mount()');
+    const raced = await call('destroyDuringResize()');
+    assert.equal(raced.listeners.count, 0, 'resize 排队中销毁不得重建并泄漏 scroll 监听');
+    assert.equal(raced.children, 0, 'resize 排队中销毁后不得留下 DOM');
+    await call('mount()');
     const destroyed = await call('destroy()');
     assert.equal(destroyed.children, 0, 'destroy 应清空图表 DOM');
     assert.equal(destroyed.listeners.count, 0, 'destroy 应移除 scroll 监听');

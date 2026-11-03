@@ -2,7 +2,8 @@
  * playground 三主题面的**多实例同步播放**合同。
  *
  * 与 playback.browser.mjs 的分工：那份验「播放这件事本身」（推进 / 冻结 / 跳期），
- * 消费方是**一个**图表实例；这份只验一件那份验不到的事——**一条轴驱动三个实例**。
+ * 消费方是**一个**图表实例；这份只验一件那份验不到的事——**一条轴驱动多个实例**
+ * （三张主题卡 + 密度档卡，如「Ainvest · 紧凑」，见 tokens/README.md「密度覆盖层」）。
  *
  * ── 为什么非要有这一份 ────────────────────────────────────────────
  * 三卡同步的失败模式是静默的：三张卡各自都在动、控件回显也正常，只是**彼此差了一期**。
@@ -70,6 +71,19 @@ try {
      蒙混过关——那等于什么都没验。 */
   await waitFor(cdp, `document.querySelectorAll('.nav-item').length > 5`, 20000);
 
+  /* 导航路由：无 hash 的默认页也要能「点当前项重置」，后退到无 hash 要回到默认项。 */
+  const activeNav = `document.querySelector('.nav-item.is-active')?.dataset.id`;
+  const activeDensity = `document.querySelector('#seg-density button.is-active')?.dataset.value`;
+  const firstNav = await evaluate(cdp, activeNav);
+  await evaluate(cdp, `document.querySelector('#seg-density button[data-value="many"]').click()`);
+  assert.equal(await evaluate(cdp, activeDensity), 'many', '前置：密度已改动');
+  await evaluate(cdp, `document.querySelector('.nav-item.is-active').click()`);
+  assert.notEqual(await evaluate(cdp, activeDensity), 'many', '无 hash 时点当前项应重置旋钮');
+  await evaluate(cdp, `[...document.querySelectorAll('.nav-item')].find((n) => !n.classList.contains('is-active')).click()`);
+  await waitFor(cdp, `${activeNav} !== ${JSON.stringify(firstNav)}`);
+  await evaluate(cdp, 'history.back()');
+  await waitFor(cdp, `${activeNav} === ${JSON.stringify(firstNav)} && location.hash === ''`);
+
   /* ① 跨示例切换要把上一个控制器收干净：否则旧控制器还挂在已 destroy 的实例上，
         切回来就是两个控制器抢同一条轴（表现为点一次播放跳两期）。 */
   assert.ok(await evaluate(cdp, clickNav(OTHER)), `左栏能切到「${OTHER}」`);
@@ -87,8 +101,10 @@ try {
   /* ② 一条轴、三张卡，且轴在卡片之外 */
   assert.equal(await evaluate(cdp, `document.querySelectorAll('.chart-playback').length`), 1,
     '整个面只有一条播放条（不是每张卡各一条）');
-  assert.equal(await evaluate(cdp, `document.querySelectorAll('.theme-card').length`), 3,
+  assert.equal(await evaluate(cdp, `document.querySelectorAll('.theme-card:not([data-density])').length`), 3,
     '三张主题卡都在');
+  /* 密度档卡与主题卡同受这条轴驱动，下面的同步断言**逐卡**覆盖全部卡片，不写死张数 */
+  const cardCount = await evaluate(cdp, `document.querySelectorAll('.theme-card').length`);
   assert.ok(!(await evaluate(cdp, `!!document.querySelector('.theme-card .chart-playback')`)),
     '播放条位于三张卡之外');
 
@@ -106,9 +122,10 @@ try {
     samples.push(await evaluate(cdp, perCard));
     await sleep(160);
   }
-  const moved = [0, 1, 2].map((card) => samples.some((s, i) => i > 0 && s[card] !== samples[i - 1][card]));
-  assert.deepEqual(moved, [true, true, true],
-    '同一时间窗内三张卡各自都在补间——没有哪张是静止或已经跑完的');
+  const moved = samples[0].map((_, card) => samples.some((s, i) => i > 0 && s[card] !== samples[i - 1][card]));
+  assert.equal(moved.length, cardCount, '每张卡都参与了采样');
+  assert.deepEqual(moved, Array(cardCount).fill(true),
+    '同一时间窗内每张卡各自都在补间——没有哪张是静止或已经跑完的');
 
   /* ④ 暂停：三张卡**一起**把当前这一期播完，然后一起停住。
      ⚠️ 2026-10-08 起本族的暂停不再是「冻结当前帧」而是「播完当前这一期再停」
@@ -128,7 +145,7 @@ try {
 
   assert.deepEqual(cdp.errors, [], '三卡同步播全程不得有页面报错');
   await cdp.close();
-  console.log('✓ 三卡同步播合同通过：一轴驱动三实例 / 各自在动 / 一起收尾停住 / 跨示例切换不残留');
+  console.log(`✓ 多卡同步播合同通过：一轴驱动 ${cardCount} 个实例 / 各自在动 / 一起收尾停住 / 跨示例切换不残留`);
 } finally {
   await stopProcess(chrome);
   server.close();

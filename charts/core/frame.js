@@ -29,9 +29,16 @@ export function verticalGeometry(host, opts = {}) {
     : yForm === 'outside' ? halfLabel : 0) + titleBottomH;
 
   const regionH = tokenNum(host, '--size-chart-region-height') || 160;
+  /* [GRID-04] 图表区高度下限，口径同 --size-chart-region-height（outside 含两端 Y 标签半行高）。
+     token 为 0 = 不设下限，只剩上面那道 48px 可用性兜底（三主题现状）；密度覆盖层可抬高它。
+     minGridHeight 传 0 的调用方（饼环 / 雷达 / 树图 / 横向条）明确表示「我没有 Y 轴图表区」，
+     这条下限一并不适用——它说的是「grid + Y 轴」，套到无轴画布上只会造出死空间。 */
+  const outsideH = yForm === 'outside' ? 2 * halfLabel : 0;
+  const regionMin = minGridHeight > 0 ? tokenNum(host, '--size-chart-region-min-height') : 0;
+  const gridMin = Math.max(minGridHeight, regionMin - outsideH);
   const gridH = height != null
-    ? Math.max(minGridHeight, height - topPad - bottomPad - navH)
-    : Math.max(minGridHeight, regionH - (yForm === 'outside' ? 2 * halfLabel : 0));
+    ? Math.max(gridMin, height - topPad - bottomPad - navH)
+    : Math.max(gridMin, regionH - outsideH);
 
   return { lineH, halfLabel, topPad, xGapTop, bottomPad, gridH };
 }
@@ -75,6 +82,9 @@ export function createFrame(host, opts = {}) {
        无轴图（饼环）应传 0 —— 它的画布边长是调用方按图元算好的（PIE-02 的 2R），
        被这个下限抬高只会在图元四周多出死空间，而那正是 PIE-09 要求恒定的那段间距的来源。 */
     minGridHeight = 48,
+    /* 复用已有画布、只更新尺寸：画布里有可聚焦节点时，整块重建会把键盘焦点丢回 body。
+       默认不传 = 新建，既有调用方不变。 */
+    svg: reuseSvg,
   } = opts;
   /* 240 是**自动取宽**时的下限：轴图靠容器宽度决定画布，容器还没布局好时会量到 0，
      兜一个最小可用宽度免得刻度/标签挤成一团。
@@ -115,7 +125,7 @@ export function createFrame(host, opts = {}) {
 
   const H = topPad + gridH + bottomPad + navH;
 
-  const svg = select(host).append('svg').attr('width', W).attr('height', H).attr('role', 'img');
+  const svg = (reuseSvg ?? select(host).append('svg')).attr('width', W).attr('height', H).attr('role', 'img');
 
   const grid = {
     left: pad.left,
@@ -174,5 +184,9 @@ export function observeResize(host, cb) {
     raf = requestAnimationFrame(cb);
   });
   ro.observe(host);
-  return () => ro.disconnect();
+  /* 排队中的 rAF 也要撤：否则销毁后还会回调一次，把图重建到已卸载的节点上。 */
+  return () => {
+    cancelAnimationFrame(raf);
+    ro.disconnect();
+  };
 }

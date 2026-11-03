@@ -639,6 +639,8 @@
     import { mountExample } from './demos/registry.js';
     import { examplesFor, familiesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, defaultDensityCountOf, densitySliderOf, densityUnitOf, clampDensity, describeConfig, buildConfig, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, playbackPeriodsOf as sharedPlaybackPeriodsOf, clampPeriodIndex as sharedClampPeriodIndex, activePeriodExample } from './demos/examples.js';
     import { createPlaybackController } from './demos/playback/controller.js';
+    import { densitiesOf } from './charts/core/theme.js';
+    import { contentLocale } from './demos/themes.js';
     /* 分类图标住在 demos/nav-icons.js（门禁要 import 它核对缺图标的族，见 hooks/lint-nav-icon.mjs）。 */
     import { NAV_ICONS } from './demos/nav-icons.js';
     import {
@@ -667,6 +669,7 @@
       theme: 'ths',
       platform: 'pc',
       mode: 'light',
+      uiDensity: 'standard', /* 版式密度（data-density）：与上面的数据「项数」density 无关，见 tokens/README.md「密度覆盖层」 */
       density: 4,            /* 连续档：本站的项数是一根滑杆，存的是**数**不是档位 id；
                                 进详情时由 defaultDensityCountOf 换成该示例的默认值 */
       treemapColor: 'intensity',
@@ -931,6 +934,8 @@
       const example = state.detail;
       state.periodIndex = clampPeriodIndex(example);
       const theme = THEMES.find((item) => item.id === state.theme);
+      /* 切到没声明紧凑档的主题时不清 uiDensity，只是不生效——切回 Ainvest 仍保持上次的选择 */
+      const compact = state.uiDensity === 'compact' && densitiesOf(state.theme).includes('compact');
       const hasPlayback = playbackPeriodsOf(example).length > 0;
       const currentPeriod = hasPlayback ? playbackPeriodsOf(example)[state.periodIndex] : null;
       const metaCopy = playbackCopy({ theme: state.theme });
@@ -940,7 +945,7 @@
       const seriesLabel = seriesControl
         ? `${clampIndexSeriesCount(example, state.seriesCount)} ${seriesControl.unit}`
         : '';
-      const exampleSummary = example.summaryByTheme?.[state.theme] ?? example.summary;
+      const exampleSummary = example.summaryByLocale?.[contentLocale(state.theme)] ?? example.summary;
       /* 只注初始宽度，高度不注——高度归 --size-chart-region-height（按主题分化）自然撑开 */
       const surfaceVariables = [
         ...(example.preferredWidth ? [`--chart-preferred-width:${example.preferredWidth}px`] : []),
@@ -974,11 +979,11 @@
           </header>
           <section class="stage">
             <div class="stage__bar">
-              <span class="stage__theme">${theme.label}</span>
+              <span class="stage__theme">${theme.label}${compact ? ' · 紧凑' : ''}</span>
               <span class="stage__meta">${currentPeriod ? `<span class="stage__period" data-stage-period>${currentPeriod.statusLabel ? `${currentPeriod.period} · ${currentPeriod.statusLabel}` : currentPeriod.period}</span> · ` : ''}${state.platform === 'pc' ? 'PC' : `${metaCopy.mobile} ${MOBILE_VIEWPORT.label}`} · ${state.mode === 'light' ? metaCopy.light : metaCopy.dark} · ${caps.density ? `<span data-stage-density>${densityLabel}</span>` : (exampleSummary ?? densityLabel)}</span>
             </div>
             <div class="stage__canvas">
-              <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}" data-platform="${state.platform}" data-mode="${state.mode}" data-playback="${hasPlayback}"${surfaceStyle}>
+              <div class="stage__surface" data-chart="${example.chart}" data-theme="${state.theme}"${compact ? ' data-density="compact"' : ''} data-platform="${state.platform}" data-mode="${state.mode}" data-playback="${hasPlayback}"${surfaceStyle}>
                 ${playbackMarkup(example)}
               </div>
             </div>
@@ -995,6 +1000,7 @@
             <div class="field"><div class="field__copy"><span class="field__label">主题</span><span class="field__hint">data-theme · 换示例后保持不变</span></div>${segment('theme', THEMES.map((item) => [item.id, item.label]), state.theme)}</div>
             <div class="field"><span class="field__label">终端</span><span class="field__hint">参与主题行为解析</span>${segment('platform', [['pc', 'PC'], ['mobile', '移动端']], state.platform)}</div>
             <div class="field"><span class="field__label">明暗</span><span class="field__hint">切换整套颜色 token</span>${segment('mode', [['light', '浅色'], ['dark', '深色']], state.mode)}</div>
+            ${densitiesOf(state.theme).includes('compact') ? `<div class="field"><span class="field__label">版式</span><span class="field__hint">data-density · 同品牌更紧凑的尺寸档</span>${segment('uiDensity', [['standard', '标准'], ['compact', '紧凑']], state.uiDensity)}</div>` : ''}
             ${caps.density ? `<div class="field">
               <div class="field__row">
                 <div class="field__copy"><span class="field__label">${densitySlider.label}</span><span class="field__hint">${densitySlider.hint}</span></div>
@@ -1183,7 +1189,7 @@
       });
       document.getElementById('reset-button').addEventListener('click', () => {
         Object.assign(state, {
-          theme: 'ths', platform: 'pc', mode: 'light', density: defaultDensityCountOf(state.detail),
+          theme: 'ths', platform: 'pc', mode: 'light', uiDensity: 'standard', density: defaultDensityCountOf(state.detail),
           dataLabel: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right',
           legendSelect: 'multi',
           treemapColor: 'intensity', axisValue: false,

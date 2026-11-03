@@ -1,0 +1,34 @@
+{
+  "$meta": {
+    "description": "密度覆盖层：同一品牌下更紧凑的版式。不是主题——data-theme 不变，在同一元素上加 data-density 才生效。合同与合并规则见 tokens/density.mjs，用法见 tokens/README.md「密度覆盖层」。",
+    "scope": "[data-theme=\"<theme>\"][data-density=\"<density>\"]（与 data-theme 挂在同一元素上）"
+  },
+  "ainvest": {
+    "compact": {
+      "$source": "Ainvest 高密度图表修改点（2026-10-28 设计稿截图）。看板层级 / 顶部导航避让暂不做。",
+      "tokens": {
+        "size-legend-marker": "6px",
+        "font-size-legend": "11px",
+        "line-height-legend": "14px",
+        "spacing-legend-marker-label": "{spacing-4}",
+        "spacing-legend-item-h": "{spacing-12}",
+        "spacing-legend-container-v-top": { "mobile": "{spacing-16}", "pc": "{spacing-8}" },
+        "spacing-legend-container-v-bottom": { "mobile": "{spacing-16}", "pc": "{spacing-8}" },
+        "size-chart-region-height": "140px",
+        "size-chart-region-min-height": "100px",
+        "size-chart-min-width": "300px",
+        "spacing-axis-x-band-top": "{spacing-2}",
+        "spacing-axis-x-band-bottom": "{spacing-2}",
+        "size-bar-max": "24px",
+        "size-bar-group-container-max": "74px",
+        "size-donut-ring-width": "24px",
+        "size-line-point": "6px",
+        "font-size-tooltip": "11px"
+      },
+      "behavior": {
+        "legend-marker": { "mode": "unified", "shape": "dot", "w": 6, "h": 6 },
+        "datazoom-handle": { "shape": "circle", "w": 24, "h": 24, "grip": { "n": 3, "h": 8, "gap": 4 } }
+      }
+    }
+  }
+}

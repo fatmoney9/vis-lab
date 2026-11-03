@@ -47,11 +47,12 @@
 | 面 | 位置 | 职责 |
 |---|---|---|
 | **对外站点** | `index.html` | 画廊 + 详情页、单主题切换；GitHub Pages 发布的就是它。详情页左栏常驻示例列表（或 ←/→ 换图），旋钮跨示例保持，**同一主题横着比几张图**看这里；同一张图比三主题看下一行 |
-| **开发验收** | `playground/preview.html` | 三主题横向并排、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
+| **开发验收** | `playground/preview.html` | 三主题横向并排（另加密度档卡，如「Ainvest · 紧凑」）、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
 | **图型对照面**（可选） | `playground/<图型>-preview.html` | 单个图型的多形态 × 三主题同屏铺开。当前有 `radar-preview.html`；**它 import 共享示例源**，只负责「怎么摆」。桑基的 `sankey-preview.html` 是**另一回事**——那个自带数据，见第七节 |
 
-**示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 主题/密度档位 + 配置装配），
-`demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理 Ainvest
+**示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 数据量档位 + 配置装配），
+`demos/themes.js` 登记主题清单与各主题的图表内容语言（`locale`），
+`demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理英文主题
 图表内部内容的英文展示。各面 import 同一份、各自决定怎么展示，
 故加示例只加一处、不会漂移；示例用 `surfaces` 字段声明进哪个面（缺省两面都进），
 用 `chart` 字段声明由哪个 L2 组件渲染。**新增一种图表**（饼 / 环 / 横向条形…）的步骤写在
@@ -177,6 +178,9 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
   **behavior.json 适用同一条合同纪律**（`core/theme.js` 加载时校验，缺键抛错）。
 - 组织方式（各自全量 vs base + delta 合并）只是维护成本取舍，届时再定
   ——那只是 JSON 的重新组织，不需要今天预付成本。图表组件本身不含任何主题逻辑。
+- **密度档（如 Ainvest 紧凑）是叠在主题上的覆盖层，不是新主题**：品牌 id 被色板、水印、播放件样式与 L3 语言
+  当作键使用，另开主题 id 会让这些地方静默回落。差异只写在 `tokens/density.json`，两条通道各自合并
+  （构建器 → CSS 作用域，`theme.js` → 形态），合同见 `tokens/README.md`「密度覆盖层」。
 - **多端（PC / App）是组件的一个配置维度**（`platform` 参数），不是两套代码。
   端差异（轴标签形式、字号、图表宽度）在 L1 构件内部消化。
 - 换入品牌色板前，先跑色觉安全校验（相邻色 CVD 差值、对比度、亮度带），不靠目测。
@@ -241,7 +245,7 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
 、`RadarChart`（标准 / 多数据 / 分区三类示例，角度均分 · 值→半径 · 横排 / 环绕标签 · 连续 / 分段背景 · 单系列可调节输入，见 `specs/radar.md` RADAR-01..18）
 、`WaterfallChart`（累计桥接 / 分组数据柱 · 有符号累计与分段守恒 · 三主题共用浅底箭头柱并使用各自主题色，见 `specs/waterfall.md` WATERFALL-01..15）
 、`ChordChart`（实体间相互流动，n×n 方阵 · 角度∝流量 · 无向 / 有向两档槽位模型 · 环绕 / 横排两档实体标签，见 `specs/chord.md` CHORD-01..19）
-与 `WorldHeatmapChart`（全球国家分级设色 · 五档强度 · 三套主题色 · hover / 键盘 Tooltip，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..08）、
+与 `WorldHeatmapChart`（全球国家分级设色 · 五档强度 · 三套主题色 · hover / 键盘 Tooltip，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）、
 共享同一份示例数据源（`demos/`）的预览面——对外站点 `index.html`、开发验收面 `playground/preview.html`，以及雷达对照面 `playground/radar-preview.html`（桑基另有自带数据的独立面，见第七节例外），
 已发布到 GitHub Pages，以及**提交前 / CI 门禁**（token 合同、水印生成物、语法、纯逻辑单元测试，
 外加一组守卫：分层与 L1 复用、Spec ID 回引、测试卫生、色值字面量、字体引用、L1 复用声明、预览面契约、分类图标、Ainvest 英文）。

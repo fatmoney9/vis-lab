@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import {
   assertWorldHeatmapTone,
@@ -82,6 +82,11 @@ test('WORLD-HEATMAP-02/06：中国境内使用口径的世界底图与圆形国�
     const svg = readFileSync(url, 'utf8');
     assert.match(svg, /^<svg\b/, `${id} 必须能读取真实 SVG，不能是符号链接目标字符串`);
   }
+  /* 反向对账：只查「地区 → 文件」拦不住多余文件，已并入 CN 的地区旗帜会继续随站点发布。 */
+  const referenced = new Set(WORLD_MAP_FEATURES.map(({ id }) => new URL(countryFlagThumbnail(id)).href));
+  const surplus = readdirSync(assetRoot)
+    .filter((file) => file.endsWith('.svg') && !referenced.has(new URL(file, assetRoot).href));
+  assert.deepEqual(surplus, [], '国旗目录不得收录底图用不到的资源');
   assert.equal(countryFlagThumbnail('cn'), new URL('cn.svg', assetRoot).href);
   assert.equal(countryFlagThumbnail('XK'), new URL('xk.svg', assetRoot).href);
   assert.equal(countryFlagThumbnail('GO'), new URL('tf.svg', assetRoot).href);
