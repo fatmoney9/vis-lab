@@ -35,7 +35,7 @@ export function validateHBarSettings(settings = HBAR_SETTINGS) {
 }
 
 /* [HBAR-11] Top-N 的合法区间。低于 2 名就没有「排名」可言，高于 30 行会挤到看不清。 */
-export const TOP_N_RANGE = Object.freeze({ min: 2, max: 30, default: 10 });
+const TOP_N_RANGE = Object.freeze({ min: 2, max: 30, default: 10 });
 
 export function clampTopN(value) {
   const n = Math.round(Number(value));

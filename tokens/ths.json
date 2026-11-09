@@ -275,7 +275,6 @@
     "pc": "1px"
   },
   "spacing-chart-region-gap": "{spacing-8}",
-  "spacing-leader-line-offset": "{spacing-8}",
   "$section-16": "柱状图 Bar",
   "size-bar-max": "16px",
   "size-bar-container-max": "24px",
@@ -403,7 +402,6 @@
   "size-chord-label-gap": "{spacing-4}",
   "size-chord-label-band": "56px",
   "font-size-chord-label": "{font-size-extra-small}",
-  "line-height-chord-label": "{line-height-small}",
   "font-weight-chord-label": "{font-weight-regular}",
   "opacity-chord-ribbon": 0.2,
   "opacity-chord-ribbon-active": 0.64,

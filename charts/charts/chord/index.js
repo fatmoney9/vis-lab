@@ -22,7 +22,7 @@ import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { tokenNum } from '../../core/tokens.js';
-import { labelAnchor, labelArc } from '../../core/polar-label.js';
+import { labelAnchor, labelArc, pointAt } from '../../core/polar-label.js';
 import { resolveChartText } from '../../core/chart-text.js';
 import {
   createHighlightState, applyHover, applyLeave, applyPick, applyClear, activeTarget,
@@ -292,7 +292,8 @@ export function ChordChart(host, initialConfig) {
     const arcAnchor = (g) => {
       const mid = (g.a0 + g.a1) / 2;
       const r = (graph.rOuter + graph.rInner) / 2;
-      return toRootPoint(Math.sin(mid) * r, -Math.cos(mid) * r);
+      const { x, y } = pointAt(mid, r);
+      return toRootPoint(x, y);
     };
 
     /* 返回是否有目标：没有目标时气泡立刻收还是延时收，由各入口自己决定 */

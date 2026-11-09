@@ -162,7 +162,7 @@ export function assertPlaybackCopy(copy, owner = '播放区') {
  */
 const LABELLED_TICKS = 8;
 
-export const labelledTickCount = (count) => Math.min(count, LABELLED_TICKS);
+const labelledTickCount = (count) => Math.min(count, LABELLED_TICKS);
 
 const labelledAt = (count) => {
   if (count <= LABELLED_TICKS) return () => true;

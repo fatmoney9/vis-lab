@@ -1,6 +1,6 @@
 import { intensityLevels } from '../../core/visual-color.js';
 
-export const WORLD_HEATMAP_TONES = Object.freeze(['primary', 'up', 'down']);
+const WORLD_HEATMAP_TONES = Object.freeze(['primary', 'up', 'down']);
 
 const REGION_ID = /^[A-Z]{2}$/;
 const FLAG_ROOT = 'https://cdn.jsdelivr.net/gh/HatScripts/circle-flags@379588b5da95482d6bbf10bd45644a35b0609ea6/flags/';
