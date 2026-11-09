@@ -632,8 +632,18 @@
     <main class="main" id="main-content"></main>
   </div>
 
+  <!-- 固定 d3 版本：浮动的 d3@7 会在上游发版当天悄悄换掉线上依赖。四个预览面各有一份，升级时一起改。 -->
   <script type="importmap">
-    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm" } }
+  </script>
+  <script>
+    /* d3 走 CDN：模块图加载失败时页面只会空白、没有任何提示。模块开头会打上 data-ready，
+       超时仍未打上就给出可见提示，而不是让人对着空页面猜。 */
+    setTimeout(() => {
+      if (document.documentElement.dataset.ready) return;
+      const main = document.getElementById('main-content');
+      if (main) main.innerHTML = '<p style="padding:40px 24px;color:#646a73">图表库加载失败，可能是网络无法访问 cdn.jsdelivr.net。请检查网络后刷新页面。</p>';
+    }, 10000);
   </script>
   <script type="module">
     import { mountExample } from './demos/registry.js';
@@ -650,6 +660,7 @@
       playbackMarkup as sharedPlaybackMarkup,
     } from './demos/playback/view.js';
 
+    document.documentElement.dataset.ready = '1'; /* 走到这里说明 d3 与全部模块都已加载成功 */
     /* 示例定义、数据生成函数、主题与密度档位全部来自 demos/examples.js —— 与 playground 同一份数据源，
        加示例只加那一处。本页只负责「怎么展示」：画廊 + 详情页、单主题切换。 */
     const EXAMPLES = examplesFor('index');
@@ -817,13 +828,26 @@
         </section>`).join('') : '<div class="empty-state">没有匹配的图表示例</div>'}
       </div>`;
 
-      main.querySelectorAll('.example-card').forEach((card) => {
+      const mountCard = (card) => {
         const example = EXAMPLES.find((item) => item.id === card.dataset.id);
         mountChart(card.querySelector('.chart-host'), example, {
           density: defaultDensityOf(example), theme: 'ths', platform: 'pc', area: false, zoom: false, axisTitle: false, callout: false,
           animation: true, compact: true,
         });
-      });
+      };
+      /* 卡片滚动到视口附近才挂载：一次挂齐全部示例是首页最大的开销，入场动效也会在看不见的地方播完。
+         预览区有固定最小高度，未挂载的卡片不会让页面跳动。 */
+      const cards = [...main.querySelectorAll('.example-card')];
+      if (!('IntersectionObserver' in window)) { cards.forEach(mountCard); return; }
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          mountCard(entry.target);
+        });
+      }, { rootMargin: '300px 0px' });
+      cards.forEach((card) => observer.observe(card));
+      chartCleanups.push(() => observer.disconnect());
     }
 
     /* disabled = 该旋钮当前不生效（如「标签对齐」在非引线档下）——置灰而不是隐藏：
