@@ -3,7 +3,7 @@
  * 本文件零 DOM / 零 d3，公式可由 node 单测直接验证。
  */
 export const WATERFALL_VARIANTS = Object.freeze(['standard', 'data']);
-export const WATERFALL_KINDS = Object.freeze(['total', 'delta', 'subtotal']);
+const WATERFALL_KINDS = Object.freeze(['total', 'delta', 'subtotal']);
 export const WATERFALL_X_CONTENTS = Object.freeze(['name', 'name-value']);
 
 const finite = (value, where) => {

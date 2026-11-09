@@ -45,7 +45,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| AXIS-07 | 默认**不显示**（全主题）。启用时：长 3px；粗细走 `size-grid-line`、颜色走 `color-visualization-divider`（与网格线同源） | `core/grid.js` → `renderTicks()` | ✅ |
+| AXIS-07 | 轴刻度线**不显示**（全主题），也不提供实现。将来需要时再连同长度、方向与 token 一并定义 | — | ✅ |
 
 ## 样式 token（X / Y 共用，主题 × 端差异收在 tokens）
 
@@ -67,4 +67,4 @@
 - [ ] AXIS-02 遗留：「副 Y 出现条件」（量纲/数量级判断）的自动化——当前靠调用方显式声明 `axis:'secondary'`（`cartesian/series.js` 缺省 `'primary'`）。**这条是「要不要做」待决，不是「待实现」**：`cartesian/index.js` 里 `const dual = resolved.some(r => r.axis === 'secondary')` 的注释「用声明判定，副轴存在性稳定」正是反对自动化的理由——量纲是业务语义、机器判不了，数量级又随数据漂，自动判定会让同一张图在换周期或拖缩放轴时坐标系自己跳出/跳回。要推翻这条，先给出「副轴不随数据抖动」的判据
 - [x] inside 布局下 0 轴标签是否省略——**已决定并已实现：不省略**。最底的 0 标签恒压在轴线之上、不越下沿。（原文此处记的 `y+3` 配 `hanging` / `y-4` 的构造已于 2026-08-20 换掉，见下一条）
 - [x] 缩放轴（datazoom）本体的规范化组件——已落地 [datazoom.md](datazoom.md)（DATAZOOM-01..07：`core/datazoom.js` + L2 窗口切片）；本页 SCALE-02 仍是「窗口→Y 轴重算」联动数学的权威，datazoom.md DATAZOOM-07 回引之
-- [x] AXIS-07 刻度线方向——**关闭：能力预留，全主题默认关，链路未接入**。`core/grid.js` 的 `renderTicks()`（含 `inward` 方向开关）**全库无任何调用点**，也没有 token / 旋钮能把 `show` 打开，与 AXIS-07 正文「默认不显示（全主题）」一致。因此「向内还是向外」当下无从验证——什么都没渲染。要接入时再连同方向一并定，并同步把本条重开
+- [x] AXIS-07 刻度线——**关闭：不显示，也不保留实现**。原 `core/grid.js` 的 `renderTicks()` 全库无调用点，2026-11-09 删除；要接入时再连同方向与 token 一并定，并重开本条。

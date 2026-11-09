@@ -208,13 +208,16 @@ export function RadarChart(host, cfg) {
   function applyDim() {
     const emph = hoverKey ?? state.selected;
     const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
-    /* [RADAR-06] 面与线分属两层（见 build），故弱化要**两层各压一次**：
-       只压 g.dv-radar-series 会让被弱化系列的面仍是满不透明度，线淡了面没淡。 */
-    select(plotHost).selectAll('g.dv-radar-series, path.dv-radar-area')
+    const pinned = state.selected;
+    select(plotHost).selectAll('g.dv-radar-series')
       .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
-    /* [RADAR-06] 钉住的那一组填充本色，其余回默认 10% 档——两档由修饰类切，值仍在 token 里。 */
+    /* [RADAR-06] 面与线分属两层（见 build），故面要单独处理：
+       钉住时选中组填本色、其余组的面压到 opacity-radar-area-dim，两档由修饰类切、值在 token 里，
+       面自身不再叠乘 dim（叠乘会把 24% 压成约 2%）。没有钉住、只是 hover 时，面随线一起弱化。 */
     select(plotHost).selectAll('path.dv-radar-area')
-      .classed('dv-radar-area--pinned', function () { return this.dataset.key === state.selected; });
+      .attr('opacity', function () { return !pinned && emph && this.dataset.key !== emph ? dim : 1; })
+      .classed('dv-radar-area--pinned', function () { return this.dataset.key === pinned; })
+      .classed('dv-radar-area--unpinned', function () { return pinned != null && this.dataset.key !== pinned; });
   }
 
   function drawLegend() {

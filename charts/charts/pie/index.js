@@ -24,7 +24,7 @@
  */
 import { select, arc } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
-import { tokenNum } from '../../core/tokens.js';
+import { tokenNum, tokenStr } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { measureTexts } from '../../core/measure.js';
@@ -124,7 +124,7 @@ export function PieChart(host, cfg) {
      `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
   function applyDim() {
     const emph = hoverKey ?? state.selected;
-    const dim = getComputedStyle(host).getPropertyValue('--opacity-visualization-dim').trim() || '1';
+    const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
     select(plotHost).selectAll('g.dv-pie-series, g.dv-data-label-series')
       .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
   }
