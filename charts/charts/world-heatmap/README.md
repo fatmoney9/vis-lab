@@ -66,3 +66,10 @@
 | `UM` | `us.svg` | 同上 |
 
 ⚠️ CDN 对上游符号链接返回 200 和目标文件名字符串，不是 SVG。升级固定提交时，要重新核对哪些文件是符号链接，并跑一遍浏览器合同：它会逐个加载底图所有地区的国旗。
+
+
+## 要点（改本族代码前先读）
+
+> 2026-11-09 从 `AGENTS.md` 迁入。规则本身以规范页为准，这里记的是设计取舍与踩过的坑。
+
+**WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以 ISO alpha-2 码标识，底图与国旗都经 jsDelivr 加载固定提交的第三方数据（来源见本族 README），不进仓库；底图异步到达，用 `ready` 等待。`CN` 统一包含台湾、港澳，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
