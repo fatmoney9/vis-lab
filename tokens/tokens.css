@@ -180,7 +180,6 @@
   --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
-  --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 16px;
   --size-bar-container-max: 24px;
   --size-bar-gap-ratio: 2:1;
@@ -291,7 +290,6 @@
   --size-chord-label-gap: var(--spacing-4);
   --size-chord-label-band: 56px;
   --font-size-chord-label: var(--font-size-extra-small);
-  --line-height-chord-label: var(--line-height-small);
   --font-weight-chord-label: var(--font-weight-regular);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;
@@ -512,7 +510,6 @@
   --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
-  --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 32px;
   --size-bar-container-max: 48px;
   --size-bar-gap-ratio: 2:1;
@@ -623,7 +620,6 @@
   --size-chord-label-gap: var(--spacing-4);
   --size-chord-label-band: 56px;
   --font-size-chord-label: var(--font-size-extra-small);
-  --line-height-chord-label: var(--line-height-small);
   --font-weight-chord-label: var(--font-weight-regular);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;
@@ -847,7 +843,6 @@
   --size-chart-min-width: auto;
   --size-grid-line: 1px;
   --spacing-chart-region-gap: var(--spacing-8);
-  --spacing-leader-line-offset: var(--spacing-8);
   --size-bar-max: 32px;
   --size-bar-container-max: 48px;
   --size-bar-gap-ratio: 2:1;
@@ -958,7 +953,6 @@
   --size-chord-label-gap: var(--spacing-4);
   --size-chord-label-band: 56px;
   --font-size-chord-label: var(--font-size-extra-small);
-  --line-height-chord-label: var(--line-height-small);
   --font-weight-chord-label: var(--font-weight-bold);
   --opacity-chord-ribbon: 0.2;
   --opacity-chord-ribbon-active: 0.64;

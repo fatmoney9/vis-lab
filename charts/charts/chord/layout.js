@@ -33,8 +33,8 @@ const largeArc = (span) => (span > Math.PI ? 1 : 0);
 /* [CHORD-01] 实体数下限。两个实体的往来用一对数字就说清了，构不成「相互流动」。 */
 export const MIN_ENTITIES = 3;
 
-export const CHORD_VARIANTS = Object.freeze(['undirected', 'directed']);
-export const CHORD_LABEL_LAYOUTS = Object.freeze(['arc', 'horizontal']);
+const CHORD_VARIANTS = Object.freeze(['undirected', 'directed']);
+const CHORD_LABEL_LAYOUTS = Object.freeze(['arc', 'horizontal']);
 
 /*
  * [CHORD-01] 校验并归一化输入。返回 { entities, matrix, n, variant, entityLabelLayout }。
