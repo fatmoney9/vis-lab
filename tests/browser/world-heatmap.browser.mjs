@@ -479,6 +479,9 @@ async function main() {
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
     await cdp.send('Page.navigate', { url: `http://${LOOPBACK}:${port}/index.html` });
     const gallerySelector = '.example-card[data-chart="world-heatmap"] .dv-world-heatmap__country';
+    /* 画廊卡片滚到视口附近才挂载，地图卡在页面底部，先滚过去。 */
+    await waitFor(cdp, "document.querySelector('.example-card[data-chart=world-heatmap]')", 25000);
+    await evaluate(cdp, "document.querySelector('.example-card[data-chart=world-heatmap]').scrollIntoView()");
     await waitFor(cdp, `document.querySelectorAll(${JSON.stringify(gallerySelector)}).length === ${MAP_COUNTRIES}`, 25000);
     const gallery = await evaluate(cdp, `([...document.querySelectorAll(${JSON.stringify(gallerySelector)})]
       .every((node) => getComputedStyle(node).pointerEvents === 'none'
