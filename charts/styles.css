@@ -1029,6 +1029,7 @@
 }
 
 .dv-radar-area--pinned { fill-opacity: 1; }
+.dv-radar-area--unpinned { fill-opacity: var(--opacity-radar-area-dim); }
 
 .dv-radar-line {
   fill: none;
