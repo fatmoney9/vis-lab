@@ -53,7 +53,7 @@
 | 水印 | `core/watermark.js` | `watermarkAnchor` · `renderWatermark` |
 
 **L1 有、但签名不合用时怎么办：参数化 L1，不要在 L2 另写一份。**
-这是 `WORKFLOW.md` 第八节用 `PieChart` 实测出来的结论——接新图型的 L1 成本几乎全部来自
+这是接 `PieChart` 时实测出来的结论（见 `docs/decisions.md`）——接新图型的 L1 成本几乎全部来自
 「为轴图设的隐含假设被无轴图暴露」，正确修法是把假设收回 L1（如 tooltip `place()` 删掉容器尺寸参数），
 而不是让新图型自带一份。判断粒度见 `WORKFLOW.md` 第三节。
 
@@ -117,62 +117,20 @@
 
 ## 当前状态与下一步
 
-当前有**九个 L2 图表组件**：
+当前有**九个 L2 图表组件**。每族的设计取舍与踩过的坑写在各自 README 的「要点」一节，**改某一族前先读那一节**；规则本身以规范页为准。
 
-- **CartesianChart**（`charts/charts/cartesian/`）：柱、堆叠、折线、折柱组合、双 Y、hover/tooltip 链路、缩放轴（datazoom，见 `specs/datazoom.md`）、水印（watermark，见 `specs/watermark.md`）、数据标签（data label，见 `specs/data-label.md`）、图表标注（callout，见 `specs/callout.md`，默认不显示，位置自动选、不移动任何下层元素）、轴标题（axis title，见 `specs/axis-title.md`，默认不显示）和入场生长动效（motion，见 `specs/motion.md`，默认开、仅实例首次挂载时播）。
+| 组件 | 目录（含要点） | 规范 |
+|---|---|---|
+| `CartesianChart` | `charts/charts/cartesian/README.md` | `specs/bar.md · specs/line.md` |
+| `HBarChart` | `charts/charts/hbar/README.md` | `specs/hbar.md` |
+| `PieChart` | `charts/charts/pie/README.md` | `specs/pie.md` |
+| `SankeyChart` | `charts/charts/sankey/README.md` | `specs/sankey.md` |
+| `TreemapChart` | `charts/charts/treemap/README.md` | `specs/treemap.md` |
+| `WaterfallChart` | `charts/charts/waterfall/README.md` | `specs/waterfall.md` |
+| `RadarChart` | `charts/charts/radar/README.md` | `specs/radar.md` |
+| `ChordChart` | `charts/charts/chord/README.md` | `specs/chord.md` |
+| `WorldHeatmapChart` | `charts/charts/world-heatmap/README.md` | `specs/world-heatmap.md` |
 
-**直角坐标系与饼环两族共用的图例点击语义**（`legendSelect`，见 `specs/legend.md` LEGEND-06 / LEGEND-14；**桑基不适用**——其图例是静态色卡，见下）：`'multi'`（默认，点谁隐谁）/ `'single'`（只留该项）/ `'focus'`（**不隐藏**，只把其余项与其图形压到 `opacity-visualization-dim`）。前两档改数据构成（饼环重算 360°、轴图重算值域），第三档不改。**这个键 2026-08-12 前住在 `behavior.json` 的 `legend-select` 上，已迁出**——它不是品牌分叉（源文档从未指定各主题默认），判例同 LEGEND-10「方位」。纯状态迁移在 `charts/core/legend-state.js`（**与 `legend.js` 分开只为可测**：那边 import d3，`node --test` 加载不了）。
-- **HBarChart**（`charts/charts/hbar/`，见 `specs/hbar.md` HBAR-01..23）：横向条形图，**排名竞赛是它的一种形态而非另一个组件**——不给时间序列就是静态横向条，给了就能逐期播放。要点：
-  - **插值的是名次本身，不是只插值数值**：行位置是排序名次、即值的**离散函数**，若每帧对插值后的值重新排序，两条交叉那一帧会整行瞬跳。正解是名次也线性插值得到**小数名次**（HBAR-12），于是交叉时平滑对穿。这与桑基相反——那边节点位置是流量的连续函数，插值后重跑布局天然平滑
-  - **Top-N 进出榜由同一条 t 顺带解决**，不需要第二套时序：进榜者起点取榜底外一行、`alpha` 0→1，掉榜者反向
-  - **keyed join 的键是实体、不是名次**，颜色只在 `build()` 写一次——这是「颜色跟随实体、不跟随排名」的物理保证
-  - 两层渲染：`build()` 读 token 与建结构，`paint()` 逐帧只写几何。逐帧重跑 token 读取会撞 `specs/motion.md` 的 Don't
-  - 几何复用 L1 `core/bar-geometry.js`（`barPath` 的 `right`/`left` 方向档 + `singleBar`）；补间驱动复用 L1 `runTween`（MOTION-08）；播放控件复用 `demos/playback/`（见 `specs/playback.md`）
-  - **读数参照系是竖向分割线 + 顶部横轴标签**（HBAR-21/22），横向网格线一条不画（行间距已经分行，再加横线会读成表格）。比例尺**逐帧重算、域是连续的插值 max**——吃 `niceSplit` 的量化上界会让所有条在换挡那一帧同时缩放（HBAR-06）
-  - **暂停 = 把当前这一期播完再停，与桑基相反**（HBAR-16 vs SANKEY-24）：横向条的长度就是数值本身，停在两期之间的条不对应任何真实值。实现上 `pause()` 是空操作、不去调 `runTween` 的 pause
-  - **条粗细别名到本主题的纵向柱 token**（HBAR-03）：横条与竖柱是同一图元的两个方向，粗细同源
-  - **本族不提供 tooltip 与指示线**（HBAR-09）：读数已由条端常驻数值承担，浮层只会遮住正在滑动的相邻行
-- **PieChart**（`charts/charts/pie/`，见 `specs/pie.md` PIE-01..17）：饼与环**同一个组件**，靠 `variant: 'donut' | 'pie'` 分形态。无坐标轴，复用同一套图例 / 数据标签 / tooltip / 水印 / 动效 / 取色构件。要点：
-  - 画布 = **图元的外接框**，不留富余——图元含圆外的引线与标签带；无外侧标签时退化为环的外接方框 2R。多出的画布会变成图元与图例之间随容器浮动的死空间（PIE-02）。**有意的例外只有标签带**：它锚容器不锚文本（见下条 PIE-13）、且**两侧恒等宽**，文本短时带内会留白——换来的是环不随数据量 / 对齐档 / 名称长短跳动，圆心也不偏离画布中心
-  - 半径 = `clamp(默认半径 × 0.5, 短边/2, 默认半径)`——token 是上限，**收缩有底**（THS/iFinD 35、Ainvest 40）；触底后环溢出画布而非继续变小（PIE-02）
-  - 两种图例布局：`legend: 'right'`（默认，左右结构）/ `'bottom'`（上下结构），间距 24px、整组居中，**图例块与环共享同一条中线**；两种结构都封顶 + 溢出滑动，上限左右 = 图元高 × 2（L2 算好写进 `--dv-pie-legend-max-h`）、上下 = 默认图元高 `size-donut-radius × 2`（纯 CSS，锚 token 是为断开「图例高 → 半径 → 图例上限」的循环）（PIE-09 / LEGEND-10/11）
-  - 扇区取色走**扇区专用盘 `pie-multi`**（THS 11 色；未声明该盘的主题回落通用 `bar-multi`），单扇区仍取 `single-default`（COLOR-08）
-  - 气泡恒走 `follow` 档（TOOLTIP-07 的无坐标系图特例，在 L2 定死、不进 behavior.json）
-  - **数据标签默认不显示**（LABEL-05「一个类目一个值就出标签」原则的明确例外）。开启后有两种**互斥**形态：`labelLayout: 'outside'`（默认，外侧标签 + 引线，PIE-12/13/14）/ `'inside'`（扇区内，PIE-04）——引线与标签强绑定，所有丢弃都必须在画线前判完
-  - 外侧标签 = **名称段 + 数值段**，两段各有自己的字号 / 行高 token，名称段另有自己的**字重**（regular）与**颜色**（`color-text-secondary`，数值段 primary）；渲染恒为**两个 `<text>`**（一个 `<text>` 只能一个 fill）。排布形态走 `behavior.json` 的 `pie-label-form`：THS / iFinD-PC `inline` 同行、Ainvest `stacked` 上下两行；`inline` 要求两段字号相同（异字号必须 stacked，否则单一 class 的测量会系统性偏窄）（PIE-15）
-  - ⚠️ **`.dv-data-label` 通用 token 的隐含前提是「标签内容是数字」**（medium 字重、`font-family-number`、`tabular-nums`）。名称段是全库第一个非数字消费者——再往这套类上挂非数字文本，先逐项复核
-  - **可命中面 = 扇区面 + 引线 + 外侧标签**，三者共用同一套绑定（接在扇区 `<g>` 上，标签层复用同一个函数），引线另叠透明命中带。**外侧标签放行 `pointer-events` 是 LABEL-08 的例外**（落在环外、不压图元）；**扇区内档必须保持 `none`**，否则在扇区中间挖出死区（PIE-17）
-  - **超宽截名称、不丢整条**（PIE-16）：数值段恒完整（截断的数字是错的数字），保底 1 字 + `…`；连最短形态都放不下才回落丢弃。图例侧另有纯 CSS 截断 + `title` 兜底（LEGEND-13）
-  - **标签带宽只看容器不看文本**（PIE-13）：`min((容器宽 − 图例带)/2 − R, size-donut-label-band-max)`，两侧同值。这是为切断「带宽由文本反推 ↔ 文本按带宽截断」的环——改动它前先读 PIE-13 的说明
-  - 强调态**两条视觉通道**：① 外扩——hover 临时 + 点击常驻，外半径 +`size-donut-hover-expand`（仅 Ainvest 10px，另两主题 0）带 200ms 补间（PIE-10/11）；② 不透明度弱化——**不随主题归零**，故 THS / iFinD-PC 只有在 `legendSelect: 'focus'` 档才看得见「点击选中」（LEGEND-14）。⚠️ 另两档下点扇区在那两个主题确实毫无反应，那是「0 即天然无形态」的预期结果，**不是缺陷、不要去补**。focus 档下图例项是扇区面 / 引线 / 标签之外的**第四个**入口，四者共用同一个 selected
-- **SankeyChart**（`charts/charts/sankey/`，见 `specs/sankey.md` SANKEY-01..29）：表达节点间的**流向与流量**，**不属于堆叠图表族**。无坐标轴、无 band。要点：
-  - **`role`（业务角色，定颜色）与 `stage`（横向阶段）必须由数据显式声明**——渲染器**不得**从「第几列」或「值是不是负数」反推。终止节点也不等同于最右列节点
-  - **图形随容器高度等比缩放**（SANKEY-29）：系数 = 可用绘图区高 ÷ 自然高度，容器为默认高度时恰为 1；主节点 240 / 120 是系数 1 时的基准，不是固定值。节点宽度、字号、横向列距不缩放。序列的自然高度由 `withSharedSankeyScale` 注入，别按当前期算，否则默认形态和逐期比例尺都会变。紧凑档高度走 `size-sankey-canvas-height`（别名到 `size-chart-region-height`）
-  - 节点高与边宽只用**几何量 `magnitude = abs(value)`**，符号只表达贡献方向；最小 1px 只放大可见线宽，**不反写**原始值、节点比例、标签数值或会计守恒（SANKEY-17/25）
-  - 主节点中心恒定在画板**垂直中轴**，后续列按流入重心逐级回拉中轴（SANKEY-21）
-  - **季度播放**（SANKEY-24/26）：仅在相邻周期节点 ID 与 `source→target` **完全同拓扑**时插值，否则立即切换；滑块只落离散刻度、不沿轨道补间。同序列可声明统一 `scaleMax` 共享比例尺
-  - 图例是**静态色卡**（`renderLegend` 不接 `onToggle`/`onHover`、标 `role="list"`），没有点击可言，故本族**不声明 `legendSelect` / `dataLabel` 等旋钮——不是漏了**（见 `demos/examples.js` `CHART_CAPABILITIES` 注释）
-- **TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06；公司标识 `showImage` 默认关，只对 `content=image` 的主题生效，TREEMAP-18），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
-- **WaterfallChart**（`charts/charts/waterfall/`，见 `specs/waterfall.md` WATERFALL-01..15）：常规累计桥接与分组数据柱共用一套有符号累计模型；`kind`、`operatorBefore` 与 `segments` 均由数据显式声明。累计公式、分段守恒和三主题共用的浅底箭头复合图元留在 L2，箭头通过 `currentColor` 使用各自主题色；画布、比例尺、零轴、X 标签碰撞、文字测量、Tooltip / 十字线、水印、格式化、取色与动效均复用 L1。主题默认色彩模式仍在 `behavior.json`，尺寸与视觉值不进实例 API。
+直角坐标系与饼环共用图例点击语义 `legendSelect`（`multi` / `single` / `focus`），见 `specs/legend.md` LEGEND-06 / LEGEND-14。
 
-- **RadarChart**（`charts/charts/radar/`，见 `specs/radar.md` RADAR-01..18）：多指标综合对比图。无坐标轴、无直角网格，`axis`/`axis-title`/`grid`/`crosshair`/`datazoom` 整条链路不适用；既有通用构件继续复用，分区形态通过 L1 `visual-color.js` 取得通用表现色阶。要点：
-  - **极坐标 ≠ 雷达**：饼环也画在极坐标里，但两者做的是**相反**的事——饼环「值 → 角度、半径恒定」，雷达「角度均分（`360/n`）、值 → 半径」。真正共享的只有 `(角度,半径)→(x,y)` 那个三角公式，故**没有 `core/polar.js`**；极坐标几何在 `radar/geometry.js` 标 `[L2-LOCAL]`。**将来三个下沉点的判断条件写在 `specs/radar.md` 的「分层边界」与 `geometry.js` 文件头**——做仪表盘的人先读那两处，它会命中「下沉点 ②」（绕圆标签几何 `labelAnchor` / `labelArc`），正确做法是提到 L1 两边共用，**不是照抄一份**
-  - **值域上界两条路**（RADAR-04）：给了 `max` 就定死、`[0,max]` 均分；不给才走 `niceSplit`。留这个口子是因为 `niceSplit(0, 5, {lineCount:4})` 会得出 5.4——0–5 评分被画成 0–5.4，且两张图数据不同时量程不同、形状不可比
-  - **n 根轴共用一把标尺**（RADAR-17）：不做逐轴归一化。这是**明确的非目标不是待办**——逐轴各自量程会让图形面积失去意义，且容易靠调量程把形状「调好看」
-  - **常规雷达的 hover 热区是扇形不是数据点**（RADAR-10，基线 9.1 的 0728 更新）；气泡恒 `follow`（TOOLTIP-07 无坐标系图特例，L2 定死、不进 behavior.json）。点系列进钉住态（RADAR-11）：一个问「这个维度各系列多少」，一个问「这个系列各维度多少」
-  - **可调节雷达图**是 `editable: true` 的单系列输入能力（RADAR-18），不是新图族也不占 `variant`；手柄沿径向轴拖动、可键盘调值，仍共用 `[0,max]` 标尺。它不渲染常规扇形 hover 热区；多系列直接抛错，避免同轴手柄重叠后编辑对象不明
-  - 对外示例分**标准雷达 / 多数据雷达 / 分区雷达**，但组件视觉变体仍只有 `variant: 'basic' | 'rating'`，多数据只由 `series` 数量表达且不开放可调节能力；仅 index 详情页用“数据组数”滑块选择 2–10 条示例系列，它不是 `CHART_CAPABILITIES` 或组件配置。网格形状（圆 / 正多边形）、闭合形状（直线 / 曲线）与维度标签排列（横排 / 环绕）是可正交组合的组件 cfg；可调节能力只用于单系列。主预览面用旋钮组合，专项面对六个典型配置做三主题回归。维度标签用 `axisLabelLayout: 'horizontal' | 'arc'`，常规默认横排、editable 默认环绕，两者均可显式覆盖。分区示例用 `ratingStyle` 在连续渐变（默认）与离散色带间切换；渐变固定取独立五档色阶，离散档支持独立的 5 / 6 段色阶，`ratingBandLabels.length` 同时控制图内色带、环线与底部色块，阈值文案可配置、色值不可配置
-
-- **ChordChart**（`charts/charts/chord/`，见 `specs/chord.md` CHORD-01..20）：同一组实体之间的**相互流动**。与桑基互补——桑基讲纵向拆解、弦图讲横向流转，但**两者不能合成一个组件**：桑基强制 DAG、禁自环、要求流量守恒，而 A→B 与 B→A 同时成环正是弦图的本体，校验规则互为否定。要点：
-  - 输入是 `entities` + **n×n 流量方阵**（`matrix[i][j]` = i 流向 j）。对角线一律忽略、负值与非数按 0，全零矩阵只画外圈占位不抛错（CHORD-01）
-  - **角度 = 数据、半径 = 常量**，与饼环同列、与雷达相反——这是 `specs/radar.md`「下沉点①」不被弦图触发的依据
-  - `variant: 'undirected'（默认）| 'directed'` 的**唯一差异是槽位表**（CHORD-05）：无向档弧长 = 总流出、有向档 = 流出 + 流入。同一份数据两档外圈弧长不同是模型的必然结果，不是 bug。角度分配、路径、取色、交互、动效一概与 variant 无关；方向由目标端**按比例收窄**表达，不用 `<marker>` 箭头
-  - 路径**手写**，不用 `d3.chord()` / `d3.ribbon()`（判据同桑基不用 `d3-sankey`）：环带是「外弧 sweep=1 + 内弧 sweep=0」，弦是两段内圆弧 + 两段**以圆心为唯一控制点**的二次贝塞尔。⚠️ 大弧标志在跨度 ≤ π 时取 0 或 1 画出来一样，**均匀数据永远测不出写错**，验收必须造「单实体占比 > 50%」的夹具
-  - 实体色走**扇区盘**（`type:'pie'`，COLOR-08）——外圈实体与饼扇区是同一种东西；超出盘长按声明序循环（Ainvest 8 色，n ≥ 9 时循环，见 `specs/chord.md` 待办）
-  - `entityLabelLayout: 'arc'（默认）| 'horizontal'` 两档**共用 L1 `core/polar-label.js`**，本族一份都不复制。⚠️ **两档的画布形状不同**：arc 档四周等宽是正方形，horizontal 档照雷达**横竖分开**（横向带由**容器宽度**决定）——两档共用 `min(宽,高)` 会让横排档的带宽被高度饿死、标签整层渲染成空串，而门禁与单测全绿
-  - 交互走 L1 `core/highlight-state.js`，与桑基共用同一套 hover / 钉住迁移；邻域**只含直接相邻**，不做传递闭包
-  - **不渲染图例**（CHORD-19）：实体名已沿外圈标注，图例是同一份信息的第二遍。这是判断不是遗漏
-
-- **WorldHeatmapChart**（`charts/charts/world-heatmap/`，见 `specs/world-heatmap.md` WORLD-HEATMAP-01..09）：全球国家分级设色图。国家以 ISO alpha-2 码标识，底图与国旗都经 jsDelivr 加载固定提交的第三方数据（来源见本族 README），不进仓库；底图异步到达，用 `ready` 等待。`CN` 统一包含台湾、港澳，不随主题切换。有数据国家按数值秩映射到五档透明度，无数据国家走中性底色。`tone: 'primary' | 'up' | 'down'` 只选择语义色通道，三主题具体颜色全部由 token 决定；hover 与键盘 focus 共用主题描边和 Tooltip，长名称可换行。容器没给高时画布高取 `size-world-heatmap-height`（三主题 240 / 紧凑档 140），不随宽度变，地图比容器窄时左右留白。
-
-下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节为准；未验证能力不要标为完成。
+下一步以 `specs/*.md` 的未完成项和 `WORKFLOW.md` 第八节的里程碑为准；未验证能力不要标为完成。

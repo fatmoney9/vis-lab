@@ -37,3 +37,10 @@
 ## 几处值得说明的复用
 
 - **`highlight-state`**：矩形块的 hover 与「点击钉住 / 再点关闭」走 L1 的状态迁移（[TREEMAP-06]），与桑基共用同一份。本族只有一类图元、也没有邻域可算，故 `kind` 恒为 `'leaf'`、`key` 直接用 leaf 对象本身；状态活在 `build()` 内，重渲即重置。**即便只有一个钉位，也不在本族另留一个变量**——「移出要回落到钉住态而不是清空」这类判定一旦各写一份，迟早会在某次改动里岔开。
+
+
+## 要点（改本族代码前先读）
+
+> 2026-11-09 从 `AGENTS.md` 迁入。规则本身以规范页为准，这里记的是设计取舍与踩过的坑。
+
+**TreemapChart**（`charts/charts/treemap/`，见 `specs/treemap.md` TREEMAP-01..18）：入口型、通用、全局三种矩形树图共用一个 L2 内核和单画布面积布局；L2 只编排面积与标签降级顺序（**单层展示、无下钻**，TREEMAP-06；公司标识 `showImage` 默认关，只对 `content=image` 的主题生效，TREEMAP-18），文字测量复用 L1 `measure.js`，图片内容复用 L1 `image-content.js`，颜色复用 L1 `visual-color.js`。业务字段统一在 `demos/` 映射为 `presentation`，不得在组件内识别主题、品牌、股票、行业分组或行情字段。
