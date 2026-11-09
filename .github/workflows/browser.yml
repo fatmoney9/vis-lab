@@ -1,0 +1,35 @@
+name: 浏览器合同
+
+# 在真实 Chrome 里打开预览页、验证交互与渲染的合同（tests/browser/*.browser.mjs）。
+# 与「质量门禁」分开：这里不是 ruleset 的必需检查，红了只提示、不拦 PR——
+# 合同依赖 CDN 与系统字体，稳定性还在观察。
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    name: 全部合同
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v7
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: 运行浏览器合同
+        run: npm run test:browser

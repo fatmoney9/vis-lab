@@ -54,7 +54,7 @@ git switch -c feat/tooltip-12-touch
 sh hooks/check.sh        # 等价 npm run check
 ```
 
-这条脚本是**唯一一份检查清单**，`hooks/pre-commit` 和 CI 调的都是它，所以本地通过基本等于 CI 的必需检查通过；CI 另有一个非必需的浏览器合同 job（`npm run test:browser`）。
+这条脚本是**唯一一份检查清单**，`hooks/pre-commit` 和 CI 调的都是它，所以本地通过基本等于 CI 的必需检查通过；CI 另有一个非必需的「浏览器合同」工作流（`.github/workflows/browser.yml`，跑 `npm run test:browser`）。
 剩下的差异只可能来自环境（Node 版本、大小写敏感的文件系统）或漏提交生成物。新增检查项只改
 `hooks/check.sh`，不要在文档或 CI 里另抄一份。
 
