@@ -10,7 +10,7 @@
 /* 分类图标：**按分类名取、取不到回落到族的图表类型**。
    只按名字取的话，改一个分类名图标就静默消失；回落到 chart 后最差也只是同族共用一枚，
    不会开天窗。图标一律 currentColor + fill:none，跟着字色走，不自带颜色。 */
-export const ICON = (d, extra = '') =>
+const ICON = (d, extra = '') =>
   `<svg class="nav-item__icon" viewBox="0 0 16 16" fill="none" stroke="currentColor"
     stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}${extra}</svg>`;
 export const NAV_ICONS = {

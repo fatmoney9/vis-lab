@@ -42,3 +42,10 @@
 - L2 `index.js`：编排浮动柱、连接线、三主题共用的箭头复合图元、数据柱内部标签及交互生命周期。
 - L0：`tokens/behavior.json` 只保留各主题默认色彩模式；颜色、线宽、线型和透明度在三份主题 token 中保持同键合同，箭头通过 `currentColor` 自动使用当前主题色。
 - L3：规则 ID 在 `specs/waterfall.md`；示例、主题文案与旋钮装配在 `demos/`，两个预览入口不拼 SVG。
+
+
+## 要点（改本族代码前先读）
+
+> 2026-11-09 从 `AGENTS.md` 迁入。规则本身以规范页为准，这里记的是设计取舍与踩过的坑。
+
+**WaterfallChart**（`charts/charts/waterfall/`，见 `specs/waterfall.md` WATERFALL-01..15）：常规累计桥接与分组数据柱共用一套有符号累计模型；`kind`、`operatorBefore` 与 `segments` 均由数据显式声明。累计公式、分段守恒和三主题共用的浅底箭头复合图元留在 L2，箭头通过 `currentColor` 使用各自主题色；画布、比例尺、零轴、X 标签碰撞、文字测量、Tooltip / 十字线、水印、格式化、取色与动效均复用 L1。主题默认色彩模式仍在 `behavior.json`，尺寸与视觉值不进实例 API。

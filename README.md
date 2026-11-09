@@ -70,5 +70,5 @@ sh hooks/check.sh
 | [AGENTS.md](AGENTS.md) | 给 AI 会话的项目约定 |
 | [specs/](specs/) | 各规范条目：[坐标轴](specs/axes.md) · [轴标题](specs/axis-title.md) · [柱](specs/bar.md) · [横向条 / 排名竞赛](specs/hbar.md) · [折线](specs/line.md) · [饼环](specs/pie.md) · [桑基](specs/sankey.md) · [矩形树图](specs/treemap.md) · [雷达](specs/radar.md) · [弦图](specs/chord.md) · [瀑布](specs/waterfall.md) · [全球热力图](specs/world-heatmap.md) · [颜色](specs/color.md) · [图例](specs/legend.md) · [浮层](specs/tooltip.md) · [数值格式](specs/format.md) · [组件固定文案](specs/chart-text.md) · [缩放轴](specs/datazoom.md) · [水印](specs/watermark.md) · [数据标签](specs/data-label.md) · [图表标注](specs/callout.md) · [图片内容](specs/image-content.md) · [动效](specs/motion.md) · [播放轴](specs/playback.md) |
 
-当前进度与后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)；
+后续里程碑见 [WORKFLOW.md 第八节](WORKFLOW.md#八当前状态与后续里程碑)，接入复盘见 [docs/decisions.md](docs/decisions.md)；
 各规范页末尾的「待办」是未完成能力的权威清单——未验证的能力不标为完成。

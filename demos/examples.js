@@ -53,16 +53,16 @@ import { isEnglishContent } from './themes.js';
 
 const K = (values) => values.map((v) => (v == null ? null : v * 1000));
 
-export const seq = (n) => Array.from({ length: n }, (_, i) => `${i + 1}`);
+const seq = (n) => Array.from({ length: n }, (_, i) => `${i + 1}`);
 
 /* 基础波形：相位 p 让多系列彼此错开 */
-export const wave = (n, p = 0) => K(Array.from(
+const wave = (n, p = 0) => K(Array.from(
   { length: n },
   (_, i) => Math.round(560 + 360 * Math.sin(i * 0.6 + p) + 140 * Math.cos(i * 1.7 + p)),
 ));
 
 /* 含负值 / 0 / null 的单系列（正负值柱专用：负值向下、0 值 1px 占位、null 断口全可见） */
-export const signedWave = (n) => {
+const signedWave = (n) => {
   const d = wave(n, 0.8).map((v) => v - 500000);
   if (n > 1) d[1] = -Math.abs(d[1]);
   if (n > 2) d[2] = 0;
@@ -78,7 +78,7 @@ export const signedWave = (n) => {
    前 6 条相位与本规则落地前逐字一致，故既有示例与三档预设的数据一个数都没变。
    它只保证**轨迹不重复**，不干预折线自然交叉。 */
 const seriesPhase = (index) => (index < 6 ? index * 0.9 : (index - 6) * 0.9 + 0.45);
-export const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, seriesPhase(k)) }));
+const posSeries = (n, names) => names.map((name, k) => ({ name, data: wave(n, seriesPhase(k)) }));
 
 const FINANCIAL_SERIES_NAMES = [
   '营业收入', '成本', '利润', '税费', '研发投入', '现金流',
@@ -101,17 +101,17 @@ const selectExampleSeries = (series, requested, fallback, preserveLast = false) 
 };
 
 /* 负值系列（堆叠含负值用） */
-export const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
+const negWave = (n) => wave(n, 2).map((v) => -Math.round(v * 0.4));
 
 /* 基础折线：保持正值，中途一个 null 断口 */
-export const lineWave = (n) => {
+const lineWave = (n) => {
   const d = wave(n, 0.4);
   d[Math.floor(n / 3)] = null;
   return d;
 };
 
 /* 正负值折线：默认首屏即跨零；数据量增加后补一个 null 断口 */
-export const signedLineWave = (n) => {
+const signedLineWave = (n) => {
   const d = wave(n, 0.4).map((v) => v - 500000);
   if (n > 1) d[1] = -Math.abs(d[1]);
   if (n > 2) d[2] = 0;
@@ -129,7 +129,7 @@ export const growth = (n) => Array.from({ length: n }, (_, i) => Math.round(12 +
 const RADAR_DIM_CN = ['盈利能力', '资产质量', '偿债能力', '现金流', '运营能力', '成长性'];
 const RADAR_DIM_EN = ['Performance', 'Safety', 'Momentum', 'Funds flow', 'Basics', 'Sentiment'];
 
-export const radarDims = (n, lang = 'cn') => (lang === 'en' ? RADAR_DIM_EN : RADAR_DIM_CN).slice(0, n);
+const radarDims = (n, lang = 'cn') => (lang === 'en' ? RADAR_DIM_EN : RADAR_DIM_CN).slice(0, n);
 
 /* [RADAR-04] 固定量程：评分类雷达的常态。不固定的话 niceSplit 会把 0–5 抬成 0–5.4，
    且两张图数据不同时量程不同、形状不可比——而横向对比正是雷达图存在的理由。 */
@@ -140,7 +140,7 @@ const RADAR_SEGMENTS = 5;
 
 /* [RADAR-15] 分段雷达的两套设计档位。数组长度既是底部说明项数，也会成为雷达内部
    色带 / 环线数量；两者必须同源，禁止预览面各自拼一份。 */
-export const RADAR_RATING_BAND_LABELS = Object.freeze({
+const RADAR_RATING_BAND_LABELS = Object.freeze({
   5: Object.freeze(['-2%', '-1%', '0%', '+1%', '>+2%']),
   6: Object.freeze(['>-3%', '-2%', '-1%', '+1%', '+2%', '>+2%']),
 });
@@ -167,7 +167,7 @@ const RADAR_SCORES = {
   ],
 };
 
-export const radarSeries = (n, lang = 'cn') =>
+const radarSeries = (n, lang = 'cn') =>
   RADAR_SCORES[lang].map((s) => ({ name: s.name, data: s.data.slice(0, n) }));
 
 /* 六条雷达示例共用同一套维度数档位与文案——档位是本族语义（轴数），不是各示例各自的口径 */
@@ -191,7 +191,7 @@ const SLICE_NAMES = ['主营业务', '投资收益', '其他业务', '政府补�
 /* 饼 / 环扇区：递减占比的正值序列（固定公式、无随机数，保证截图可复现）。
    0 与 null 的位置对齐 signedWave 的先例——[PIE-01] 两者都**不占角也不进分母**，
    故 n=4 时可见 3 个扇区、n=16 时可见 14 个。 */
-export const sliceItems = (n) => {
+const sliceItems = (n) => {
   const values = Array.from({ length: n }, (_, i) => Math.round(1200 / (i + 1.6) + 120));
   if (n > 2) values[2] = 0;
   if (n > 4) values[4] = null;
@@ -220,13 +220,13 @@ const LONG_NAMES = [
 ];
 
 /* 超长名称 + 大数值：压 PIE-16 名称截断、LEGEND-13 图例截断，以及「数值段恒完整」 */
-export const longNameItems = (n) => Array.from({ length: n }, (_, i) => ({
+const longNameItems = (n) => Array.from({ length: n }, (_, i) => ({
   name: `${LONG_NAMES[i % LONG_NAMES.length]}${i >= LONG_NAMES.length ? Math.floor(i / LONG_NAMES.length) + 1 : ''}`,
   value: Math.round(987654321 / (i + 1.3)),
 }));
 
 /* 极端占比：首项独占约 98%，其余是几乎看不见的窄扇区 */
-export const skewItems = (n) => Array.from({ length: n }, (_, i) => ({
+const skewItems = (n) => Array.from({ length: n }, (_, i) => ({
   name: i === 0 ? '主营业务' : `${SLICE_NAMES[i % SLICE_NAMES.length]}${i}`,
   value: i === 0 ? 98000 : Math.max(1, Math.round(60 / i)),
 }));
@@ -376,7 +376,7 @@ export const financialSankeyPeriods = () => {
   return withSharedSankeyScale(periods);
 };
 
-export const financialSankey = () => financialSankeyPeriods()[0];
+const financialSankey = () => financialSankeyPeriods()[0];
 
 const financialSankeyPlayback = () => {
   const periods = financialSankeyPeriods();
@@ -674,7 +674,7 @@ const industryFlow = (count) => {
 
 /* 数据密度 = 传给 cfg 的类目数（cfg 是 n 的函数，故新图表可自行解释「一个类目」的含义） */
 export const DENSITY = { few: 4, mid: 16, many: 36 };
-export const DENSITY_LEVELS = [
+const DENSITY_LEVELS = [
   { id: 'few', label: '少量' },
   { id: 'mid', label: '中量' },
   { id: 'many', label: '大量' },
@@ -703,8 +703,8 @@ export const densityControlOf = (example) => {
    「三个可复现的固定场景」（截图对比、回归），主站要的是「随手拉到任意一档看形变」。
    上下限默认 1–50，示例可各自收窄——**收窄是硬约束不是审美**：
    雷达低于 3 维 RadarChart 直接抛错（RADAR-01），高于 6 维示例也只有 6 个维度名。 */
-export const DENSITY_RANGE = { min: 1, max: 50 };
-export const densityRangeOf = (example) => ({ ...DENSITY_RANGE, ...(example?.densityRange ?? {}) });
+const DENSITY_RANGE = { min: 1, max: 50 };
+const densityRangeOf = (example) => ({ ...DENSITY_RANGE, ...(example?.densityRange ?? {}) });
 export const densityUnitOf = (example) => example?.densityUnit ?? '类目';
 
 export const clampDensity = (example, n) => {
@@ -732,7 +732,7 @@ export const densitySliderOf = (example) => {
   };
 };
 
-export const INITIAL_ZOOM = { start: 0.35, end: 1 };
+const INITIAL_ZOOM = { start: 0.35, end: 1 };
 
 /*
  * 各图表类型支持哪些**语义旋钮**（≠ 样式参数，样式一律走 token）。
@@ -794,7 +794,7 @@ export const suggestedLegend = (labelLayout) => (labelLayout === 'outside' ? 'bo
 /* [AXISTITLE-01] 轴标题旋钮打开时注入的通用文案；示例可用自己的 axisTitle 字段覆盖（给更贴切的文案）。
    文案是内容不是样式——两面共用这一份，避免各写各的。
    **y2 是否落进最终 cfg 由 buildConfig 按图表形态实判**（见那里的注释），不靠逐示例记得写。 */
-export const AXIS_TITLES = { y: '单位：元', y2: '副轴', x: '交易日' };
+const AXIS_TITLES = { y: '单位：元', y2: '副轴', x: '交易日' };
 
 /* ── 示例清单 ────────────────────────────────────────────────── */
 
@@ -946,7 +946,7 @@ export const EXAMPLES = [
     description: '横向条按市值排名，随季度推进名次互换；只显示前 N 名，进出榜有滑入滑出。',
     densityRange: { min: 5, max: 12 }, densityValues: { few: 6, mid: 8, many: 12 }, densityUnit: '名',
     /* 数据量旋钮在本族的语义是 **Top-N**，不是类目数——所以 cfg 的入参叫 count。 */
-    cfg: (count) => marketCapPresentation({ ...marketCapPeriods().at(-1), topN: count }),
+    cfg: (count) => ({ ...marketCapPeriods().at(-1), topN: count }),
     presentation: marketCapPresentation,
     /* [HBAR-12] 播放：每期一帧。cfg(period, count) 让 Top-N 滑杆对播放示例也生效
        （activePeriodExample 会把数量透传进来）。 */
@@ -954,6 +954,15 @@ export const EXAMPLES = [
       periods: marketCapPeriods(),
       cfg: (period, count) => ({ ...period, topN: count }),
     },
+  },
+  {
+    /* [HBAR-01] 不给时间序列就是静态横向条：与竞赛示例同一份数据的最后一期，只是不接播放。 */
+    id: 'market-cap-rank', group: '排名变化', chart: 'hbar',
+    title: '行业市值排名（静态）', spec: 'HBAR-01 / HBAR-04', surfaces: BOTH,
+    description: '不给时间序列时就是静态横向条：按市值从高到低排列，只显示前 N 名。',
+    densityRange: { min: 5, max: 12 }, densityValues: { few: 6, mid: 8, many: 12 }, densityUnit: '名',
+    cfg: (count) => ({ ...marketCapPeriods().at(-1), topN: count }),
+    presentation: marketCapPresentation,
   },
   {
     id: 'donut', group: '饼图与环形图', chart: 'pie',
@@ -1284,7 +1293,7 @@ export function familiesFor(surface) {
 }
 
 /* 渐变面积只对「非堆叠且含折线」的配置有意义——按 cfg 实际形态判，不是按图表类型 */
-export const supportsArea = (example) => {
+const supportsArea = (example) => {
   if (!CHART_CAPABILITIES[example.chart]?.area) return false;
   const cfg = example.cfg(4);
   return cfg.stack == null && cfg.series.some((s) => s.type === 'line');

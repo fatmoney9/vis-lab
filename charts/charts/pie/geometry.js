@@ -6,8 +6,8 @@
  * core/polar-label.js，故仍可被 node --test 直接加载（同 L1 的 bar-geometry）。
  *
  * 角度约定与 d3.arc 一致：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
- * 故任一角 a 处半径 r 的点是 (sin(a)·r, −cos(a)·r)——labelAnchor 用的就是这个式子，
- * 与 d3.arc().centroid() 同源，标签因此天然落在扇区里。
+ * 故任一角 a 处半径 r 的点由 L1 `pointAt(a, r)` 给出——与 d3.arc().centroid() 同源，
+ * 标签因此天然落在扇区里。
  *
  * 五个函数：
  *   sliceAngles  值 → 每个可绘扇区的 {i, a0, a1}（PIE-01）
@@ -21,7 +21,7 @@
  * 一个扇区的两个角、返回 {x, y, maxWidth}，只分左右两侧；那边吃单个角度、返回八向对齐。
  * 两者都没有下沉/上浮的关系，别互相替换。
  */
-import { labelBand } from '../../core/polar-label.js';
+import { labelBand, pointAt } from '../../core/polar-label.js';
 
 const TAU = Math.PI * 2;
 
@@ -98,9 +98,10 @@ export function labelAnchor(a0, a1, R, innerR) {
   const mid = (a0 + a1) / 2;
   const rm = (R + innerR) / 2;
   const ring = R - innerR;
+  const { x, y } = pointAt(mid, rm);
   return {
-    x: Math.sin(mid) * rm,
-    y: -Math.cos(mid) * rm,
+    x,
+    y,
     maxWidth: Math.min(rm * (a1 - a0), ring),
   };
 }
@@ -120,13 +121,12 @@ export function labelAnchor(a0, a1, R, innerR) {
  */
 export function leaderElbow(a0, a1, R, radial) {
   const mid = (a0 + a1) / 2;
-  const sin = Math.sin(mid);
-  const cos = Math.cos(mid);
-  const er = R + Math.max(0, radial);
+  const a = pointAt(mid, R);
+  const e = pointAt(mid, R + Math.max(0, radial));
   return {
     side: mid < Math.PI ? 'right' : 'left',
-    ax: sin * R, ay: -cos * R,
-    ex: sin * er, ey: -cos * er,
+    ax: a.x, ay: a.y,
+    ex: e.x, ey: e.y,
   };
 }
 

@@ -26,26 +26,3 @@ export function renderGrid(layer, frame, ticks, y, { showXSplit = false, xPositi
     .attr('x1', (d) => d)
     .attr('x2', (d) => d);
 }
-
-/*
- * [AXIS-07] 轴刻度线（tick marks）：默认不显示（全主题）。
- * 启用时长 3px，粗细/颜色与网格线同源（--size-grid-line / --color-visualization-divider，
- * 见 charts/styles.css 的 .dv-tick）。长度当前无专用 token。
- * inward：inside 布局网格左右铺满画布（grid.left = 0），向外画会被画布裁掉，
- *         须向内绘制；方向是否入规范待定（见 specs/axes.md 待办）。
- */
-export function renderTicks(layer, frame, ticks, y, { side = 'left', show = false, length = 3, inward = false } = {}) {
-  const data = show ? ticks : [];
-  const dir = (side === 'left' ? -1 : 1) * (inward ? -1 : 1);
-  const x0 = side === 'left' ? frame.grid.left : frame.grid.right;
-  const x1 = x0 + dir * length;
-  layer
-    .selectAll('line.dv-tick')
-    .data(data)
-    .join('line')
-    .attr('class', 'dv-tick')
-    .attr('x1', x0)
-    .attr('x2', x1)
-    .attr('y1', (d) => y(d))
-    .attr('y2', (d) => y(d));
-}
