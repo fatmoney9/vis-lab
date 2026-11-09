@@ -30,7 +30,7 @@ import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
-import { tokenNum } from '../../core/tokens.js';
+import { tokenNum, tokenStr } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
@@ -121,7 +121,7 @@ export function CartesianChart(host, cfg) {
      `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
   function applyDim() {
     const emph = hoverKey ?? state.selected;
-    const dim = getComputedStyle(host).getPropertyValue('--opacity-visualization-dim').trim() || '1';
+    const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
     select(plotHost).selectAll('g.dv-bar-series, g.dv-line-series, g.dv-data-label-series')
       .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
   }
