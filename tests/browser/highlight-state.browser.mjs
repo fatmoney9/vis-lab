@@ -26,11 +26,13 @@ import { join } from 'node:path';
  */
 const CONSUMERS = [
   {
+    /* 与另外两族一样走对外站点的详情页。曾用桑基独立预览面，那页更重（812px 财报外框与整套播放控件），
+       CI 上偶发 15 秒内画不出节点。 */
     name: 'SankeyChart',
-    path: '/playground/sankey-preview.html',
-    ready: "document.querySelectorAll('.dv-sankey__node').length > 0",
-    target: '.dv-sankey__node',
-    active: '.dv-sankey__node.is-active',
+    path: '/index.html#sankey-financial',
+    ready: "document.querySelectorAll('.stage__surface .dv-sankey__node').length > 0",
+    target: '.stage__surface .dv-sankey__node',
+    active: '.stage__surface .dv-sankey__node.is-active',
   },
   {
     name: 'TreemapChart',
