@@ -31,7 +31,7 @@
 | **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05] / [SANKEY-18]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
-| 解析主题 / 端形态 / 密度档 | `core/theme.js` | `themeOf` · `modeOf` · `densityOf` · `resolveBehavior`（已含密度覆盖层，L2 无需感知密度） |
+| 解析主题 / 端形态 / 密度档 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior`（已含密度覆盖层，L2 无需感知密度） |
 | 数值格式化 | `core/format.js` | `makeFormatter` |
 | **组件写死的文案（读屏描述 / 看板固定行名）** | `core/chart-text.js` | `resolveChartText`（缺省表 + `config.text` 整套替换）· `fillText`（`{key}` 模板）（[CHARTTEXT-01..03]）——别在 L2 拼中文模板字符串，Ainvest 的英文由 L3 注入 |
 | 图例（渲染 / 点击状态 / 弱化） | `core/legend.js` · `core/legend-state.js` | `renderLegend` · `markerSpecFor` · `dimByKey` / `applyToggle` · `applyFocus` · **`legendHandlers`**（按档分流的点击 / hover 接线，别在 L2 再写一遍）· `emphasisKey` |

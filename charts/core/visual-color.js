@@ -6,7 +6,7 @@
  */
 
 export const ITEM_COLOR_MODES = ['series', 'intensity', 'semantic-binned', 'semantic-flat'];
-export const PERFORMANCE_COLOR_LEVELS = 6;
+const PERFORMANCE_COLOR_LEVELS = 6;
 
 const finite = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const levelOpacity = (level) => `var(--opacity-visualization-intensity-level-${level})`;

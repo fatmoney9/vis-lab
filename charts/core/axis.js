@@ -2,7 +2,7 @@ import { tokenNum } from './tokens.js';
 import { measureTexts, measureInk } from './measure.js';
 
 const fmt = new Intl.NumberFormat('en-US');
-export const formatValue = (v) => fmt.format(v);
+const formatValue = (v) => fmt.format(v);
 
 /* 轴标签级间距经 token 下发（源码禁字面量）：
  *   --spacing-axis-y-inset-gap     [AXIS-01] inside 数据让位安全间距

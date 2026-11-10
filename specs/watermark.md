@@ -20,7 +20,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | WATERMARK-02 | **锚定 `frame.grid` 绘图区角、偏移相对 grid 物理边**（≠ 容器边、≠ 10% 数据框边——窗口 / resize 时不与 X 标签 / 数据图形位置绑死）。纯几何 `watermarkAnchor(anchor, grid, size, offset)`：`anchor = {top\|bottom}-{left\|right}`；left/top 锚 = 从 grid 边内推 offset；right/bottom 锚 = 内退 offset + 尺寸使该边贴齐。锚 `frame.grid` = 绘图区（在 datazoom nav 带之上），与缩放带无关 | `core/watermark.js` → `watermarkAnchor`；`core/frame.js` → `grid` | ✅ |
-| WATERMARK-03 | **主题身份（平台通用，无 mobile/pc 分叉）**：THS **右下角、距 grid 右侧 36px、距底部网格线 24px**、36×10；**iFinD-PC 复用 THS 资源**（`asset:"ths"`）同锚同偏移；**Ainvest 左下角、距 grid 左侧 4px、距底部网格线 2px**、96×20。形态在 `behavior.json → watermark`（`{asset, anchor, offset}`），键位对齐契约强制三主题俱全 | `tokens/behavior.json` → `watermark`；`core/theme.js` → `resolveBehavior`（unfold 原样透传）；L2 `wm = b['watermark']` | ✅ |
+| WATERMARK-03 | **主题身份（平台通用，无 mobile/pc 分叉）**：THS **右下角、距 grid 右侧 36px、距底部网格线 24px**、36×10；**iFinD-PC 复用 THS 资源**（`asset:"ths"`）同锚同偏移；**Ainvest 左下角、距 grid 左侧 4px、距底部网格线 2px**、95×20。形态在 `behavior.json → watermark`（`{asset, anchor, offset}`），键位对齐契约强制三主题俱全 | `tokens/behavior.json` → `watermark`；`core/theme.js` → `resolveBehavior`（unfold 原样透传）；L2 `wm = b['watermark']` | ✅ |
 
 ## 层级与命中
 
@@ -47,4 +47,4 @@
       （无轴带占位时 grid 即整块画布），三主题锚角与偏移仍只由 `behavior.json` 一处决定（[pie.md](pie.md) PIE-07）。
 - [ ] 副图（多图联动）接入时同样在末尾追加 `renderWatermark`——**主图贴、副图不贴**。
 - [ ] `offset.right = 36` 等偏移为原体系定值常量，暂随 `behavior.json` 携带（datazoom nav 留白同属"待 token 化"一类）。
-- [ ] 极小容器下 Ainvest 96×20 于左上角可能压近数据——如需按 grid 宽比例缩放 / 隐藏，待原体系明确后补 ID。
+- [ ] 极小容器下 Ainvest 95×20 于左上角可能压近数据——如需按 grid 宽比例缩放 / 隐藏，待原体系明确后补 ID。

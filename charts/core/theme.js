@@ -49,7 +49,7 @@ export function themeOf(host) {
 /* 密度档：**只读挂 data-theme 的那个元素**上的 data-density——CSS 作用域是
    [data-theme][data-density] 的同元素复合选择器，形态若改成「最近的 [data-density] 祖先」，
    两条通道就会在属性分挂两处时各说各话（值已紧凑、形态仍标准，或反之）。 */
-export function densityOf(host) {
+function densityOf(host) {
   return host.closest('[data-theme]')?.dataset.density ?? null;
 }
 

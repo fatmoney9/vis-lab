@@ -163,7 +163,7 @@ export function createFrame(host, opts = {}) {
  *   随后从含绘图区的根去减 → 画布依赖画布 → 逐帧坍缩（饼环实测 140 → 28 → 0）。
  *   详见 pie/index.js 的 observeResize 注释。
  */
-export const CONTAINER_HEIGHT_MIN = 40;
+const CONTAINER_HEIGHT_MIN = 40;
 
 /* 挂载时：容器是否已给出可用高度（给了就随容器，否则用主题默认包络） */
 export const containerDrivesHeight = (hostHeight) => Number(hostHeight) >= CONTAINER_HEIGHT_MIN;
