@@ -27,6 +27,7 @@
 | `legend` | 用 |
 | `legend-state` | 用 |
 | `mark` | 不用：该模块画的是柱与折线；扇区弧由本族 `geometry.js` + d3 `arc` 生成（PIE-02） |
+| `math` | 用 |
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |

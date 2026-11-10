@@ -62,24 +62,15 @@ export function SankeyChart(host, initialConfig) {
     .attr('class', 'dv-sankey__svg')
     .attr('role', 'img');
   const tooltip = createTooltip(root.node());
-  let tooltipHideTimer = 0;
   let fit = { hostHeight: null, factor: 1 };
 
-  const clearTooltipHide = () => {
-    clearTimeout(tooltipHideTimer);
-    tooltipHideTimer = 0;
-  };
-  const hideTooltip = () => {
-    clearTooltipHide();
-    tooltip.hide();
-  };
   /* [SANKEY-24] 暂停 = 冻结当前几何帧、不落终态。驱动器在 L1（MOTION-08），
      本族不再自己写 rAF 循环——那份手写实现 2026-09-20 迁走，行为逐条不变。 */
   const cancelMotion = () => { motionTween?.pause(); motionTween = null; };
 
   function build() {
     if (destroyed) return;
-    hideTooltip();
+    tooltip.hide();
     const platform = config.platform ?? 'pc';
     if (!['pc', 'mobile'].includes(platform)) {
       throw new TypeError("SankeyChart：platform 仅支持 'pc' 或 'mobile'");
@@ -91,10 +82,6 @@ export function SankeyChart(host, initialConfig) {
     const style = resolveSankeySettings(platform);
     const behavior = resolveBehavior(host, platform);
     const format = makeFormatter(behavior['number-format']);
-    const configuredHideDelay = tokenNum(host, '--tooltip-hide-delay');
-    const tooltipHideDelay = Number.isFinite(configuredHideDelay)
-      ? configuredHideDelay
-      : 2000;
 
     const rect = host.getBoundingClientRect();
     if (rect.width < 1) {
@@ -458,7 +445,7 @@ export function SankeyChart(host, initialConfig) {
       placeTooltip({ x, y });
     };
     const showTooltip = (content, point) => {
-      clearTooltipHide();
+      tooltip.cancelHide();
       tooltip.show(content, behavior['legend-marker']);
       placeTooltip(point);
     };
@@ -468,10 +455,6 @@ export function SankeyChart(host, initialConfig) {
         sankeyNodeDashboardValueColor(node),
       );
       showTooltip(sankeyNodeDashboard(node, format), point);
-    };
-    const scheduleTooltipHide = () => {
-      clearTooltipHide();
-      tooltipHideTimer = setTimeout(hideTooltip, tooltipHideDelay);
     };
     const pointFromSvg = (x, y) => {
       const rootRect = root.node().getBoundingClientRect();
@@ -507,7 +490,7 @@ export function SankeyChart(host, initialConfig) {
         : null;
       if (link) {
         highlightEdge(null, link);
-        hideTooltip(); /* 流向只编辑高亮状态，不触发数据看板 */
+        tooltip.hide(); /* 流向只编辑高亮状态，不触发数据看板 */
         return true;
       }
       resetHighlight();
@@ -527,16 +510,16 @@ export function SankeyChart(host, initialConfig) {
     const leaveNode = () => {
       highlight = applyLeave(highlight);
       /* 有钉住则回落到钉住态；否则收气泡——节点这一路是**延时**收（SANKEY-20） */
-      if (!renderHighlight()) scheduleTooltipHide();
+      if (!renderHighlight()) tooltip.hideLater();
     };
     const clickNode = (event, node) => {
       event.stopPropagation();
       highlight = applyPick(highlight, 'node', node.id);
-      if (!renderHighlight(pointerPoint(event, node))) hideTooltip();
+      if (!renderHighlight(pointerPoint(event, node))) tooltip.hide();
     };
     const blurInteractiveItem = () => {
       highlight = applyLeave(highlight);
-      if (!renderHighlight()) hideTooltip();
+      if (!renderHighlight()) tooltip.hide();
     };
 
     /* [SANKEY-10/20] 节点矩形与文字共享 hover / click 看板；点击后保持以支持移动端。 */
@@ -565,12 +548,12 @@ export function SankeyChart(host, initialConfig) {
       .on('pointerleave', () => {
         highlight = applyLeave(highlight);
         /* 流向这一路**立刻**收气泡：它本就没出过看板，没有「让用户读完」的延时需求 */
-        if (!renderHighlight()) hideTooltip();
+        if (!renderHighlight()) tooltip.hide();
       })
       .on('click', (event, link) => {
         event.stopPropagation();
         highlight = applyPick(highlight, 'edge', link.index);
-        if (!renderHighlight()) hideTooltip();
+        if (!renderHighlight()) tooltip.hide();
       })
       .on('focus', (event, link) => {
         highlight = applyHover(highlight, 'edge', link.index);
@@ -581,7 +564,7 @@ export function SankeyChart(host, initialConfig) {
     svg.on('click.sankey-interaction', () => {
       highlight = applyClear();
       renderHighlight();
-      hideTooltip();
+      tooltip.hide();
     });
 
     /* 重渲（resize / 播放补间）后把钉住态画回去——否则拖一下容器钉住就没了 */
@@ -660,7 +643,7 @@ export function SankeyChart(host, initialConfig) {
       destroyed = true;
       cancelMotion();
       cancelAnimationFrame(resizeFrame);
-      clearTooltipHide();
+      tooltip.cancelHide();
       stopResize();
       root.remove();
     },

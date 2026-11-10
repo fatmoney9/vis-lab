@@ -24,10 +24,10 @@
 | `mark.js` | 柱 / 线 / 数据点的图元渲染（返回逐帧重绘闭包供生长动效驱动）；路径与圆角取自 `bar-geometry.js` | bar.md、line.md、motion.md |
 | `motion.js` | 缓动曲线、减弱动效判断与逐帧生长循环（零 DOM，rAF / 时钟可注入）；桑基季度播放复用曲线与减弱动效判断，保留专属暂停时序 | motion.md（MOTION-01..07）、sankey.md（SANKEY-24） |
 | `label.js` | 数据标签渲染、批量省略、三档前景色（跟随系列色 / 按底色反色 / 中性）与碰撞过滤。`truncateBatch` 的测量回调可同时收到源条目，支持桑基同批标题按各自字号测量；`dropCollisions` 收 `{start,size}`，**两个方向共用**：柱线判行、饼环外侧标签判列 | data-label.md（LABEL-01..09）、pie.md（PIE-16）、sankey.md（SANKEY-15） |
-| `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列） | legend.md（LEGEND-01/10/11） |
-| `legend-state.js` | 图例点击的状态迁移：`applyToggle`（筛，改 hidden）/ `applyFocus`（强调，改 selected）。**与 legend.js 分开只为一件事**——那边 import d3，住在里面就一行测不了 | legend.md（LEGEND-06/12/14） |
+| `legend.js` | 图例渲染与显隐 / 弱化事件；排布方向可参数化（横排换行 / 纵向单列）；`dimByKey` 按 `data-key` 把非强调系列压到 `--opacity-visualization-dim` | legend.md（LEGEND-01/10/11） |
+| `legend-state.js` | 图例点击的状态迁移：`applyToggle`（筛，改 hidden）/ `applyFocus`（强调，改 selected）；`legendHandlers` 是按档分流的接线（focus → `onFocus` / 筛 → 改 hidden 后 `onFilter` / hover → `onDim`），`emphasisKey` 定「hover 优先于选中」。**与 legend.js 分开只为一件事**——那边 import d3，住在里面就一行测不了 | legend.md（LEGEND-06/12/14） |
 | `highlight-state.js` | 图元 hover / 钉住的状态迁移（零 import，可被 node 加载）：`applyHover` / `applyLeave` / `applyPick` / `applyClear` + `activeTarget`。**钉位只有一个**，跨类互斥由类型保证；只认 `{kind, key}`，邻域怎么算、class 怎么贴、出不出看板都留在 L2 | sankey.md（SANKEY-10/20）、treemap.md（TREEMAP-06） |
-| `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（X 贴片只负责状态背景、边界钳制与指示关系，文字直接复用 `axis.js` 的逐行结构、`.dv-axis-label` 基础样式及常态轴标签坐标；气泡标题可带实体图标，详情行可隐藏 marker；每行接收调用方已经完整格式化的单一 value；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸；气泡宽度受内容 / 视口 / 容器三道封顶，容器封顶的比例走 token、由 `place()` 在读宽度前写入，「容器」= 图表根 `.dv-chart`、缺省回落到宿主（与 follow 档 clamp 边界同一个定义），见 TOOLTIP-01；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md（TOOLTIP-01/12）、waterfall.md（WATERFALL-08/13） |
+| `tooltip.js` · `crosshair.js` | 浮层气泡、**X / Y 两向**指示线与轴高亮贴片（气泡自带延迟隐藏计时器：`hide()` 立即隐藏并撤掉待执行的延迟、`hideLater(also)` 按 `--tooltip-hide-delay` 延迟隐藏、`cancelHide()` 撤销，见 TOOLTIP-10；X 贴片只负责状态背景、边界钳制与指示关系，文字直接复用 `axis.js` 的逐行结构、`.dv-axis-label` 基础样式及常态轴标签坐标；气泡标题可带实体图标，详情行可隐藏 marker；每行接收调用方已经完整格式化的单一 value；**三个位置档的 clamp 边界由本模块按档自取**，`place()` 不收容器尺寸；气泡宽度受内容 / 视口 / 容器三道封顶，容器封顶的比例走 token、由 `place()` 在读宽度前写入，「容器」= 图表根 `.dv-chart`、缺省回落到宿主（与 follow 档 clamp 边界同一个定义），见 TOOLTIP-01；Y 向横线 + Y 值徽标默认关，见 TOOLTIP-12） | tooltip.md（TOOLTIP-01/12）、waterfall.md（WATERFALL-08/13） |
 | `image-content.js` | 可选图片内容的标准化、尺寸档降级、SVG 结构和 Tooltip 内容转换；不识别图表、主题或业务字段 | image-content.md（IMAGECONTENT-01..04） |
 | `datazoom.js` | 缩放轴轨道 / 手柄与窗口事件 | datazoom.md |
 | `watermark.js` · `watermark-assets.js` | 品牌水印（资源为生成物，勿手改） | watermark.md |
@@ -39,6 +39,7 @@
 | `chart-text.js` | 组件固定文案（零 import，可被 node 加载）：`resolveChartText` 取 L2 缺省表或调用方的**整套**替换（缺键 / 多键当场抛错），`fillText` 填 `{key}` 模板。不认识语言或品牌——Ainvest 英文表由 L3 注入 | chart-text.md（CHARTTEXT-01..03） |
 | `theme.js` | 主题行为解析（behavior.json → 参数）；同元素 `data-density` 叠加密度覆盖层的形态段（`densityOf` / `densitiesOf`，合并规则在 `tokens/density.mjs`） | WORKFLOW 第六节、tokens/README「密度覆盖层」 |
 | `tokens.js` | 从计算样式读取 CSS 自定义属性 | — |
+| `math.js` | 数值小工具（零 import，可被 node 加载）：`clamp(lo, v, hi)`（**参数顺序 = 数轴顺序**）· `clamp01`（非数一律当 0）。曾在 L1 / L2 散落 7 份私有副本、参数顺序两种 | — |
 
 ## 边界
 

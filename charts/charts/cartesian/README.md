@@ -25,6 +25,7 @@
 | `legend` | 用 |
 | `legend-state` | 用 |
 | `mark` | 用 |
+| `math` | 用 |
 | `measure` | 不用：经 `axis.js` 间接用到（`measureYLabelWidth` / `yLabelInset` 内部调它），本层不直接依赖；轴标签类名由 `axis.js` 一处固定，L2 再调一次只会多出第二个类名口径 |
 | `motion` | 用 |
 | `palette` | 用 |

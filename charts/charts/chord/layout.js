@@ -3,8 +3,8 @@
  * [CHORD-01..08/10/18]
  *
  * 干什么：把「每个实体占多少角、每条弦从哪连到哪、圆画多大」算成**纯数据**，
- * 交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token；唯一的 import 是同样零依赖的
- * core/polar-label.js，故可被 `node --test` 直接加载（同 pie/geometry.js、radar/geometry.js）。
+ * 交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token；import 的只有同样零依赖的
+ * core/polar-label.js 与 core/math.js，故可被 `node --test` 直接加载（同 pie/geometry.js、radar/geometry.js）。
  *
  * **不使用 d3.chord() / d3.ribbon()**，判据与桑基不用 d3-sankey 相同，见 specs/chord.md
  * 「分层边界」：D3 在本仓库只做计算与 DOM 装配，不用它的高层图表封装。
@@ -12,10 +12,10 @@
  * 角度约定由 core/polar-label.js 统一：0 弧度 = 12 点方向，正角顺时针。
  */
 import { pointAt, labelBand } from '../../core/polar-label.js';
+import { clamp } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
 
-const clamp = (lo, v, hi) => Math.max(lo, Math.min(v, hi));
 
 /*
  * 路径坐标保留 3 位小数（≈0.001px，远细于显示精度）。

@@ -1,6 +1,6 @@
 /*
  * [L2-LOCAL][HBAR-10..13] 横向条的排名模型：排序、Top-N 截断、两帧之间的插值。
- * 零 import、无 DOM、无 d3、不读 token，故整份可被 node --test 直接加载。
+ * 只 import 同样零依赖的 core/math.js、无 DOM、无 d3、不读 token，故整份可被 node --test 直接加载。
  *
  * ── 为什么插值的是**名次**，不是只插值数值 ────────────────────────
  * 这是本族与 SankeyChart 最关键的分叉，别照抄那边：
@@ -15,7 +15,8 @@
  *   掉榜者反向。渲染时取 `rank <= topN` 并按绘图区裁剪即可。
  */
 
-const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
+import { clamp01 } from '../../core/math.js';
+
 const lerp = (a, b, t) => a + (b - a) * t;
 
 /* 实体身份：显式 key 优先，回落名称。名次会变，**身份不能跟着名次变**，

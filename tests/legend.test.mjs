@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { applyToggle, applyFocus } from '../charts/core/legend-state.js';
+import { applyToggle, applyFocus, legendHandlers, emphasisKey } from '../charts/core/legend-state.js';
 
 const KEYS = ['A', 'B', 'C', 'D'];
 /* 断言读的是「谁还亮着」而不是「谁在 hidden 里」——前者才是规范表述的口径 */
@@ -107,4 +107,43 @@ test('LEGEND-14 focus：不产生 hidden——数据构成一点不动', () => {
 
 test('LEGEND-14 focus：取消强调回到「全部同权」，不是「全部隐藏」——LEGEND-12 在本档不适用', () => {
   assert.equal(applyFocus('A', 'A'), null, '唯一被强调项应可取消');
+});
+
+/* ── 图例接线 legendHandlers：三族共用的按档分流 ──────────────────── */
+
+const wire = (mode, state = { hidden: new Set(), selected: null, hovered: null }) => {
+  const calls = [];
+  const h = legendHandlers({
+    state, keys: KEYS, mode,
+    onFocus: (next) => { calls.push(['focus', next]); state.selected = next; },
+    onFilter: () => calls.push(['filter']),
+    onDim: () => calls.push(['dim', emphasisKey(state)]),
+  });
+  return { h, state, calls };
+};
+
+test('legendHandlers focus 档：只交出下一个 selected，不动 hidden、不重建', () => {
+  const { h, state, calls } = wire('focus');
+  h.onToggle('B');
+  h.onToggle('B');
+  assert.deepEqual(calls, [['focus', 'B'], ['focus', null]]);
+  assert.equal(state.hidden.size, 0);
+});
+
+test('legendHandlers multi / single 档：改 hidden、清掉 hover、整树重建', () => {
+  for (const mode of ['multi', 'single']) {
+    const { h, state, calls } = wire(mode);
+    h.onHover('B');
+    h.onToggle('B');
+    assert.equal(state.hovered, null, mode);
+    assert.deepEqual(calls.at(-1), ['filter'], mode);
+    assert.notDeepEqual(visible(state.hidden), KEYS, mode);
+  }
+});
+
+test('emphasisKey：hover 优先于常驻选中，离开后回落到选中项', () => {
+  const { h, calls } = wire('focus', { hidden: new Set(), selected: 'A', hovered: null });
+  h.onHover('C');
+  h.onHover(null);
+  assert.deepEqual(calls, [['dim', 'C'], ['dim', 'A']]);
 });

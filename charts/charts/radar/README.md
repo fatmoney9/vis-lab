@@ -22,6 +22,7 @@
 | `legend` | 用 |
 | `legend-state` | 用 |
 | `mark` | 不用：该模块绘制柱与折线，本族图元是闭合多边形或闭合曲线 |
+| `math` | 用 |
 | `measure` | 用 |
 | `motion` | 用 |
 | `palette` | 用 |

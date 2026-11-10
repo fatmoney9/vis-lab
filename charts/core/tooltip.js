@@ -1,5 +1,6 @@
 import { select } from 'd3';
 import { tokenNum } from './tokens.js';
+import { clamp } from './math.js';
 import { markerSpecFor, renderMarker } from './legend.js';
 
 /*
@@ -18,8 +19,6 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 const ARROW_H = 6;        /* [TOOLTIP-05] top-anchor 专属下三角高（兜底值） */
 const ARROW_W = 12;       /* [TOOLTIP-05] 三角底宽 */
 const FOLLOW_OFFSET = 12; /* [TOOLTIP-04] follow 档气泡与鼠标的间距 */
-
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));
 
 export function createTooltip(plotHost) {
   const root = select(plotHost).append('div').attr('class', 'dv-tooltip');
@@ -173,10 +172,10 @@ export function createTooltip(plotHost) {
          而这条只有在边界贴着图表时才够得着——放宽到视口后，桌面宽度下气泡从不碰边（实测 1600px
          视口 / 706px 图表全程无接触），那条规则就成了永不触发的死代码。
          **垂直不 clamp**：② 明写「底边 y 与坐标 y 无关」，一夹这条就碎（三角会脱离气泡底边）。 */
-      left = clamp(cx - w / 2, 0, Math.max(0, box.width - w));
+      left = clamp(0, cx - w / 2, Math.max(0, box.width - w));
       top = grid.top - ARROW_H - h;
       arrow.style('display', 'block')
-        .style('left', `${clamp(cx - left - ARROW_W / 2, 2, w - ARROW_W - 2)}px`);
+        .style('left', `${clamp(2, cx - left - ARROW_W / 2, w - ARROW_W - 2)}px`);
     } else if (mode === 'side-fixed') {
       /* [TOOLTIP-06] 两侧固定式：以图表中点反选对侧（左半区触发 → 贴右上角、右半区 → 左上角），
          顶对齐 grid 上沿、不随鼠标纵移、水平只有左右两个离散档。
@@ -193,15 +192,40 @@ export function createTooltip(plotHost) {
       const b = bounds(box);
       left = pointer.x + FOLLOW_OFFSET;
       if (left + w > b.right) left = pointer.x - FOLLOW_OFFSET - w;
-      left = clamp(left, b.left, Math.max(b.left, b.right - w));
-      top = clamp(pointer.y + FOLLOW_OFFSET, b.top, Math.max(b.top, b.bottom - h));
+      left = clamp(b.left, left, Math.max(b.left, b.right - w));
+      top = clamp(b.top, pointer.y + FOLLOW_OFFSET, Math.max(b.top, b.bottom - h));
     }
     /* [TOOLTIP-12] 局部坐标 → fixed 视口坐标（plotHost 视口矩形每次 place 现取，滚动/重排后自准） */
     root.style('left', `${box.left + left}px`).style('top', `${box.top + top}px`);
   }
 
-  /* 隐藏即时执行；「移出延迟」的 timer 归 L2（与指示线 / 线点同步隐藏，TOOLTIP-10） */
-  const hide = () => root.classed('is-visible', false);
+  /*
+   * [TOOLTIP-10] 隐藏的两种节奏：
+   *   hide()          —— 立即隐藏，并撤掉尚未到点的延迟隐藏（滚动即隐、图例点击、销毁都走它）。
+   *   hideLater(also) —— 按 `--tooltip-hide-delay` 延迟隐藏（移出绘图区）；also 是同一时刻要一起
+   *                      收掉的 L2 件（指示线 / 唤出点 / 激活扇区），延迟只有这一个计时器。
+   *   cancelHide()    —— 指针又回来了：撤掉延迟隐藏，气泡保持。
+   * 计时器住在这里而不是各族各一份：先前七族各自 `let hideTimer` + `clearTimeout` / `setTimeout`，
+   * 其中几族排新延时前不撤旧的——眼下靠「两次 leave 之间必有一次 enter 去撤」才没出事，
+   * 换一种事件接法，旧计时器就会丢了句柄、到点把正在用的气泡关掉。
+   * 一个气泡只有一个计时器，排新的必先撤旧的——由本模块保证，调用方无从写错。
+   */
+  let hideTimer = 0;
+  const cancelHide = () => {
+    clearTimeout(hideTimer);
+    hideTimer = 0;
+  };
+  const hide = () => {
+    cancelHide();
+    root.classed('is-visible', false);
+  };
+  const hideLater = (also) => {
+    cancelHide();
+    hideTimer = setTimeout(() => {
+      hide();
+      also?.();
+    }, tokenNum(plotHost, '--tooltip-hide-delay'));
+  };
 
-  return { show, place, hide };
+  return { show, place, hide, hideLater, cancelHide };
 }

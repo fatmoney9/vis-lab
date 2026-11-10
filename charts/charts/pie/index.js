@@ -24,13 +24,13 @@
  */
 import { select, arc } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
-import { tokenNum, tokenStr } from '../../core/tokens.js';
+import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { measureTexts } from '../../core/measure.js';
 import { resolveSeriesColors } from '../../core/palette.js';
-import { renderLegend } from '../../core/legend.js';
-import { applyToggle, applyFocus } from '../../core/legend-state.js';
+import { renderLegend, dimByKey } from '../../core/legend.js';
+import { applyFocus, legendHandlers, emphasisKey } from '../../core/legend-state.js';
 import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '../../core/label.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
@@ -102,8 +102,7 @@ export function PieChart(host, cfg) {
      PIE-17 已把扇区面 / 引线 / 外侧标签收成同一套入口，focus 档下图例项是**第四个**入口。
      两处各持一份状态必然出现「点扇区选中了、图例没跟着亮」这种自相矛盾的画面。
      都挂在 build 外：resize / 显隐会整树重建，状态不该因此丢失。 */
-  const state = { hidden: new Set(), selected: null };
-  let hoverKey = null;
+  const state = { hidden: new Set(), selected: null, hovered: null };
 
   /* DOM 骨架（一次性）。[PIE-09][LEGEND-10] 与 cartesian 的关键差别：**绘图区在前、图例在后**。
      饼环没有「图例在上」这种形态（左右 / 上下两种结构里图例都在图之后），DOM 序 = 阅读序 =
@@ -120,13 +119,9 @@ export function PieChart(host, cfg) {
      松开后自然回落到常驻的那个（同 PIE-10「两者独立叠加」的取舍）。
      [PIE-10] 这是选中态的**第二条视觉通道**。第一条是外扩，而 `size-donut-hover-expand`
      在 THS / iFinD-PC 是 0px（规范有意：0 即天然无形态），故那两个主题下选中态此前没有任何表达；
-     不透明度这条不随主题归零，focus 档因此三主题都看得见。两条通道并存、互不替代。
-     `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
+     不透明度这条不随主题归零，focus 档因此三主题都看得见。两条通道并存、互不替代。 */
   function applyDim() {
-    const emph = hoverKey ?? state.selected;
-    const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
-    select(plotHost).selectAll('g.dv-pie-series, g.dv-data-label-series')
-      .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
+    dimByKey(plotHost, 'g.dv-pie-series, g.dv-data-label-series', emphasisKey(state));
   }
 
   /* [PIE-09][LEGEND-10] 方位定内部排布与对齐：左右结构纵向单列左对齐、上下结构横向居中换行。
@@ -140,13 +135,12 @@ export function PieChart(host, cfg) {
       /* [LEGEND-06][LEGEND-14][PIE-03] 按档分流：focus 只动 selected——分母不变、角度不重算，
          故**不必 build**，改一层 opacity 即可（顺带走 selectEmphasis 让外扩通道也跟上）；
          multi / single 动 hidden，剩余扇区要重新闭合 360°，必须整树重绘。 */
-      onToggle: (key) => {
-        if (legendSelect === 'focus') return selectEmphasis(applyFocus(state.selected, key));
-        state.hidden = applyToggle(state.hidden, key, keys, legendSelect);
-        hoverKey = null;
-        build();
-      },
-      onHover: (key) => { hoverKey = key; applyDim(); },
+      ...legendHandlers({
+        state, keys, mode: legendSelect,
+        onFocus: selectEmphasis,
+        onFilter: build,
+        onDim: applyDim,
+      }),
     });
   }
 
@@ -367,20 +361,17 @@ export function PieChart(host, cfg) {
        气泡必须在 plotHost.innerHTML='' 之后创建：它把浮层 div 挂在 plotHost 内
        （保 data-theme token 作用域与随图表销毁），清空画布会一并带走上一轮的浮层。 */
     const tooltip = createTooltip(plotHost);
-    let hideTimer = 0;
-    const hideTip = () => { clearTimeout(hideTimer); tooltip.hide(); };
+    const hideTip = () => tooltip.hide();
     /* [TOOLTIP-10] scroll 不冒泡，capture 才能覆盖 window 与内部滚动容器，
        否则 fixed 气泡会脱离已滚走的图表继续悬在原地。 */
     window.addEventListener('scroll', hideTip, { capture: true, passive: true });
-    const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
     stopHover = () => {
-      clearTimeout(hideTimer);
       window.removeEventListener('scroll', hideTip, true);
       tooltip.hide();
     };
 
     function showTip(event, r) {
-      clearTimeout(hideTimer);
+      tooltip.cancelHide();
       const box = plotHost.getBoundingClientRect();
       /* [TOOLTIP-02] 标题行 = 这组数据的名字（不给则整行不渲染）；数据行 = 命中扇区一行，
          marker 与图例同源（圆点）、数值与标签同一份 format、null 显示 "-"。 */
@@ -414,7 +405,7 @@ export function PieChart(host, cfg) {
     /* [PIE-10] 强调态外扩：扇区的**外**半径 +expand（内半径不动 → 环变厚）。
        两个来源并存、任一命中即外扩：hover 是临时态、点击选中是常驻态。
        token 为 0 的主题（THS / iFinD-PC）自然无形态，无需分支判断。
-       与图例 hover 的 hoverKey 是两条链路：这里管几何、那边管弱化透明度。 */
+       与图例 hover 的 state.hovered 是两条链路：这里管几何、那边管弱化透明度。 */
     const expand = tokenNum(plotHost, '--size-donut-hover-expand') || 0;
     let emphHover = null;
     const emphasized = (n) => n === emphHover || n === state.selected;
@@ -505,7 +496,7 @@ export function PieChart(host, cfg) {
          「进入/离开它的任一后代」，正是这里要的语义；标签在另一层（PIE-07 要求它压在扇区之上），
          够不着这个 `<g>`，故把同一个绑定函数留给下面的标签层复用，而不是复制一份处理器。 */
       const bindHit = (sel) => sel.on('mouseenter', () => {
-        clearTimeout(hideTimer); /* 从扇区挪到自己的标签上时，别让上一段留下的延时把气泡关掉 */
+        tooltip.cancelHide(); /* 从扇区挪到自己的标签上时，别让上一段留下的延时把气泡关掉 */
         if (!expand) return;
         emphHover = r.name;
         raiseAbove();
@@ -513,7 +504,7 @@ export function PieChart(host, cfg) {
       })
         .on('mousemove', (event) => showTip(event, r))
         .on('mouseleave', () => {
-          hideTimer = setTimeout(() => tooltip.hide(), hideDelay); /* [TOOLTIP-10] 延迟隐藏 */
+          tooltip.hideLater(); /* [TOOLTIP-10] 延迟隐藏 */
           if (!expand) return;
           emphHover = null;
           animateEmphasis();
