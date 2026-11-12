@@ -50,7 +50,7 @@
 | **开发验收** | `playground/preview.html` | 三主题横向并排（另加密度档卡，如「Ainvest · 紧凑」）、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
 | **图型对照面**（可选） | `playground/<图型>-preview.html` | 单个图型的多形态 × 三主题同屏铺开。当前有 `radar-preview.html`；**它 import 共享示例源**，只负责「怎么摆」。桑基的 `sankey-preview.html` 是**另一回事**——那个自带数据，见第七节 |
 
-**示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 数据量档位 + 配置装配），
+**示例定义只有一份**：`demos/examples.js`（示例清单；数据生成在 `demos/data/`、数据量档位在 `density.js`、能力声明在 `capabilities.js`、配置装配在 `config.js`，均由它统一转出），
 `demos/themes.js` 登记主题清单与各主题的图表内容语言（`locale`），
 `demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理英文主题
 图表内部内容的英文展示。各面 import 同一份、各自决定怎么展示，
@@ -91,7 +91,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 1. **颜色只来自权威数据源。** 元素色来自 `tokens/<theme>.json` 生成的 CSS 变量；系列色只在
    `tokens/palette.json` 定义，由取色器写入 `--dv-series-N`。生产组件源码内禁止色值字面量
-   （`#hex`、`rgb(`、颜色名）；结构样式集中在 `charts/styles.css`。
+   （`#hex`、`rgb(`、颜色名）；结构样式入口是 `charts/styles.css`（按职责拆在 `charts/styles/`）。
    **本条已上守卫**（`hooks/lint-color-literals.mjs`，扫 `charts/` 下 .js/.css）：注释里为解释缘由
    而提到颜色是放行的，`transparent` / `currentColor` 等「跟随上游」关键字同样放行；
    唯一豁免文件是生成物 `core/watermark-assets.js`（色按 WATERMARK-01 烘焙在源 SVG 内）。

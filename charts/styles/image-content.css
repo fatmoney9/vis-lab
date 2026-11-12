@@ -1,0 +1,28 @@
+/* 图片内容块（specs/image-content.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [IMAGECONTENT-03] 通用图片内容结构；具体图表负责前景色与尺寸 token。 */
+.dv-image-content { pointer-events: none; }
+.dv-image-content__fallback-bg { fill: var(--color-background-layer1); }
+.dv-image-content__fallback-text {
+  fill: var(--color-text-primary);
+  font-family: var(--font-family-cn);
+  font-size: var(--dv-image-content-fallback-size);
+  font-weight: var(--font-weight-bold);
+}
+.dv-treemap-label .dv-image-content__fallback-text { fill: var(--color-text-primary); }
+.dv-image-content__label {
+  font-family: var(--font-family-cn);
+  font-size: var(--dv-image-content-label-size);
+  font-weight: var(--dv-image-content-label-weight, var(--font-weight-regular));
+}
+.dv-image-content__value {
+  font-family: var(--font-family-number);
+  font-size: var(--dv-image-content-value-size);
+  font-weight: var(--dv-image-content-value-weight, var(--font-weight-medium));
+  font-synthesis: none;
+  font-variant-numeric: tabular-nums;
+}
+.dv-treemap-label.dv-image-content {
+  --dv-image-content-label-weight: var(--font-weight-treemap-name);
+  --dv-image-content-value-weight: var(--font-weight-data-label);
+}

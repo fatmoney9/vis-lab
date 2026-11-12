@@ -1,0 +1,45 @@
+/* 矩形树图（specs/treemap.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [TREEMAP-03..08] 矩形树图：上级路径独占导航带，图面高度由真实容器或 L3 验收实例提供。
+ */
+.dv-chart--treemap { width: 100%; }
+.dv-chart--treemap > .dv-chart__plot { width: 100%; }
+.dv-chart--treemap > .dv-chart__plot > .dv-treemap {
+  overflow: hidden;
+  border-radius: var(--radius-treemap-canvas);
+}
+
+/* [TREEMAP-03] 单元间隔与画板外角均由主题 token 提供；内部单元保持直角且不另加描边。 */
+.dv-treemap-node__rect {
+  fill: currentColor;
+  stroke: var(--color-background-weak);
+  stroke-width: var(--spacing-0);
+}
+.dv-treemap-node { cursor: pointer; }
+.dv-treemap-node:focus-visible { outline: none; }
+.dv-treemap-node:focus-visible .dv-treemap-node__rect {
+  stroke: var(--color-text-primary);
+  stroke-width: calc(var(--size-grid-line) * 2);
+}
+.dv-treemap-node__mask {
+  pointer-events: none;
+  fill: var(--color-visualization-highlight-block);
+  opacity: 0;
+}
+.dv-treemap-node__mask.is-active { opacity: 1; }
+
+/* [TREEMAP-05/12/16] 各形态的字号上下限由 token 给出；名称走系统字体，数值走金融数字字体。
+   单元格内文字固定使用 84% 白，不再因底色动态切换黑白。 */
+.dv-treemap-label { pointer-events: none; }
+.dv-treemap-label text { fill: var(--color-text-inverse-primary); }
+.dv-treemap-label__name {
+  font-family: var(--font-family-cn);
+  font-size: var(--dv-treemap-name-size, var(--font-size-treemap-local-label-name));
+  font-weight: var(--font-weight-treemap-name);
+}
+.dv-treemap-label__value {
+  font-family: var(--font-family-number);
+  font-size: var(--dv-treemap-value-size, var(--font-size-treemap-local-label-value));
+  font-weight: var(--font-weight-data-label);
+  font-variant-numeric: tabular-nums;
+}

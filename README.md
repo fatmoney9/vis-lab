@@ -45,7 +45,7 @@ sh hooks/check.sh
 | `charts/charts/` | L2 | 图表编排：`cartesian`（柱 / 堆叠 / 折线 / 折柱组合 / 双 Y）· `hbar`（横向条 / 排名竞赛）· `pie`（饼 / 环）· `sankey`（流向流量 / 季度播放）· `treemap`（入口 / 通用 / 全局）· `radar`（多指标对比）· `waterfall`（累计桥接 / 分组数据柱）· `chord`（实体间相互流动）· `world-heatmap`（国家分级设色）。每族的 `README.md` 是它的 **L1 复用声明**（门禁校验，且与代码 import 对账） |
 | `specs/` | L3 | 条目化规范，规则 ID 的权威定义 |
 | `demos/` | L3 | 各预览面共享的示例数据源与图表类型注册表 |
-| `index.html` · `playground/` | L3 | 预览面，只负责展示（对外站点、开发验收面，以及雷达对照面 / 桑基独立面） |
+| `index.html` · `site/` · `playground/` | L3 | 预览面，只负责展示（对外站点、开发验收面，以及雷达对照面 / 桑基独立面）。`index.html` 只剩骨架，站点的外壳样式与页面逻辑在 `site/` |
 | `tests/` · `hooks/` | — | 纯逻辑单测、浏览器合同与提交前守卫；`hooks/check.sh` 是门禁清单的唯一权威 |
 
 依赖方向只能向下：L3 → L2 → L1 → L0。
@@ -59,6 +59,7 @@ sh hooks/check.sh
 | 改颜色 / 字号 / 间距 | `tokens/<theme>.json` 后 `node tokens/build.mjs`；**源码里禁止色值字面量与字体名** |
 | 改布局形态（轴位置、碰撞策略…） | `tokens/behavior.json`，L1 保持主题无关 |
 | 改一条规范 | 先改 `specs/*.md` 的条目，再改对应的那一个模块 |
+| 改对外站点的外壳（导航、卡片、详情页面板） | `site/site.css` · `site/app.js`；图表自身的样式在 `charts/styles/` |
 
 ## 文档
 

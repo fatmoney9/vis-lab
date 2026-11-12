@@ -1,0 +1,80 @@
+/* 瀑布图（specs/waterfall.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [WATERFALL-03..15] 瀑布图专属结构。几何由 L2 装配；所有颜色、字体、线宽与透明度走 token。 */
+.dv-chart--waterfall { width: 100%; }
+.dv-chart--waterfall > .dv-chart__plot { width: 100%; }
+.dv-waterfall-period {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+}
+.dv-waterfall-connector {
+  fill: none;
+  stroke: var(--color-waterfall-connector);
+  stroke-width: var(--size-waterfall-connector);
+  stroke-dasharray: var(--dash-waterfall-connector);
+}
+.dv-waterfall-bar { fill: currentColor; }
+.dv-waterfall-bar--delta-arrow { fill-opacity: var(--opacity-waterfall-delta-fill); }
+.dv-waterfall-segment-divider {
+  stroke: var(--color-background-layer1);
+  stroke-width: var(--size-waterfall-connector);
+}
+.dv-waterfall-delta-cap {
+  stroke: currentColor;
+  stroke-width: var(--size-waterfall-delta-cap);
+}
+.dv-waterfall-direction-line {
+  stroke: currentColor;
+  stroke-width: var(--size-waterfall-arrow-line);
+  opacity: var(--opacity-waterfall-delta-fill);
+}
+.dv-waterfall-direction-head {
+  fill: currentColor;
+  opacity: var(--opacity-waterfall-delta-fill);
+}
+.dv-waterfall-percent__bg { fill: currentColor; }
+.dv-waterfall-percent__text {
+  fill: var(--color-text-inverse-primary);
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-xxs);
+  font-weight: var(--font-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-value-label {
+  font-size: var(--font-size-extra-small);
+  font-weight: var(--font-weight-medium);
+}
+.dv-waterfall-segment-label {
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-extra-small);
+  pointer-events: none;
+}
+.dv-waterfall-segment-label__name { font-weight: var(--font-weight-regular); }
+.dv-waterfall-segment-label__value {
+  font-family: var(--font-family-number);
+  font-weight: var(--font-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-segment-label--solid .dv-waterfall-segment-label__name,
+.dv-waterfall-segment-label--solid .dv-waterfall-segment-label__value {
+  fill: var(--color-text-inverse-primary);
+}
+.dv-waterfall-segment-label--light .dv-waterfall-segment-label__name { fill: var(--color-text-secondary); }
+.dv-waterfall-segment-label--light .dv-waterfall-segment-label__value { fill: var(--color-text-primary); }
+.dv-waterfall-operator {
+  fill: var(--color-text-axis);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-axis);
+  font-weight: var(--font-weight-axis);
+}
+.dv-waterfall-axis-value {
+  font-family: var(--font-family-number);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+.dv-waterfall-hit {
+  fill: transparent;
+  cursor: pointer;
+}

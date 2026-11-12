@@ -1,0 +1,37 @@
+/* 网格线 / 坐标轴标签 / 轴标题（specs/axes.md · axis-title.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [GRID-01] 横向网格线 + 0 轴基线加深；[GRID-02] 纵向分割线共用同一样式（默认不渲染） */
+.dv-grid-line-y,
+.dv-grid-line-x {
+  stroke: var(--color-visualization-divider);
+  stroke-width: var(--size-grid-line);
+}
+.dv-grid-baseline {
+  stroke: var(--color-visualization-divider-deep);
+  stroke-width: var(--size-grid-line);
+}
+
+/* [AXIS-01][TOOLTIP-09] 常态轴标签与高亮态共用唯一一组字体规则。
+   `.dv-axis-tag-text` 同列是旧模块缓存的向后兼容：即使浏览器先更新 CSS、仍运行只挂状态类的
+   旧 crosshair.js，也不会回退到 SVG 默认 16px。新 DOM 同时挂 .dv-axis-label，结果完全相同。 */
+.dv-axis-label,
+.dv-axis-tag-text {
+  font-size: var(--font-size-axis);
+  font-weight: var(--font-weight-axis);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}
+.dv-axis-label { fill: var(--color-text-axis); }
+
+/* [AXISTITLE-05] 轴标题与 Y 轴标签**共用同一套文字样式规则**：§22 的四个 token 逐一别名到
+   轴标签同名项（color-text-axis / font-size-axis / line-height-axis / font-weight-axis），
+   主题 × 端 × 明暗的分叉全部由轴标签那套自带，此处不重复声明——改标签样式，标题自动跟随。
+   保留 *-axis-title 语义名（不直接写 --font-size-axis）：将来要分家改 token 一行即可，本文件不动。
+   唯一不跟的是字体：轴标签为数值等宽走 font-family-number + tabular-nums，
+   标题是文案不是数值 → font-family-cn（同图例文本），不加 tabular-nums。 */
+.dv-axis-title {
+  fill: var(--color-text-axis-title);
+  font-size: var(--font-size-axis-title);
+  font-weight: var(--font-weight-axis-title);
+  font-family: var(--font-family-cn);
+}
