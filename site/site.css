@@ -556,6 +556,82 @@ a { color: inherit; text-decoration: none; }
 .button { width: 100%; margin-top: 16px; border: 0; border-radius: var(--r-pill); padding: 11px; background: var(--shell-brand); color: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity .18s; }
 .button:hover { opacity: .85; }
 
+/* ── 设计规范视图（#spec）：正文现场渲染 specs/*.md，见 site/specs-view.js ─────────────
+   版式取「读文档」而不是「看卡片」：单栏、限宽、表格可横向滚动；规则表是主体，故表格样式最讲究。 */
+.workspace--spec .search, .workspace--spec .sidebar__hint { display: none; }
+.workspace--spec .category-nav { padding-top: 12px; }
+/* 规范页直接挂在导航下（不像示例那样包在纵向 flex 的 .nav-examples 里），<a> 默认是行内元素，
+   背景只包住文字行框——要显式成块，选中态的底色才是整行 */
+.category-nav > .nav-example { display: block; }
+.nav-spec-toc { display: flex; flex-direction: column; margin: 2px 0 10px; padding-left: 12px; }
+.nav-spec-toc a {
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  border-left: 1px solid var(--shell-divider); padding: 4px 12px;
+  color: var(--shell-text-3); font-size: 13px;
+}
+.nav-spec-toc a:hover { color: var(--shell-text); border-left-color: var(--shell-divider-strong); }
+
+.spec-chip__link { color: inherit; }
+.spec-chip__link:hover { text-decoration: underline; }
+
+.spec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.spec-card {
+  display: flex; flex-direction: column; gap: 6px;
+  border: 1px solid var(--shell-divider); border-radius: var(--r-lg); padding: 14px 16px;
+  transition: border-color .15s, background .15s;
+}
+.spec-card:hover { border-color: var(--shell-divider-strong); background: var(--shell-hover); }
+.spec-card__title { font-size: 14px; font-weight: 500; }
+.spec-card__ids { color: var(--shell-text-3); font-size: var(--font-min); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.spec-doc { width: min(100%, 1040px); margin: 0 auto; padding: 32px 40px 80px; }
+.spec-doc .breadcrumb { margin-bottom: 8px; }
+.spec-doc__source { margin-left: auto; flex: none; color: var(--shell-text-3); }
+.spec-doc__source:hover { color: var(--shell-text); text-decoration: underline; }
+.spec-doc__status { color: var(--shell-text-3); font-size: 14px; }
+
+.markdown { color: var(--shell-text); font-size: 14px; line-height: 1.7; }
+.markdown h1 { margin: 0 0 16px; font-size: 24px; line-height: 32px; }
+.markdown h2 { margin: 40px 0 12px; padding-top: 8px; font-size: 18px; line-height: 26px; }
+.markdown h3 { margin: 28px 0 8px; font-size: 15px; line-height: 22px; }
+.markdown h1, .markdown h2, .markdown h3 { scroll-margin-top: calc(var(--topbar-h) + 16px); }
+.markdown p, .markdown ul, .markdown ol { margin: 0 0 12px; }
+.markdown ul, .markdown ol { padding-left: 22px; }
+.markdown li { margin: 4px 0; }
+.markdown a { color: var(--shell-link); text-decoration: underline; text-decoration-color: var(--shell-divider-strong); text-underline-offset: 2px; }
+.markdown a:hover { text-decoration-color: currentColor; }
+.markdown code {
+  border-radius: var(--r-xs); padding: 1px 5px; background: var(--shell-weak);
+  font: .9em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-word;
+}
+.markdown pre { margin: 0 0 16px; overflow: auto; border-radius: var(--r-md); padding: 14px 16px; background: var(--shell-rail); }
+.markdown pre code { padding: 0; background: none; font-size: 13px; white-space: pre; }
+.markdown blockquote { margin: 0 0 16px; border-left: 3px solid var(--shell-divider-strong); padding: 4px 0 4px 16px; color: var(--shell-text-2); }
+.markdown blockquote p:last-child { margin-bottom: 0; }
+.markdown hr { margin: 32px 0; border: 0; border-top: 1px solid var(--shell-divider); }
+/* 规则表：ID 列不折行、规则列吃剩余宽、实现列收窄；整表可横向滚，窄屏不撑破版面 */
+.markdown .md-table { margin: 0 0 20px; overflow-x: auto; border: 1px solid var(--shell-divider); border-radius: var(--r-md); }
+.markdown table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.65; }
+.markdown th, .markdown td { border-bottom: 1px solid var(--shell-divider); padding: 10px 12px; text-align: left; vertical-align: top; }
+.markdown th { background: var(--shell-rail); color: var(--shell-text-2); font-weight: 500; white-space: nowrap; }
+.markdown tbody tr:last-child td { border-bottom: 0; }
+.markdown td:first-child { white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--font-min); color: var(--shell-text-2); }
+.markdown td:nth-child(2) { min-width: 360px; }
+.markdown td:nth-child(3) { min-width: 180px; color: var(--shell-text-2); }
+.markdown [id^="rule-"] { scroll-margin-top: calc(var(--topbar-h) + 16px); }
+/* 从详情页的规范徽标跳过来时，被指到的那一条短暂高亮 */
+.markdown .is-target { animation: spec-target 2.4s ease-out; }
+.markdown tr.is-target td { background: var(--shell-brand-weak); }
+@keyframes spec-target { from { box-shadow: inset 3px 0 0 var(--shell-brand); } to { box-shadow: inset 3px 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .markdown .is-target { animation: none; } }
+.md-task { list-style: none; display: flex; gap: 8px; margin-left: -22px; }
+.md-task__box {
+  flex: none; width: 16px; height: 16px; margin-top: 4px;
+  border: 1px solid var(--shell-divider-strong); border-radius: 4px;
+  display: grid; place-items: center; font-size: var(--font-min); line-height: 1; color: var(--shell-text-2);
+}
+.md-task.is-done > span:last-child { color: var(--shell-text-3); }
+
 /* 详情页三栏（导航 260 + 舞台 + 参数 320）在窄屏挤不下：演示外壳自己就有 320px 下限，
    低于这个宽度左栏先让位，回到「面包屑 + 键盘 ←/→」的老路径，键盘那条任何宽度都还在。 */
 @media (max-width: 1180px) {
@@ -563,7 +639,10 @@ a { color: inherit; text-decoration: none; }
   .workspace--detail .main { margin-left: 0; }
 }
 @media (max-width: 900px) {
-  .topnav { display: none; }
+  /* 顶栏只留两个主入口：「设计规范」在窄屏没有别的入口，整条藏掉就进不去了 */
+  .topnav { gap: 16px; }
+  .topnav__item:not([data-view]) { display: none; }
+  .spec-doc { padding: 24px 16px 64px; }
   .detail { grid-template-columns: minmax(0, 1fr) 280px; }
   .gallery { padding-right: 16px; padding-left: 16px; }
 }
@@ -578,6 +657,10 @@ a { color: inherit; text-decoration: none; }
   /* 横向排布下第三级排不开：只留分类胶囊，换图回到画廊卡片那条路 */
   .category-nav { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 12px; }
   .nav-family, .nav-examples { display: none; }
+  /* 规范视图同理：横排只留页名，页内目录收起（正文里的标题仍可直接滚到） */
+  .nav-spec-toc { display: none; }
+  .workspace--spec .category-nav { align-items: center; }
+  .category-nav > .nav-example { flex: none; }
   .nav-item { flex: none; width: auto; }
   .main { margin-left: 0; }
   .detail { grid-template-columns: 1fr; }

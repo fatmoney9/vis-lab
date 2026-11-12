@@ -60,6 +60,7 @@ sh hooks/check.sh
 | 改布局形态（轴位置、碰撞策略…） | `tokens/behavior.json`，L1 保持主题无关 |
 | 改一条规范 | 先改 `specs/*.md` 的条目，再改对应的那一个模块 |
 | 改对外站点的外壳（导航、卡片、详情页面板） | `site/site.css` · `site/app.js`；图表自身的样式在 `charts/styles/` |
+| 加一篇规范页 | 写 `specs/<名>.md`，再在 `site/spec-index.js` 登记（分组 + 规则 ID 前缀），站点「设计规范」随之出现；漏登记门禁会拦 |
 
 ## 文档
 

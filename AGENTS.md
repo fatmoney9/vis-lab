@@ -112,6 +112,9 @@
   画廊卡片靠 `.example-card__preview .chart-host { pointer-events: none }` **继承**关掉交互，所以
   **组件样式不得给命中元素显式声明 `pointer-events`**——显式值优先于继承值，写死就等于在预览卡片里
   把鼠标要回来（2026-09-16 弦图与桑基图实测如此）。透明粗描边与 `fill: transparent` 的热区默认就能命中，不必声明。
+- 站点的「设计规范」（`#spec`）**运行时读取 `specs/*.md` 原文渲染**，不另存副本；页面清单与规则 ID 前缀登记在 `site/spec-index.js`，
+  新增规范页、改规则编号或改示例的 `spec` 徽标时，`hooks/lint-spec-index.mjs` 会核对登记齐全、徽标指向真实存在的规则。
+  渲染器 `site/markdown.js` 只支持 specs 实际用到的语法（且先整体转义、只放行 `<br>`）；开始用新语法时在那里补，不要绕开。
 - 详细分层、主题通道和规范变更流程以 `WORKFLOW.md` 为准。
 - 多人分支、中文提交、验证和 PR 约定以 `CONTRIBUTING.md` 为准。
 

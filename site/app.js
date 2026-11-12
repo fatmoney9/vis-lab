@@ -9,6 +9,8 @@
     import { contentLocale } from '../demos/themes.js';
     /* 分类图标住在 demos/nav-icons.js（门禁要 import 它核对缺图标的族，见 hooks/lint-nav-icon.mjs）。 */
     import { NAV_ICONS } from '../demos/nav-icons.js';
+    import { renderSpecView, scrollSpecAnchor } from './specs-view.js';
+    import { parseSpecRoute, ruleIdsOf, ruleHref } from './spec-index.js';
     import {
       playbackCopy,
       applyPlaybackViewport,
@@ -34,6 +36,8 @@
       group: ALL,
       query: '',
       detail: null,
+      /* 设计规范视图：{ page, anchor } 或 null。与 detail 互斥——同一时刻只看一样东西。 */
+      spec: null,
       theme: 'ths',
       platform: 'pc',
       mode: 'light',
@@ -356,7 +360,11 @@
             </nav>
             <div class="detail-title-row">
               <div><h1>${example.title}</h1><p>${example.description}</p></div>
-              <span class="spec-chip">${example.spec}</span>
+              <span class="spec-chip">${ruleIdsOf(example.spec).map((id) => {
+                /* 规范徽标的每个 ID 都能点到规范页的那一条（门禁保证 ID 真实存在，见 hooks/lint-spec-index.mjs） */
+                const href = ruleHref(id);
+                return href ? `<a class="spec-chip__link" href="${href}">${id}</a>` : id;
+              }).join(' / ')}</span>
             </div>
           </header>
           <section class="stage">
@@ -613,9 +621,22 @@
       });
     }
 
+    /* 顶栏两个入口的选中态跟着视图走（index.html 里写死的初始态只对首屏成立） */
+    const topnavItems = [...document.querySelectorAll('.topnav__item[data-view]')];
+    function syncTopnav() {
+      const view = state.spec ? 'spec' : 'examples';
+      topnavItems.forEach((a) => a.classList.toggle('topnav__item--active', a.dataset.view === view));
+    }
+
     function render() {
       destroyCharts();
       workspace.classList.toggle('workspace--detail', Boolean(state.detail));
+      workspace.classList.toggle('workspace--spec', Boolean(state.spec));
+      syncTopnav();
+      if (state.spec) {
+        renderSpecView(main, categoryNav, state.spec);
+        return;
+      }
       renderNavigation();
       if (state.detail) renderDetail();
       else renderGallery();
@@ -661,8 +682,20 @@
 
     function syncRoute() {
       const id = window.location.hash.slice(1);
+      const nextSpec = parseSpecRoute(id);
+      if (nextSpec) {
+        const samePage = state.spec && state.spec.page === nextSpec.page;
+        state.spec = nextSpec;
+        state.detail = null;
+        /* 同一页内换锚点只滚动，不重取原文、不重画 */
+        if (samePage) scrollSpecAnchor(main, nextSpec.anchor);
+        else render();
+        return;
+      }
+      const leavingSpec = Boolean(state.spec);
+      state.spec = null;
       const nextDetail = EXAMPLES.find((example) => example.id === id) || null;
-      if ((state.detail?.id || null) === (nextDetail?.id || null)) return;
+      if (!leavingSpec && (state.detail?.id || null) === (nextDetail?.id || null)) return;
       state.detail = nextDetail;
       state.density = defaultDensityCountOf(nextDetail);
       state.seriesCount = defaultIndexSeriesCountOf(nextDetail);
@@ -671,7 +704,8 @@
 
     window.addEventListener('popstate', syncRoute);
     window.addEventListener('hashchange', syncRoute);
-    state.detail = EXAMPLES.find((example) => example.id === window.location.hash.slice(1)) || null;
+    state.spec = parseSpecRoute(window.location.hash.slice(1));
+    state.detail = state.spec ? null : EXAMPLES.find((example) => example.id === window.location.hash.slice(1)) || null;
     state.density = defaultDensityCountOf(state.detail);
     state.seriesCount = defaultIndexSeriesCountOf(state.detail);
     render();
