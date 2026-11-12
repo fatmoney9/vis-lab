@@ -61,7 +61,10 @@
   "color-performance-six-level-4": "#BFE500",
   "color-performance-six-level-5": "#00CC22",
   "color-performance-six-level-6": "#00B239",
-  "color-sankey-income": "#265FFC",
+  "color-sankey-income": {
+    "light": "#3A6EE5",
+    "dark": "#4278EF"
+  },
   "color-sankey-expense": "{color-price-down}",
   "color-sankey-profit": "{color-price-up}",
   "$section-02": "字体家族",
@@ -213,7 +216,10 @@
   "opacity-visualization-intensity-level-3": 0.75,
   "opacity-visualization-intensity-level-4": 0.85,
   "opacity-visualization-intensity-level-5": 1,
-  "color-world-heatmap-primary": "#165DFF",
+  "color-world-heatmap-primary": {
+    "light": "#3A6EE5",
+    "dark": "#4278EF"
+  },
   "color-world-heatmap-up": "{color-price-up}",
   "color-world-heatmap-down": "{color-price-down}",
   "color-world-heatmap-empty": {
@@ -230,6 +236,31 @@
   "opacity-world-heatmap-level-3": 0.3,
   "opacity-world-heatmap-level-4": 0.4,
   "opacity-world-heatmap-level-5": 0.6,
+  "color-world-heatmap-primary-level-1": {
+    "light": "#ABC4F4",
+    "dark": "#1847BB"
+  },
+  "color-world-heatmap-primary-level-2": {
+    "light": "#739BEC",
+    "dark": "#3A6EE5"
+  },
+  "color-world-heatmap-primary-level-3": {
+    "light": "#5785E9",
+    "dark": "#5785E9"
+  },
+  "color-world-heatmap-primary-level-4": {
+    "light": "#3A6EE5",
+    "dark": "#739BEC"
+  },
+  "color-world-heatmap-primary-level-5": {
+    "light": "#1847BB",
+    "dark": "#ABC4F4"
+  },
+  "opacity-world-heatmap-primary-level-1": 1,
+  "opacity-world-heatmap-primary-level-2": 1,
+  "opacity-world-heatmap-primary-level-3": 1,
+  "opacity-world-heatmap-primary-level-4": 1,
+  "opacity-world-heatmap-primary-level-5": 1,
   "size-world-heatmap-border": "0.5px",
   "size-world-heatmap-flag": "16px",
   "size-world-heatmap-height": "240px",

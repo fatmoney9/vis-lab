@@ -9,9 +9,9 @@
 - `ainvest.json`：Ainvest 主题的完整值 token；
 - `behavior.json`：需要参与几何计算或逻辑分支的主题形态与行为配置；
 - `density.json` + `density.mjs`：**密度覆盖层**（见下文「密度覆盖层」）——某主题的紧凑档相对该主题改了哪些值 token 与形态键，全部写在这一个文件里；`density.mjs` 是构建器与 `charts/core/theme.js` 共用的解析 / 合并纯函数；
-- `palette.json`：系列色板（`bar-multi` / `line-multi` / `pie-multi` / `single-default` 等），由取色器
-  `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；`build.mjs` 只校验其颜色值域，
-  不输出为 CSS 变量；
+- `palette.json`：系列色板（`single-default` / `bar-multi` / `line-multi`，可选 `pie-multi` / `combo-bar-multi` / `rank-multi`），由取色器
+  `charts/core/palette.js` 消费写入 `--dv-series-N`，见 `specs/color.md`；色值可写成 `{ light, dark }` 明暗各一份（Ainvest），
+  结构合同由 `palette.js` 的 `normalizePalette` 把关；`build.mjs` 只校验其颜色值域，不输出为 CSS 变量；
 - 桑基业务语义色使用三份主题文件中的 `color-sankey-income` / `expense` / `profit`，与其他
   主题值一起参与 key 合同、值域校验和 CSS 生成；桑基专属几何与播放配置属于 L2，保存在
   `charts/charts/sankey/config.js`，不混入 design token；

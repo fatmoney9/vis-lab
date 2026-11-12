@@ -3,13 +3,17 @@
     "description": "系列色板（柱/线/饼扇区… 的数据系列色）。第三类主题数据：不进 tokens.css。",
     "authority": "权威规则见 specs/color.md（COLOR-01..07）；取色算法见 charts/core/palette.js",
     "notes": [
-      "系列色一律写死 hex、不走值 token；light/dark 同色、无深色派生；整套替换、绝不跨主题混用",
+      "系列色一律写死 hex、不走值 token；整套替换、绝不跨主题混用",
+      "色值两种写法：字符串 / 数组 = 明暗同色；{ light, dark } = 明暗各一份（两份数组等长、同序号同实体）。取色器按容器 data-mode 选",
+      "色盘两种写法：数组 / {light,dark} 简写 = 超出循环；{ colors, other?, overflow? } 完整写法，overflow = cycle（缺省）/ other（用尽后一律取 other）/ { restart: k }（用尽后回到第 k+1 个循环，k 从 0 计）",
+      "可选键 combo-bar-multi（折柱组合的柱）、rank-multi（排名图）、pie-multi（饼环）：不声明即回落 bar-multi",
+      "以 $ 开头的键是注释，取色器与构建器都忽略",
       "build.mjs 只校验本文件的颜色值域，不把色板输出为 CSS 变量",
       "取色：单系列 → single-default；多系列 → bar-multi 按序号取、超出循环。count = 声明系列数（图例隐藏不重排色，见 COLOR-04）",
       "THS 多系列柱=末行「固定第 N 色」前 N；单系列另用 single-default（#3366FF，非 bar-multi[0] 的 #52BBFF）——「整套换」非「序号叠加」。设计表的其余行不再计划补入，理由见 specs/color.md 待办里已撤销的那条",
       "line-multi = 折柱组合的折线子序列（柱线分色板、禁交叉，COLOR-05）；iFinD 用浅盘避撞柱色。仅组合使用：纯折线（无柱声明）走通用 bar-multi",
       "pie-multi = 饼环扇区盘（COLOR-08），可选键：主题不声明即回落 bar-multi。THS 有设计稿独立的 11 色扇区盘，iFinD / Ainvest 暂无、仍走通用盘",
-      "动态条形 16 色等后续切片再补键（dynamic-bar）"
+      "排名图（含动态排序条形）走 rank-multi：Ainvest 已声明 24 色，THS / iFinD 未声明、回落 bar-multi"
     ]
   },
 
@@ -32,8 +36,67 @@
     "line-multi": ["#FFBF80", "#51E5E6", "#B3BFFF", "#AAF065", "#FF80BF", "#FF8080", "#75E9FF"]
   },
   "ainvest": {
-    "single-default": "#265FFC",
-    "bar-multi": ["#265FFC", "#38D1FF", "#F564B9", "#733ED6", "#00DDCB", "#273D8F", "#FF7040", "#9EA9C7"],
-    "line-multi": ["#FF7040", "#9EA9C7"]
+    "$source": "Figma「261106 - Ainvest 可视化色板」，交付文件 ainvest-chart-palette.ts（2026-11-11）。深色按图表底 #141414 校验",
+    "single-default": { "light": "#3A6EE5", "dark": "#4278EF" },
+    "bar-multi": {
+      "$note": "基础：第 1 轮默认 8 色 → 第 2 轮各深一档 → 第 3 轮各浅一档（后两轮蓝不重复），共 22 色；第 23 个起用「其他」",
+      "colors": {
+        "light": [
+          "#3A6EE5", "#F97C2F", "#12B1E0", "#F4BA1D", "#7F4FC4", "#9ED160", "#DA5691", "#15B09D",
+          "#DF6B21", "#0F9CC6", "#DCA719", "#6B42A6", "#8EBC55", "#BE4A7E", "#119B8A",
+          "#FA9D6C", "#62C2E7", "#F8D384", "#8F68CD", "#BCE096", "#E376A3", "#5DC0AF"
+        ],
+        "dark": [
+          "#4278EF", "#EE7325", "#20BBEC", "#FFC531", "#8457C8", "#98CA59", "#E05D97", "#00AA97",
+          "#D2651F", "#1BA6D2", "#EAB100", "#7147AE", "#88B54F", "#C74E84", "#009584",
+          "#F5915C", "#6ECCF1", "#FFDF9C", "#9370CF", "#B5DA8C", "#E581A9", "#55BAA9"
+        ]
+      },
+      "other": { "light": "#858585", "dark": "#7A7A7A" },
+      "overflow": "other"
+    },
+    "combo-bar-multi": {
+      "$note": "折柱组合的柱：基础 8 色去掉 4 黄（黄留给折线），超过 7 根 Figma 未定义、暂循环",
+      "colors": {
+        "light": ["#3A6EE5", "#F97C2F", "#12B1E0", "#7F4FC4", "#9ED160", "#DA5691", "#15B09D"],
+        "dark": ["#4278EF", "#EE7325", "#20BBEC", "#8457C8", "#98CA59", "#E05D97", "#00AA97"]
+      }
+    },
+    "line-multi": {
+      "$note": "折柱组合的折线：黄、灰两色，超过 2 条 Figma 未定义、暂循环",
+      "colors": { "light": ["#F4BA1D", "#858585"], "dark": ["#FFC531", "#7A7A7A"] }
+    },
+    "pie-multi": {
+      "$note": "饼环：前 22 色同基础；第 23 个起回到第 2 个（橙）按 2 → 22 循环，不用「其他」。other 留给将来「前 8 个 + 其他」的合并项，取色器尚未消费",
+      "colors": {
+        "light": [
+          "#3A6EE5", "#F97C2F", "#12B1E0", "#F4BA1D", "#7F4FC4", "#9ED160", "#DA5691", "#15B09D",
+          "#DF6B21", "#0F9CC6", "#DCA719", "#6B42A6", "#8EBC55", "#BE4A7E", "#119B8A",
+          "#FA9D6C", "#62C2E7", "#F8D384", "#8F68CD", "#BCE096", "#E376A3", "#5DC0AF"
+        ],
+        "dark": [
+          "#4278EF", "#EE7325", "#20BBEC", "#FFC531", "#8457C8", "#98CA59", "#E05D97", "#00AA97",
+          "#D2651F", "#1BA6D2", "#EAB100", "#7147AE", "#88B54F", "#C74E84", "#009584",
+          "#F5915C", "#6ECCF1", "#FFDF9C", "#9370CF", "#B5DA8C", "#E581A9", "#55BAA9"
+        ]
+      },
+      "other": { "light": "#858585", "dark": "#7A7A7A" },
+      "overflow": { "restart": 1 }
+    },
+    "rank-multi": {
+      "$note": "排名：三轮各 8 色（蓝也参与第 2、3 轮），共 24 色，第 25 个起回到第 1 个，不用「其他」",
+      "colors": {
+        "light": [
+          "#3A6EE5", "#F97C2F", "#12B1E0", "#F4BA1D", "#7F4FC4", "#9ED160", "#DA5691", "#15B09D",
+          "#295AD0", "#DF6B21", "#0F9CC6", "#DCA719", "#6B42A6", "#8EBC55", "#BE4A7E", "#119B8A",
+          "#5785E9", "#FA9D6C", "#62C2E7", "#F8D384", "#8F68CD", "#BCE096", "#E376A3", "#5DC0AF"
+        ],
+        "dark": [
+          "#4278EF", "#EE7325", "#20BBEC", "#FFC531", "#8457C8", "#98CA59", "#E05D97", "#00AA97",
+          "#3164DA", "#D2651F", "#1BA6D2", "#EAB100", "#7147AE", "#88B54F", "#C74E84", "#009584",
+          "#608FF1", "#F5915C", "#6ECCF1", "#FFDF9C", "#9370CF", "#B5DA8C", "#E581A9", "#55BAA9"
+        ]
+      }
+    }
   }
 }

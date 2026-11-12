@@ -10,7 +10,7 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| COLOR-01 | **系列色是第三类主题数据，不进 tokens.css**：一律写死 hex、不走值 token；**light / dark 同色、无深色派生**；整套替换、绝不跨主题混用。原因：取色是**算法**（依赖图型 / 系列数 / 序号 / 柱线归属），CSS 变量表达不了；且设计源明确"写死 hex"。数据在 `tokens/palette.json`，取色器在 `charts/core/palette.js`（`build.mjs` 不读 palette.json，故不会被输出为 CSS 变量） | `tokens/palette.json` + `core/palette.js` | ✅ |
+| COLOR-01 | **系列色是第三类主题数据，不进 tokens.css**：一律写死 hex、不走值 token；整套替换、绝不跨主题混用。原因：取色是**算法**（依赖图型 / 系列数 / 序号 / 柱线归属），CSS 变量表达不了；且设计源明确"写死 hex"。<br>**明暗是否分叉由主题数据决定，不是取色器的假设**：色值写成字符串 / 数组 = 明暗同色（THS、iFinD-PC）；写成 `{ light, dark }` = 各一份（Ainvest，设计稿按深色底 `#141414` 另校验了一套）。两份数组必须等长——同序号即同实体，切换明暗不换槽位。取色器在构建时读容器的 `data-mode`（`theme.js` → `modeOf`），切换明暗由预览面重建图表生效。数据在 `tokens/palette.json`，取色器在 `charts/core/palette.js`（`build.mjs` 不读 palette.json，故不会被输出为 CSS 变量） | `tokens/palette.json` + `core/palette.js` | ✅ |
 | COLOR-07 | **禁止引入色板外颜色**作为系列色（组件源码无 hex 字面量——hex 只在 palette.json；组件里只有 `currentColor` / `var(--dv-series-i)`） | `hooks/lint-color-literals.mjs` | ✅ |
 | COLOR-06 | **涨跌色不在系列色板内**，走值 token `color-price-up` / `color-price-down`（红绿柱、盒须、K 线等语义色） | `tokens/*.json` | ✅ |
 
@@ -18,11 +18,11 @@
 
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
-| COLOR-02 | **按主题取色**（主题差异只在数据、取色器主题无关）：单系列 → `single-default`；多系列 → 该主题色板**按序号取、超出循环**。Ainvest（8 色）/ iFinD（24 色）本就按序号；**THS 多系列柱**取"末行固定第 N 色"前 N（`bar-multi`），与单系列不同色——"整套换"非"序号叠加" | `core/palette.js` → `resolveSeriesColors(host, { series })` | ✅ |
-| COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest `#265FFC`。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
+| COLOR-02 | **按主题取色**（主题差异只在数据、取色器主题无关）：单系列 → `single-default`；多系列 → 该主题色板**按序号取**，色盘用尽后怎么办也是数据：`overflow` = `cycle`（缺省，回到第 1 个）/ `other`（一律取色盘的 `other` 灰）/ `{ restart: k }`（回到第 k+1 个循环）。iFinD（24 色）按序号循环；**Ainvest 基础盘**（`bar-multi`）是 8 色 × 深浅三轮共 22 色（后两轮不重复主色蓝），第 23 个起取「其他」；**THS 多系列柱**取"末行固定第 N 色"前 N（`bar-multi`），与单系列不同色——"整套换"非"序号叠加"。<br>**排名图**（`type: 'rank'`，HBarChart）走可选盘 `rank-multi`：Ainvest 是 8 色 × 三轮共 24 色（主色也参与深浅两轮），满 24 回到第 1 个；未声明的主题回落 `bar-multi` | `core/palette.js` → `resolveSeriesColors(host, { series })`（纯函数 `pickSeriesColors` 由 `tests/palette.test.mjs` 覆盖） | ✅ |
+| COLOR-03 | **单系列默认色**：THS `#3366FF` · iFinD-PC `#4D5999` · Ainvest 浅 `#3A6EE5` / 深 `#4278EF`（= 基础盘第 1 色）。基础图单系列即用它，不进多系列色板序号 | `palette.json` 各主题 `single-default` | ✅ |
 | COLOR-04 | **颜色跟随实体、不跟随排名**：图例显隐 / 数据过滤**不重排颜色**。取色使用**完整的声明系列列表**，不是当前可见系列——隐藏一个系列不会重新调用取色或改变其余系列的固定槽位 | `CartesianChart` 传入归一化后的 `series`，并按 `seriesIndex` 固定 `--dv-series-i` | ✅ |
-| COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走 `bar-multi`、折线走 `line-multi`（THS 橙灰 / Ainvest 橙灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
-| COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → **`pie-multi`** 按序号取、超出循环（COLOR-02）。<br>**扇区自成一盘（`pie-multi`）而非借用 `bar-multi`**：饼环把全部槽位同时摆在一个圆里，相邻扇区直接接边、没有柱间距与轴带隔开，需要的色数也远多于分组柱（36 扇区是 demo 常态）——THS 因此在设计稿里给了**独立的 11 色扇区盘**（`#52BBFF` 起，较 `bar-multi` 的 7 色更长、色相分布更匀）。<br>**该键可选、缺省回落 `bar-multi`**：iFinD-PC（24 色）/ Ainvest（8 色）设计稿未另出扇区盘，不声明 `pie-multi` 即沿用通用盘，行为与本条落地前完全一致——「整套换」的边界是主题，不是图型。<br>**取色器只加一条分支**：`type: 'pie'` 走 `pie-multi ?? bar-multi` 的独立序号，与柱 / 线两个计数器互不干扰。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `palette.json` 各主题可选 `pie-multi`；`core/palette.js` → `resolveSeriesColors()` 的 pie 分支；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
+| COLOR-05 | **折柱组合柱 / 线各走自己的子序列，禁交叉**（避免撞色）：柱走可选盘 `combo-bar-multi`（未声明回落 `bar-multi`）、折线走 `line-multi`（THS 橙灰 / Ainvest 黄灰 / iFinD 7 色浅盘避撞），各按自身类型序号取、互不套用。Ainvest 的组合柱是基础 8 色去掉第 4 色黄（黄让给折线），共 7 色。**`line-multi` 仅在组合（柱线混合声明）中使用**：纯折线（无柱声明）走通用 `bar-multi`——与多系列柱同一套色板按序号取 | `palette.json` 的 `line-multi` + `core/palette.js` 按类型取色（混合判定） | ✅ |
+| COLOR-08 | **饼 / 环的扇区按序号占固定槽位**——取色单位是**扇区**而不是系列：一个饼环只有一组数据，但它的每个扇区都是一个独立实体，与「多系列柱的每根柱」同构。故 L2 把 N 个扇区当 N 个取色单位传入：`resolveSeriesColors(host, { series: items.map(() => ({ type: 'pie' })) })` —— 单扇区 → `single-default`（COLOR-03）、多扇区 → **`pie-multi`** 按序号取、超出循环（COLOR-02）。<br>**扇区自成一盘（`pie-multi`）而非借用 `bar-multi`**：饼环把全部槽位同时摆在一个圆里，相邻扇区直接接边、没有柱间距与轴带隔开，需要的色数也远多于分组柱（36 扇区是 demo 常态）——THS 因此在设计稿里给了**独立的 11 色扇区盘**（`#52BBFF` 起，较 `bar-multi` 的 7 色更长、色相分布更匀）。<br>**该键可选、缺省回落 `bar-multi`**：iFinD-PC（24 色）设计稿未另出扇区盘，不声明 `pie-multi` 即沿用通用盘——「整套换」的边界是主题，不是图型。Ainvest 有独立扇区盘：前 22 色同基础盘，用尽后**回到第 2 色（橙）按 2 → 22 循环**（`overflow: { restart: 1 }`），主色蓝只出现一次、不用「其他」。<br>**取色器只加一条分支**：`type: 'pie'` 走 `pie-multi ?? bar-multi` 的独立序号，与柱 / 线两个计数器互不干扰。<br>**隐藏扇区不重排颜色**（COLOR-04）：图例点掉一个扇区只让剩余扇区重算角度闭合 360°（[pie.md](pie.md) PIE-03），每个扇区的槽位与色值都不动 | `palette.json` 各主题可选 `pie-multi`；`core/palette.js` → `resolveSeriesColors()` 的 pie 分支；`charts/charts/pie/index.js` 按扇区传入 | ✅ |
 | COLOR-09 | **数据项视觉颜色是 L1 通用能力**：`series` 消费固定系列槽位；`intensity` 使用主题单系列主色，并按数据秩映射全局五档透明度；`semantic-binned` 使用主题最终涨跌色 `color-price-{up\|down}-gradient-1..3`，0 使用 `color-price-even-gradient`。渐变 token 自身可包含 alpha（THS）或完整不透明色（AInvest），core 不得再叠加 `fill-opacity`；`semantic-flat` 固定使用同方向 `gradient-1`，0 同样使用 `color-price-even-gradient`。语义模式必须接收与面积值等长的有限 `semanticValues`；分档阈值必须满足 `0 < lower < upper < Infinity`，缺值不得伪装为平盘。颜色解析不识别图表、主题或业务字段；具体模式由 behavior 选择，业务字段到 `colorValue` 的映射、分档阈值均由 L3 数据层完成。阈值是业务配置，不是主题视觉值，禁止写入 CSS token。 | `core/visual-color.js`；`opacity-visualization-intensity-level-1..5`（仅 `intensity`）；`color-price-{up\|down}-gradient-1..3`；`color-price-even-gradient` | ✅ |
 | COLOR-10 | **低表现→高表现色阶是 L1 通用能力**：五档与六档是产品确认的两套独立色阶，均从风险红依次过渡到优秀绿，顺序不随 A 股 / 国际市场的涨跌色方向翻转。五档固定为 `#FF1919 / #FF8C19 / #FFE225 / #A9E010 / #03D345`；六档固定为 `#E50000 / #FF6619 / #FFC61A / #BFE500 / #00CC22 / #00B239`，三主题与明暗模式共用。`performanceColorRamp(5/6)` 分别返回对应的完整色阶；其他 `n≥2` 档数才按归一化位置投影到最近的六档色阶。函数返回 token 引用，不解析主题最终值；连续渐变与离散色带只是消费形态，不进入取色器。 | `core/visual-color.js` → `performanceColorRamp()`；`color-performance-{five\|six}-level-*` | ✅ |
 
@@ -38,12 +38,16 @@
 | ID | 日期 | 决策 | 溯源边界 |
 |---|---|---|---|
 | COLOR-ADR-01 | 2026-08-24 | THS 三档语义色直接写入 `color-price-{up\|down}-gradient-1..3`，依次使用 100% / 75% / 55%；不分档的 `semantic-flat` 固定使用 1 档。 | 基线 PDF 只给出 55% / 65% / 75% / 85% / 100% 五档强度阶梯；三档映射是本次产品评审明确采用的“端点 + 中点”投影，不冒充原稿直接值。 |
+| COLOR-ADR-02 | 2026-11-12 | 撤销「系列色 light / dark 同色」这条硬约束，改为由主题数据决定是否分叉；色盘用尽后的行为（循环 / 其他 / 从第 k 个起循环）也下放为数据。取色器仍只有一套算法。 | 起因是 Ainvest 新色板（Figma「261106 - Ainvest 可视化色板」，交付文件 `ainvest-chart-palette.ts`）每个色都给了浅深两份，并对基础 / 折柱组合 / 饼环 / 排名四种场景规定了不同的用尽规则。THS / iFinD 数据不动，行为不变（`tests/palette.test.mjs` 断言其明暗同色）。 |
 
 ## 待办
 
 - [x] COLOR-05 折柱组合柱/线子序列 → `line-multi` 落地（iFinD 用 7 色浅盘避撞）。
 - ~~THS「按系列数量整取第 N 行」基础表~~ —— **2026-08-18 撤销，不再计划**：该设想要求「几个系列就整套换一组配色」，但设计源只提供了末行（即现行 `bar-multi`），且其适用场景自相矛盾——原文写「用于基础柱」，而基础柱是单系列、直接走 `single-default`，根本用不到多系列色表；真正的多系列场景（分组柱）现行按序号取已覆盖。要重开需先由设计给出完整表数据**并**明确「哪种柱型用哪张表」。
-- [ ] **Ainvest 动态条形图 16 色**（序列 8 + 浅色变体 8，按序号循环）。
+- [x] **Ainvest 排名 / 动态条形色盘** → `rank-multi` 24 色（2026-11-12，Figma「261106 - Ainvest 可视化色板」取代原先计划的 16 色）。
+- [ ] **「前 8 个 + 其他」合并**：Ainvest 基础盘与饼环盘的「超过 8 个」档要求把第 9 个起合并成一项「其他」。合并是数据层的事，组件目前都不做；`other` 灰已在 `palette.json` 就位，合并落地时给该项取 `other` 即可。
+- [ ] **Ainvest 顺序 / 发散色板**（主色蓝、暖、冷绿顺序盘；红蓝、冷暖发散盘）：色值进 `palette.json`，按值取档的函数进 `core/visual-color.js`——和本篇「按序号占槽位」是两种问法。
 - [x] **标准多折线图**（非组合）的折线色板：**决定不设独立色板**——纯折线走通用 `bar-multi`（COLOR-05 补充），`line-multi` 仅保留为折柱组合子序列（原设想的 `line-standard` 独立序列不再需要）。
 - [x] **饼 / 环扇区取色** → COLOR-08：扇区即取色单位，按序号取自扇区盘 `pie-multi`（THS 11 色；未声明该盘的主题回落 `bar-multi`）。
-- [ ] **iFinD-PC / Ainvest 的扇区盘**：等设计稿出独立 `pie-multi` 再补键，取色器与 spec 均无需再改（COLOR-08 的回落分支已就位）。
+- [x] **Ainvest 扇区盘** → `pie-multi` 22 色（2026-11-12）。
+- [ ] **iFinD-PC 的扇区盘**：等设计稿出独立 `pie-multi` 再补键，取色器与 spec 均无需再改（COLOR-08 的回落分支已就位）。

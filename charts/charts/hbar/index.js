@@ -148,8 +148,10 @@ export function HBarChart(host, cfg) {
       (Math.max(valueMax, 0, ...valueWidths) + valueGap) / 4,
     ) * 4;
     const dataR = frame.grid.right - valueReserve;
+    /* type:'rank' → 主题的排名色盘（rank-multi，未声明回落 bar-multi）。取色器按序号给出第 i 个槽位色，
+       条按 `--dv-series-${slot + 1}` 读——槽位是声明序、与此处 rows 的名次序无关（HBAR-07）。 */
     const colors = resolveSeriesColors(host, {
-      series: target.rows.map((r) => ({ name: r.name, type: 'bar', seriesIndex: r.slot })),
+      series: target.rows.map((r) => ({ name: r.name, type: 'rank', seriesIndex: r.slot })),
     });
     colors.forEach((hex, i) => host.style.setProperty(`--dv-series-${i + 1}`, hex));
 
