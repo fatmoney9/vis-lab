@@ -108,7 +108,7 @@
   **它 import `demos/examples.js`、只负责「怎么摆」**，故没有「改示例要改两处」的漂移代价，加示例仍然只改 `demos/`。
   想为某个图型另开对照面时照它、不要照桑基。
   这是硬需求逼出来的特例，不是可照抄的范式——理由与代价见 `WORKFLOW.md` 第七节。
-- `index.html` 是对外站点，`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
+- `index.html` 是对外站点（只剩骨架，外壳样式与页面逻辑在 `site/site.css` / `site/app.js`；`app.js` 的 import 相对 `site/`，写进 DOM 的资源路径相对页面），`playground/` 是开发验收面；组件 API 只收数据与语义配置，不收样式参数。
   画廊卡片靠 `.example-card__preview .chart-host { pointer-events: none }` **继承**关掉交互，所以
   **组件样式不得给命中元素显式声明 `pointer-events`**——显式值优先于继承值，写死就等于在预览卡片里
   把鼠标要回来（2026-09-16 弦图与桑基图实测如此）。透明粗描边与 `fill: transparent` 的热区默认就能命中，不必声明。
