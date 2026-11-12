@@ -243,8 +243,9 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
    **具体步骤与推进顺序见 `TESTING.md` 第七节「接入路线」，此处不复述。**
 2. **补未完成规范**：图例溢出、移动端触摸、数据更新 / 退场动效等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签、轴标题、动效已落地
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
-3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
-   也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
+3. **规范站产品化**：对外站点（`index.html`）已有画廊 + 详情页 + **设计规范**（`#spec`，2026-11-12 接入）。
+   规范页运行时读取 `specs/*.md` 原文现场渲染，不另存副本，`specs/` 仍是唯一权威；详情页的规范徽标可直接跳到那一条规则。
+   第五节「规则表 → 活 demo → Do/Don't → API」的标准结构尚未在站点上做成版式，目前按原文顺序呈现。
 4. **接入更多图型**：现有九族已落；K 线等新图型同法——
    L2 组件 + `demos/registry.js` 登记 + `CHART_CAPABILITIES` 声明能力，两个预览面无需改动。
    ⚠️ 桑基是**目前唯一的例外**：另有独立预览面（见第七节）。
