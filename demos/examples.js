@@ -48,7 +48,7 @@ import { financialSankeyPresentation } from './sankey-presentation.js';
 import { waterfallPresentation } from './waterfall-presentation.js';
 import { industryFlow } from './data/chord.js';
 import { marketCapPeriods, marketCapPresentation } from './data/market-cap.js';
-import { LONG_NAMES, SLICE_NAMES, longNameItems, skewItems, sliceItems } from './data/pie.js';
+import { LONG_NAMES, SLICE_NAMES, gapItems, longNameItems, skewItems, sliceItems } from './data/pie.js';
 import { RADAR_DENSITY, RADAR_FIXED_MAX, RADAR_SEGMENTS, radarDims, radarSeries } from './data/radar.js';
 import { financialSankey, financialSankeyPlayback } from './data/sankey.js';
 import { FINANCIAL_SERIES_NAMES, MARKET_INDEX_SERIES_NAMES, growth, lineWave, negWave, posSeries, selectExampleSeries, seq, signedLineWave, signedWave, wave } from './data/series.js';
@@ -491,6 +491,12 @@ export const EXAMPLES = [
     title: '单扇区', spec: 'COLOR-03 / PIE-01', surfaces: ['playground'],
     description: '只有一个扇区（整环 360°），取色应走单系列默认色而非扇区盘首色——数据量旋钮对它无效。',
     cfg: () => ({ name: '营收构成', variant: 'donut', items: [{ name: '主营业务', value: 1000 }] }),
+  },
+  {
+    id: 'edge-gaps', group: '边界与极端情况', chart: 'pie',
+    title: '部分为 0 与 null', spec: 'PIE-01', surfaces: ['playground'],
+    description: '第 3 项为 0、第 5 项为 null：不画扇区、不进分母，但仍占取色槽位、仍在图例里——环上颜色会跳过它们。',
+    cfg: (n) => ({ name: '营收构成', variant: 'donut', items: gapItems(n) }),
   },
   {
     id: 'edge-empty', group: '边界与极端情况', chart: 'pie',

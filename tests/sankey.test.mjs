@@ -725,7 +725,7 @@ test('SANKEY-11：THS 与 Ainvest 使用各自三种业务语义色', () => {
     expense: THEME_TOKENS.ainvest['color-sankey-expense'],
     profit: THEME_TOKENS.ainvest['color-sankey-profit'],
   }, {
-    income: '#265FFC', expense: '{color-price-down}', profit: '{color-price-up}',
+    income: { light: '#3A6EE5', dark: '#4278EF' }, expense: '{color-price-down}', profit: '{color-price-up}',
   });
 });
 

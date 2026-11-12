@@ -214,16 +214,26 @@ function build() {
   }
 
   const palette = JSON.parse(readFileSync(join(DIR, 'palette.json'), 'utf8'));
+  /* 只校验值域：色盘结构（明暗等长、overflow 合法…）由 charts/core/palette.js 的 normalizePalette 把关，
+     tests/palette.test.mjs 在 Node 里跑同一份。这里把每个颜色叶子（含 {light,dark} 两份、other）逐个过一遍。
+     $ 开头的是注释键；overflow 是策略不是颜色。 */
+  const colorLeaves = (v, path) => {
+    if (typeof v === 'string') return [[path, v]];
+    if (Array.isArray(v)) return v.flatMap((x, i) => colorLeaves(x, `${path}-${i + 1}`));
+    if (v && typeof v === 'object') {
+      return Object.entries(v)
+        .filter(([k]) => !k.startsWith('$') && k !== 'overflow')
+        .flatMap(([k, x]) => colorLeaves(x, k === 'colors' ? path : `${path}-${k}`));
+    }
+    return [[path, v]];
+  };
   for (const theme of THEMES) {
     const profile = palette?.[theme];
-    assertTokenDomain('palette', `color-${theme}-single-default`, profile?.['single-default']);
-    for (const ramp of ['bar-multi', 'line-multi', 'pie-multi']) {
-      if (!(ramp in (profile ?? {}))) continue;
-      if (!Array.isArray(profile[ramp]) || profile[ramp].length === 0) {
-        fail(`palette:${theme}.${ramp} 必须是非空颜色数组`);
-      }
-      for (const [index, color] of profile[ramp].entries()) {
-        assertTokenDomain('palette', `color-${theme}-${ramp}-${index + 1}`, color);
+    if (!profile?.['single-default']) fail(`palette:${theme} 缺 single-default`);
+    for (const [key, raw] of Object.entries(profile ?? {})) {
+      if (key.startsWith('$')) continue;
+      for (const [path, color] of colorLeaves(raw, `color-${theme}-${key}`)) {
+        assertTokenDomain('palette', path, color);
       }
     }
   }

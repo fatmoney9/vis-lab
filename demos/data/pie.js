@@ -7,19 +7,15 @@
 export const SLICE_NAMES = ['主营业务', '投资收益', '其他业务', '政府补助', '资产处置', '公允价值变动', '汇兑损益', '营业外收入'];
 
 /* 饼 / 环扇区：递减占比的正值序列（固定公式、无随机数，保证截图可复现）。
-   0 与 null 的位置对齐 signedWave 的先例——[PIE-01] 两者都**不占角也不进分母**，
-   故 n=4 时可见 3 个扇区、n=16 时可见 14 个。 */
-export const sliceItems = (n) => {
-  const values = Array.from({ length: n }, (_, i) => Math.round(1200 / (i + 1.6) + 120));
-  if (n > 2) values[2] = 0;
-  if (n > 4) values[4] = null;
-  return values.map((value, i) => ({
-    name: i < SLICE_NAMES.length
-      ? SLICE_NAMES[i]
-      : `${SLICE_NAMES[i % SLICE_NAMES.length]}${Math.floor(i / SLICE_NAMES.length) + 1}`,
-    value,
-  }));
-};
+   默认示例**全部为正**：0 / null 不画扇区却仍占取色槽位（PIE-01 绘制序 = 声明序 = 图例序），
+   放在默认示例里会让环上的颜色跳一格（如蓝、橙、黄，中间少了青），看起来像色板顺序错了。
+   这类边界交给 playground 的 gapItems。 */
+const sliceName = (i) => (i < SLICE_NAMES.length
+  ? SLICE_NAMES[i]
+  : `${SLICE_NAMES[i % SLICE_NAMES.length]}${Math.floor(i / SLICE_NAMES.length) + 1}`);
+const sliceValue = (i) => Math.round(1200 / (i + 1.6) + 120);
+
+export const sliceItems = (n) => Array.from({ length: n }, (_, i) => ({ name: sliceName(i), value: sliceValue(i) }));
 
 /* ── 边界与极端情况的数据（playground 专用）────────────────────
    这些不是「好看的示例」，是**把规则推到边界上**的夹具：长名称压截断、极端占比压窄扇区、
@@ -41,6 +37,13 @@ export const LONG_NAMES = [
 export const longNameItems = (n) => Array.from({ length: n }, (_, i) => ({
   name: `${LONG_NAMES[i % LONG_NAMES.length]}${i >= LONG_NAMES.length ? Math.floor(i / LONG_NAMES.length) + 1 : ''}`,
   value: Math.round(987654321 / (i + 1.3)),
+}));
+
+/* 部分为 0 / null：第 3 项为 0、第 5 项为 null——[PIE-01] 两者都**不占角也不进分母**，
+   但仍占取色槽位、仍在图例里，故 n=4 时可见 3 个扇区、n=16 时可见 14 个，环上颜色跳过它们 */
+export const gapItems = (n) => sliceItems(n).map((item, i) => ({
+  ...item,
+  value: i === 2 ? 0 : i === 4 ? null : item.value,
 }));
 
 /* 极端占比：首项独占约 98%，其余是几乎看不见的窄扇区 */

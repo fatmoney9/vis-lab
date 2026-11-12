@@ -6,7 +6,7 @@
 
 - **WORLD-HEATMAP-01 · 输入**：组件接收 `regions:[{ id, name, value }]`；`id` 使用底图收录的 ISO 3166-1 alpha-2 国家 / 地区码，同一地区不可重复。`value` 必须是有限的 JavaScript `number`，允许 `0` 与负数；不得以 `null`、`undefined`、空串、数字字符串、布尔或对象代替数值，`NaN` / `Infinity` 同样拒绝。数字字符串的解析由 L3 数据适配负责；缺数据地区应从 `regions` 中省略，空数组表示完整无数据地图。
 - **WORLD-HEATMAP-02 · 底图**：底图运行时加载（WORLD-HEATMAP-09），以墨卡托投影铺入宽 1000 的视框，不绘制南极洲。完整等比缩放并居中，不因容器比例拉伸国家形状。容器未给高度时画布高取 `size-world-heatmap-height`（三主题 240px，紧凑档 140px），不随宽度变化；容器给了高度就随容器。地图比容器窄时左右留白。
-- **WORLD-HEATMAP-03 · 强度**：有数据国家按数值秩等距映射至五档透明度；并列值同档，最高值恒为最深档。档位数学复用 L1 `visual-color.intensityLevels`。
+- **WORLD-HEATMAP-03 · 强度**：有数据国家按数值秩等距映射至五档；并列值同档，最高值恒为最深档。档位数学复用 L1 `visual-color.intensityLevels`。`primary` 色调逐档取 `color-world-heatmap-primary-level-1..5` 与 `opacity-world-heatmap-primary-level-1..5` 两个 token：THS / iFinD-PC 为同一主色叠五档透明度；Ainvest 为主色顺序色板的 5 档实色（浅色 `#ABC4F4 → #1847BB`，深色同一组倒过来，使小值贴近深底、大值最亮），透明度恒 1。`up` / `down` 仍是单色 + `opacity-world-heatmap-level-1..5`。
 - **WORLD-HEATMAP-04 · 主题**：默认 `tone:'primary'`，THS / iFinD-PC / Ainvest 使用各自地图主题色；另支持 `up` / `down` 两种涨跌语义色。颜色与透明度只能来自 token。
 - **WORLD-HEATMAP-05 · 无数据**：无数据国家保留中性浅底与国界，不触发 Tooltip，也不进入键盘 Tab 顺序。
 - **WORLD-HEATMAP-06 · Tooltip**：Web hover 或键盘 focus 时，命中国家显示选中描边色，线宽仍复用普通国境线的 `size-world-heatmap-border`，不得另行加粗。只将该国家的完整描边副本放在其他国家之上，副本不参与命中或键盘 focus；原国家 DOM 与 Tab 顺序始终保持固定，所有共享国境线与离岛边界均连续可见，不被后绘制邻国的常态描边覆盖。

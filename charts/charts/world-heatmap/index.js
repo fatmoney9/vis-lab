@@ -165,12 +165,20 @@ export function WorldHeatmapChart(host, cfg) {
       .join('g')
       .attr('class', ({ id }) => `dv-world-heatmap__country${dataById.has(id) ? ' has-data' : ''}`)
       .attr('data-region', ({ id }) => id)
-      .style('--dv-world-heatmap-fill', ({ id }) => dataById.has(id)
-        ? toneColor(tone)
-        : 'var(--color-world-heatmap-empty)')
+      /* [WORLD-HEATMAP-03/04] primary 逐档取「色 + 透明度」两个 token：主题可以给同一主色叠透明度
+         （THS / iFinD），也可以给顺序色板的实色档（Ainvest，透明度恒 1）——L2 不分主题。
+         up / down 仍是单色 + 五档透明度。 */
+      .style('--dv-world-heatmap-fill', ({ id }) => {
+        const region = dataById.get(id);
+        if (!region) return 'var(--color-world-heatmap-empty)';
+        return tone === 'primary' ? `var(--color-world-heatmap-primary-level-${region.level})` : toneColor(tone);
+      })
       .style('--dv-world-heatmap-opacity', ({ id }) => {
         const region = dataById.get(id);
-        return region ? `var(--opacity-world-heatmap-level-${region.level})` : 1;
+        if (!region) return 1;
+        return tone === 'primary'
+          ? `var(--opacity-world-heatmap-primary-level-${region.level})`
+          : `var(--opacity-world-heatmap-level-${region.level})`;
       })
       .attr('tabindex', ({ id }) => dataById.has(id) ? 0 : null)
       .attr('role', ({ id }) => dataById.has(id) ? 'graphics-symbol' : null)

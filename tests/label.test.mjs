@@ -7,7 +7,7 @@ import { labelTone, relativeLuminance, dropCollisions, dropOversized } from '../
 
 test('LABEL-04：深色系列色 → on-dark（配浅色文字）', () => {
   assert.equal(labelTone('#3366FF'), 'on-dark');  /* THS single-default，L≈0.174 */
-  assert.equal(labelTone('#265FFC'), 'on-dark');  /* Ainvest single-default */
+  assert.equal(labelTone('#3A6EE5'), 'on-dark');  /* Ainvest single-default（浅色；深色 #4278EF 越过交叉点、配黑字） */
   assert.equal(labelTone('#4D5999'), 'on-dark');  /* iFinD single-default */
   assert.equal(labelTone('#000000'), 'on-dark');
 });
