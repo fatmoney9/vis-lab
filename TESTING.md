@@ -82,6 +82,7 @@ CI 里它是单独的「浏览器合同」工作流（`.github/workflows/browser
 - `charts/core/visual-color.js`：数据项取色的两类边界——[COLOR-09] 强度按数值秩分档（并列同档、最高值恒最深档）与语义分档拒收缺值 / 非法阈值（不把缺值伪装成平盘）；[COLOR-10] 五档与六档分别返回独立权威 token，其他档数才按归一化位置投影到六档色阶（`intensityLevels` / `resolveItemColors` / `performanceColorRamp`）。
 - `charts/charts/world-heatmap/model.js`：有限数输入合同（拒绝空值与隐式数字转换，保留真实 0 / 负数 / 空数组）、国家码归一化与重复校验、复用强度分档；另检查投影形状、底图与国旗都指向固定提交、上游符号链接已改取真实文件（`tests/world-heatmap.test.mjs`，不联网）。
 - `charts/charts/pie/geometry.js`：扇区角度（占比换算、`null`/`≤0` 不占角不进分母、末段吸边保证整环闭合）、半径与环宽（token 上限 + 空间不足时等比收缩 + 收缩下限 = 默认半径的 50%）、标签锚点与可用宽、标签带宽（`labelBand`——只看容器不看文本，这是截断不震荡的根据）（`sliceAngles` / `donutRadii` / `labelAnchor` / `alignOutside` / `labelBand`）。
+- `site/markdown.js` + `site/spec-index.js`：站点规范页的渲染与路由——先整体转义只放行 `<br>`（规范正文里写成纯文本的 `<g>` 不被吞掉）、单元格里转义的竖线与行内代码里的竖线不切列、规则锚点的三种写法（表格首列 / 列表项粗体 / 标题）、规则 ID 按整段前缀找页（`COLOR-ADR` 不被 `COLOR` 抢走）、路由往返（`tests/spec-site.test.mjs`）。
 - `demos/examples.js`：示例声明与图表形态的一致性（双 Y 示例必带 `y2`、动效关掉才落进 cfg、无坐标系图不得声明轴相关能力、`describeConfig` 不得增删字段等，`buildConfig`）。
 - `tests/browser/collapse-retry.browser.mjs`：cartesian / pie / radar / treemap 在容器塌陷时进入重试，容器恢复后图表回来且重试停止，塌陷中销毁后不再请求动画帧（`createBuildRetry`，GRID-03）。
 - `tests/browser/harness.mjs`：服务器 / Chrome / CDP 这层**与图表无关的壳**，各图型的合同共用一份。抄第二份的代价不是行数，是两份壳会各自长出细节差异（超时、端口、Chrome 路径回落），到时候「瀑布过了弦图没过」分不清是图的问题还是壳的问题。

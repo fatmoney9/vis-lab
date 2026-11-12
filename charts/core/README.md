@@ -44,7 +44,7 @@
 ## 边界
 
 - 本目录放置可复用的生产逻辑，不放具体 Preview 页面和演示数据（示例数据在 `demos/`）。
-- 组件结构样式集中在 `charts/styles.css`。
+- 组件结构样式的入口是 `charts/styles.css`，正文按职责拆在 `charts/styles/`（@import 顺序即层叠顺序，见入口注释）。
 - 颜色、字号、间距和尺寸等主题值来自 `tokens/` 生成的 CSS 变量。
 - 参与几何计算或逻辑分支的主题差异来自 `tokens/behavior.json`。
 - Core 组件不应硬编码具体主题判断；主题配置应先解析为参数，再传给组件。

@@ -1,0 +1,93 @@
+/* 图例本体：容器、项、marker、关闭态与强调态（specs/legend.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [LEGEND-01] 图例容器：默认左对齐、横排、宽度不足 flex-wrap 自动换行；间距/边距走 token。
+   对齐无 token（左/中/右），故左对齐为默认、中/右用修饰类切 justify-content。 */
+.dv-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  column-gap: var(--spacing-legend-item-h);
+  row-gap: var(--spacing-legend-row-v);
+  /* [LEGEND-01] 上/下边距分开：下边距 = 图例与 grid 的间距（frame 顶部不另留白） */
+  padding: var(--spacing-legend-container-v-top) var(--spacing-legend-container-h) var(--spacing-legend-container-v-bottom);
+}
+.dv-legend--center { justify-content: center; }
+.dv-legend--right { justify-content: flex-end; }
+
+/* [LEGEND-10] 纵向单列排布（左右结构用）：一项一行、不换行。
+   主轴换成纵向后，「左/中/右对齐」自然由 align-items 承载——语义与横排一致，
+   故下面两条要压过上面的 justify-content 版本（同特异性，靠声明序胜出）。
+   ⚠️ 纵向下没有换行兜底，项一多会把容器撑高——图例溢出（LEGEND-07）待办同样覆盖本排布。 */
+.dv-legend--column {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  /* 纵向下 justify-content 管的是**竖直**分布：整列居中，与左侧绘图区的视觉中线对齐。
+     ⚠️ **必须是 `safe center` 而不是 `center`**（[LEGEND-11]）：本元素同时是滚动容器（下方
+     overflow-y:auto），而居中的溢出是**往两头对半溢**的——上半截跑到滚动原点之上，
+     scrollTop 又不能为负，那部分就**永远滚不到**（36 项时实测首项在容器顶之上 362px，
+     前八九项等于凭空消失）。`safe` 的语义正是「一旦对齐会导致溢出，就退回 start 对齐」：
+     不溢出时照常居中，溢出时自动从顶部起排、整列可滚完。 */
+  justify-content: safe center;
+  /* [LEGEND-01] 项距走纵向专属 token，**不复用换行行距**（--spacing-legend-row-v，4px）：
+     主轴转成竖直后 row-gap 会接管项与项的间距，若不显式覆盖就会静默套用为"换行兜底"定的那个值。
+     两者是不同意图——换行行距是横排放不下时的补偿，项距是纵列的主排布节奏。 */
+  row-gap: var(--spacing-legend-item-v);
+  /* [LEGEND-11] 纵列溢出 = 容器内纵向滑动（不分页、不截断、不换列）。
+     生效前提是父级 .dv-chart__legend 允许被压缩（min-height:0），见下方。 */
+  overflow-y: auto;
+}
+.dv-legend--column.dv-legend--center { align-items: center; }
+.dv-legend--column.dv-legend--right { align-items: flex-end; justify-content: safe center; }
+
+/* [LEGEND-02] 图例项 = marker + label；整项为点击 / hover 热区 */
+.dv-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-legend-marker-label);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* [LEGEND-02][LEGEND-03] 标记容器 size-legend-marker；currentColor = 系列色（经 --dv-series-color 下发） */
+.dv-legend-marker {
+  flex: none;
+  width: var(--size-legend-marker);
+  height: var(--size-legend-marker);
+  color: var(--dv-series-color, currentColor);
+}
+
+/* [LEGEND-02] 标签：字号 / 行高 / 颜色 / 字体全部走 token */
+.dv-legend-label {
+  font-size: var(--font-size-legend);
+  line-height: var(--line-height-legend);
+  color: var(--color-text-legend);
+  font-family: var(--font-family-cn);
+}
+
+/* [LEGEND-13] 纵向单列图例的标签超宽即省略号截断。**只管纵列**：横排放不下会自动换行
+   （LEGEND-01），长名称撑不爆宽度；纵列一项一行、不换行，长名称会一路把图例撑宽，
+   而图例宽参与「图 + 间距 + 图例」整组居中的布局计算（PIE-09），撑宽即整组偏移。
+   图例标签是 HTML <span> 不是 SVG <text>，故截断是纯 CSS —— 不必测量、不必二分；
+   完整名称由原生 title 兜底（图例本就有 pointer events，要点击显隐，见 legend.js）。 */
+.dv-legend--column .dv-legend-label {
+  max-width: var(--size-legend-label-max);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* [LEGEND-06] 关闭态：文字 + marker 均切 color-text-quaternary（比常态类特异性更高，胜出） */
+.dv-legend-item--off .dv-legend-marker { color: var(--color-text-quaternary); }
+.dv-legend-item--off .dv-legend-label { color: var(--color-text-quaternary); }
+
+/* [LEGEND-14] 强调档的非选中项：**压不透明度，不换色**。
+   与上面的 --off 刻意用两条不同的通道，因为语义不同——quaternary 是「已关闭」，
+   而强调档下一项都没关（数据构成完整），只是让位给被强调的那项。换成 quaternary 会让
+   「这些系列还在图上」这件事读不出来。
+   与图元弱化同一个 token（--opacity-visualization-dim，THS/Ainvest 0.2、iFinD-PC 0.1）：
+   同一个「弱化」语义不该有两个值，图例与图元的弱化程度因此恒等。
+   整项一起压（marker + label 同降），不逐元素写——marker 的色是 currentColor 跟随系列色，
+   分开压会让色标与文字出现两种深浅。 */
+.dv-legend-item--dim { opacity: var(--opacity-visualization-dim); }

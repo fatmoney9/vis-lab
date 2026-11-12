@@ -50,7 +50,7 @@
 - L2 `config.js`：跨主题不变的**比例量与弧度**（pad、taper、半径下限比例、最小可见角、播放参数）。`[L2-LOCAL]`。像素、颜色、字号、透明度一律不在这里——它们在 `tokens/*.json`。
 - L2 `index.js`：只负责编排生命周期、SVG 装配、交互接线与入场动效。
 - L3：示例数据与配置装配在 `demos/`；**不另建专属预览面**——本族是正方形画布、无固定外框硬需求，两个通用面表达得了（`specs/chord.md`「活 demo」）。
-- 全局结构样式：`charts/styles.css` 的 `.dv-chord` 命名空间。
+- 全局结构样式：`charts/styles/chord.css` 的 `.dv-chord` 命名空间。
 
 
 ## 要点（改本族代码前先读）

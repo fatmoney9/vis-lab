@@ -1,0 +1,25 @@
+/* 饼环图元：扇区与引线（specs/pie.md）；饼环的图例方位在 layout.css，外侧标签在 data-label.css —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [PIE-01] 扇区：填充跟随所在分组 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）。
+   与柱同一口径——hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 不渲染，不在此表达。
+   不设描边：扇区间无间隙（PIE-01），描边会在相邻扇区之间挤出一条比设计稿更宽的缝。 */
+.dv-pie-sector { fill: currentColor; }
+
+/* [PIE-12] 外侧标签的引线：跟随所在扇区 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）——
+   色彩关联由线承担，文字才得以走中性色（LABEL-09 档③）。
+   线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / tooltip 指示线同源），不设自有 token。
+   [PIE-17] 引线**参与命中**（早先是 pointer-events:none）：它与扇区在同一个 <g> 里、绑的是
+   同一套处理器，抢不抢得到都指向同一个扇区，那条「会抢走本该落到扇区的 hover」的顾虑不成立。 */
+.dv-pie-label-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-grid-line);
+}
+/* [PIE-17] 引线的命中带：与可见引线同形同点、透明加粗，只为让 1px 的线能被指针够着。
+   pointer-events:stroke —— 显式只认描边，不受 transparent 是否算「已绘制」的实现差异影响；
+   stroke-width 由 L2 按模块常量写在元素上（是可点性阈值，不是设计尺寸，故不进 token）。 */
+.dv-pie-label-line-hit {
+  fill: none;
+  stroke: transparent;
+  pointer-events: stroke;
+}

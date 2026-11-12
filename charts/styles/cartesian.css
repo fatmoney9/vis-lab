@@ -1,0 +1,47 @@
+/* 直角坐标系图元：柱、折线、数据点、面积（specs/bar.md · line.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [BAR-01] 柱：填充跟随所在分组 <g> 的 currentColor（= 系列色，由 L2 写 --dv-series-i）。
+   hover 弱化 / 点击隐藏由 L2 控制分组 <g> 的 opacity / 移除，不在此表达。 */
+.dv-bar { fill: currentColor; }
+
+/* [LINE-01] 折线 + 数据点：描边/填充跟随所在 <g> 的 currentColor（= 系列色）。
+   线宽走 --size-line-stroke；数据点描边同宽（默认态实心，hover 白心时只翻 fill）。 */
+.dv-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--size-line-stroke);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.dv-line-point {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: var(--size-line-stroke);
+}
+
+/* 数据点密度静默（specs/line.md：点数 > 13 隐藏所有点，移动/PC 一致）：
+   点留在 DOM（带 data-i）仅视觉隐藏——未来 tooltip/十字准星切片给最近类目的点挂
+   .is-active 即可唤出（规则在后、同特异性下声明序胜出，压过静默）。 */
+.points-muted .dv-line-point { opacity: 0; }
+/* hover 唤出点白心（specs/line.md）：中心填充切 token（THS/Ainvest 亮白暗黑、
+   iFinD = currentColor 保持实心），描边不变 = 系列色 */
+.dv-line-point.is-active {
+  opacity: 1;
+  fill: var(--color-visualization-line-point-hover);
+}
+
+/* 多折线的非主线（主线=首条声明线保持标准线宽，specs/line.md）：线与点描边切更细的 multi 线宽 */
+.lines-multi .dv-line,
+.lines-multi .dv-line-point { stroke-width: var(--size-line-stroke-multi); }
+
+/* 主线渐变面积（可开启配置，specs/line.md）：色随系列（currentColor），
+   两端透明度由 mark.js 从 --opacity-line-area-from/-to 写入 stop-opacity */
+.dv-line-area { pointer-events: none; }
+.dv-line-area-stop { stop-color: currentColor; }
+
+/* 堆叠折线填充带（specs/line.md）：折线与其累计基线之间，与线同色、0.2 不透明度 */
+.dv-line-stack-fill {
+  fill: currentColor;
+  fill-opacity: var(--opacity-line-stack-fill);
+  pointer-events: none;
+}

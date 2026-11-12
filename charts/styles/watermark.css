@@ -1,0 +1,5 @@
+/* 水印（specs/watermark.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [WATERMARK-05] 水印：品牌 logo <image>，颜色/透明度烘焙在 SVG 内、明暗各一份（不走 token 链路）。
+   pointer-events:none —— 永不抢鼠标，贴数据之上也不影响 hover/tooltip 命中。 */
+.dv-watermark { pointer-events: none; }

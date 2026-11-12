@@ -50,7 +50,7 @@
 | **开发验收** | `playground/preview.html` | 三主题横向并排（另加密度档卡，如「Ainvest · 紧凑」）、旋钮更全、可拖拽 resize，用于规范验收（全图型，不限直角坐标系） |
 | **图型对照面**（可选） | `playground/<图型>-preview.html` | 单个图型的多形态 × 三主题同屏铺开。当前有 `radar-preview.html`；**它 import 共享示例源**，只负责「怎么摆」。桑基的 `sankey-preview.html` 是**另一回事**——那个自带数据，见第七节 |
 
-**示例定义只有一份**：`demos/examples.js`（示例清单 + 数据生成函数 + 数据量档位 + 配置装配），
+**示例定义只有一份**：`demos/examples.js`（示例清单；数据生成在 `demos/data/`、数据量档位在 `density.js`、能力声明在 `capabilities.js`、配置装配在 `config.js`，均由它统一转出），
 `demos/themes.js` 登记主题清单与各主题的图表内容语言（`locale`），
 `demos/registry.js` 登记「图表类型 → L2 组件」，`demos/chart-presentation.js` 统一处理英文主题
 图表内部内容的英文展示。各面 import 同一份、各自决定怎么展示，
@@ -91,7 +91,7 @@ L3 面（index / playground）──▶ demos/registry ──▶ L2 图表组件
 
 1. **颜色只来自权威数据源。** 元素色来自 `tokens/<theme>.json` 生成的 CSS 变量；系列色只在
    `tokens/palette.json` 定义，由取色器写入 `--dv-series-N`。生产组件源码内禁止色值字面量
-   （`#hex`、`rgb(`、颜色名）；结构样式集中在 `charts/styles.css`。
+   （`#hex`、`rgb(`、颜色名）；结构样式入口是 `charts/styles.css`（按职责拆在 `charts/styles/`）。
    **本条已上守卫**（`hooks/lint-color-literals.mjs`，扫 `charts/` 下 .js/.css）：注释里为解释缘由
    而提到颜色是放行的，`transparent` / `currentColor` 等「跟随上游」关键字同样放行；
    唯一豁免文件是生成物 `core/watermark-assets.js`（色按 WATERMARK-01 烘焙在源 SVG 内）。
@@ -243,8 +243,9 @@ Ainvest 的系列名、图例、轴标题、扇区名、雷达维度与树图业
    **具体步骤与推进顺序见 `TESTING.md` 第七节「接入路线」，此处不复述。**
 2. **补未完成规范**：图例溢出、移动端触摸、数据更新 / 退场动效等以 `specs/*.md` 待办为准（datazoom、watermark、数据标签、轴标题、动效已落地
    [specs/datazoom.md](specs/datazoom.md) / [specs/watermark.md](specs/watermark.md) / [specs/data-label.md](specs/data-label.md) / [specs/axis-title.md](specs/axis-title.md) / [specs/motion.md](specs/motion.md)）。
-3. **规范站产品化**：对外站点已在仓库内（`index.html`，画廊 + 详情页）；待办是把 `specs/` 的条目化规范
-   也接进站点（当前站点只有图表示例，规范仍以 `specs/*.md` 为权威入口）。
+3. **规范站产品化**：对外站点（`index.html`）已有画廊 + 详情页 + **设计规范**（`#spec`，2026-11-12 接入）。
+   规范页运行时读取 `specs/*.md` 原文现场渲染，不另存副本，`specs/` 仍是唯一权威；详情页的规范徽标可直接跳到那一条规则。
+   第五节「规则表 → 活 demo → Do/Don't → API」的标准结构尚未在站点上做成版式，目前按原文顺序呈现。
 4. **接入更多图型**：现有九族已落；K 线等新图型同法——
    L2 组件 + `demos/registry.js` 登记 + `CHART_CAPABILITIES` 声明能力，两个预览面无需改动。
    ⚠️ 桑基是**目前唯一的例外**：另有独立预览面（见第七节）。
