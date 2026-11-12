@@ -1,0 +1,22 @@
+/* hover 指示线 / 指示 block / 轴高亮贴片（specs/tooltip.md TOOLTIP-08/09/11/12） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [TOOLTIP-08] X 轴竖指示线：线色/虚实随主题 token（iFinD 虚线 3 3）；线宽与网格线同源 */
+.dv-crosshair-x {
+  stroke: var(--color-visualization-highlight-line);
+  stroke-width: var(--size-grid-line);
+  stroke-dasharray: var(--dash-highlight-line);
+}
+
+/* [TOOLTIP-12] Y 轴横指示线：与竖线**共用同一组 token**——同一个 hover 指示语义，不因方向分叉 */
+.dv-crosshair-y {
+  stroke: var(--color-visualization-highlight-line);
+  stroke-width: var(--size-grid-line);
+  stroke-dasharray: var(--dash-highlight-line);
+}
+
+/* [TOOLTIP-11] hover 指示 block（纯分组柱）：类目底色带（网格之上、mark 之下），三主题同 token */
+.dv-crosshair-block { fill: var(--color-visualization-highlight-block); }
+
+/* [TOOLTIP-09] 轴高亮贴片：text 同时挂 .dv-axis-label 复用全部字体规则；状态类只覆盖字色。 */
+.dv-axis-tag-bg { fill: var(--color-visualization-highlight-background-tick); }
+.dv-axis-tag-text { fill: var(--color-text-highlight-tick); }

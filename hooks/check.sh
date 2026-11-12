@@ -33,7 +33,7 @@ node assets/build-watermark-assets.mjs
 if [ "$VERIFY" = 1 ]; then git diff --exit-code -- charts/core/watermark-assets.js; fi
 
 # 3/14 语法检查——单测 import 不到的文件（渲染构件、注册表）只能靠它兜住
-find charts demos hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
+find charts demos site hooks tokens tests assets -type f \( -name '*.js' -o -name '*.mjs' \) -print0 \
   | xargs -0 -n1 node --check
 
 # 4/14 预览面 HTML 的内联脚本语法（find 只认 .js / .mjs，这部分单测也加载不了）

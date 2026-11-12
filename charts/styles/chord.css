@@ -1,0 +1,93 @@
+/* 弦图（specs/chord.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* ── 弦图 Chord（specs/chord.md）──────────────────────────────────────────────
+   结构样式只管「怎么摆、怎么亮」：实体色由 L2 写成 --dv-series-N 后经 --dv-chord-color
+   逐图元下发；透明度三档全部来自 token（CHORD-17），本文件不出现任何色值或数值常量。 */
+.dv-chord {
+  position: relative;
+  display: flex;
+  /* ⚠️ 本元素同时带 .dv-chart，而那条规则是 flex-direction: column——
+     故**横向居中要 align-items、不是 justify-content**（后者在 column 下管的是纵向）。 */
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--size-chord-container);
+  font-family: var(--font-family-cn);
+}
+
+.dv-chord__svg {
+  display: block;
+  overflow: visible;
+}
+
+/* [CHORD-07] 外圈环带：实体本色实心，是这张图的「坐标系」，不参与透明度分档。 */
+.dv-chord__arc-band {
+  fill: var(--dv-chord-color);
+  cursor: pointer;
+}
+
+/* [CHORD-17][CHORD-20] 弦默认半透明；描边透明只为撑出命中区（细弦也要点得中），同桑基的做法。
+   同样**不写 pointer-events**：默认 visiblePainted 已经认这圈透明描边，显式值则会盖过
+   继承来的 pointer-events: none，让画廊预览卡片里的弦重新接管鼠标（详见 .dv-sankey__edge-ribbon）。 */
+.dv-chord__ribbon-band {
+  /* [CHORD-08] 填充是两端实体色的渐变（L2 逐条生成 linearGradient 后由此变量下发）。
+     留 --dv-chord-color 作兜底：渐变缺失时退成单色，而不是整条弦不可见。 */
+  fill: var(--dv-chord-ribbon-fill, var(--dv-chord-color));
+  fill-opacity: var(--opacity-chord-ribbon);
+  stroke: var(--dv-chord-color);
+  stroke-width: var(--spacing-8);
+  stroke-opacity: 0;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+/* [CHORD-11] 实体标签：两档共用同一套字号与字重，差别只在摆放几何。 */
+.dv-chord__label {
+  fill: var(--color-text-primary);
+  font-size: var(--font-size-chord-label);
+  font-weight: var(--font-weight-chord-label);
+  pointer-events: none;
+}
+
+/* [CHORD-20] 透明矩形接管标签区域的命中；fill 是 transparent（不是 none），故 visiblePainted 认它，
+   同样不写 pointer-events，理由见 .dv-sankey__edge-ribbon。 */
+.dv-chord__label-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+/* [CHORD-12][CHORD-17] 高亮只改变可见度，不改变实体色、也不重新排序。 */
+.dv-chord__ribbon.is-active .dv-chord__ribbon-band {
+  fill-opacity: var(--opacity-chord-ribbon-active);
+}
+
+.dv-chord__arc.is-dimmed,
+.dv-chord__ribbon.is-dimmed,
+.dv-chord__label.is-dimmed {
+  opacity: var(--opacity-visualization-dim);
+}
+
+.dv-chord__arc:focus,
+.dv-chord__ribbon:focus {
+  outline: none;
+}
+
+.dv-chord__arc:focus .dv-chord__arc-band {
+  stroke: var(--color-text-primary);
+  stroke-width: var(--size-grid-line);
+  vector-effect: non-scaling-stroke;
+}
+
+/* [CHORD-13] 看板数值跟随该实体色，与桑基同一口径。 */
+.dv-chord .dv-tooltip__value {
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+}
+
+/* [HBAR-01][HBAR-04][HBAR-05] 横向条形图。条色走系列槽位（行 <g> 上的 color，
+   fill:currentColor），名称列复用轴标签字体、数值列复用数据标签字体——两者都是
+   既有语义的横向形态，不新开字体 token。
+   整行不声明 pointer-events：画廊卡片靠继承关掉交互，显式值会把鼠标要回来。 */
+.dv-hbar__bar { fill: currentColor; }
+.dv-hbar__name { fill: var(--color-text-secondary); }
+.dv-hbar__value { fill: currentColor; }

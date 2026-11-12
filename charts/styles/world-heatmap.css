@@ -1,0 +1,35 @@
+/* 全球热力图（specs/world-heatmap.md） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [WORLD-HEATMAP-02..06] 全球热力图：几何固定、主题与明暗全部由 token 注入。 */
+.dv-chart--world-heatmap { width: 100%; }
+.dv-chart--world-heatmap > .dv-chart__plot { width: 100%; }
+.dv-chart__plot > .dv-world-heatmap { overflow: hidden; }
+.dv-world-heatmap__shape {
+  fill: var(--dv-world-heatmap-fill);
+  fill-opacity: var(--dv-world-heatmap-opacity);
+  stroke: var(--color-world-heatmap-border);
+  stroke-width: var(--size-world-heatmap-border);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.dv-world-heatmap__country.has-data { cursor: pointer; }
+.dv-world-heatmap__country:focus { outline: none; }
+.dv-world-heatmap__highlight { pointer-events: none; }
+.dv-world-heatmap__outline {
+  fill: none;
+  stroke: var(--color-world-heatmap-highlight);
+  stroke-width: var(--size-world-heatmap-border);
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.dv-chart--world-heatmap .dv-tooltip__title {
+  padding-bottom: var(--spacing-0);
+  border-bottom-width: 0;
+  margin-bottom: var(--spacing-0);
+}
+.dv-chart--world-heatmap .dv-tooltip__title-icon,
+.dv-chart--world-heatmap .dv-tooltip__title-icon-fallback {
+  width: var(--size-world-heatmap-flag);
+  height: var(--size-world-heatmap-flag);
+  border-radius: var(--radius-full);
+}

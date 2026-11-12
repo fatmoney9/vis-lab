@@ -1,0 +1,106 @@
+/* 图表根骨架：图例与绘图区的占位、方位与溢出（LEGEND-04/10/11 · GRID-04 · PIE-09） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [LEGEND-04] 图表容器：图例与绘图区各占其位（图例占位优先、给绘图区让位、不重叠）。
+   主题无关的结构样式（无颜色）。 */
+/* 图表自身不定高——由使用方给容器高度（绘图区 flex 撑满剩余）。
+   position:relative = tooltip 浮层的定位锚点（TOOLTIP-01，浮层像素与 svg 同坐标系） */
+.dv-chart { display: flex; flex-direction: column; }
+/* [GRID-04] 宽度下限挂在图表根上：各族都从根（或其内的绘图区）量 clientWidth，
+   根不窄于下限，所有图型的布局宽就一并不窄于下限，不必逐族改测量代码；容器更窄时由宿主决定滚动或裁切。
+   三主题 token = auto（CSS 初始值，与不写这行逐像素一致）；密度覆盖层给具体值。 */
+.dv-chart { min-width: var(--size-chart-min-width); }
+.dv-chart__plot { flex: 1; min-height: 0; min-width: 0; position: relative; }
+
+/* [LEGEND-10] 图例方位：DOM 顺序恒为「绘图区 → 图例」（阅读序），方位只由 flex 方向决定，
+   不用 row-reverse 之类的视觉倒序——那会让 DOM 序与视觉序脱节，Tab 焦点和读屏顺序都跟着错。
+   · 缺省（无修饰类）——直角坐标图：容器 column + DOM 里图例在前 = 图例在上（LEGEND-04）
+   · --legend-right ——左右结构：图左图例右
+   · --legend-bottom——上下结构：图上图例下（容器本就是 column，此类只为语义显式化） */
+/* [PIE-09] 左右结构：图与图例**相邻成组、整组居中**（不是图撑满、图例被推到最右）。
+   故绘图区 flex:none 贴着环的方形尺寸成块（边长由 L2 显式传给 createFrame），
+   容器 justify-content 居中整组；两块间距走 --spacing-legend-chart-gap，
+   图例朝向图的那侧内边距清零，避免与 gap 叠加成双份。
+   ⚠️ 容器**不能**用 align-items:center 让两块各自居中：那样 .dv-chart__plot 的高度会塌成内容高，
+   而组件正是读 plotHost.clientHeight 决定画布边长（PIE-02）——首帧读到 0 就陷入
+   requestAnimationFrame 空转。故保持默认 stretch（绘图区撑满高度），
+   改由绘图区内部 flex 居中 SVG，视觉相同而无循环依赖。 */
+.dv-chart--legend-right {
+  flex-direction: row;
+  justify-content: center;
+  gap: var(--spacing-legend-chart-gap);
+}
+.dv-chart--legend-right > .dv-chart__plot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dv-chart--legend-right .dv-legend { padding-left: 0; }
+/* [PIE-09] 上下结构：图上图例下，同一份间距 token；图例的上内边距清零同理。
+   绘图区保持 flex:1 铺满宽度，环在其中水平居中 = 整体居中。 */
+.dv-chart--legend-bottom {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--spacing-legend-chart-gap);
+}
+/* 同左右结构：绘图区贴着画布成块（flex:none），不铺满剩余高度——
+   铺满的话环与下方图例之间会多出一段随容器浮动的空白，间距就不恒定了。 */
+.dv-chart--legend-bottom > .dv-chart__plot { flex: none; }
+.dv-chart--legend-bottom .dv-legend { padding-top: 0; }
+
+/* [PIE-09][LEGEND-11] 上下结构的图例块同样封顶 + 溢出滑动（与左右结构同一条纪律，只是取值不同）。
+   **上限 = 默认图元高度 `--size-donut-radius × 2`**（THS / iFinD-PC 140、Ainvest 160），
+   与左右结构那条「图元高 × 2」的关键差别有二：
+   ① **取默认半径而不是当前 R**——本结构下 `avail = 容器高 − 图例高 − gap`，图例高反过来决定
+      半径，若上限再由半径算出，就成了「图例高 → 半径 → 图例上限 → 图例高」的循环；
+      锚在 token 上（一个与当前布局无关的常量）一刀切断，L2 首帧量到的就已是封顶后的高度，
+      不需要二次重排。**故本条纯 CSS 表达、L2 一行不参与**（左右结构那条仍走
+      `--dv-pie-legend-max-h`，两者互不覆盖：各自的选择器只命中自己的结构）。
+   ② 倍数取 ×1 而非 ×2——横排换行的图例是「铺开」的，占到与环等高就已经和环平分了卡片；
+      再放宽会让图例喧宾夺主（纵列窄，故给到 ×2）。
+   `100%` 同样是必需的钳制：卡片比 140 还矮时不许探出。 */
+.dv-chart--legend-bottom > .dv-chart__legend {
+  display: flex;
+  /* ⚠️ **必须是 column**：本壳子只负责「封高」，横向必须原样让位给内部的 .dv-legend。
+     row（flex 默认）会把 .dv-legend 变成主轴上收缩到内容宽的项 —— 项少时它只有内容那么宽、
+     还贴在壳子左边，于是 LEGEND-01 的 justify-content:center 没有富余宽度可居中，
+     整条图例塌到左对齐（实测 4 项时图例块只有 284/706 宽、偏离中线 211px；
+     16 / 36 项因内容本就撑满整宽而看不出来——**别拿项多的截图验收这条**）。
+     换成 column 后横向变成交叉轴，默认 align-items:stretch 让 .dv-legend 恢复满宽，
+     居中重新由它自己的 justify-content 说了算。 */
+  flex-direction: column;
+  min-height: 0;
+  max-height: min(calc(var(--size-donut-radius) * 2), 100%);
+}
+/* [LEGEND-11] 横排换行排布的溢出同样是「容器内纵向滑动」。这里**不需要** `safe center`：
+   多行的竖直分布由 align-content 管，其默认值 normal(≈stretch) 本就从顶部起排，
+   不存在纵列那种「居中把上半截推到滚动原点之上」的陷阱（见 .dv-legend--column）。 */
+.dv-chart--legend-bottom .dv-legend { overflow-y: auto; min-height: 0; }
+
+/* [LEGEND-11] 图例块的外壳：默认贴合内容；在左右结构下要能被压缩到容器高度以内
+   （flex 子项默认 min-height:auto = 不小于内容，不给 0 的话内部的 overflow-y 永远不触发，
+   图例会把整个卡片顶高而不是自己滚）。自身也做 flex，好让内部 .dv-legend 撑满可用高度。 */
+.dv-chart--legend-right > .dv-chart__legend {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  /* [PIE-09] 图例块**自己**在交叉轴上居中，与左侧环的视觉中线对齐。
+     ⚠️ 不能靠默认的 stretch：**一旦 max-height 生效，拉伸就被截断、flex 回退成 flex-start**，
+     于是卡片拉高时环在正中、图例却贴着顶（实测卡片 1000px 时环心 y=468、图例块中心 y=140）。
+     `align-self:center` 让这个块按自身高度（内容高，封顶于下面的 max-height）居中，
+     两块因此在任意容器高度下共享同一条中线。 */
+  align-self: center;
+  /* [PIE-09][LEGEND-11] 两重上限取紧者：
+     ① `--dv-pie-legend-max-h` —— L2 按图元高度算好写进来（当前 = 图元高 × 2）。
+        没有它时图例会把整张卡片无限撑高——36 扇区能撑到上千像素，而环仍只有 2R。
+     ② `100%` —— 容器比 ① 还矮时不许探出卡片。**改 align-self 后这条是必需的**：
+        stretch 时代是「被容器压扁」自然不会溢出，居中之后高度由内容说了算，
+        少了这道钳制，矮卡片里的图例会上下双向溢出到卡片外。
+     缺省值取 100% 而非 none —— min() 里放 none 会让整条声明失效。 */
+  max-height: min(var(--dv-pie-legend-max-h, 100%), 100%);
+}
+/* 绘图 SVG：
+   · display:block —— 消除 inline 替换元素的基线降部空隙（否则 plot 容器比 svg 高约半行的降部、下方多一条空白）。
+   · [DATAZOOM-01] overflow:visible —— 贴边的缩放轴手柄其居中描边外半 + 投影会溢出 grid 边（= 无标签侧的视口边），
+     放行让其渲染进卡片内边距、不被切平。图元本身都在 grid 内，不受影响。 */
+.dv-chart__plot > svg { display: block; overflow: visible; }

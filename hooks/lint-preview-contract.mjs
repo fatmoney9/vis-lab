@@ -20,7 +20,7 @@ import { join } from 'node:path';
 
 const SURFACES = [
   { file: 'playground/preview.html', selector: '.theme-card' },
-  { file: 'index.html', selector: '.stage__surface' },
+  { file: 'site/site.css', selector: '.stage__surface' }, /* index.html 的外壳样式 */
 ];
 
 const findings = [];

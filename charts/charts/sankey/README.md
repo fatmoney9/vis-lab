@@ -52,7 +52,7 @@
   `demos/playback/playback.css` 的播放区视觉。独立财报验收场景仍放在
   `playground/sankey-preview.html`，页面只保留各自的画板外框和状态接线；组件目录不保存业务样例
   或页面控制逻辑。
-- 全局结构样式：`charts/styles.css` 的 `.dv-sankey` 命名空间。
+- 全局结构样式：`charts/styles/sankey.css` 的 `.dv-sankey` 命名空间。
 
 主题业务色与字体来自全局 token；`config.js` 不承载品牌分叉。节点高度到字号的映射、数值缩字、
 统一标签槽和所有纵向几何仍由桑基 L2 负责。季度播放保留原来的“文字先切换 → 120ms 停留 →

@@ -253,7 +253,7 @@ SankeyChart(host, {
 - 专属布局：`charts/charts/sankey/layout.js`
 - 专属语义模型：`charts/charts/sankey/model.js`
 - L2 配置：`charts/charts/sankey/config.js`
-- 全局结构样式：`charts/styles.css`（`.dv-sankey` 命名空间）
+- 全局结构样式：`charts/styles/sankey.css`（`.dv-sankey` 命名空间）
 - 独立预览：`playground/sankey-preview.html`
 
 ## 待办

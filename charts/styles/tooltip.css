@@ -1,0 +1,128 @@
+/* Tooltip 气泡（specs/tooltip.md TOOLTIP-01..06） —— 由 charts/styles.css 按序 @import；颜色 / 字号一律引用 token，禁止色值字面量 */
+
+/* [TOOLTIP-01] 气泡卡片：背景/边框/阴影/圆角/内边距/最大宽度/字体全走 token。
+   iFinD 特例（1px 边框 + 阴影 + Arial）由其 token 值天然生效，THS/Ainvest 为 transparent/none 无形。
+   pointer-events:none——气泡永不抢鼠标（贴着指针也不触发 mouseleave）；无过渡动画（TOOLTIP-10）。
+   [TOOLTIP-12] fixed 视口定位：DOM 挂 plotHost（token 作用域）但不受祖先 overflow 裁剪，
+   气泡可超出图表 frame / 卡片容器；坐标由 tooltip.js place() 按 plotHost 视口矩形换算。 */
+.dv-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  display: none;
+  pointer-events: none;
+  box-sizing: border-box;
+  /* 宽度=内容真实宽（TOOLTIP-02 以最长一行为准）。不写则 absolute+left 的收缩宽度
+     受「left→容器右缘」剩余空间约束——气泡贴右侧时可用宽≈自身宽，亚像素取整差
+     会把系列名压缩换行 */
+  width: max-content;
+  background: var(--color-visualization-tooltip);
+  border: 1px solid var(--color-visualization-tooltip-border);
+  box-shadow: var(--shadow-tooltip);
+  border-radius: var(--radius-tooltip);
+  padding: var(--spacing-tooltip-pad);
+  /* [TOOLTIP-01] 宽度自适应内容（width: max-content 那条），再受**三道**封顶：
+     · 内容封顶 --size-tooltip-max-width —— 超过它的文字按 TOOLTIP-03 换行；
+     · 视口封顶 —— 窄屏上两侧各留 spacing-24，气泡永远不会顶到屏幕边；
+     · 容器封顶 —— 图表根宽 × --size-tooltip-max-container-ratio（目前仅 THS 移动端 0.5）。
+     取最小者，故各道独立生效，不必为某一族或某一端另写一条规则。
+     280px 是量出来的不是拍的：全族 × 三主题实测自然宽 111–228px（最宽是瀑布图
+     Ainvest 的复合读数 228），280 留了约两成余量；再宽的内容（如「超长名称」
+     边界用例的 339px）本就该换行，而不是让气泡霸屏。 */
+  max-width: min(
+    var(--size-tooltip-max-width),
+    calc(100vw - var(--spacing-24) - var(--spacing-24)),
+    /* 第三道：容器封顶（THS 移动端 = 图表根宽的 1/2，由 core/tooltip.js 量好写入）。
+       未写入时回落到内容封顶本身，min() 结果不变——不用魔数兜底。 */
+    var(--dv-tooltip-container-cap, var(--size-tooltip-max-width))
+  );
+  font-family: var(--font-family-tooltip);
+  font-size: var(--font-size-tooltip);
+  font-weight: var(--font-weight-regular);
+  line-height: 1.4;
+}
+.dv-tooltip.is-visible { display: block; }
+
+/* [TOOLTIP-05] top-anchor 档下三角：颜色随气泡背景；几何（border-width）由 tooltip.js 常量写入 */
+.dv-tooltip__arrow {
+  display: none;
+  position: absolute;
+  top: 100%;
+  border-style: solid;
+  border-color: var(--color-visualization-tooltip) transparent transparent;
+}
+
+/* [TOOLTIP-01][TOOLTIP-02] 标题行：下边框 = iFinD 分割线特例（THS/Ainvest transparent 只占 1px 无形） */
+.dv-tooltip__title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  color: var(--color-text-tooltip-title);
+  padding-bottom: var(--spacing-tooltip-row);
+  border-bottom: 1px solid var(--color-visualization-tooltip-divider);
+  margin-bottom: var(--spacing-tooltip-row);
+}
+.dv-tooltip__title-icon {
+  flex: none;
+  width: var(--spacing-24);
+  height: var(--spacing-24);
+  object-fit: contain;
+}
+.dv-tooltip__title-icon-fallback {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--spacing-24);
+  height: var(--spacing-24);
+  color: var(--color-text-primary);
+  background: var(--color-background-layer1);
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-cn);
+  font-size: var(--font-size-tooltip);
+  font-weight: var(--font-weight-bold);
+}
+/* [TOOLTIP-02/03] 单实体标题同样只折名称，不压缩数值；不为某个图型扩大封顶。 */
+.dv-tooltip__title.has-value { align-items: flex-start; }
+.dv-tooltip__title-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dv-tooltip__title-value {
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--spacing-tooltip-row-gap);
+  color: var(--color-text-tooltip-value);
+  font-weight: var(--font-weight-tooltip-value);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.dv-tooltip__rows { display: flex; flex-direction: column; gap: var(--spacing-tooltip-row); }
+
+/* [TOOLTIP-02][TOOLTIP-03] 数据行：marker 独立列（悬挂缩进天然成立）+ 系列名可换行 +
+   数值单行贴右；align-items:flex-start = 数值/marker 顶对齐系列名第一行 */
+.dv-tooltip__row { display: flex; align-items: flex-start; }
+.dv-tooltip__marker {
+  flex: none;
+  margin-right: var(--spacing-legend-marker-label);
+  /* marker 相对首行文字竖直居中（1.4 = 气泡行高） */
+  margin-top: calc((1.4em - var(--size-legend-marker)) / 2);
+  color: var(--dv-series-color, currentColor);
+}
+.dv-tooltip__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--color-text-tooltip-series);
+  overflow-wrap: anywhere;
+}
+.dv-tooltip__value {
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--spacing-tooltip-row-gap); /* 两列最小间距 */
+  color: var(--color-text-tooltip-value);
+  font-weight: var(--font-weight-tooltip-value);
+  white-space: nowrap; /* [TOOLTIP-03] 数值永不换行 */
+  font-variant-numeric: tabular-nums;
+}
