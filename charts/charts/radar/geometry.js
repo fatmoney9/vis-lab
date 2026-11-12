@@ -4,7 +4,7 @@
  *
  * 干什么：把「每根轴指向哪、值该落在多远、网格环画多大、指针落在第几个扇形」
  * 算成**纯数据**，交给 index.js 去画。不碰 DOM、不碰 d3、不碰 token；
- * 唯一的 import 是同样零依赖的 core/polar-label.js，故仍可被 `node --test` 直接加载
+ * import 的只有同样零依赖的 core/polar-label.js 与 core/math.js，故仍可被 `node --test` 直接加载
  * （同 pie/geometry.js、L1 的 bar-geometry）。
  *
  * 角度约定由 core/polar-label.js 统一：**0 弧度 = 12 点方向，正角顺时针**；圆心为原点，
@@ -31,6 +31,7 @@
  * 建立在「角度均分」这个雷达专属前提上。
  */
 import { pointAt, labelBand } from '../../core/polar-label.js';
+import { clamp } from '../../core/math.js';
 
 const TAU = Math.PI * 2;
 
@@ -48,7 +49,6 @@ const MIN_SEGMENTS = 2;
 /* [RADAR-01] 维度数下限（基线 1.2「并列维度应大于 2」）。两根轴构不成面积，读不出形状。 */
 export const MIN_DIMENSIONS = 3;
 
-const clamp = (lo, v, hi) => Math.max(lo, Math.min(v, hi));
 
 /*
  * [RADAR-02] n 根径向轴的角度：首轴恒在 12 点方向（0 弧度），其余按 360/n 均分、顺时针。

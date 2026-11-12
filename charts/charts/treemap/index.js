@@ -366,15 +366,13 @@ export function TreemapChart(host, cfg) {
        故在 L2 定死、不给 behavior.json 加键（同 PIE-05 的做法）。 */
     const tooltip = createTooltip(plotHost);
     const tooltipMode = 'follow';
-    const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
-    let hideTimer = 0;
     /* [TREEMAP-06] hover / 钉住的状态迁移走 L1（core/highlight-state.js），与其他关系型图同一套。
        本族只有一类图元、也没有邻域可算，故 kind 恒为 'leaf'、key 直接用 leaf 对象本身——
        状态与 pinnedLeaf 一样活在 build() 内，重渲即重置，行为与先前逐字一致。 */
     let highlight = createHighlightState();
     const reset = () => masks.classed('is-active', false);
     const showTip = (event, leaf) => {
-      clearTimeout(hideTimer);
+      tooltip.cancelHide();
       const item = leaf.data.item;
       masks.classed('is-active', (d) => d === leaf);
       if (usesImageContent) tooltip.show(detailTooltipContent(item), marker);
@@ -408,7 +406,7 @@ export function TreemapChart(host, cfg) {
     const leave = () => {
       highlight = applyLeave(highlight);
       /* 有钉住则回落到钉住态，否则延时收气泡 */
-      if (!renderHighlight(null)) hideTimer = setTimeout(() => tooltip.hide(), hideDelay);
+      if (!renderHighlight(null)) tooltip.hideLater();
     };
     /* [TREEMAP-06] 单层展示，无下钻：点击只钉住 / 取消钉住 Tooltip。 */
     const activate = (event, leaf) => {
@@ -425,7 +423,7 @@ export function TreemapChart(host, cfg) {
         event.preventDefault();
         activate(null, leaf);
       });
-    stopHover = () => { clearTimeout(hideTimer); tooltip.hide(); };
+    stopHover = () => tooltip.hide();
 
     if (wm) renderWatermark(frame.svg.append('g').attr('class', 'dv-watermark-layer'), frame, { spec: wm, mode: modeOf(host) });
 

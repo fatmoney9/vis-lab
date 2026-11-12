@@ -4,6 +4,7 @@
  */
 import { resolveSankeySettings } from './config.js';
 import { assertSankeyConfig, layoutSankey, scaleSankeyStyle } from './layout.js';
+import { clamp01 } from '../../core/math.js';
 
 function semanticColorVar(role) {
   return `--color-sankey-${role}`;
@@ -45,7 +46,6 @@ export function sankeyRelatedNeighborhood(node) {
   return { nodes, links };
 }
 
-const clamp01 = (value) => Math.max(0, Math.min(1, Number(value) || 0));
 
 const referenceKey = (reference) => {
   if (reference && typeof reference === 'object') {

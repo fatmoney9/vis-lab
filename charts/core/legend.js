@@ -1,5 +1,5 @@
 import { select } from 'd3';
-import { tokenNum } from './tokens.js';
+import { tokenNum, tokenStr } from './tokens.js';
 
 /*
  * L1 · 图例（Legend）。权威规范见 specs/legend.md。
@@ -127,3 +127,18 @@ export function renderLegend(host, items, opts = {}) {
 /* [LEGEND-06][LEGEND-14] 点击的状态迁移（applyToggle / applyFocus）住在 core/legend-state.js。
    那边不 import d3，故可被 node --test 直接加载；本文件不再 re-export——
    同一个函数留两个门只会让下一个人挑错那个（同 examples.js 不留「扁平分类名」版本的取舍）。 */
+
+/*
+ * [LEGEND-05][LEGEND-14] 按系列弱化：scope 内命中 selector 的元素，data-key ≠ emph 的压到
+ * `--opacity-visualization-dim`，其余复原为 1；emph 为空即全部复原。
+ * 系列 <g> 与它的数据标签组都挂同名 data-key，故一个 selector 列全即可整组一起弱化。
+ * 三族（柱线 / 饼环 / 雷达）的 applyDim 曾各写一份同样的读 token + 判 key；
+ * 「弱化哪些元素」「强调的是谁」仍由 L2 给（见 legend-state.js 的 emphasisKey）。
+ * 返回读到的弱化值，供需要额外处理的图层（雷达的面）沿用同一个数。
+ */
+export function dimByKey(scope, selector, emph) {
+  const dim = tokenStr(scope, '--opacity-visualization-dim') || '1';
+  select(scope).selectAll(selector)
+    .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
+  return dim;
+}

@@ -2,10 +2,10 @@
  * L1 · 绕圆标签几何（纯几何，无 DOM、无 d3、无 token）。
  * 权威规范见 specs/radar.md（RADAR-07 / RADAR-14）与 specs/pie.md（PIE-13）。
  *
- * ⚠️ **本模块必须零 import**，这不是风格是硬约束：消费方 pie/geometry.js、radar/geometry.js
- * 都被 `node --test` 直接加载，而 core/frame.js 顶部 `import 'd3'`、core/palette.js 顶层
- * `await fetch` —— 本模块只要接上其中任何一条链路，那几族的单测立刻全红。
- * 同 measure.js / split.js / legend-state.js 的纪律。
+ * ⚠️ **本模块只许 import 同样零依赖的模块（目前只有 core/math.js）**，这不是风格是硬约束：
+ * 消费方 pie/geometry.js、radar/geometry.js 都被 `node --test` 直接加载，而 core/frame.js 顶部
+ * `import 'd3'`、core/palette.js 顶层 `await fetch` —— 本模块只要接上其中任何一条链路，
+ * 那几族的单测立刻全红。同 measure.js / split.js / legend-state.js 的纪律。
  *
  * ── 为什么会有这个模块 ────────────────────────────────────────────
  * 它不是「可能有用所以先抽出来」，而是 specs/radar.md 写死的两个下沉条件同时被兑现：
@@ -26,9 +26,10 @@
  * 与 d3.arc() 一致，标签因此天然与扇区/弧对得上。
  */
 
+import { clamp } from './math.js';
+
 const TAU = Math.PI * 2;
 
-const clamp = (lo, v, hi) => Math.max(lo, Math.min(v, hi));
 
 /*
  * 极坐标 → 直角坐标（相对圆心）。**全库唯一一处三角公式**，别在别处再写一遍。

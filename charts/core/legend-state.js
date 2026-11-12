@@ -61,3 +61,40 @@ export function applyToggle(hidden, key, allKeys, selectMode = 'multi') {
 export function applyFocus(selected, key) {
   return selected === key ? null : key;
 }
+
+/*
+ * [LEGEND-05][LEGEND-14] 此刻该被强调的系列：hover（临时）优先于选中（常驻）。
+ * 指针停在 B 上时读的就该是 B，松开后自然回落到常驻的那个（PIE-10「两者独立叠加」的同一条取舍）。
+ * `??` 而非 `||`：hovered 的「无」是 null，用 || 会让空串一类的假值也穿透。
+ */
+export function emphasisKey(state) {
+  return state.hovered ?? state.selected;
+}
+
+/*
+ * [LEGEND-05][LEGEND-06][LEGEND-14] 图例项的点击 / hover 接线——交给 renderLegend 的 onToggle / onHover。
+ *
+ * 按档分流的骨架在这里只写一份（曾在 cartesian / pie / radar 各抄一份）：
+ *   focus        —— 只算出下一个 selected，交给 L2 的 onFocus 落状态并重画表达；
+ *                   数据构成一点不动，故**不必整树重建**。
+ *   multi/single —— 改 hidden、清掉 hover（被点的那项可能刚被隐藏，留着它会弱化一个不存在的系列），
+ *                   再交给 L2 的 onFilter 整树重建（值域 / 角度要按可见项重算）。
+ *   hover        —— 记到 state.hovered，交给 L2 的 onDim 重画弱化。
+ * 「落到哪些图元上」各族不同（柱线 / 扇区外扩 / 雷达面切档），所以留在三个回调里。
+ *
+ * state 由调用方持有：{ hidden, selected, hovered }，本函数原地改它的字段（与 renderLegend 读同一个对象）。
+ */
+export function legendHandlers({ state, keys, mode = 'multi', onFocus, onFilter, onDim }) {
+  return {
+    onToggle(key) {
+      if (mode === 'focus') return onFocus(applyFocus(state.selected, key));
+      state.hidden = applyToggle(state.hidden, key, keys, mode);
+      state.hovered = null;
+      return onFilter();
+    },
+    onHover(key) {
+      state.hovered = key;
+      onDim();
+    },
+  };
+}

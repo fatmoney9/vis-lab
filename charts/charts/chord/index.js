@@ -54,16 +54,7 @@ export function ChordChart(host, initialConfig) {
     .attr('class', 'dv-chord__svg')
     .attr('role', 'img');
   const tooltip = createTooltip(root.node());
-  let tooltipHideTimer = 0;
 
-  const clearTooltipHide = () => {
-    clearTimeout(tooltipHideTimer);
-    tooltipHideTimer = 0;
-  };
-  const hideTooltip = () => {
-    clearTooltipHide();
-    tooltip.hide();
-  };
 
   function build() {
     if (destroyed) return;
@@ -82,8 +73,6 @@ export function ChordChart(host, initialConfig) {
     svg.attr('aria-label', chartText.chartLabel);
     const marker = behavior['legend-marker'];
     const wm = behavior.watermark;
-    const configuredHideDelay = tokenNum(host, '--tooltip-hide-delay');
-    const tooltipHideDelay = Number.isFinite(configuredHideDelay) ? configuredHideDelay : 2000;
 
     const maxRadius = tokenNum(host, '--size-chord-radius') || 80;
     const ring = tokenNum(host, '--size-chord-ring') || 10;
@@ -302,7 +291,7 @@ export function ChordChart(host, initialConfig) {
       if (!target) { resetHighlight(); return false; }
       const related = chordRelatedNeighborhood(target, graph.ribbons);
       paint(related);
-      clearTooltipHide();
+      tooltip.cancelHide();
       if (target.kind === 'arc') {
         const g = graph.groups.find((item) => item.index === target.key);
         if (!g) { resetHighlight(); return false; }
@@ -315,10 +304,6 @@ export function ChordChart(host, initialConfig) {
         placeTooltip(point ?? arcAnchor(graph.groups[r.i]));
       }
       return true;
-    };
-    const scheduleTooltipHide = () => {
-      clearTooltipHide();
-      tooltipHideTimer = setTimeout(hideTooltip, tooltipHideDelay);
     };
     const pointAtEvent = (event) => {
       const [x, y] = pointer(event, root.node());
@@ -335,12 +320,12 @@ export function ChordChart(host, initialConfig) {
       })
       .on('pointerleave', () => {
         highlight = applyLeave(highlight);
-        if (!renderHighlight()) scheduleTooltipHide();
+        if (!renderHighlight()) tooltip.hideLater();
       })
       .on('click', (event, d) => {
         event.stopPropagation();
         highlight = applyPick(highlight, kind, keyOf(d));
-        if (!renderHighlight(pointAtEvent(event))) hideTooltip();
+        if (!renderHighlight(pointAtEvent(event))) tooltip.hide();
       })
       .on('focus', (event, d) => {
         highlight = applyHover(highlight, kind, keyOf(d));
@@ -348,14 +333,14 @@ export function ChordChart(host, initialConfig) {
       })
       .on('blur', () => {
         highlight = applyLeave(highlight);
-        if (!renderHighlight()) hideTooltip();
+        if (!renderHighlight()) tooltip.hide();
       })
       /* [CHORD-15] 键盘钉住：与指针共用同一套迁移，故行为天然一致 */
       .on('keydown', (event, d) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         highlight = applyPick(highlight, kind, keyOf(d));
-        if (!renderHighlight()) hideTooltip();
+        if (!renderHighlight()) tooltip.hide();
       });
 
     bindTarget(arcGroups, 'arc', (g) => g.index);
@@ -365,7 +350,7 @@ export function ChordChart(host, initialConfig) {
     svg.on('click.chord-interaction', () => {
       highlight = applyClear();
       renderHighlight();
-      hideTooltip();
+      tooltip.hide();
     });
 
     /* 重渲后把钉住态画回去——否则拖一下容器钉住就没了 */
@@ -428,7 +413,7 @@ export function ChordChart(host, initialConfig) {
       destroyed = true;
       cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(motionFrame);
-      clearTooltipHide();
+      tooltip.cancelHide();
       stopResize();
       root.remove();
     },

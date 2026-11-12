@@ -25,6 +25,7 @@ import { makeFormatter } from '../../core/format.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { tokenNum } from '../../core/tokens.js';
 import { createTextMeasurer } from '../../core/measure.js';
+import { clamp } from '../../core/math.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { resolveItemColors } from '../../core/visual-color.js';
 import { renderDataLabels } from '../../core/label.js';
@@ -118,10 +119,11 @@ export function WaterfallChart(host, cfg) {
     const slotWidth = plotHost.clientWidth > 0
       ? plotHost.clientWidth / model.items.length
       : labelWidthLimit;
-    const axisLabelMaxWidth = Math.max(1, Math.min(
-      labelWidthLimit,
+    const axisLabelMaxWidth = clamp(
+      1,
       slotWidth - tokenNum(plotHost, '--spacing-axis-x-label-min-gap'),
-    ));
+      labelWidthLimit,
+    );
     const axisMeasurer = createTextMeasurer(plotHost, 'dv-axis-label');
     const axisRows = model.items.map((item) => {
       const nameLines = wrapAxisLabel(
@@ -318,8 +320,6 @@ export function WaterfallChart(host, cfg) {
 
     const hoverLayer = frame.svg.append('g').attr('class', 'dv-waterfall-hover').style('display', 'none');
     const tooltip = createTooltip(plotHost);
-    const hideDelay = tokenNum(plotHost, '--tooltip-hide-delay');
-    let hideTimer = 0;
     const hitItems = model.items.map((item, index) => {
       const left = index === 0 ? frame.grid.left : (centers[index - 1] + centers[index]) / 2;
       const right = index === model.items.length - 1 ? frame.grid.right : (centers[index] + centers[index + 1]) / 2;
@@ -332,7 +332,7 @@ export function WaterfallChart(host, cfg) {
       .attr('y', frame.grid.top).attr('height', frame.grid.height);
 
     const showHover = (event, hit) => {
-      clearTimeout(hideTimer);
+      tooltip.cancelHide();
       const local = pointer(event, plotHost);
       const item = hit.item;
       const segment = variant === 'data'
@@ -370,15 +370,9 @@ export function WaterfallChart(host, cfg) {
         pointer: { x: local[0], y: local[1] },
       });
     };
-    const leave = () => {
-      hideTimer = setTimeout(() => {
-        hoverLayer.style('display', 'none');
-        tooltip.hide();
-      }, hideDelay);
-    };
+    const leave = () => tooltip.hideLater(() => hoverLayer.style('display', 'none'));
     hits.on('mouseenter', showHover).on('mousemove', showHover).on('mouseleave', leave);
     stopHover = () => {
-      clearTimeout(hideTimer);
       tooltip.hide();
       hits.on('mouseenter', null).on('mousemove', null).on('mouseleave', null);
     };

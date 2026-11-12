@@ -1,6 +1,7 @@
 import { tokenNum } from './tokens.js';
 import { measureTexts } from './measure.js';
 import { renderAxisLabelLines } from './axis.js';
+import { clamp } from './math.js';
 
 /*
  * L1 · 图表标注 callout（强调环 + 多行文字 + 带箭头曲线引线）。
@@ -8,7 +9,7 @@ import { renderAxisLabelLines } from './axis.js';
  *
  * 与 label.js / watermark.js / mark.js 一致：接收调用方传入的 d3 selection，
  * 本模块**不 import d3**（顺带使下面全部纯几何函数可被 node --test 直接加载）。
- * 三个 import 都是零 d3 的 L1 横向复用（axis.js 那条的先例是 crosshair.js）。
+ * 四个 import 都是零 d3 的 L1 横向复用（axis.js 那条的先例是 crosshair.js）。
  *
  * ── 职责边界 ──────────────────────────────────────────────────────
  * 本模块收「**已经解析好的像素锚点** + 文案 + 障碍矩形」，负责选位、算路径、画 DOM。
@@ -34,9 +35,6 @@ import { renderAxisLabelLines } from './axis.js';
  * 它被 [AXIS-04] 限死**最多两行**、超出的余文并回末行——那是 X 轴名称的叙事规则，
  * 不是通用折行器。标注是整句话，参考稿就折了四行。故本模块自带 wrapByWidth，
  * 但**逐行 tspan 的装配仍复用 axis.js 的 renderAxisLabelLines**，不另造一份。
- *
- * ⚠️ 仓库有两个参数顺序不一致的私有 clamp：polar-label.js / radar/geometry.js /
- * chord/layout.js 是 (lo, v, hi)，tooltip.js 是 (v, lo, hi)。本模块取**多数派 (lo, v, hi)**。
  */
 
 const TEXT_CLASS = 'dv-callout-text';
@@ -44,7 +42,6 @@ const TEXT_CLASS = 'dv-callout-text';
 /* 数值判定用的浮点容差：方位向量的分量只有 0 / ±1 / ±√2/2，1e-9 足够把「正交」与「斜向」分开 */
 const TOL = 1e-9;
 
-const clamp = (lo, v, hi) => Math.max(lo, Math.min(v, hi));
 const sgn = (v) => (v > TOL ? 1 : v < -TOL ? -1 : 0);
 
 /*

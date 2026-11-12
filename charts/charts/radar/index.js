@@ -42,7 +42,7 @@
  */
 import { select, line, curveLinearClosed, curveCardinalClosed } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
-import { tokenNum, tokenStr } from '../../core/tokens.js';
+import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { measureTexts, measureInk } from '../../core/measure.js';
@@ -51,8 +51,8 @@ import { niceSplit } from '../../core/split.js';
 import { linearY } from '../../core/scale.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { performanceColorRamp } from '../../core/visual-color.js';
-import { renderLegend } from '../../core/legend.js';
-import { applyToggle, applyFocus } from '../../core/legend-state.js';
+import { renderLegend, dimByKey } from '../../core/legend.js';
+import { legendHandlers, emphasisKey } from '../../core/legend-state.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
@@ -159,8 +159,7 @@ export function RadarChart(host, cfg) {
   /* [LEGEND-06][LEGEND-14][RADAR-11] 两条状态线，挂在 build 外——resize / 显隐会整树重建，
      状态不该因此丢失。hidden 是「筛」，selected 是「强调」= RADAR-11 的单系列钉住本身
      （图例项与多边形是同一个 selected 的两个入口，两处各持一份必然自相矛盾）。 */
-  const state = { hidden: new Set(), selected: null };
-  let hoverKey = null;
+  const state = { hidden: new Set(), selected: null, hovered: null };
 
   host.classList.add('dv-chart', 'dv-chart--radar');
   if (variant === 'rating') host.classList.add('dv-chart--radar-rating');
@@ -206,11 +205,9 @@ export function RadarChart(host, cfg) {
   /* [LEGEND-05][LEGEND-14][RADAR-11] 弱化的**唯一出口**：hover（临时）与钉住（常驻）都收在这里，
      hover 优先——指针停在 B 上时读的就该是 B，松开回落到常驻那个（同 PIE-10 的取舍）。 */
   function applyDim() {
-    const emph = hoverKey ?? state.selected;
-    const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
+    const emph = emphasisKey(state);
     const pinned = state.selected;
-    select(plotHost).selectAll('g.dv-radar-series')
-      .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
+    const dim = dimByKey(plotHost, 'g.dv-radar-series', emph);
     /* [RADAR-06] 面与线分属两层（见 build），故面要单独处理：
        钉住时选中组填本色、其余组的面压到 opacity-radar-area-dim，两档由修饰类切、值在 token 里，
        面自身不再叠乘 dim（叠乘会把 24% 压成约 2%）。没有钉住、只是 hover 时，面随线一起弱化。 */
@@ -225,13 +222,12 @@ export function RadarChart(host, cfg) {
     if (resolved.length <= 1) { legendHost.innerHTML = ''; return; }
     renderLegend(legendHost, legendItems, {
       marker, layout: 'row', align: 'left', state,
-      onToggle: (key) => {
-        if (legendSelect === 'focus') return pinSeries(applyFocus(state.selected, key));
-        state.hidden = applyToggle(state.hidden, key, keys, legendSelect);
-        hoverKey = null;
-        build();
-      },
-      onHover: (key) => { hoverKey = key; applyDim(); },
+      ...legendHandlers({
+        state, keys, mode: legendSelect,
+        onFocus: pinSeries,
+        onFilter: build,
+        onDim: applyDim,
+      }),
     });
   }
 
@@ -245,7 +241,8 @@ export function RadarChart(host, cfg) {
 
   let stopGrow = () => {};
   let stopDrag = () => {};
-  let hideTimer = 0;
+  /* 上一轮 build 的气泡收口（含它尚未到点的延迟隐藏）：气泡随 build 重建，故同 stopGrow 的模式。 */
+  let stopTip = () => {};
   /* [RADAR-18][RADAR-04] 可调节态的量程**一经建立就冻结**。
      editable 会原地改 r.data，而 build() 每次都按当前数据重算量程——两者相乘的后果是：
      用户把各点拖低后，任意一次重建（拖容器 / 切旋钮）都会把标尺跟着缩小，已设好的值
@@ -262,7 +259,8 @@ export function RadarChart(host, cfg) {
     stopGrow = () => {};
     stopDrag();
     stopDrag = () => {};
-    clearTimeout(hideTimer);
+    stopTip();
+    stopTip = () => {};
     drawLegend();                       /* 图例先占位，可用空间再按剩余算（LEGEND-04） */
     /* [RADAR-09] 容器塌到不可用高度时推迟到下一帧、**不抛错**：标签页切换 / 折叠面板展开 /
        懒布局首帧都会让容器高短暂为 0，那不是配置错误，抛异常会把整张图打没且不会自己回来。 */
@@ -271,6 +269,7 @@ export function RadarChart(host, cfg) {
     /* ⚠️ 气泡必须**在清空之后**建：它是 plotHost 的子节点，建在 build 外会被上面那行连根删掉
        （症状很隐蔽——扇形高亮照常，只是气泡再也不出现）。同 pie / treemap 的做法。 */
     const tooltip = createTooltip(plotHost);
+    stopTip = () => tooltip.hide();
 
     const gapPx = tokenNum(host, '--spacing-chart-region-gap') || 8;
     const legendH = resolved.length > 1 ? legendHost.getBoundingClientRect().height + gapPx : 0;
@@ -572,7 +571,7 @@ export function RadarChart(host, cfg) {
           .attr('tabindex', 0).attr('role', 'button')
           .attr('aria-label', `${label}`);
         const activate = (event) => {
-          clearTimeout(hideTimer);
+          tooltip.cancelHide();
           hitLayer.selectAll('path').classed('is-active', false);
           sector.classed('is-active', true);
           showDimensionTip(i, event);
@@ -583,10 +582,7 @@ export function RadarChart(host, cfg) {
     }
     /* 指针在扇区之间移动时不该闪：整层统一收口，离开绘图区才按 token 延迟隐藏（同 PIE-05 / TREEMAP-07） */
     select(plotHost).on('mouseleave', () => {
-      hideTimer = setTimeout(() => {
-        hitLayer.selectAll('path').classed('is-active', false);
-        tooltip.hide();
-      }, tokenNum(plotHost, '--tooltip-hide-delay') || 0);
+      tooltip.hideLater(() => hitLayer.selectAll('path').classed('is-active', false));
     });
 
     /* [RADAR-10] 气泡列「这个维度各系列多少」；位置档恒 follow（TOOLTIP-07 无坐标系图特例，
@@ -714,7 +710,6 @@ export function RadarChart(host, cfg) {
         showDimensionTip(d.i, event);
       }).on('blur', () => {
         /* Tab 出图表后气泡不该长驻；此前只有鼠标划过绘图区再离开才收得掉。 */
-        clearTimeout(hideTimer);
         tooltip.hide();
       });
 
@@ -785,7 +780,7 @@ export function RadarChart(host, cfg) {
       buildRetry.cancel();
       stopGrow();
       stopDrag();
-      clearTimeout(hideTimer);
+      stopTip();
       stop();
       /* 挂了几个类就摘几个：`dv-chart--radar-rating` 漏摘时，同一 host 上换挂的标准雷达
          会继续吃 `.dv-chart--radar-rating` 的规则——折线变黑、面积被 fill:none 掐掉。 */

@@ -30,13 +30,13 @@ import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
 import { renderGrid } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
-import { tokenNum, tokenStr } from '../../core/tokens.js';
+import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
-import { renderLegend } from '../../core/legend.js';
-import { applyToggle, applyFocus } from '../../core/legend-state.js';
+import { renderLegend, dimByKey } from '../../core/legend.js';
+import { legendHandlers, emphasisKey } from '../../core/legend-state.js';
 import { renderDataZoom } from '../../core/datazoom.js';
 import { renderWatermark } from '../../core/watermark.js';
 import { renderDataLabels } from '../../core/label.js';
@@ -47,6 +47,7 @@ import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
 import { axisDomain } from './domain.js';
 import { groupedBars, singleBar, stackBars } from '../../core/bar-geometry.js';
+import { clamp } from '../../core/math.js';
 import { resolveCalloutAnchors, barObstacles, lineObstacles } from './callout-anchor.js';
 
 export function CartesianChart(host, cfg) {
@@ -94,9 +95,9 @@ export function CartesianChart(host, cfg) {
   const zoomOn = !!zoom && N >= 1;
   let win = { i0: 0, i1: Math.max(0, N - 1) };
   if (zoomOn && zoom !== true) {
-    const s = Math.max(0, Math.min(1, zoom.start ?? 0));
-    const e = Math.max(s, Math.min(1, zoom.end ?? 1));
-    win = { i0: Math.min(N - 1, Math.floor(s * N)), i1: Math.max(0, Math.min(N - 1, Math.ceil(e * N) - 1)) };
+    const s = clamp(0, zoom.start ?? 0, 1);
+    const e = clamp(s, zoom.end ?? 1, 1);
+    win = { i0: Math.min(N - 1, Math.floor(s * N)), i1: clamp(0, Math.ceil(e * N) - 1, N - 1) };
     if (win.i1 < win.i0) win.i1 = win.i0;
   }
 
@@ -105,8 +106,7 @@ export function CartesianChart(host, cfg) {
      hidden 是「筛」（multi / single 档改它，隐藏系列退出值域计算）、
      selected 是「强调」（focus 档改它，值域一点不动、只改视觉权重）。
      两者都挂在 build 外——resize / 显隐会整树重绘，状态不该因此丢失。 */
-  const state = { hidden: new Set(), selected: null };
-  let hoverKey = null;
+  const state = { hidden: new Set(), selected: null, hovered: null };
 
   /* DOM 骨架（一次性）：图例在上、绘图区在下（LEGEND-04） */
   host.classList.add('dv-chart');
@@ -117,32 +117,22 @@ export function CartesianChart(host, cfg) {
      数据标签也按系列分组（dataset.key 同名），随其所属系列一起弱化——否则柱变淡、数字仍全黑。 */
   /* [LEGEND-05][LEGEND-14] 弱化的**唯一出口**：两个来源都收在这里，各自不单独写 opacity。
      hover 是临时态、选中是常驻态，**hover 优先**——指针停在 B 上时读的就该是 B，
-     松开后自然回落到常驻的那个（PIE-10「两者独立叠加」的同一条取舍）。
-     `??` 而非 `||`：hoverKey 的「无」是 null，用 || 会让空串一类的假值也穿透。 */
+     松开后自然回落到常驻的那个（PIE-10「两者独立叠加」的同一条取舍）。 */
   function applyDim() {
-    const emph = hoverKey ?? state.selected;
-    const dim = tokenStr(host, '--opacity-visualization-dim') || '1';
-    select(plotHost).selectAll('g.dv-bar-series, g.dv-line-series, g.dv-data-label-series')
-      .attr('opacity', function () { return emph && this.dataset.key !== emph ? dim : 1; });
+    dimByKey(plotHost, 'g.dv-bar-series, g.dv-line-series, g.dv-data-label-series', emphasisKey(state));
   }
 
   function drawLegend() {
     renderLegend(legendHost, legendItems, {
       marker, align, state,
-      /* [LEGEND-06][LEGEND-14] 按档分流：focus 只动 selected（不重排数据，故**不必 build**，
+      /* [LEGEND-06][LEGEND-14] 按档分流在 L1：focus 只动 selected（不重排数据，故**不必 build**，
          改一层 opacity 就够）；multi / single 动 hidden，值域要按可见系列重算，必须整树重绘。 */
-      onToggle: (key) => {
-        if (legendSelect === 'focus') {
-          state.selected = applyFocus(state.selected, key);
-          drawLegend();
-          applyDim();
-          return;
-        }
-        state.hidden = applyToggle(state.hidden, key, keys, legendSelect);
-        hoverKey = null;
-        build();
-      },
-      onHover: (key) => { hoverKey = key; applyDim(); },
+      ...legendHandlers({
+        state, keys, mode: legendSelect,
+        onFocus: (next) => { state.selected = next; drawLegend(); applyDim(); },
+        onFilter: build,
+        onDim: applyDim,
+      }),
     });
   }
 
