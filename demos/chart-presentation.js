@@ -207,7 +207,7 @@ const AINVEST_CHART_TEXT = {
   ]),
 };
 
-/* 与各族 L2 缺省表（CHORD_TEXT / RADAR_TEXT / TREEMAP_TEXT）键集一一对应；缺键或多键组件会当场报错。 */
+/* 与各族 L2 缺省表（CHORD_TEXT / PIE_TEXT / RADAR_TEXT / TREEMAP_TEXT）键集一一对应；缺键或多键组件会当场报错。 */
 const AINVEST_COMPONENT_TEXT = {
   chord: {
     chartLabel: 'Chord chart showing mutual flows between entities',
@@ -216,6 +216,9 @@ const AINVEST_COMPONENT_TEXT = {
     net: 'Net',
     arcLabel: '{name}, outflow {outflow}, inflow {inflow}',
     ribbonLabel: 'Flow between {source} and {target}: {source} to {target} {forward}, {target} to {source} {backward}',
+  },
+  pie: {
+    centerLabel: 'Total',
   },
   radar: {
     handleLabel: '{dimension}, {series}',

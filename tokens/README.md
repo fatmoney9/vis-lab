@@ -137,7 +137,11 @@ spacing-0 / 2 / 4 / 6 / 8 / 10 / 12 / 14 / 16 / 20 / 24
   是引线末端到文字的净距。另有 `size-donut-label-band-max`（**三主题同为 `120px`**）＝ 每侧标签带
   的绝对上限：带宽两侧恒等（PIE-13，为的是圆心不偏离画布中心），故一条超长文本会把两侧一起撑宽，
   必须封顶，否则环被挤成小圆点。**不按主题分化**——它约束的是版面纪律而非主题观感。
-  引线**线宽不设自有 token**，复用全库细线宽 `size-grid-line`。
+  引线**线宽与线色都不设自有 token**：线宽复用全库细线宽 `size-grid-line`，线色复用 hover 指示线的
+  `color-visualization-highlight-line`（中性灰，PIE-12）。
+  **环心合计**（[specs/pie.md](../specs/pie.md) PIE-18）六个键：`font-size` / `line-height` / `font-weight`
+  × `donut-center-label` / `donut-center-value`。三主题默认标签 12/16 regular、数值 16/22 600；
+  Ainvest 紧凑档（`density.json`）只覆盖数值行为 14/18 500。
   **外侧标签的两段排版**（[specs/pie.md](../specs/pie.md) PIE-15）另有四个键：
   `font-size-donut-label-name` / `line-height-donut-label-name` 与
   `font-size-donut-label-value` / `line-height-donut-label-value`——

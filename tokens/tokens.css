@@ -240,6 +240,12 @@
   --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-extra-small);
   --line-height-donut-label-value: var(--line-height-small);
+  --font-size-donut-center-label: var(--font-size-extra-small);
+  --line-height-donut-center-label: var(--line-height-small);
+  --font-weight-donut-center-label: var(--font-weight-regular);
+  --font-size-donut-center-value: var(--font-size-base);
+  --line-height-donut-center-value: var(--line-height-large);
+  --font-weight-donut-center-value: var(--font-weight-bold);
   --color-text-data-label-on-light: rgba(0, 0, 0, 0.84);
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -595,6 +601,12 @@
   --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-data-label);
   --line-height-donut-label-value: var(--line-height-data-label);
+  --font-size-donut-center-label: var(--font-size-extra-small);
+  --line-height-donut-center-label: var(--line-height-small);
+  --font-weight-donut-center-label: var(--font-weight-regular);
+  --font-size-donut-center-value: var(--font-size-base);
+  --line-height-donut-center-value: var(--line-height-large);
+  --font-weight-donut-center-value: var(--font-weight-bold);
   --color-text-data-label-on-light: #292933;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-extra-small);
@@ -953,6 +965,12 @@
   --font-weight-donut-label-name: var(--font-weight-regular);
   --font-size-donut-label-value: var(--font-size-medium);
   --line-height-donut-label-value: var(--line-height-medium);
+  --font-size-donut-center-label: var(--font-size-extra-small);
+  --line-height-donut-center-label: var(--line-height-small);
+  --font-weight-donut-center-label: var(--font-weight-regular);
+  --font-size-donut-center-value: var(--font-size-base);
+  --line-height-donut-center-value: var(--line-height-large);
+  --font-weight-donut-center-value: var(--font-weight-bold);
   --color-text-data-label-on-light: #000000;
   --color-text-data-label-on-dark: var(--color-text-inverse-primary);
   --font-size-data-label: var(--font-size-xxs);
@@ -1121,6 +1139,9 @@
   --size-bar-group-container-max: 74px;
   --size-donut-ring-width: 24px;
   --size-line-point: 6px;
+  --font-size-donut-center-value: var(--font-size-medium);
+  --line-height-donut-center-value: var(--line-height-medium);
+  --font-weight-donut-center-value: var(--font-weight-medium);
   --font-size-tooltip: 11px;
   --line-height-tooltip: 14px;
   --size-world-heatmap-height: 140px;
