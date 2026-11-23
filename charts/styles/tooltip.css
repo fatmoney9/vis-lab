@@ -40,7 +40,8 @@
   font-family: var(--font-family-tooltip);
   font-size: var(--font-size-tooltip);
   font-weight: var(--font-weight-regular);
-  line-height: 1.4;
+  /* 字号 / 行高：THS 12 / 16 · iFinD-PC 14 / 20 · Ainvest 12 / 16，Ainvest 紧凑 11 / 14（line-height-tooltip） */
+  line-height: var(--line-height-tooltip);
 }
 .dv-tooltip.is-visible { display: block; }
 
@@ -53,15 +54,17 @@
   border-color: var(--color-visualization-tooltip) transparent transparent;
 }
 
-/* [TOOLTIP-01][TOOLTIP-02] 标题行：下边框 = iFinD 分割线特例（THS/Ainvest transparent 只占 1px 无形） */
+/* [TOOLTIP-01][TOOLTIP-02] 标题行：下边框 = iFinD 分割线特例（THS/Ainvest transparent 只占 1px 无形）。
+   标题 → 首个数据行的距离 = title-pad + divider + title-gap，三段各有 token：
+   THS / Ainvest（含紧凑）0 + 0 + 4，与数据行之间同为 4px；iFinD 4 + 1 + 4 = 9——它的标题分割线可见，画在这 1px 上、两侧各留 4 */
 .dv-tooltip__title {
   display: flex;
   align-items: center;
   gap: var(--spacing-8);
   color: var(--color-text-tooltip-title);
-  padding-bottom: var(--spacing-tooltip-row);
-  border-bottom: 1px solid var(--color-visualization-tooltip-divider);
-  margin-bottom: var(--spacing-tooltip-row);
+  padding-bottom: var(--spacing-tooltip-title-pad);
+  border-bottom: var(--size-tooltip-divider) solid var(--color-visualization-tooltip-divider);
+  margin-bottom: var(--spacing-tooltip-title-gap);
 }
 .dv-tooltip__title-icon {
   flex: none;
@@ -107,8 +110,8 @@
 .dv-tooltip__marker {
   flex: none;
   margin-right: var(--spacing-legend-marker-label);
-  /* marker 相对首行文字竖直居中（1.4 = 气泡行高） */
-  margin-top: calc((1.4em - var(--size-legend-marker)) / 2);
+  /* marker 相对首行文字竖直居中（与气泡同一个行高 token） */
+  margin-top: calc((var(--line-height-tooltip) - var(--size-legend-marker)) / 2);
   color: var(--dv-series-color, currentColor);
 }
 .dv-tooltip__label {

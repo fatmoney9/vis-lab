@@ -40,13 +40,26 @@ test('AXIS-04/TOOLTIP-09：单行与多行共用一式，贴片顶沿对齐、�
   assert.equal(two.height, one.height + frame.lineH);
 });
 
-test('AXIS-04/TOOLTIP-09：点击态复用常态 X 标签坐标，不发生纵向跳动', () => {
+test('AXIS-04/TOOLTIP-09：缺字体度量时回落为 hanging 贴带上沿', () => {
   const frame = { xBandTop: 104, lineH: 16 };
   assert.deepEqual(xAxisLabelTextLayout(frame), {
     y: 104,
     dominantBaseline: 'hanging',
     lineHeight: 16,
   });
+});
+
+test('AXIS-04：X 标签的字体行框在 lineH 行框内上下居中，且落在 X 带内', () => {
+  for (const [lineH, ascent, descent] of [[14, 11, 2], [16, 11, 2], [12, 10, 2], [14, 12.5, 3.5]]) {
+    const frame = { xBandTop: 104, lineH, xLabelFontBox: { ascent, descent } };
+    const { y, dominantBaseline, lineHeight } = xAxisLabelTextLayout(frame);
+    assert.equal(dominantBaseline, 'alphabetic');
+    assert.equal(lineHeight, lineH);
+    const above = (y - ascent) - frame.xBandTop;          /* 字体框顶 ↔ 行框顶 */
+    const below = (frame.xBandTop + lineH) - (y + descent); /* 字体框底 ↔ 行框底 */
+    assert.ok(Math.abs(above - below) < 1e-9, `上下余量应相等：${above} vs ${below}`);
+    assert.ok(y > frame.xBandTop && y < frame.xBandTop + lineH, '基线落在行框内');
+  }
 });
 
 test('AXIS-04：轴名称优先按词折成两行，不用省略号丢失内容', () => {

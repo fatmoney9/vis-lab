@@ -20,12 +20,17 @@
         "size-chart-min-width": "300px",
         "spacing-axis-x-band-top": "{spacing-2}",
         "spacing-axis-x-band-bottom": "{spacing-2}",
+        "line-height-axis-x": { "mobile": "12px", "pc": "14px" },
+        "line-height-data-label": "{line-height-axis-x}",
+        "spacing-datazoom-band-v": "{spacing-4}",
         "size-bar-max": "24px",
         "size-bar-group-container-max": "74px",
         "size-donut-ring-width": "24px",
         "size-line-point": "6px",
         "font-size-tooltip": "11px",
-        "size-world-heatmap-height": "140px"
+        "line-height-tooltip": "14px",
+        "size-world-heatmap-height": "140px",
+        "radius-playback-step": "12px"
       },
       "behavior": {
         "legend-marker": { "mode": "unified", "shape": "dot", "w": 6, "h": 6 },

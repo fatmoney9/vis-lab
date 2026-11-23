@@ -61,7 +61,8 @@ export function createTooltip(plotHost) {
    * [TOOLTIP-02] 内容：标题行 + 数据行（marker + 系列名左 / 数值右）。
    * 行序由调用方保证 = 图例序（声明序）；marker 与图例同源（legend.js 同一份规格与渲染）。
    * titleIcon / titleIconFallback / titleValue 可选；titleValue 用于地图这类单行实体读数；
-   * rows = [{ key, label, type, colorVar, value, showMarker? }]
+   * rows = [{ key, label, type, colorVar, value, showMarker?, valueTone? }]
+   * （valueTone = 'up' / 'down' / 'muted'：数值按涨跌语义上色，如财报差值 EARNINGS-06；缺省不上色）
    * （value 已由调用方完整格式化，null 已转 "-"；showMarker=false 时不画 marker）。
    */
   function show({
@@ -114,7 +115,9 @@ export function createTooltip(plotHost) {
       })
       .order();
     row.select('.dv-tooltip__label').text((d) => d.label);
-    row.select('.dv-tooltip__value').text((d) => d.value);
+    row.select('.dv-tooltip__value')
+      .attr('class', (d) => `dv-tooltip__value${d.valueTone ? ` dv-tooltip__value--${d.valueTone}` : ''}`)
+      .text((d) => d.value);
     row.each(function (d) {
       const svg = select(this).select('svg.dv-tooltip__marker')
         .style('display', d.showMarker === false ? 'none' : null);

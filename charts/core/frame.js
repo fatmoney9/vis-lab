@@ -1,5 +1,6 @@
 import { select } from 'd3';
 import { tokenNum } from './tokens.js';
+import { measureFontBox } from './measure.js';
 
 /*
  * 纵向几何：行高、上下留白、绘图区高度。**只依赖容器高与标题 / 缩放带，与刻度值无关**——
@@ -13,19 +14,23 @@ export function verticalGeometry(host, opts = {}) {
     height, yForm = 'inside', xBand = true, xBandLines = 1, navH = 0,
     titleTopH = 0, titleBottomH = 0, minGridHeight = 48,
   } = opts;
+  /* Y 标签行高（定半行留白）与 X 标签行高（定 X 带行框）分开取：Ainvest 紧凑 PC 两者不同（Y 16 / X 14，
+     见 Figma「Compact 图表/图表框架」）。line-height-axis-x 缺省别名回 line-height-axis，其余场景两者相同。 */
   const lineH = tokenNum(host, '--line-height-axis') || 14;
+  const xLineH = tokenNum(host, '--line-height-axis-x') || lineH;
   const halfLabel = Math.ceil(lineH / 2);
   const xBandTopGap = tokenNum(host, '--spacing-axis-x-band-top');
   const xBandBottomGap = tokenNum(host, '--spacing-axis-x-band-bottom');
 
   const topPad = titleTopH + (yForm === 'outside' ? halfLabel : 0);
-  /* outside 的底部 Y 标签以末条网格线为垂直中心，会向下溢出 halfLabel；
-     因此 X 标签位置 = 网格线 + halfLabel + 规范净距。 */
+  /* [AXIS-01/04] outside：首末两条网格线各以一个 Y 标签行框为垂直中心——网格**上下各留半个 Y 标签行高**
+     （Figma 图表区 = 网格 + 上下各 halfLabel），X 带接在这块图表区之下。
+     故 X 标签位置 = 末条网格线 + halfLabel + 规范净距。 */
   const xGapTop = (yForm === 'outside' ? halfLabel : 0) + xBandTopGap;
   /* [AXISTITLE-02] X 标题带接在 X 标签带下沿之后 */
   const xLines = Math.max(1, Math.floor(Number(xBandLines) || 1));
   const bottomPad = (xBand
-    ? xGapTop + lineH * xLines + xBandBottomGap
+    ? xGapTop + xLineH * xLines + xBandBottomGap
     : yForm === 'outside' ? halfLabel : 0) + titleBottomH;
 
   const regionH = tokenNum(host, '--size-chart-region-height') || 160;
@@ -40,7 +45,7 @@ export function verticalGeometry(host, opts = {}) {
     ? Math.max(gridMin, height - topPad - bottomPad - navH)
     : Math.max(gridMin, regionH - outsideH);
 
-  return { lineH, halfLabel, topPad, xGapTop, bottomPad, gridH };
+  return { lineH, xLineH, halfLabel, topPad, xGapTop, xBandTopGap, xBandBottomGap, xLines, bottomPad, gridH };
 }
 
 /*
@@ -91,7 +96,7 @@ export function createFrame(host, opts = {}) {
      **显式传 width 时不设限**——那是调用方算好的画布尺寸（如饼环按 donut 容器给的方形画布，
      PIE-02/PIE-09），再往上抬会把方形撑成横条。 */
   const W = width != null ? Math.max(1, width) : Math.max(240, host.clientWidth ?? 640);
-  const { lineH, halfLabel, topPad, xGapTop, bottomPad, gridH } = verticalGeometry(host, opts);
+  const { lineH, xLineH, halfLabel, topPad, xGapTop, xBandTopGap, xBandBottomGap, xLines, bottomPad, gridH } = verticalGeometry(host, opts);
 
   /* [AXIS-01][AXIS-04] 绘制区几何留白经 token 下发（源码禁字面量，三主题同值、走间距阶梯别名）：
        --spacing-axis-y-label-gap    outside 的「Y 标签 ↔ 网格」净距；**标签绘制（axis.js
@@ -141,8 +146,19 @@ export function createFrame(host, opts = {}) {
   /* [AXISTITLE-02] 标题文字上沿（hanging 基线）：Y 标题在 SVG 顶部的标题带内、X 标题在其带内，各让出带内上间距 */
   const titleTop = titleGap;
   const xTitleTop = navTop - titleBottomH + titleGap;
+  /* [AXIS-04] X 标签字体的行框度量：xAxisLabelTextLayout 据此把文字放在行框内上下居中（同 Figma / CSS）。
+     不预留 X 带的图型（饼环、雷达等）不量，省一次探针。 */
+  const xLabelFontBox = xBand === false ? null : measureFontBox(host, 'dv-axis-label');
+  /* 纵向几何自报（只读、开发验收用）：playground 的「测量」开关据此标出各带，不自己重算公式。
+     不是组件 API——生产代码不得读它。 */
+  svg.attr('data-dv-geom', JSON.stringify({
+    gridTop: grid.top, gridBottom: grid.bottom, width: W, height: H,
+    xBand: xBand !== false, xAvoid: xGapTop - xBandTopGap, xGapTop: xBandTopGap,
+    yHalf: yForm === 'outside' ? halfLabel : 0, xLineBox: xLineH * xLines, xLines, xGapBottom: xBandBottomGap,
+    titleBottomH, navTop, navH,
+  }));
   return {
-    svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH,
+    svg, host, width: W, height: H, grid, xBandTop: grid.bottom + xGapTop, lineH, xLineH, xLabelFontBox,
     navTop, navBottom: navTop + navH, navH, titleTop, xTitleTop,
   };
 }

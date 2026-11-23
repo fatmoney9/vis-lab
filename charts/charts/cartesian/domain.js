@@ -10,9 +10,12 @@
  */
 import { stackBars } from '../../core/bar-geometry.js';
 
+/* 一个数据项摊平成参与值域的数：财报点（EARNINGS-01）的实际值与预期值都要落在轴内 */
+const valuesOf = (v) => (v != null && typeof v === 'object' ? [v.actual, v.estimate] : [v]);
+
 /* 一组系列里所有非 null 数据的 [min, max]（空则 [0,0]） */
 export function extentOf(rows) {
-  const nums = rows.flatMap((r) => r.data).filter((v) => v != null);
+  const nums = rows.flatMap((r) => r.data.flatMap(valuesOf)).filter((v) => v != null);
   return nums.length ? [Math.min(...nums), Math.max(...nums)] : [0, 0];
 }
 
@@ -24,6 +27,7 @@ export function extentOf(rows) {
 export function axisDomain(categories, axisSeries, stack, hidden) {
   const bars = axisSeries.filter((r) => r.type === 'bar');
   const lines = axisSeries.filter((r) => r.type === 'line');
+  const points = axisSeries.filter((r) => r.type === 'earnings'); /* [EARNINGS-01] 点图：只并 extent，不堆叠 */
   let lo = 0;
   let hi = 0;
   if (stack !== 'none' && bars.length) {
@@ -38,6 +42,10 @@ export function axisDomain(categories, axisSeries, stack, hidden) {
     lo = Math.min(lo, st.lo); hi = Math.max(hi, st.hi);
   } else if (lines.length) {
     const [a, c] = extentOf(lines);
+    lo = Math.min(lo, a); hi = Math.max(hi, c);
+  }
+  if (points.length) {
+    const [a, c] = extentOf(points);
     lo = Math.min(lo, a); hi = Math.max(hi, c);
   }
   return [lo, hi];

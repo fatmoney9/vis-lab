@@ -408,6 +408,60 @@
   mask-image: url('../../assets/playback/ainvest-period-arrow-next.svg');
 }
 
+/* [PLAYBACK-12] Ainvest 紧凑密度（data-density="compact"，与 data-theme 同元素）：Figma Compact 尺寸。
+   总高 80 = 上 4 + 时间轴 36 + 间距 12 + 控件 24 + 下 4——按标准 110（6 + 46 + 16 + 36 + 6）扣掉控件高后
+   等比缩放（56 / 74 ≈ 0.76）取整。时间轴内：把手 24 居中压在轨道上（轨道顶 10、高 4），
+   11/14 刻度标签贴底（22–36），与把手下沿重叠 2px，同标准档的重叠量。
+   步进按钮圆角走 token radius-playback-step（紧凑 12 = 控件高 24 的一半，见 density.json）。
+   特异性与上面的 :where 规则同为 0，靠**顺序**覆盖——本段必须留在 Ainvest 规则之后。 */
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback {
+  --chart-playback-timeline-height: 36px;
+  --chart-playback-control-height: calc(var(--spacing-12) * 2);
+  gap: var(--spacing-12);
+  height: 80px;
+  min-height: 80px;
+  padding: var(--spacing-4) var(--spacing-0);
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__timeline::before {
+  top: var(--spacing-10);
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__range {
+  height: calc(var(--spacing-12) * 2);
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__range::-webkit-slider-thumb {
+  width: calc(var(--spacing-12) * 2);
+  height: calc(var(--spacing-12) * 2);
+  margin-top: calc(var(--spacing-10) * -1);
+  /* grip 同紧凑缩放轴手柄（behavior datazoom-handle.grip：3 根、高 8、中心距 4） */
+  background-position: calc(50% - 4px) center, 50% center, calc(50% + 4px) center;
+  background-size: 1.5px 8px;
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__range::-moz-range-thumb {
+  width: calc(var(--spacing-12) * 2);
+  height: calc(var(--spacing-12) * 2);
+  background-position: calc(50% - 4px) center, 50% center, calc(50% + 4px) center;
+  background-size: 1.5px 8px;
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__tick {
+  padding-top: 22px;
+  font-size: var(--font-size-super-small);
+  line-height: var(--line-height-extra-small);
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__tick::before {
+  top: var(--spacing-10);
+}
+
+:where([data-theme='ainvest'][data-density='compact']) .chart-playback__step {
+  font-size: var(--font-size-extra-small);
+  line-height: var(--line-height-extra-small);
+}
+
 @container chart-playback (max-width: 600px) {
   .chart-playback__tick-label--full {
     display: none;

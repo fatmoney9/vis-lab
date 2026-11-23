@@ -17,7 +17,7 @@ import {
 } from '../../core/frame.js';
 import { niceSplit } from '../../core/split.js';
 import { bandX, linearY } from '../../core/scale.js';
-import { renderGrid } from '../../core/grid.js';
+import { renderBaseline } from '../../core/grid.js';
 import { wrapAxisLabel } from '../../core/axis.js';
 import { renderAxisTag, renderCrosshairX } from '../../core/crosshair.js';
 import { createTooltip } from '../../core/tooltip.js';
@@ -177,9 +177,6 @@ export function WaterfallChart(host, cfg) {
         .text(period);
     }
 
-    /* [WATERFALL-06] 只把 0 交给 L1 网格构件，天然只渲染一根加深基线。 */
-    renderGrid(frame.svg.append('g').attr('class', 'dv-waterfall-grid'), frame, [0], y);
-
     const connectorLayer = frame.svg.append('g').attr('class', 'dv-waterfall-connectors');
     connectorLayer.selectAll('line.dv-waterfall-connector')
       .data(model.connectors)
@@ -273,6 +270,10 @@ export function WaterfallChart(host, cfg) {
       drawCalls.push(draw);
       draw(1);
     });
+
+    /* [WATERFALL-06][GRID-01] 无常规网格，只画一根加深的 0 轴基线；放在连接线与柱之后、标注之前，
+       故压在柱上（与直角坐标系同口径），不进入场生长。 */
+    renderBaseline(frame.svg.append('g').attr('class', 'dv-waterfall-grid dv-baseline-layer'), frame, y);
 
     const annotationLayer = frame.svg.append('g').attr('class', 'dv-waterfall-annotations');
     if (variant === 'standard') {

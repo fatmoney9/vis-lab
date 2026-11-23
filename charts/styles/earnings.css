@@ -1,0 +1,33 @@
+/* 财报预期对比点（specs/earnings.md · EARNINGS-01..05）与 X 轴副标题按状态上色（specs/axes.md · AXIS-09）。
+   颜色 / 字号一律引用 token，禁止色值字面量。 */
+
+/* [EARNINGS-01] 预期环：内描边、无填充；描边宽由 L1 读 token 后写属性（几何量），色在这里 */
+.dv-earnings-estimate {
+  fill: none;
+  stroke: var(--dv-earnings-estimate); /* 色板「其他」色，L2 下发（EARNINGS-01） */
+}
+/* [EARNINGS-04] 待公布：环内填前景色，盖住穿过环心的网格线 */
+.dv-earnings-estimate--pending { fill: var(--color-foreground-layer1); }
+.dv-earnings-estimate-label {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family-number);
+  font-size: var(--font-size-earnings-label);
+  font-weight: var(--font-weight-earnings-label);
+}
+
+/* [EARNINGS-03] 实际点：涨 / 跌 / 无预期走系列色（dotG 上 color 下发） */
+.dv-earnings-actual--up { fill: var(--color-price-up); }
+.dv-earnings-actual--down { fill: var(--color-price-down); }
+.dv-earnings-actual--series { fill: currentColor; }
+
+/* [AXIS-09] X 轴副标题（第二行）按状态上色、字重 500；字号 / 行高随所在 <text>，与主标签一致。
+   字重写在类上，renderXLabels 带着这个类名量宽，碰撞判定按加粗后的真实宽度算 */
+.dv-axis-sub { font-weight: var(--font-weight-medium); }
+.dv-axis-sub--up { fill: var(--color-price-up); }
+.dv-axis-sub--down { fill: var(--color-price-down); }
+.dv-axis-sub--muted { fill: var(--color-text-secondary); }
+
+/* [EARNINGS-06] tooltip 差值行随状态上色 */
+.dv-tooltip__value--up { color: var(--color-price-up); }
+.dv-tooltip__value--down { color: var(--color-price-down); }
+.dv-tooltip__value--muted { color: var(--color-text-secondary); }

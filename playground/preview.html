@@ -116,6 +116,17 @@
   .chart-host { height: auto; }
   .theme-card.is-resized .chart-host { height: 100%; }
 
+  /* ── 「测量」开关：开发验收叠加层（只在本页，不属于组件样式）。
+     色块半透明叠在图上，标出 X 轴带各段与缩放带；数字是该段的像素高。 */
+  .pv-measure rect { stroke: none; }
+  .pv-measure .m-avoid { fill: rgba(140, 140, 140, 0.28); }
+  .pv-measure .m-gap { fill: rgba(255, 140, 0, 0.35); }
+  .pv-measure .m-line { fill: rgba(30, 120, 255, 0.22); }
+  .pv-measure .m-nav { fill: rgba(0, 170, 90, 0.18); }
+  .pv-measure .m-edge { stroke: rgba(230, 0, 90, 0.9); stroke-width: 1; stroke-dasharray: 2 2; }
+  .pv-measure text { font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: rgba(200, 0, 80, 1); paint-order: stroke; stroke: rgba(255, 255, 255, 0.9); stroke-width: 2.5px; }
+  .theme-card[data-mode="dark"] .pv-measure text { stroke: rgba(0, 0, 0, 0.85); fill: rgba(255, 120, 170, 1); }
+
   /* ── 右栏：配置（端 / 明暗）────────────────────────────────────── */
   .config { padding: 20px 18px; overflow-y: auto; flex: 1; }
   .config h3 { font-size: 12px; font-weight: 600; margin: 0 0 18px; letter-spacing: 0.2px; }
@@ -123,6 +134,9 @@
   .field-label { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
   .field-label b { font-size: 12px; font-weight: 600; color: var(--shell-text); }
   .field-label span { font-size: 11px; color: var(--shell-text-3); }
+  .field-note { margin-top: 6px; font-size: 11px; line-height: 16px; color: var(--shell-text-3); }
+  /* 某个数据场景让组件抛错时，卡片里照实写出来——那也是边界表现的一部分，不该让整页白屏 */
+  .chart-error { padding: 12px; font-size: 12px; line-height: 18px; color: #c0392b; white-space: pre-wrap; word-break: break-word; }
 
   .seg { display: flex; background: rgba(0, 0, 0, 0.04); border-radius: 8px; padding: 3px; gap: 3px; }
   .seg + .seg { margin-top: 6px; }
@@ -195,6 +209,14 @@
           <button data-value="light" class="is-active">浅色</button>
           <button data-value="dark">深色</button>
         </div>
+      </div>
+
+      <!-- 数据场景（边界与极端情况）：对当前任何一张图生效，按钮由 demos/scenarios.js 的 SCENARIOS 生成。
+           某族无从构造的场景会在下方写明原因（不静默显示成「常规」）。 -->
+      <div class="field">
+        <div class="field-label"><b>数据场景</b><span>边界与极端情况</span></div>
+        <div class="seg" id="seg-scenario"></div>
+        <div class="field-note" id="scenario-note" hidden></div>
       </div>
 
       <div class="field">
@@ -399,6 +421,16 @@
         </div>
       </div>
 
+      <!-- 开发验收叠加层：读 createFrame 自报的 data-dv-geom，标出 Y 半行（网格上下各一）、X 轴带（上间距 / 行框 / 下间距）
+           与缩放带，数字为像素高。只是看，不改图；切旋钮、拖缩放、改尺寸都会跟着重画。 -->
+      <div class="field">
+        <div class="field-label"><b>测量</b><span>X 轴带 / 缩放带</span></div>
+        <div class="seg" id="seg-measure">
+          <button data-value="off" class="is-active">关</button>
+          <button data-value="on">开</button>
+        </div>
+      </div>
+
       <p class="config-note">
         端与明暗切换后三张卡片会整体重绘：端影响 <code>--font-size-axis</code> / 网格线粗细与轴的行为旋钮，
         明暗切换整套文本与网格色。左侧切分类换图形，三主题横向对比同一份数据。
@@ -431,11 +463,11 @@
 </div>
 
 <script type="importmap">
-  { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm" } }
+  { "imports": { "d3": "../vendor/d3.v7.9.0.js" } }
 </script>
 <script type="module">
   import { mountExample } from '../demos/registry.js';
-  import { examplesFor, suggestedLegend, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, buildConfig, playbackPeriodsOf, clampPeriodIndex, activePeriodExample } from '../demos/examples.js';
+  import { examplesFor, suggestedLegend, SCENARIOS, scenarioNote, THEMES, capabilitiesOf, defaultDensityOf, densityControlOf, radarGridShapeOf, radarShapeOf, radarEditableOf, radarAxisLabelLayoutOf, buildConfig, playbackPeriodsOf, clampPeriodIndex, activePeriodExample } from '../demos/examples.js';
   import { densitiesOf } from '../charts/core/theme.js';
   import { playbackCopy, playbackMarkup } from '../demos/playback/view.js';
   import { createPlaybackController } from '../demos/playback/controller.js';
@@ -444,7 +476,7 @@
      加示例只加那一处。本页只负责「怎么展示」：三主题横向并排 + 开发验收用的全套旋钮。 */
   const CATEGORIES = examplesFor('playground');
   const initialCategory = CATEGORIES.find(({ id }) => id === window.location.hash.slice(1)) ?? CATEGORIES[0];
-  const state = { category: initialCategory.id, periodIndex: 0, platform: 'pc', mode: 'light', density: defaultDensityOf(initialCategory), treemapColor: 'intensity', treemapImage: 'off', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
+  const state = { category: initialCategory.id, periodIndex: 0, platform: 'pc', mode: 'light', density: defaultDensityOf(initialCategory), treemapColor: 'intensity', treemapImage: 'off', waterfallColor: 'primary', label: 'auto', labelLayout: 'off', labelAlign: 'anchor', legend: 'right', legendSelect: 'multi', axisTitle: 'off', axisValue: 'off', radarGridShape: 'auto', radarShape: 'auto', radarEditable: 'off', ratingStyle: 'gradient', ratingBandCount: '6', axisLabelLayout: 'auto', chordVariant: 'undirected', chordLabelLayout: 'arc', scenario: 'normal', area: 'off', zoom: 'off', yIndicator: 'off', animation: 'on' };
 
   /* ── 左栏导航：按 group 分节 ─────────────────────────────────────── */
   const navEl = document.getElementById('nav');
@@ -605,9 +637,22 @@
       mount.appendChild(host);
       /* 配置装配与组件挂载都走 demos/ 共享模块：cfg 怎么拼、哪个旋钮对哪种图表生效，
          两个预览面用同一份实现（铁律3：面不自己拼装）。新图表类型只需在 registry 登记。 */
-      chartInstances[t.key] = mountExample(host, periodExample(cat, t.theme), knobs(t.theme)).instance;
+      try {
+        chartInstances[t.key] = mountExample(host, periodExample(cat, t.theme), knobs(t.theme)).instance;
+      } catch (error) {
+        chartInstances[t.key] = null;
+        host.innerHTML = '';
+        const msg = document.createElement('div');
+        msg.className = 'chart-error';
+        msg.textContent = `渲染失败（数据场景：${SCENARIOS.find((s) => s.id === state.scenario)?.label}）\n${error.message}`;
+        host.appendChild(msg);
+      }
     });
     renderPlayback(cat);
+    const note = scenarioNote(cat.chart, state.scenario);
+    const noteEl = document.getElementById('scenario-note');
+    noteEl.hidden = !note;
+    noteEl.textContent = note ? `本图不适用：${note}` : '';
   }
 
   /* 旋钮状态 → buildConfig 的入参。**一份实现两个出口**：首屏挂载走 mountExample，
@@ -616,6 +661,7 @@
     return {
       theme: themeId,
       density: state.density,
+      scenario: state.scenario, /* 数据场景：边界与极端情况（demos/scenarios.js） */
       treemapColor: state.treemapColor,
       treemapImage: state.treemapImage === 'on',
       waterfallColor: state.waterfallColor,
@@ -717,6 +763,9 @@
     document.getElementById(id).querySelectorAll('button')
       .forEach((b) => b.classList.toggle('is-active', b.dataset.value === value));
   }
+  document.getElementById('seg-scenario').innerHTML = SCENARIOS
+    .map((s) => `<button data-value="${s.id}"${s.id === state.scenario ? ' class="is-active"' : ''}>${s.label}</button>`).join('');
+  wireSeg('seg-scenario', 'scenario');
   wireSeg('seg-platform', 'platform');
   wireSeg('seg-mode', 'mode');
   wireSeg('seg-density', 'density');
@@ -745,6 +794,67 @@
   /* [MOTION-04] 生长只在实例首次挂载时播，故「重播」= 整卡重建（render 本就 destroy + 新建三张卡）。
      动任意旋钮都会走同一条路径，所以它们也都会重播——这正是规范里「重建实例 = 重新入场」的表现。 */
   document.getElementById('seg-replay').addEventListener('click', () => render());
+
+  /* ── 测量叠加层：不进 state / knobs（不改图，只看），故不走 wireSeg 的 render() ── */
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  let measureOn = false;
+  function drawMeasure(svg) {
+    const geomAttr = svg.getAttribute('data-dv-geom');
+    const old = svg.querySelector(':scope > g.pv-measure');
+    if (!measureOn || !geomAttr) { old?.remove(); return; }
+    if (old && old.dataset.geom === geomAttr) return; /* 几何没变：不重画，也就不会自触发观察器 */
+    old?.remove();
+    const g = JSON.parse(geomAttr);
+    const layer = document.createElementNS(SVG_NS, 'g');
+    layer.setAttribute('class', 'pv-measure');
+    layer.setAttribute('pointer-events', 'none');
+    layer.dataset.geom = geomAttr;
+    const add = (tag, attrs) => {
+      const el = document.createElementNS(SVG_NS, tag);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      layer.appendChild(el);
+      return el;
+    };
+    const fmt = (v) => String(Math.round(v * 100) / 100);
+    const band = (y, h, cls) => { if (h > 0) add('rect', { class: cls, x: 0, y, width: g.width, height: h }); };
+    const note = (y, text) => { const t = add('text', { x: 2, y, 'dominant-baseline': 'central' }); t.textContent = text; };
+    if (g.xBand) {
+      let y = g.gridBottom;
+      band(y, g.xAvoid, 'm-avoid'); y += g.xAvoid;
+      band(y, g.xGapTop, 'm-gap'); y += g.xGapTop;
+      band(y, g.xLineBox, 'm-line'); y += g.xLineBox;
+      band(y, g.xGapBottom, 'm-gap'); y += g.xGapBottom;
+      const parts = [
+        g.xAvoid > 0 ? `灰 Y 半行 ${fmt(g.xAvoid)}` : null,
+        `橙 上 ${fmt(g.xGapTop)}`,
+        `蓝 行框 ${fmt(g.xLineBox)}${g.xLines > 1 ? `（${g.xLines} 行）` : ''}`,
+        `橙 下 ${fmt(g.xGapBottom)}`,
+      ].filter(Boolean);
+      /* 汇总写在网格线上方：X 带本身太窄（紧凑档上下间距只有 2px），写在带里会叠成一团 */
+      note(g.gridBottom - 7, `X 带 ${fmt(y - g.gridBottom)} = ${parts.join(' + ')}`);
+    }
+    /* outside：网格上方同样留半个 Y 标签行高（首条网格线 = 顶部 Y 标签行框中线） */
+    if (g.yHalf > 0) band(g.gridTop - g.yHalf, g.yHalf, 'm-avoid');
+    if (g.navH > 0) {
+      band(g.navTop, g.navH, 'm-nav');
+      note(g.navTop + 6, `绿 缩放带 ${fmt(g.navH)}`);
+    }
+    add('line', { class: 'm-edge', x1: 0, x2: g.width, y1: g.gridBottom, y2: g.gridBottom });
+    svg.appendChild(layer);
+  }
+  const drawAllMeasures = () => canvasEl.querySelectorAll('svg[data-dv-geom]').forEach(drawMeasure);
+  let measureFrame = 0;
+  new MutationObserver(() => {
+    if (measureFrame) return;
+    measureFrame = requestAnimationFrame(() => { measureFrame = 0; drawAllMeasures(); });
+  }).observe(canvasEl, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-dv-geom'] });
+  document.getElementById('seg-measure').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    measureOn = btn.dataset.value === 'on';
+    e.currentTarget.querySelectorAll('button').forEach((b) => b.classList.toggle('is-active', b === btn));
+    drawAllMeasures();
+  });
 
   render();
 </script>

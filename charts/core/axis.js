@@ -183,11 +183,27 @@ export function renderAxisLabelLines(selection, {
 
 /* [AXIS-04][TOOLTIP-09] 常态与高亮态 X 标签共用的文字定位合同。
    位置与逐行节奏只能在这一处定义，避免两个状态各自计算后产生像素跳动。 */
+/* X 标签行高：frame.xLineH（line-height-axis-x）；旧形态 frame 只有 lineH 时回落 */
+const xLineHOf = (frame) => frame.xLineH ?? frame.lineH;
+
 export function xAxisLabelTextLayout(frame) {
+  /* [AXIS-04] 文字在 lineH 行框内上下居中（与 Figma 文本框、CSS 行框同一排字方式）：
+     基线 = 行框顶 + half-leading + ascent，half-leading = (lineH − ascent − descent) / 2。
+     ascent / descent 是字体的行框度量（createFrame 量好放在 frame.xLabelFontBox），与字符无关，
+     故同一根轴上所有标签同基线；多行时逐行 dy = lineH，每行各占一个行框。
+     2026-11-23 前用 hanging 把悬挂基线（≈ 字顶）直接贴在带上沿，行高余量全堆在字下，
+     带上间距一小（Ainvest 紧凑 2px）字就贴到网格线上。
+     缺度量（非浏览器环境）时回落到旧的 hanging 贴上沿。 */
+  const box = frame.xLabelFontBox;
+  if (!box || !Number.isFinite(box.ascent) || !Number.isFinite(box.descent)) {
+    return { y: frame.xBandTop, dominantBaseline: 'hanging', lineHeight: xLineHOf(frame) };
+  }
+  const lineH = xLineHOf(frame);
+  const halfLeading = (lineH - box.ascent - box.descent) / 2;
   return {
-    y: frame.xBandTop,
-    dominantBaseline: 'hanging',
-    lineHeight: frame.lineH,
+    y: frame.xBandTop + halfLeading + box.ascent,
+    dominantBaseline: 'alphabetic',
+    lineHeight: lineH,
   };
 }
 
@@ -206,7 +222,16 @@ export function yLabelInset(host, ticks, format = formatValue) {
 }
 
 /*
- * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x, lines? }]，x = 类目中心）。
+ * [AXIS-09] X 轴副标题（标签下方第二行）的类名：按状态语义上色（up / down / muted，色值在 styles/earnings.css）。
+ * 常态标签与 hover 贴片（TOOLTIP-09）都从这里取，两种状态同色同类名。
+ */
+export const axisSubClass = (tone) => `dv-axis-sub dv-axis-sub--${tone === 'up' || tone === 'down' ? tone : 'muted'}`;
+const hasSubLine = (d) => d.sub != null && d.sub !== '';
+
+/*
+ * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x, lines?, sub?, subTone? }]，x = 类目中心）。
+ * [AXIS-09] sub / subTone：可选第二行（副标题）与其颜色语义；任一项带 sub 时整根轴按多行排布，
+ *           调用方须同时给 createFrame 传 xBandLines: 2。**不传 sub 时与原单行路径逐像素一致**。
  * lines 缺省时维持单行；存在时直接逐行测量并以最宽行作为标签盒，不要求 L2 另造测量探针。
  * [AXIS-05] 对齐：中间标签居中；首尾是否贴绘制区边缘由 flushFirst / flushLast
  *           决定（数据贴边时为 true，如满幅折线）；居中标签越界时向内回收。
@@ -223,14 +248,26 @@ export function renderXLabels(layer, frame, items, opts = {}) {
   } = opts;
   const n = items.length;
   const minGap = tokenNum(frame.host, '--spacing-axis-x-label-min-gap');
-  const lineGroups = items.map((datum, datumIndex) => axisLabelLines(datum.lines ?? datum.label)
+  /* [AXIS-09] 副标题 = 主标签各行之后再追加一行；没有任何 sub 时 linesOf / classOf 与原来完全相同 */
+  const withSub = items.some(hasSubLine);
+  const linesOf = (d) => (withSub && hasSubLine(d)
+    ? [...axisLabelLines(d.lines ?? d.label), String(d.sub)]
+    : (d.lines ?? d.label));
+  const classOf = withSub
+    ? (text, lineIndex, datum, datumIndex, nodes) => {
+      const base = lineClass ? lineClass(text, lineIndex, datum, datumIndex, nodes) : null;
+      const isSub = hasSubLine(datum) && lineIndex === axisLabelLines(datum.lines ?? datum.label).length;
+      return [base, isSub ? axisSubClass(datum.subTone) : null].filter(Boolean).join(' ') || null;
+    }
+    : lineClass;
+  const lineGroups = items.map((datum, datumIndex) => axisLabelLines(linesOf(datum))
     .map((text, lineIndex) => ({
       datum,
       datumIndex,
       lineIndex,
       text,
-      className: lineClass
-        ? lineClass(text, lineIndex, datum, datumIndex, [])
+      className: classOf
+        ? classOf(text, lineIndex, datum, datumIndex, [])
         : null,
     })));
   const flatLines = lineGroups.flat();
@@ -283,14 +320,14 @@ export function renderXLabels(layer, frame, items, opts = {}) {
     .attr('y', textLayout.y)
     .attr('dominant-baseline', textLayout.dominantBaseline);
 
-  if (kept.some((d) => d.lines != null)) {
+  if (withSub || kept.some((d) => d.lines != null)) {
     const textX = (d) => d.left + d.width / 2;
     labels.attr('x', textX).attr('text-anchor', 'middle');
     renderAxisLabelLines(labels, {
-      lines: (d) => d.lines ?? d.label,
+      lines: linesOf,
       x: textX,
       lineHeight: textLayout.lineHeight,
-      lineClass,
+      lineClass: classOf,
     });
   } else {
     /* 保持既有单行轴 DOM 与起点锚定不变，避免无关图型因本次多行能力重构发生像素漂移。 */

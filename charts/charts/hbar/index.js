@@ -78,7 +78,7 @@ export function HBarChart(host, cfg) {
     const valueMax = tokenNum(host, '--size-hbar-data-label-max') || 40;
     const gap = tokenNum(host, '--spacing-axis-y-label-gap') || 8;
     const valueGap = tokenNum(host, '--spacing-data-label-gap') || 4;
-    const axisLh = tokenNum(host, '--line-height-axis') || 12;
+    const axisLh = tokenNum(host, '--line-height-axis-x') || 12; /* 横向条的数值轴在底部 = X 轴 */
     const axisBand = axisLh + gap;            /* [HBAR-22] 顶部轴标签带 */
     const rMax = tokenNum(host, '--radius-bar-top');
     const rReduced = tokenNum(host, '--radius-bar-top-reduced');

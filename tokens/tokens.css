@@ -77,6 +77,7 @@
   --spacing-24: 24px;
   --font-size-axis: 12px;
   --line-height-axis: 12px;
+  --line-height-axis-x: var(--line-height-axis);
   --font-weight-axis: var(--font-weight-medium);
   --color-text-axis: rgba(0, 0, 0, 0.6);
   --spacing-axis-y-inset-gap: var(--spacing-8);
@@ -99,6 +100,7 @@
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: #3B3B3B;
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: rgba(255, 255, 255, 0.6);
   --color-text-tooltip-series: rgba(255, 255, 255, 0.84);
   --color-text-tooltip-value: rgba(255, 255, 255, 0.84);
@@ -136,10 +138,14 @@
   --size-world-heatmap-flag: 16px;
   --size-world-heatmap-height: 240px;
   --font-size-tooltip: 12px;
+  --line-height-tooltip: 16px;
   --font-family-tooltip: var(--font-family-cn);
   --font-weight-tooltip-value: var(--font-weight-medium);
   --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
+  --spacing-tooltip-title-pad: 0px;
+  --spacing-tooltip-title-gap: var(--spacing-tooltip-row);
+  --size-tooltip-divider: 0px;
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 280px;
@@ -176,6 +182,7 @@
   --size-slider-handle-border: 0.5px;
   --radius-slider-handle: var(--radius-6);
   --radius-slider-mask: var(--radius-6);
+  --spacing-datazoom-band-v: 6px;
   --color-playback-primary-bg: #FF2436;
   --color-playback-primary-paused-bg: var(--color-grey-05);
   --radius-playback-step: var(--radius-4);
@@ -204,6 +211,13 @@
   --size-line-stroke: 1.5px;
   --size-line-stroke-multi: 1px;
   --size-line-point: 6px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -328,6 +342,7 @@
   --color-visualization-divider: rgba(255, 255, 255, 0.06);
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
+  --color-foreground-layer1: #1A1A1A;
   --color-visualization-highlight-line: rgba(255, 255, 255, 0.6);
   --color-visualization-highlight-block: rgba(255, 255, 255, 0.1);
   --color-world-heatmap-empty: rgba(255, 255, 255, 0.06);
@@ -417,6 +432,7 @@
   --spacing-24: 24px;
   --font-size-axis: 14px;
   --line-height-axis: 14px;
+  --line-height-axis-x: var(--line-height-axis);
   --font-weight-axis: var(--font-weight-medium);
   --color-text-axis: #87879C;
   --spacing-axis-y-inset-gap: var(--spacing-8);
@@ -439,6 +455,7 @@
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: rgba(255, 255, 255, 0.95);
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: #292933;
   --color-text-tooltip-series: #4F4F5E;
   --color-text-tooltip-value: #4F4F5E;
@@ -476,10 +493,14 @@
   --size-world-heatmap-flag: 16px;
   --size-world-heatmap-height: 240px;
   --font-size-tooltip: 14px;
+  --line-height-tooltip: 20px;
   --font-family-tooltip: Arial;
   --font-weight-tooltip-value: var(--font-weight-regular);
   --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
+  --spacing-tooltip-title-pad: var(--spacing-tooltip-row);
+  --spacing-tooltip-title-gap: var(--spacing-tooltip-row);
+  --size-tooltip-divider: 1px;
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 280px;
@@ -516,6 +537,7 @@
   --size-slider-handle-border: 1px;
   --radius-slider-handle: var(--radius-6);
   --radius-slider-mask: var(--radius-4);
+  --spacing-datazoom-band-v: 6px;
   --color-playback-primary-bg: #1B63D9;
   --color-playback-primary-paused-bg: var(--color-grey-05);
   --radius-playback-step: var(--radius-4);
@@ -544,6 +566,13 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 8px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: currentColor;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -667,6 +696,7 @@
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
   --color-visualization-tooltip: rgba(27, 27, 36, 0.95);
+  --color-foreground-layer1: #1A1A1A;
   --color-text-tooltip-title: #E9E9F2;
   --color-text-tooltip-series: #D1D1E0;
   --color-text-tooltip-value: #D1D1E0;
@@ -760,6 +790,7 @@
   --spacing-24: 24px;
   --font-size-axis: 11px;
   --line-height-axis: 16px;
+  --line-height-axis-x: var(--line-height-axis);
   --font-weight-axis: var(--font-weight-regular);
   --color-text-axis: #000000;
   --spacing-axis-y-inset-gap: var(--spacing-8);
@@ -778,10 +809,11 @@
   --color-text-inverse-quaternary: rgba(255, 255, 255, 0.2);
   --color-text-link: #165DFF;
   --color-visualization-divider: rgba(0, 0, 0, 0.05);
-  --color-visualization-divider-deep: #858585;
+  --color-visualization-divider-deep: #808080;
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: #383838;
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: #ffffff;
   --color-text-tooltip-series: #ffffff;
   --color-text-tooltip-value: #ffffff;
@@ -819,10 +851,14 @@
   --size-world-heatmap-flag: 16px;
   --size-world-heatmap-height: 240px;
   --font-size-tooltip: 12px;
+  --line-height-tooltip: 16px;
   --font-family-tooltip: var(--font-family-en);
   --font-weight-tooltip-value: var(--font-weight-regular);
   --spacing-tooltip-pad: var(--spacing-8);
   --spacing-tooltip-row: var(--spacing-4);
+  --spacing-tooltip-title-pad: 0px;
+  --spacing-tooltip-title-gap: var(--spacing-tooltip-row);
+  --size-tooltip-divider: 0px;
   --spacing-tooltip-row-gap: var(--spacing-12);
   --radius-tooltip: var(--radius-4);
   --size-tooltip-max-width: 280px;
@@ -859,6 +895,7 @@
   --size-slider-handle-border: 1px;
   --radius-slider-handle: var(--radius-full);
   --radius-slider-mask: var(--radius-2);
+  --spacing-datazoom-band-v: 6px;
   --color-playback-primary-bg: #165DFF;
   --color-playback-primary-paused-bg: var(--color-grey-05);
   --radius-playback-step: 18px;
@@ -887,6 +924,13 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 8px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -1022,8 +1066,10 @@
   --color-text-quaternary: rgba(255, 255, 255, 0.2);
   --color-text-link: #3371FF;
   --color-visualization-divider: rgba(255, 255, 255, 0.07);
+  --color-visualization-divider-deep: #666666;
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
+  --color-foreground-layer1: #1A1A1A;
   --color-visualization-highlight-line: rgba(255, 255, 255, 0.6);
   --color-visualization-highlight-block: rgba(255, 255, 255, 0.1);
   --color-visualization-highlight-background-tick: #ffffff;
@@ -1068,20 +1114,27 @@
   --size-chart-min-width: 300px;
   --spacing-axis-x-band-top: var(--spacing-2);
   --spacing-axis-x-band-bottom: var(--spacing-2);
+  --line-height-axis-x: 14px;
+  --line-height-data-label: var(--line-height-axis-x);
+  --spacing-datazoom-band-v: var(--spacing-4);
   --size-bar-max: 24px;
   --size-bar-group-container-max: 74px;
   --size-donut-ring-width: 24px;
   --size-line-point: 6px;
   --font-size-tooltip: 11px;
+  --line-height-tooltip: 14px;
   --size-world-heatmap-height: 140px;
+  --radius-playback-step: 12px;
 }
 
 [data-theme="ainvest"][data-density="compact"][data-platform="mobile"] {
   --spacing-legend-container-v-top: var(--spacing-16);
   --spacing-legend-container-v-bottom: var(--spacing-16);
+  --line-height-axis-x: 12px;
 }
 
 [data-theme="ainvest"][data-density="compact"][data-platform="mobile"][data-mode="dark"] {
   --spacing-legend-container-v-top: var(--spacing-16);
   --spacing-legend-container-v-bottom: var(--spacing-16);
+  --line-height-axis-x: 12px;
 }
