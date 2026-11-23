@@ -44,7 +44,7 @@
 
   <!-- 固定 d3 版本：浮动的 d3@7 会在上游发版当天悄悄换掉线上依赖。四个预览面各有一份，升级时一起改。 -->
   <script type="importmap">
-    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm" } }
+    { "imports": { "d3": "./vendor/d3.v7.9.0.js" } }
   </script>
   <script>
     /* d3 走 CDN：模块图加载失败时页面只会空白、没有任何提示。模块开头会打上 data-ready，

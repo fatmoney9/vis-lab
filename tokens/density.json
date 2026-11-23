@@ -28,6 +28,7 @@
         "size-donut-ring-width": "24px",
         "size-line-point": "6px",
         "font-size-tooltip": "11px",
+        "line-height-tooltip": "14px",
         "size-world-heatmap-height": "140px",
         "radius-playback-step": "12px"
       },
