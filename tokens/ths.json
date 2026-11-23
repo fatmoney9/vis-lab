@@ -398,7 +398,10 @@
   "line-height-radar-label-value": "{line-height-small}",
 
   "$section-26": "瀑布图 Waterfall（Figma node 135:2840）",
-  "color-waterfall-connector": "{color-visualization-divider}",
+  "color-waterfall-connector": {
+    "light": "rgba(0, 0, 0, 0.2)",
+    "dark": "rgba(255, 255, 255, 0.22)"
+  },
   "size-waterfall-connector": "1px",
   "dash-waterfall-connector": "2 2",
   "opacity-waterfall-delta-fill": 0.2,
