@@ -19,7 +19,7 @@ export const EPS_QUARTERS = [
 /* 状态 → 副标题文案与颜色语义。判定口径与 L1 earningsState 相同（实际 vs 预期）；
    这里只决定「写什么字」，颜色语义（tone）随状态固定。 */
 export function epsSubOf({ actual, estimate }) {
-  if (actual == null && estimate == null) return { text: '', tone: 'muted' }; /* 该季无数据：不写副标题 */
+  if (actual == null && estimate == null) return { text: '--', tone: 'muted' }; /* 该季无数据：不画点，副标题照写「--」（EARNINGS-09） */
   if (actual == null) return { text: '待公布', tone: 'muted' };
   if (estimate == null) return { text: '--', tone: 'muted' };
   if (Math.abs(actual - estimate) < 1e-9) return { text: '符合', tone: 'up' };

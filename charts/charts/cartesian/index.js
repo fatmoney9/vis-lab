@@ -265,12 +265,23 @@ export function CartesianChart(host, cfg) {
       }
     }
 
+    /* [EARNINGS-09] 财报图的值全为 0：没有可取整的跨度，0 放在垂直正中，上下各一条网格线、只标 0。
+       （niceSplit 对 [0, 0] 会给出 0~某个间隔的整套刻度，读起来像「有数据、只是很小」） */
+    let labelTicks = pSplit.ticks;
+    if (!dual && earnVisible.length && viewResolved.every((r) => r.type === 'earnings')) {
+      const vals = earnVisible.flatMap((r) => r.data.flatMap((d) => [d?.actual, d?.estimate])).filter((v) => v != null);
+      if (vals.length && vals.every((v) => Number(v) === 0)) {
+        pSplit = { min: -1, max: 1, interval: 1, ticks: [-1, 0, 1] };
+        labelTicks = [0];
+      }
+    }
+
     /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
-    const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
+    const oppTicks = dual ? sSplit.ticks : mirror ? labelTicks : null;
 
     /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量。
        轴标题不参与——它贴画布外缘，与标签列宽无关（AXISTITLE-04）。 */
-    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
+    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, labelTicks.map(yFormat)) : 0;
     const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     const frame = createFrame(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
@@ -286,7 +297,7 @@ export function CartesianChart(host, cfg) {
     let dataL = frame.grid.left;
     let dataR = frame.grid.right;
     if (yForm === 'inside') {
-      const insetP = yLabelInset(plotHost, pSplit.ticks, yFormat);
+      const insetP = yLabelInset(plotHost, labelTicks, yFormat);
       if (ySide === 'left') dataL += insetP; else dataR -= insetP;
       if (oppTicks) {
         const insetO = yLabelInset(plotHost, oppTicks, yFormat);
@@ -299,7 +310,7 @@ export function CartesianChart(host, cfg) {
     const x = bandX(viewCats, dataL, dataR, { mode: xMode });
 
     renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
-    renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03] */
+    renderYLabels(frame.svg.append('g'), frame, labelTicks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03][EARNINGS-09] 网格画全部刻度，标签只标 labelTicks */
     if (oppTicks) renderYLabels(frame.svg.append('g'), frame, oppTicks, yS, { form: yForm, side: oppSide, format: yFormat, align: yAlign }); /* [AXIS-02] 反侧：副轴另一套 / iFinD 镜像同一套 */
     renderXLabels(frame.svg.append('g'), frame,
       viewCats.map((c, j) => ({ label: c, x: x(c) + x.bandwidth() / 2, sub: viewSub?.[j]?.text, subTone: viewSub?.[j]?.tone })),

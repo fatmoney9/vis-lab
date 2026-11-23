@@ -27,7 +27,7 @@ function earningsRows(r, i, hidden, format) {
   const state = earningsState(d.actual, d.estimate);
   const tone = earningsTone(state);
   const key = (part) => `${r.name}|${part}`;
-  const show = (v) => (v == null ? '-' : format(Number(v)));
+  const show = (v) => (v == null ? '--' : format(Number(v))); /* [EARNINGS-09] 缺值写「--」，与副标题同一记号 */
   const rows = [];
   if (!hidden.has(key('actual'))) {
     rows.push({

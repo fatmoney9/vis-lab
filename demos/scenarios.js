@@ -11,6 +11,7 @@
  *   extreme  极端值    一项独大（约 ×50～×100），其余被压扁（压窄扇区、细柱、标签碰撞）
  *   gaps     0 与 null 第 2 项为 0、第 4 项为 null（压断口、0 占位、取色槽位不重排）
  *   single   单项      只留一项（压单系列取色、单类目缩放轴、单节点布局）
+ *   zero     全 0      全部值为 0（压「没有跨度的轴」：如财报图 0 居中只标 0，EARNINGS-09）
  *   empty    全空      全部 0 / null（压「不抛错、不留半个图」）
  *
  * **尊重各族的数据契约**：某族规定了缺值的表达方式（如世界地图「没有数据 = 不出现该国」、
@@ -28,6 +29,7 @@ export const SCENARIOS = [
   { id: 'extreme', label: '极端值' },
   { id: 'gaps', label: '0 与 null' },
   { id: 'single', label: '单项' },
+  { id: 'zero', label: '全 0' },
   { id: 'empty', label: '全空' },
 ];
 
@@ -55,6 +57,12 @@ const blankValue = (v) => (v != null && typeof v === 'object' ? { ...v, actual: 
 /* ── 各族变换（cfg 已是深拷贝，可直接改）─────────────────────── */
 
 const cartesian = {
+  /* 财报点按设计稿「异常情况 02」造：实际值全为 0、没有预期 */
+  zero(cfg) {
+    cfg.series.forEach((s) => {
+      s.data = s.data.map((v) => (v != null && typeof v === 'object' ? { ...v, actual: 0, estimate: null } : 0));
+    });
+  },
   long(cfg) {
     cfg.categories = cfg.categories.map((_, i) => longName(i));
     cfg.series.forEach((s, k) => { if (cfg.series.length > 1 || s.type !== 'earnings') s.name = longName(k + 1); });
@@ -88,6 +96,7 @@ const listOf = (key, { nameKey = 'name', valueKey = 'value', min = 1 } = {}) => 
     });
   },
   single(cfg) { cfg[key] = cfg[key].slice(0, min); },
+  zero(cfg) { cfg[key].forEach((it) => { it[valueKey] = 0; }); },
   empty(cfg) { cfg[key].forEach((it, i) => { it[valueKey] = i % 2 ? null : 0; }); },
 });
 
@@ -116,6 +125,7 @@ const radar = {
     cfg.dimensions = cfg.dimensions.slice(0, 3);
     cfg.series = cfg.series.slice(0, 1).map((s) => ({ ...s, data: s.data.slice(0, 3) }));
   },
+  zero(cfg) { cfg.series.forEach((s) => { s.data = s.data.map(() => 0); }); },
   empty(cfg) { cfg.series.forEach((s) => { s.data = s.data.map(() => null); }); },
 };
 
@@ -143,6 +153,7 @@ const treemap = {
     if (!first) return;
     cfg.root.children = [first.children?.length ? { ...first, children: first.children.slice(0, 1) } : first];
   },
+  zero(cfg) { leaves(cfg.root).forEach((leaf) => { leaf.value = 0; }); },
   empty(cfg) { leaves(cfg.root).forEach((leaf, i) => { leaf.value = i % 2 ? null : 0; }); },
 };
 
@@ -165,7 +176,8 @@ const chord = {
     cfg.entities = cfg.entities.slice(0, 3);
     cfg.matrix = cfg.matrix.slice(0, 3).map((row) => row.slice(0, 3));
   },
-  empty(cfg) { cfg.matrix = cfg.matrix.map((row) => row.map(() => 0)); },
+  zero(cfg) { cfg.matrix = cfg.matrix.map((row) => row.map(() => 0)); },
+  empty(cfg) { cfg.matrix = cfg.matrix.map((row) => row.map(() => null)); },
 };
 
 /* 瀑布：组件要求「汇总项 = 当前累计值」「带分段的项 value = 分段和」（WATERFALL-01/02/04），
@@ -205,6 +217,8 @@ const waterfall = {
     if (d) { setItemValue(d, 0); rebalance(cfg.items); }
   },
   single(cfg) { cfg.items = cfg.items.slice(0, 1); },
+  zero(cfg) { cfg.items.forEach((it) => setItemValue(it, 0)); rebalance(cfg.items); },
+  /* 瀑布组件拒绝缺值，全空与全 0 同构 */
   empty(cfg) { cfg.items.forEach((it) => setItemValue(it, 0)); rebalance(cfg.items); },
 };
 
@@ -217,6 +231,7 @@ const worldHeatmap = {
     cfg.regions = cfg.regions.filter((_, i) => i !== GAP_NULL);
   },
   single(cfg) { cfg.regions = cfg.regions.slice(0, 1); },
+  zero(cfg) { cfg.regions.forEach((r) => { r.value = 0; }); },
   empty(cfg) { cfg.regions = []; },
 };
 
@@ -238,6 +253,7 @@ export const SCENARIO_NOTES = {
     extreme: '桑基的流量必须满足财报恒等式（收入 = 成本 + 毛利…），单独放大一条会被组件拒绝；极端占比请在 sankey-preview 用真实季度数据看',
     gaps: '同上：置 0 / null 会破坏恒等式',
     single: '同上：只留一条流量不构成财报结构',
+    zero: '同上：全 0 不构成财报结构',
     empty: '同上：全空不构成财报结构',
   },
 };
