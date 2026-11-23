@@ -116,6 +116,19 @@ export function pickSeriesColors(profile, series, mode = 'light') {
 }
 
 /*
+ * [COLOR-02] 「其他」色：主题通用色盘（bar-multi）声明的 other，按容器的 data-theme / data-mode 取。
+ * 给「不是主角、只作参照」的图元用（如财报预期环 EARNINGS-01）。主题没声明 other 时返回 null，
+ * 由调用方决定兜底——本模块不替调用方猜一个灰。
+ */
+export function resolveOtherColor(host) {
+  const p = PALETTE[themeOf(host)] ?? PALETTE[DEFAULT_THEME];
+  const other = p['bar-multi']?.other;
+  if (!other) return null;
+  const mode = modeOf(host);
+  return other[MODES.includes(mode) ? mode : 'light'];
+}
+
+/*
  * 组件入口：按容器的 data-theme / data-mode 取色（返回 hex 数组，与系列一一对应）。
  * 入参 series = [{type}]，用**声明的系列**（图例隐藏/过滤不重排颜色，[COLOR-04]）。
  * 明暗只在构建时读一次——各预览面切换明暗都会重建图表。

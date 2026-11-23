@@ -100,6 +100,7 @@
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: #3B3B3B;
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: rgba(255, 255, 255, 0.6);
   --color-text-tooltip-series: rgba(255, 255, 255, 0.84);
   --color-text-tooltip-value: rgba(255, 255, 255, 0.84);
@@ -206,6 +207,13 @@
   --size-line-stroke: 1.5px;
   --size-line-stroke-multi: 1px;
   --size-line-point: 6px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -330,6 +338,7 @@
   --color-visualization-divider: rgba(255, 255, 255, 0.06);
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
+  --color-foreground-layer1: #1A1A1A;
   --color-visualization-highlight-line: rgba(255, 255, 255, 0.6);
   --color-visualization-highlight-block: rgba(255, 255, 255, 0.1);
   --color-world-heatmap-empty: rgba(255, 255, 255, 0.06);
@@ -442,6 +451,7 @@
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: rgba(255, 255, 255, 0.95);
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: #292933;
   --color-text-tooltip-series: #4F4F5E;
   --color-text-tooltip-value: #4F4F5E;
@@ -548,6 +558,13 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 8px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: currentColor;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -671,6 +688,7 @@
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
   --color-visualization-tooltip: rgba(27, 27, 36, 0.95);
+  --color-foreground-layer1: #1A1A1A;
   --color-text-tooltip-title: #E9E9F2;
   --color-text-tooltip-series: #D1D1E0;
   --color-text-tooltip-value: #D1D1E0;
@@ -787,6 +805,7 @@
   --color-background-layer1: #F5F5F5;
   --color-background-weak: rgba(0, 0, 0, 0.04);
   --color-visualization-tooltip: #383838;
+  --color-foreground-layer1: #FFFFFF;
   --color-text-tooltip-title: #ffffff;
   --color-text-tooltip-series: #ffffff;
   --color-text-tooltip-value: #ffffff;
@@ -893,6 +912,13 @@
   --size-line-stroke: 2px;
   --size-line-stroke-multi: 2px;
   --size-line-point: 8px;
+  --size-earnings-estimate: 20px;
+  --size-earnings-estimate-stroke: 1.5px;
+  --size-earnings-actual: 16px;
+  --spacing-earnings-label-gap: var(--spacing-4);
+  --font-size-earnings-label: 10px;
+  --line-height-earnings-label: 12px;
+  --font-weight-earnings-label: var(--font-weight-bold);
   --color-visualization-line-point-hover: #ffffff;
   --opacity-line-area-from: 0.2;
   --opacity-line-area-to: 0;
@@ -1031,6 +1057,7 @@
   --color-visualization-divider-deep: #666666;
   --color-background-layer1: #0F0F0F;
   --color-background-weak: rgba(255, 255, 255, 0.06);
+  --color-foreground-layer1: #1A1A1A;
   --color-visualization-highlight-line: rgba(255, 255, 255, 0.6);
   --color-visualization-highlight-block: rgba(255, 255, 255, 0.1);
   --color-visualization-highlight-background-tick: #ffffff;

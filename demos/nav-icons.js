@@ -20,6 +20,8 @@ export const NAV_ICONS = {
   '堆叠图': ICON('<rect x="4" y="3" width="8" height="10" rx="1"/><path d="M4 6.5h8M4 9.5h8"/>'),
   /* 折线：一条折线 */
   '折线图': ICON('<path d="M2.5 11l3.5-4 3 2.5L13.5 4"/>'),
+  /* 财报预期：一个空心环（预期）+ 一个偏上的实心点（实际） */
+  '财报预期': ICON('<circle cx="8" cy="9.5" r="3.5"/><circle cx="8" cy="6" r="2.2" fill="currentColor"/>'),
   /* 组合：两根柱 + 一条线 */
   '组合图': ICON('<path d="M3.5 13V8.5M12.5 13V6"/><path d="M2.5 5.5l4 2 3-2.5 4 1.5"/>'),
   /* 瀑布：三个**逐级悬空**的块拼成阶梯。

@@ -49,6 +49,7 @@
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
 | **柱的 band 排布 / 堆叠累计 / 单根柱路径与圆角** | `core/bar-geometry.js` | `groupedBars` · `singleBar` · `stackBars` · `barPath`（四档方向：竖柱 `top`/`bottom` · 横条 `right`/`left`）· `barRadius`（[BAR-01/02/03/05/06] / [HBAR-02/03]）——零 import 故可单测；**`top`/`bottom` 被 golden value 锁死**，改之前先读 `specs/hbar.md` 的 Don't |
 | **在图里指着某个点写一段说明**（环 + 文字 + 带箭头曲线引线） | `core/callout.js` | `renderCallouts`（位置自动选，不收方位参数）· `placeCallouts` / `scoreCandidate` / `calloutLeader` / `wrapByWidth`（均为纯几何，可单测）（[CALLOUT-01..16]）——**别和 `mark.js` 搞混**：那是柱/线图元，`MARK-` 前缀也是留给它的 |
+| **财报预期对比点（实际 vs 预期）** | `core/earnings-point.js` | `earningsState` · `earningsTone` · `earningsLegendTone`（状态与颜色语义的**唯一判定处**，副标题 / 图例 / tooltip 都从这里取）· `renderEarningsPoints`（[EARNINGS-01..06]） |
 | hover 指示线 / 轴高亮贴片 | `core/crosshair.js` | `renderCrosshairX` · `renderCrosshairY` · `renderCrosshairBlock` · `axisTagBox` / `renderAxisTag`（X 贴片，逐行内容和文字坐标复用 `axis.js`）· `renderYAxisTags`（Y 值徽标） |
 | 缩放轴 | `core/datazoom.js` | `renderDataZoom` |
 | 水印 | `core/watermark.js` | `watermarkAnchor` · `renderWatermark` |

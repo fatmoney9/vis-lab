@@ -222,7 +222,16 @@ export function yLabelInset(host, ticks, format = formatValue) {
 }
 
 /*
- * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x, lines? }]，x = 类目中心）。
+ * [AXIS-09] X 轴副标题（标签下方第二行）的类名：按状态语义上色（up / down / muted，色值在 styles/earnings.css）。
+ * 常态标签与 hover 贴片（TOOLTIP-09）都从这里取，两种状态同色同类名。
+ */
+export const axisSubClass = (tone) => `dv-axis-sub dv-axis-sub--${tone === 'up' || tone === 'down' ? tone : 'muted'}`;
+const hasSubLine = (d) => d.sub != null && d.sub !== '';
+
+/*
+ * [AXIS-04][AXIS-05][AXIS-06] X 轴标签（items: [{ label, x, lines?, sub?, subTone? }]，x = 类目中心）。
+ * [AXIS-09] sub / subTone：可选第二行（副标题）与其颜色语义；任一项带 sub 时整根轴按多行排布，
+ *           调用方须同时给 createFrame 传 xBandLines: 2。**不传 sub 时与原单行路径逐像素一致**。
  * lines 缺省时维持单行；存在时直接逐行测量并以最宽行作为标签盒，不要求 L2 另造测量探针。
  * [AXIS-05] 对齐：中间标签居中；首尾是否贴绘制区边缘由 flushFirst / flushLast
  *           决定（数据贴边时为 true，如满幅折线）；居中标签越界时向内回收。
@@ -239,14 +248,26 @@ export function renderXLabels(layer, frame, items, opts = {}) {
   } = opts;
   const n = items.length;
   const minGap = tokenNum(frame.host, '--spacing-axis-x-label-min-gap');
-  const lineGroups = items.map((datum, datumIndex) => axisLabelLines(datum.lines ?? datum.label)
+  /* [AXIS-09] 副标题 = 主标签各行之后再追加一行；没有任何 sub 时 linesOf / classOf 与原来完全相同 */
+  const withSub = items.some(hasSubLine);
+  const linesOf = (d) => (withSub && hasSubLine(d)
+    ? [...axisLabelLines(d.lines ?? d.label), String(d.sub)]
+    : (d.lines ?? d.label));
+  const classOf = withSub
+    ? (text, lineIndex, datum, datumIndex, nodes) => {
+      const base = lineClass ? lineClass(text, lineIndex, datum, datumIndex, nodes) : null;
+      const isSub = hasSubLine(datum) && lineIndex === axisLabelLines(datum.lines ?? datum.label).length;
+      return [base, isSub ? axisSubClass(datum.subTone) : null].filter(Boolean).join(' ') || null;
+    }
+    : lineClass;
+  const lineGroups = items.map((datum, datumIndex) => axisLabelLines(linesOf(datum))
     .map((text, lineIndex) => ({
       datum,
       datumIndex,
       lineIndex,
       text,
-      className: lineClass
-        ? lineClass(text, lineIndex, datum, datumIndex, [])
+      className: classOf
+        ? classOf(text, lineIndex, datum, datumIndex, [])
         : null,
     })));
   const flatLines = lineGroups.flat();
@@ -299,14 +320,14 @@ export function renderXLabels(layer, frame, items, opts = {}) {
     .attr('y', textLayout.y)
     .attr('dominant-baseline', textLayout.dominantBaseline);
 
-  if (kept.some((d) => d.lines != null)) {
+  if (withSub || kept.some((d) => d.lines != null)) {
     const textX = (d) => d.left + d.width / 2;
     labels.attr('x', textX).attr('text-anchor', 'middle');
     renderAxisLabelLines(labels, {
-      lines: (d) => d.lines ?? d.label,
+      lines: linesOf,
       x: textX,
       lineHeight: textLayout.lineHeight,
-      lineClass,
+      lineClass: classOf,
     });
   } else {
     /* 保持既有单行轴 DOM 与起点锚定不变，避免无关图型因本次多行能力重构发生像素漂移。 */

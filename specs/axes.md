@@ -46,6 +46,7 @@
 | ID | 规则 | 实现 | 状态 |
 |---|---|---|---|
 | AXIS-07 | 轴刻度线**不显示**（全主题），也不提供实现。将来需要时再连同长度、方向与 token 一并定义 | — | ✅ |
+| AXIS-09 | **X 轴副标题按状态上色**：标签对象可带 `sub`（第二行文字）与 `subTone`（`up` / `down` / `muted`，颜色语义不是色值）。第二行 `<tspan>` 挂 `dv-axis-sub dv-axis-sub--<tone>`：up → `color-price-up`、down → `color-price-down`、muted → `color-text-secondary`。字号、行高与主标签相同（随所在 `<text>`，紧凑 11 / 14），**字重 500**（`font-weight-medium`）。任一标签有 `sub` 时整根轴按两行排布，L2 给 `createFrame` 传 `xBandLines: 2`（直角坐标系按窗口内是否有副标题自动判定）。hover 贴片（TOOLTIP-09）**只高亮类目名（第一行）**，副标题留在原位、保持常态颜色——贴片与第一行共用 `xAxisLabelTextLayout`，盖上去不跳。**不传 `sub` 时走原单行路径，渲染结果逐像素不变**。文案由调用方生成（如 EPS 的 Beat / Met / Missed / Upcoming / --，见 [earnings.md](earnings.md) EARNINGS-07），组件只管颜色语义 | `core/axis.js` → `renderXLabels()`（`sub` / `subTone`）· `axisSubClass()`；`charts/styles/earnings.css`；`charts/cartesian/index.js`（`xSub` 配置、`xBandLines`） | ✅ |
 
 ## 样式 token（X / Y 共用，主题 × 端差异收在 tokens）
 

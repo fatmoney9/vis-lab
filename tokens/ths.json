@@ -151,6 +151,10 @@
     "dark": "rgba(255, 255, 255, 0.06)"
   },
   "color-visualization-tooltip": "#3B3B3B",
+  "color-foreground-layer1": {
+    "light": "#FFFFFF",
+    "dark": "#1A1A1A"
+  },
   "color-text-tooltip-title": "rgba(255, 255, 255, 0.6)",
   "color-text-tooltip-series": "rgba(255, 255, 255, 0.84)",
   "color-text-tooltip-value": "rgba(255, 255, 255, 0.84)",
@@ -304,6 +308,13 @@
   "size-line-stroke": "1.5px",
   "size-line-stroke-multi": "1px",
   "size-line-point": "6px",
+  "size-earnings-estimate": "20px",
+  "size-earnings-estimate-stroke": "1.5px",
+  "size-earnings-actual": "16px",
+  "spacing-earnings-label-gap": "{spacing-4}",
+  "font-size-earnings-label": "10px",
+  "line-height-earnings-label": "12px",
+  "font-weight-earnings-label": "{font-weight-bold}",
   "color-visualization-line-point-hover": {
     "light": "#ffffff",
     "dark": "#000000"

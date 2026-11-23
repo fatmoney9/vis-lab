@@ -14,6 +14,12 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 /* [LEGEND-03] 按图表类型取 marker 规格：unified 全类型同形；by-type 命中类型、缺则 default 兜底。
    导出：tooltip 数据行的系列 marker 与图例同源（TOOLTIP-02），复用同一份规格与渲染 */
 export function markerSpecFor(marker, type) {
+  /* [EARNINGS-05] 预期值（空心环）：形状固定为环、尺寸跟随本主题的 marker（紧凑 6）——
+     不管 unified / by-type，「预期」都只能读成空心环，否则和实际点分不开 */
+  if (type === 'earnings-estimate') {
+    const base = markerSpecFor(marker, 'dot');
+    return { shape: 'ring', w: base.w, h: base.h ?? base.w };
+  }
   if (!marker) return { shape: 'rect', w: 6, h: 6, r: 1 };
   if (marker.mode === 'unified') return { shape: marker.shape, w: marker.w, h: marker.h };
   return (marker.shapes && (marker.shapes[type] || marker.shapes.default)) || { shape: 'rect', w: 6, h: 6, r: 1 };
@@ -23,6 +29,7 @@ export function markerSpecFor(marker, type) {
  * [LEGEND-03] 标记本体渲染：居中于 size-legend-marker 容器（container px）。
  *   rect —— 方块 / line —— 横粗线（同为可圆角填充矩形，line 即细矩形），fill=currentColor 跟随系列色
  *   dot  —— 实心圆，fill=currentColor
+ *   ring —— 空心环（财报预期，EARNINGS-05），stroke=currentColor
  *   box  —— 描边方（盒须缩略），stroke=currentColor
  *   split—— 左右两色（红绿柱），涨跌固定色 --color-price-up/-down（不跟随系列色，故 off 态不改色）
  * 颜色一律 currentColor 或 var() 引用，无色值字面量；w/h/r 为形态几何（来自 behavior）。
@@ -41,6 +48,12 @@ export function renderMarker(sel, spec, container) {
     sel.append('circle')
       .attr('cx', cx).attr('cy', cy).attr('r', Math.min(w, h) / 2)
       .attr('fill', 'currentColor');
+  } else if (shape === 'ring') {
+    /* 空心环：内描边（半径收半个描边），外径 = w；描边 1px 是 marker 尺度下的结构常量 */
+    const sw = 1;
+    sel.append('circle')
+      .attr('cx', cx).attr('cy', cy).attr('r', Math.max(0, Math.min(w, h) / 2 - sw / 2))
+      .attr('fill', 'none').attr('stroke', 'currentColor').attr('stroke-width', sw);
   } else if (shape === 'box') {
     sel.append('rect')
       .attr('x', cx - w / 2).attr('y', cy - h / 2).attr('width', w).attr('height', h).attr('rx', r)
