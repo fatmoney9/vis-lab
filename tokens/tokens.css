@@ -1084,6 +1084,7 @@
   --size-line-point: 6px;
   --font-size-tooltip: 11px;
   --size-world-heatmap-height: 140px;
+  --radius-playback-step: 12px;
 }
 
 [data-theme="ainvest"][data-density="compact"][data-platform="mobile"] {
