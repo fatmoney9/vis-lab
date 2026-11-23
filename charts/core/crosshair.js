@@ -11,7 +11,7 @@ import { axisLabelLines, renderAxisLabelLines, xAxisLabelTextLayout } from './ax
  * [TOOLTIP-09] X 轴标签高亮贴片：文字直接复用 .dv-axis-label 基础类，
  * 并经 renderAxisLabelLines 与常态标签同构；
  * .dv-axis-tag-text 只覆盖高亮字色。label 接字符串或逐行字符串数组，数组保持
- * 原轴标签的分行。背景比文字大一圈——高 = 行数 × line-height-axis（上下由行高撑）、
+ * 原轴标签的分行。背景比文字大一圈——高 = 行数 × line-height-axis-x（上下由行高撑）、
  * 左右各加 spacing-axis-label-tag-pad-h，圆角 radius-axis-label-tag。
  * 文字直接复用常态轴标签的 y / dominant-baseline / 逐行 dy；交互态只改变背景与字色，
  * 不允许为了在黑底内视觉居中而平移文字，否则切换状态时标签会跳动。
@@ -36,7 +36,7 @@ import { axisLabelLines, renderAxisLabelLines, xAxisLabelTextLayout } from './ax
  */
 export function axisTagBox(frame, lineCount, box = null) {
   const lines = Math.max(1, Math.floor(Number(lineCount) || 1));
-  const height = frame.lineH * lines;
+  const height = (frame.xLineH ?? frame.lineH) * lines; /* X 贴片：X 标签行高 */
   const top = Number(box?.y);
   const boxHeight = Number(box?.height);
   const centered = Number.isFinite(top) && Number.isFinite(boxHeight);
@@ -140,7 +140,7 @@ export function renderYAxisTags(layer, frame, items, opts = {}) {
     /* **`central` 而不是 `middle`**：SVG 的 `middle` 对齐的是「字母基线 + 半个 x-height」，
        而徽标里是数字与汉字、高度远超 x-height，用 middle 会让整体上浮（三主题实测上偏 2.75~3.10px）。
        `central` 才是 em 盒居中。X 贴片（TOOLTIP-09）走的是另一条路——它的文字必须与相邻轴标签同基线，
-       故通过 xAxisLabelTextLayout 与常态标签共同保持 hanging，不做视觉居中位移。 */
+       故通过 xAxisLabelTextLayout 与常态标签共用同一基线（行框内居中，见 AXIS-04），不另做视觉位移。 */
     .attr('dominant-baseline', 'central')
     .text((d) => d.label);
 

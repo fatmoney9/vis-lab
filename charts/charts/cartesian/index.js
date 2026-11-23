@@ -28,7 +28,7 @@ import { select } from 'd3';
 import { createFrame, observeResize, verticalGeometry, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
-import { renderGrid } from '../../core/grid.js';
+import { renderGrid, renderBaseline } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
 import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
@@ -169,10 +169,11 @@ export function CartesianChart(host, cfg) {
     const secondary = viewResolved.filter((r) => r.axis === 'secondary');
     const yFormat = stack === 'percent' ? pctFormat : format;
 
-    /* [DATAZOOM-01] 缩放带高度：启用时预留「上间距 6 + max(轨道高, 手柄高) + 下间距 6」；不启用为 0（无回归）。
-       上下 6px 为结构留白常量（比 X 带的 4px 略大，给缩放轴与 X 标签多留分隔；待 token 化）。 */
+    /* [DATAZOOM-01] 缩放带高度：启用时预留「上留白 + max(轨道高, 手柄高) + 下留白」；不启用为 0（无回归）。
+       上下留白 = --spacing-datazoom-band-v（标准 6，Ainvest 紧凑 4）；读不到时回落 6。 */
     const dzSliderH = zoomOn ? (tokenNum(plotHost, '--size-slider-height') || 16) : 0;
-    const navH = zoomOn ? 6 + Math.max(dzSliderH, dzHandleH) + 6 : 0;
+    const dzPad = zoomOn ? (tokenNum(plotHost, '--spacing-datazoom-band-v') || 6) : 0;
+    const navH = zoomOn ? dzPad + Math.max(dzSliderH, dzHandleH) + dzPad : 0;
     /* [AXISTITLE-02] 标题带高：Y（主/副任一有标题）在顶、X 在底；无标题即 0，几何与原状一致。 */
     const titleGap = tokenNum(plotHost, '--spacing-axis-title-gap');
     const titleLineH = tokenNum(plotHost, '--line-height-axis-title');
@@ -454,6 +455,10 @@ export function CartesianChart(host, cfg) {
         });
       }
     });
+
+    /* [GRID-01] 0 轴基线在所有 mark 之后、数据标签 / 水印之前追加 ⇒ 压在柱 / 线之上。
+       不进 grow：入场生长只作用于图元，0 轴首帧即终态（MOTION）。 */
+    renderBaseline(frame.svg.append('g').attr('class', 'dv-baseline-layer'), frame, yP, pSplit.ticks);
 
     /* [LABEL-08] 标签层在所有 mark 之后追加 = 压在柱 / 线之上（层级 = DOM 顺序，同 WATERMARK-05），
        水印仍在最末。每系列一个 <g>：color 下发系列色供档① 的 currentColor 取（LABEL-03），

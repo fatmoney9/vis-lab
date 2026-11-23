@@ -2,7 +2,7 @@
  * [L2-LOCAL] 瀑布图专属 SVG 片段与展示文本。
  * 调用方提供 layer / frame / 已解析数据，本模块不持有生命周期、主题状态或 hover 状态。
  */
-import { renderXLabels } from '../../core/axis.js';
+import { renderXLabels, xAxisLabelTextLayout } from '../../core/axis.js';
 import { truncateBatch } from '../../core/label.js';
 import { measureTexts } from '../../core/measure.js';
 import { tokenNum } from '../../core/tokens.js';
@@ -81,9 +81,10 @@ export function renderWaterfallXAxis(layer, frame, items, centers, rows, showRel
     .join('text')
     .attr('class', 'dv-waterfall-operator')
     .attr('x', ({ index }) => (centers[index - 1] + centers[index]) / 2)
-    .attr('y', frame.xBandTop)
+    /* [AXIS-04] 运算符与首行标签同基线：取 L1 同一份行框排布，不自贴带上沿 */
+    .attr('y', xAxisLabelTextLayout(frame).y)
     .attr('text-anchor', 'middle')
-    .attr('dominant-baseline', 'hanging')
+    .attr('dominant-baseline', xAxisLabelTextLayout(frame).dominantBaseline)
     .text(({ item }) => item.operatorBefore);
 }
 

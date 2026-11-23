@@ -28,7 +28,7 @@
 
 | 我要… | 用 L1 的 | 关键导出 |
 |---|---|---|
-| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05] / [SANKEY-18]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
+| **量文字渲染宽度 / 墨迹上下边** | `core/measure.js` | `measureTexts` · `createTextMeasurer`（宽，走真实 SVG 级联）· `measureInk`（墨迹上下边，走 Canvas）· `measureFontBox`（字体行框 ascent / descent，排「行框内居中」用）—— **全库唯一测量源**（[AXIS-08] / [TREEMAP-05] / [SANKEY-18]），不要另起一份。两类测量使用不同手段的理由见模块注释 |
 | **缓动曲线 / 逐帧动画 / 减弱动效判断** | `core/motion.js` | `easeOutCubic`（[MOTION-03]）· `runGrowth` · `reducedMotion`（[MOTION-07]） |
 | 读 CSS token 值 | `core/tokens.js` | `tokenStr` · `tokenNum` |
 | 解析主题 / 端形态 / 密度档 | `core/theme.js` | `themeOf` · `modeOf` · `resolveBehavior`（已含密度覆盖层，L2 无需感知密度） |
@@ -44,7 +44,7 @@
 | 把数夹到区间 | `core/math.js` | `clamp(lo, v, hi)` · `clamp01`——别再写私有的 `Math.max(lo, Math.min(…))` |
 | 比例尺与刻度 | `core/split.js`（刻度数学）· `core/scale.js`（像素换算） | `niceSplit` · `niceSplitDual` / `linearY` · `bandX` |
 | 画布与 resize | `core/frame.js` | `createFrame` · `observeResize` · `verticalGeometry`（先于刻度问出绘图区高；`xBandLines` 声明多行 X 带）· **`containerDrivesHeight` / `containerTookOver`**（「高度由谁说了算」的两条判据，别再抄阈值）· `createBuildRetry`（容器塌陷时的下一帧重试，destroy 必须撤销） |
-| 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderXLabels` · `axisLabelLines` / `renderAxisLabelLines` / `xAxisLabelTextLayout`（常态与高亮态共用的逐行内容与文字坐标）· `renderGrid` · `axisTitleBand` … |
+| 坐标轴 / 网格 / 轴标题 | `core/axis.js` · `core/grid.js` · `core/axis-title.js` | `renderYLabels` · `renderXLabels` · `axisLabelLines` / `renderAxisLabelLines` / `xAxisLabelTextLayout`（常态与高亮态共用的逐行内容与文字坐标）· `renderGrid` / `renderBaseline`（0 轴单独一层，压在柱 / 线之上）· `axisTitleBand` … |
 | 数据标签（截断 / 碰撞 / 前景色） | `core/label.js` | `truncateBatch` · `dropCollisions` · `labelTone` |
 | 图元（柱 / 线） | `core/mark.js` | `renderBars` · `renderLine` |
 | **柱的 band 排布 / 堆叠累计 / 单根柱路径与圆角** | `core/bar-geometry.js` | `groupedBars` · `singleBar` · `stackBars` · `barPath`（四档方向：竖柱 `top`/`bottom` · 横条 `right`/`left`）· `barRadius`（[BAR-01/02/03/05/06] / [HBAR-02/03]）——零 import 故可单测；**`top`/`bottom` 被 golden value 锁死**，改之前先读 `specs/hbar.md` 的 Don't |

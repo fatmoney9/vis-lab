@@ -183,11 +183,27 @@ export function renderAxisLabelLines(selection, {
 
 /* [AXIS-04][TOOLTIP-09] 常态与高亮态 X 标签共用的文字定位合同。
    位置与逐行节奏只能在这一处定义，避免两个状态各自计算后产生像素跳动。 */
+/* X 标签行高：frame.xLineH（line-height-axis-x）；旧形态 frame 只有 lineH 时回落 */
+const xLineHOf = (frame) => frame.xLineH ?? frame.lineH;
+
 export function xAxisLabelTextLayout(frame) {
+  /* [AXIS-04] 文字在 lineH 行框内上下居中（与 Figma 文本框、CSS 行框同一排字方式）：
+     基线 = 行框顶 + half-leading + ascent，half-leading = (lineH − ascent − descent) / 2。
+     ascent / descent 是字体的行框度量（createFrame 量好放在 frame.xLabelFontBox），与字符无关，
+     故同一根轴上所有标签同基线；多行时逐行 dy = lineH，每行各占一个行框。
+     2026-11-23 前用 hanging 把悬挂基线（≈ 字顶）直接贴在带上沿，行高余量全堆在字下，
+     带上间距一小（Ainvest 紧凑 2px）字就贴到网格线上。
+     缺度量（非浏览器环境）时回落到旧的 hanging 贴上沿。 */
+  const box = frame.xLabelFontBox;
+  if (!box || !Number.isFinite(box.ascent) || !Number.isFinite(box.descent)) {
+    return { y: frame.xBandTop, dominantBaseline: 'hanging', lineHeight: xLineHOf(frame) };
+  }
+  const lineH = xLineHOf(frame);
+  const halfLeading = (lineH - box.ascent - box.descent) / 2;
   return {
-    y: frame.xBandTop,
-    dominantBaseline: 'hanging',
-    lineHeight: frame.lineH,
+    y: frame.xBandTop + halfLeading + box.ascent,
+    dominantBaseline: 'alphabetic',
+    lineHeight: lineH,
   };
 }
 

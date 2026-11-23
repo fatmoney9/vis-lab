@@ -102,6 +102,7 @@
     "pc": "12px"
   },
   "line-height-axis": "12px",
+  "line-height-axis-x": "{line-height-axis}",
   "font-weight-axis": "{font-weight-medium}",
   "color-text-axis": {
     "light": "rgba(0, 0, 0, 0.6)",
@@ -254,6 +255,7 @@
   "size-slider-handle-border": "0.5px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-6}",
+  "spacing-datazoom-band-v": "6px",
   "color-playback-primary-bg": "#FF2436",
   "color-playback-primary-paused-bg": "{color-grey-05}",
   "radius-playback-step": "{radius-4}",

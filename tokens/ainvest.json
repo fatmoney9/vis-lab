@@ -129,6 +129,7 @@
     "mobile": "12px",
     "pc": "16px"
   },
+  "line-height-axis-x": "{line-height-axis}",
   "font-weight-axis": "{font-weight-regular}",
   "color-text-axis": {
     "mobile": {
@@ -182,7 +183,10 @@
       "dark": "rgba(255, 255, 255, 0.07)"
     }
   },
-  "color-visualization-divider-deep": "#858585",
+  "color-visualization-divider-deep": {
+    "light": "#808080",
+    "dark": "#666666"
+  },
   "color-background-layer1": {
     "light": "#F5F5F5",
     "dark": "#0F0F0F"
@@ -332,6 +336,7 @@
   "size-slider-handle-border": "1px",
   "radius-slider-handle": "{radius-full}",
   "radius-slider-mask": "{radius-2}",
+  "spacing-datazoom-band-v": "6px",
   "color-playback-primary-bg": {
     "light": "#165DFF",
     "dark": "#3371FF"

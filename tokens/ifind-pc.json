@@ -99,6 +99,7 @@
   "$section-08": "坐标轴",
   "font-size-axis": "14px",
   "line-height-axis": "14px",
+  "line-height-axis-x": "{line-height-axis}",
   "font-weight-axis": "{font-weight-medium}",
   "color-text-axis": {
     "light": "#87879C",
@@ -266,6 +267,7 @@
   "size-slider-handle-border": "1px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-4}",
+  "spacing-datazoom-band-v": "6px",
   "color-playback-primary-bg": {
     "light": "#1B63D9",
     "dark": "#3371FF"
