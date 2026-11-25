@@ -72,6 +72,31 @@ export function measureInk(host, texts, className) {
 }
 
 /*
+ * 量 className 样式下字体的**行框度量**（字体上伸 / 下伸，相对字母基线的 px，与具体字符无关）。
+ *   → { ascent, descent }
+ * 与 measureInk 的区别：那个量字形墨迹（随字符变），这个量字体给行框用的 ascent / descent
+ * （Canvas fontBoundingBox，即 CSS 行框与 Figma 文本框排字所用的同一组度量）。
+ * [AXIS-04] 用途：X 轴标签按「行框内上下居中」排字——基线 = 行框顶 + half-leading + ascent。
+ * 字体同样走真实级联：先用带真实类名的探针读解析后的字体，再交给 Canvas。
+ */
+export function measureFontBox(host, className) {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.style.cssText = 'position:absolute;visibility:hidden;width:0;height:0;overflow:visible';
+  const probe = document.createElementNS(SVG_NS, 'text');
+  probe.setAttribute('class', className);
+  svg.appendChild(probe);
+  host.appendChild(svg);
+  const cs = getComputedStyle(probe);
+  const font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  svg.remove();
+
+  const ctx = (measureFontBox.ctx ||= document.createElement('canvas').getContext('2d'));
+  ctx.font = font;
+  const m = ctx.measureText('');
+  return { ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent };
+}
+
+/*
  * [TREEMAP-05][SANKEY-18] 需要反复测量同一类文字时复用单个隐藏 SVG，避免每次字号拟合都重建 DOM。
  * 字号边界仍由图表 token 提供；本构件只负责按传入字号返回真实渲染宽度。
  */

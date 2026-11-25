@@ -48,11 +48,12 @@ import { financialSankeyPresentation } from './sankey-presentation.js';
 import { waterfallPresentation } from './waterfall-presentation.js';
 import { industryFlow } from './data/chord.js';
 import { marketCapPeriods, marketCapPresentation } from './data/market-cap.js';
-import { LONG_NAMES, SLICE_NAMES, gapItems, longNameItems, skewItems, sliceItems } from './data/pie.js';
+import { sliceItems } from './data/pie.js';
 import { RADAR_DENSITY, RADAR_FIXED_MAX, RADAR_SEGMENTS, radarDims, radarSeries } from './data/radar.js';
 import { financialSankey, financialSankeyPlayback } from './data/sankey.js';
 import { FINANCIAL_SERIES_NAMES, MARKET_INDEX_SERIES_NAMES, growth, lineWave, negWave, posSeries, selectExampleSeries, seq, signedLineWave, signedWave, wave } from './data/series.js';
 import { TREEMAP_SEMANTIC_THRESHOLDS, treemapHierarchy } from './data/treemap.js';
+import { epsEstimateConfig } from './data/earnings.js';
 
 /* 原先住在本文件、已按职责拆出的公开导出：照旧从这里转出，既有 import 一处不用改。 */
 export { CHART_CAPABILITIES, suggestedLegend } from './capabilities.js';
@@ -66,11 +67,14 @@ export { DENSITY, clampDensity, defaultDensityCountOf, defaultDensityOf, density
 
 /* 主题清单与内容语言住在 demos/themes.js（presentation 模块也要读，放这里会成环）；此处 re-export 保持既有 import */
 export { THEMES } from './themes.js';
+export { SCENARIOS, scenarioNote } from './scenarios.js';
 
 /* ── 示例清单 ────────────────────────────────────────────────── */
 
 const BOTH = ['index', 'playground'];
 const RADAR_REGRESSION = ['radar-preview'];
+/* 雷达的三张专项配置（曲线 / 多边形 / 可调节）也进 playground：preview 要能看到**所有**图 */
+const RADAR_REGRESSION_PREVIEW = [...RADAR_REGRESSION, 'playground'];
 const RADAR_ALL_SURFACES = [...BOTH, ...RADAR_REGRESSION];
 
 export const EXAMPLES = [
@@ -212,6 +216,13 @@ export const EXAMPLES = [
     }),
   },
   {
+    id: 'eps-estimate', group: '财报预期', chart: 'cartesian',
+    title: 'EPS 预期对比', spec: 'EARNINGS-01 / AXIS-09', surfaces: BOTH,
+    description: '8 个季度的 EPS 实际值对比市场预期，覆盖超预期、符合、未达预期、无预期与待公布五种状态；按 Ainvest 紧凑档设计。',
+    density: false,
+    cfg: () => epsEstimateConfig(),
+  },
+  {
     id: 'market-cap-race', group: '排名变化', chart: 'hbar',
     title: '行业市值排名', spec: 'HBAR-10 / HBAR-12', surfaces: BOTH,
     description: '横向条按市值排名，随季度推进名次互换；只显示前 N 名，进出榜有滑入滑出。',
@@ -271,7 +282,7 @@ export const EXAMPLES = [
   },
   {
     id: 'radar-curve', group: '雷达图', chart: 'radar',
-    title: '曲线轮廓配置', spec: 'RADAR-05 / RADAR-06 / RADAR-10', surfaces: RADAR_REGRESSION,
+    title: '曲线轮廓配置', spec: 'RADAR-05 / RADAR-06 / RADAR-10', surfaces: RADAR_REGRESSION_PREVIEW,
     description: '专项回归配置：闭合曲线 + 面填充，曲线态不出圆点；hover 热区为扇形。',
     ...RADAR_DENSITY,
     cfg: (n) => ({
@@ -281,7 +292,7 @@ export const EXAMPLES = [
   },
   {
     id: 'radar-polygon', group: '雷达图', chart: 'radar',
-    title: '多边形网格配置', spec: 'RADAR-03 / RADAR-04', surfaces: RADAR_REGRESSION,
+    title: '多边形网格配置', spec: 'RADAR-03 / RADAR-04', surfaces: RADAR_REGRESSION_PREVIEW,
     description: '专项回归配置：正多边形网格；不给 max，走自动 nice 上界。',
     ...RADAR_DENSITY,
     /* [RADAR-04] **有意不给 max**：与另两条固定量程的示例并排，即可看出自动档会把上界抬到
@@ -303,7 +314,7 @@ export const EXAMPLES = [
   },
   {
     id: 'radar-adjustable', group: '雷达图', chart: 'radar',
-    title: '可调节能力配置', spec: 'RADAR-18', surfaces: RADAR_REGRESSION,
+    title: '可调节能力配置', spec: 'RADAR-18', surfaces: RADAR_REGRESSION_PREVIEW,
     description: '专项回归配置：在标准雷达上开启单系列编辑能力，验证径向拖动、键盘调值与环绕标签。',
     ...RADAR_DENSITY,
     cfg: (n) => ({
@@ -445,9 +456,6 @@ export const EXAMPLES = [
     }),
   },
 
-  /* ── 边界与极端情况（**只进 playground**）────────────────────────
-     对外站点是画廊，不该摆这些；但它们是改标签 / 图例 / 取色时最先该看的几张图。
-     每个示例只推**一个**边界，出问题时能一眼定位是哪条规则塌了。 */
   {
     id: 'world-heatmap-market', group: '全球热力图', chart: 'world-heatmap',
     title: '全球市场热力图', spec: 'WORLD-HEATMAP-01 / WORLD-HEATMAP-06', surfaces: BOTH,
@@ -472,52 +480,6 @@ export const EXAMPLES = [
         { id: 'BR', name: '巴西', value: 1.03 },
         { id: 'AR', name: '阿根廷', value: 0.82 },
       ],
-    }),
-  },
-  {
-    id: 'edge-long-name', group: '边界与极端情况', chart: 'pie',
-    title: '超长名称与数值', spec: 'PIE-16 / LEGEND-13', surfaces: ['playground'],
-    description: '扇区名长到必然溢出：外侧标签截名称、图例截标签，数值段两处都恒完整。',
-    cfg: (n) => ({ name: '利润表科目', variant: 'donut', items: longNameItems(n) }),
-  },
-  {
-    id: 'edge-skew', group: '边界与极端情况', chart: 'pie',
-    title: '极端占比', spec: 'PIE-01 / PIE-14', surfaces: ['playground'],
-    description: '首项独占约 98%，其余是几乎无角度的窄扇区——压窄扇区的标签、hover 命中与重叠丢弃。',
-    cfg: (n) => ({ name: '收入构成', variant: 'donut', items: skewItems(n) }),
-  },
-  {
-    id: 'edge-single', group: '边界与极端情况', chart: 'pie',
-    title: '单扇区', spec: 'COLOR-03 / PIE-01', surfaces: ['playground'],
-    description: '只有一个扇区（整环 360°），取色应走单系列默认色而非扇区盘首色——数据量旋钮对它无效。',
-    cfg: () => ({ name: '营收构成', variant: 'donut', items: [{ name: '主营业务', value: 1000 }] }),
-  },
-  {
-    id: 'edge-gaps', group: '边界与极端情况', chart: 'pie',
-    title: '部分为 0 与 null', spec: 'PIE-01', surfaces: ['playground'],
-    description: '第 3 项为 0、第 5 项为 null：不画扇区、不进分母，但仍占取色槽位、仍在图例里——环上颜色会跳过它们。',
-    cfg: (n) => ({ name: '营收构成', variant: 'donut', items: gapItems(n) }),
-  },
-  {
-    id: 'edge-empty', group: '边界与极端情况', chart: 'pie',
-    title: '全 0 与全 null', spec: 'PIE-01', surfaces: ['playground'],
-    description: '所有值都是 0 或 null：总和为 0 → 什么都不画（不抛错、不留半个环），图例仍在。',
-    cfg: (n) => ({
-      name: '营收构成',
-      variant: 'donut',
-      items: Array.from({ length: n }, (_, i) => ({
-        name: SLICE_NAMES[i % SLICE_NAMES.length] + (i >= SLICE_NAMES.length ? Math.floor(i / SLICE_NAMES.length) + 1 : ''),
-        value: i % 2 ? null : 0,
-      })),
-    }),
-  },
-  {
-    id: 'edge-long-legend', group: '边界与极端情况', chart: 'cartesian',
-    title: '超长图例名（横排）', spec: 'LEGEND-01 / LEGEND-13', surfaces: ['playground'],
-    description: '与饼环那张对照：横排图例放不下是**换行**、不截断（LEGEND-13 只管纵列），故长名会把图例撑高而非省略。',
-    cfg: (n) => ({
-      categories: seq(n),
-      series: LONG_NAMES.slice(0, 4).map((name, k) => ({ name, data: wave(n, k * 0.9) })),
     }),
   },
 ];

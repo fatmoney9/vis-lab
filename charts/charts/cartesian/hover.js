@@ -17,6 +17,40 @@
 import { select } from 'd3';
 import { createTooltip } from '../../core/tooltip.js';
 import { renderCrosshairX, renderCrosshairY, renderCrosshairBlock, renderAxisTag, renderYAxisTags } from '../../core/crosshair.js';
+import { earningsState, earningsTone } from '../../core/earnings-point.js';
+
+/* [EARNINGS-06] 财报点在 tooltip 里展开成三行：实际 / 预期 / 差值。
+   实际行的 marker 按**该类目**的状态上色（图例那一项按全量构成，两者口径不同，见 EARNINGS-05）；
+   差值只在两者都有时出，带正负号，颜色随状态。键与图例同名，隐藏的那一项不出。 */
+function earningsRows(r, i, hidden, format) {
+  const d = r.data[i] ?? {};
+  const state = earningsState(d.actual, d.estimate);
+  const tone = earningsTone(state);
+  const key = (part) => `${r.name}|${part}`;
+  const show = (v) => (v == null ? '--' : format(Number(v))); /* [EARNINGS-09] 缺值写「--」，与副标题同一记号 */
+  const rows = [];
+  if (!hidden.has(key('actual'))) {
+    rows.push({
+      key: key('actual'), label: r.labels.actual, type: 'earnings-actual',
+      colorVar: state === 'unrated' ? r.colorVar : tone === 'down' ? '--color-price-down' : '--color-price-up',
+      value: show(d.actual),
+    });
+  }
+  if (!hidden.has(key('estimate'))) {
+    rows.push({
+      key: key('estimate'), label: r.labels.estimate, type: 'earnings-estimate',
+      colorVar: '--dv-earnings-estimate', value: show(d.estimate),
+    });
+  }
+  if (state === 'beat' || state === 'met' || state === 'missed') {
+    const diff = Number(d.actual) - Number(d.estimate);
+    rows.push({
+      key: key('diff'), label: r.labels.diff, showMarker: false, valueTone: tone,
+      value: `${diff > 0 ? '+' : ''}${format(state === 'met' ? 0 : diff)}`,
+    });
+  }
+  return rows;
+}
 
 export function bindHover(plotHost, frame, { categories, x, series, hidden, format, marker, position,
   indicator = 'line', blockLayer = null, blockWidth = 0,
@@ -81,10 +115,14 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
     const i = centers.reduce((best, c, k) => (Math.abs(c - px) < Math.abs(centers[best] - px) ? k : best), 0);
 
     /* [TOOLTIP-02] 行 = 可见系列按声明序（与图例一致）；数值与 Y 轴同源 format（percent 显原值）、null → "-" */
-    const rows = series.filter((r) => !hidden.has(r.name)).map((r) => ({
-      key: r.name, label: r.name, type: r.type, colorVar: r.colorVar,
-      value: r.data[i] == null ? '-' : format(r.data[i]),
-    }));
+    const rows = series.flatMap((r) => {
+      if (r.type === 'earnings') return earningsRows(r, i, hidden, format);
+      if (hidden.has(r.name)) return [];
+      return [{
+        key: r.name, label: r.name, type: r.type, colorVar: r.colorVar,
+        value: r.data[i] == null ? '-' : format(r.data[i]),
+      }];
+    });
     if (!rows.length) return hideHover();
 
     tooltip.show({ title: categories[i], rows }, marker);
@@ -92,7 +130,9 @@ export function bindHover(plotHost, frame, { categories, x, series, hidden, form
        本层只给几何：grid 与触发点。 */
     tooltip.place(position, { grid: frame.grid, cx: centers[i], pointer: { x: px, y: py } });
     hoverG.style('display', null);
-    const tagTop = renderAxisTag(tagLayer, frame, { x: centers[i], label: categories[i] }); /* [TOOLTIP-09] */
+    /* [TOOLTIP-09][AXIS-09] 贴片只高亮类目名（第一行）；有副标题时它留在原位、保持常态颜色——
+       贴片与第一行同一套 xAxisLabelTextLayout，盖上去不跳 */
+    const tagTop = renderAxisTag(tagLayer, frame, { x: centers[i], label: categories[i] });
     if (indicator === 'block') {
       blockLayer.style('display', null);
       renderCrosshairBlock(blockLayer, frame, centers[i], blockWidth); /* [TOOLTIP-11] 纯分组柱：竖线换 block */

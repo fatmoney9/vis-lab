@@ -14,7 +14,11 @@
  *
  *   host  容器元素（须挂在带 data-theme 的祖先内，且自身有高度）
  *   cfg   { categories, series:[{name,data,type?,axis?}], stack='none', platform='pc', unit, align='left',
- *           zoom, dataLabel='auto', axisTitle, animation=true, callout }
+ *           zoom, dataLabel='auto', axisTitle, animation=true, callout, xSub, decimals }
+ *         xSub（语义配置，文案即内容）：与 categories 等长的 [{ text, tone }]，X 轴标签下方第二行（AXIS-09）；
+ *           tone = 'up' / 'down' / 'muted'（颜色语义，不是色值）
+ *         decimals（语义配置：数据的有效精度）：覆盖主题 number-format 的最多小数位（如 EPS 两位小数）
+ *         type:'earnings'：data = [{ actual, estimate }]，画财报预期对比点（specs/earnings.md）
  *         type 默认 bar / axis 默认 primary
  *         callout（语义配置，标在哪 + 写什么）：[{ series?, category, value?, text, axis? }]
  *           给 series 锚到该系列在该类目的真实数据点；不给则用 value 锚任意数值坐标。
@@ -28,12 +32,12 @@ import { select } from 'd3';
 import { createFrame, observeResize, verticalGeometry, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { niceSplit, niceSplitDual } from '../../core/split.js';
 import { linearY, bandX } from '../../core/scale.js';
-import { renderGrid } from '../../core/grid.js';
+import { renderGrid, renderBaseline } from '../../core/grid.js';
 import { renderYLabels, renderXLabels, yLabelInset, measureYLabelWidth } from '../../core/axis.js';
 import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
-import { resolveSeriesColors } from '../../core/palette.js';
+import { resolveSeriesColors, resolveOtherColor } from '../../core/palette.js';
 import { renderBars, renderLine } from '../../core/mark.js';
 import { renderLegend, dimByKey } from '../../core/legend.js';
 import { legendHandlers, emphasisKey } from '../../core/legend-state.js';
@@ -45,18 +49,18 @@ import { axisTitleBand, axisTitleAnchor, renderAxisTitles } from '../../core/axi
 import { runGrowth, reducedMotion } from '../../core/motion.js';
 import { resolveSeries } from './series.js';
 import { bindHover } from './hover.js';
-import { axisDomain } from './domain.js';
+import { axisDomain, extentOf } from './domain.js';
 import { groupedBars, singleBar, stackBars } from '../../core/bar-geometry.js';
 import { clamp } from '../../core/math.js';
 import { resolveCalloutAnchors, barObstacles, lineObstacles } from './callout-anchor.js';
+import { renderEarningsPoints, earningsState, earningsLegendTone, earningsPadding } from '../../core/earnings-point.js';
 
 export function CartesianChart(host, cfg) {
-  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false, callout } = cfg;
+  const { categories, series, stack = 'none', platform = 'pc', unit, align = 'left', zoom, dataLabel = 'auto', axisTitle, animation = true, legendSelect = 'multi', yIndicator = false, callout, xSub, decimals } = cfg;
   /* [GRID-03] 调用方明确给容器高度时随容器适配；未给高度时使用主题默认高度包络 token。 */
   let usesContainerHeight = containerDrivesHeight(host.clientHeight);
 
   const resolved = resolveSeries(series);                 /* 归一化：补默认 type/axis（见 series.js） */
-  const keys = resolved.map((r) => r.name);
   const dual = resolved.some((r) => r.axis === 'secondary'); /* 用声明判定，副轴存在性稳定 */
 
   /* [COLOR-02..05] 按类型固定槽位配色：柱走 bar-multi、线走 line-multi；写成 host 上的 CSS 变量。
@@ -79,7 +83,8 @@ export function CartesianChart(host, cfg) {
   const yAlign = b['y-label-align'];        /* [AXIS-03] Ainvest 右对齐特例 */
   const pointShape = b['line-point-shape']; /* [LINE-01] 数据点形状（iFinD 菱形特例） */
   const marker = b['legend-marker'];
-  const format = makeFormatter(b['number-format']);       /* [FORMAT-01] */
+  /* [FORMAT-01] decimals 只改「最多几位小数」，换算体系（K / 万）仍随主题 */
+  const format = makeFormatter(decimals != null ? { ...b['number-format'], 'max-decimals': decimals } : b['number-format']);
   const pctFormat = (v) => `${Math.round(v * 100)}%`;     /* [BAR-06] 归一化轴 */
 
   /* [DATAZOOM-02/03/04] 缩放轴形态（behavior）+ 初始窗口。zoom 语义配置（WORKFLOW §四 铁律4 允许 initialZoom 一类）：
@@ -101,7 +106,29 @@ export function CartesianChart(host, cfg) {
     if (win.i1 < win.i0) win.i1 = win.i0;
   }
 
-  const legendItems = resolved.map((r) => ({ key: r.name, label: r.name, type: r.type, colorVar: r.colorVar }));
+  /* [EARNINGS-05] 财报点系列在图例里拆成两项：实际（实心点）与预期（空心环），可分别显隐 / 弱化。
+     实际项的颜色按全量数据的状态构成定（EARNINGS-05），写成 host 上的 CSS 变量，tooltip 不复用它——
+     tooltip 的实际行按**该类目**的状态上色。 */
+  const earnKey = (r, part) => `${r.name}|${part}`;
+  /* [EARNINGS-01] 预期环色 = 色板「其他」色（Ainvest 亮 #858585 / 暗 #7A7A7A）；主题没声明 other 时
+     回落 color-grey-05（三主题同值 #858585，与 Ainvest 亮色一致）。写成 host 上的 CSS 变量，
+     环 / 图例 / tooltip 的 Estimate 标记都读它——同系列色的下发方式。 */
+  if (resolved.some((r) => r.type === 'earnings')) {
+    host.style.setProperty('--dv-earnings-estimate', resolveOtherColor(host) ?? 'var(--color-grey-05)');
+  }
+  resolved.filter((r) => r.type === 'earnings').forEach((r) => {
+    const tone = earningsLegendTone(r.data.map((d) => earningsState(d?.actual, d?.estimate)));
+    r.actualVar = `--dv-earnings-actual-${r.seriesIndex + 1}`;
+    host.style.setProperty(r.actualVar, tone === 'up' ? 'var(--color-price-up)'
+      : tone === 'down' ? 'var(--color-price-down)' : `var(${r.colorVar})`);
+  });
+  const legendItems = resolved.flatMap((r) => (r.type === 'earnings'
+    ? [
+      { key: earnKey(r, 'actual'), label: r.labels.actual, type: 'earnings-actual', colorVar: r.actualVar },
+      { key: earnKey(r, 'estimate'), label: r.labels.estimate, type: 'earnings-estimate', colorVar: '--dv-earnings-estimate' },
+    ]
+    : [{ key: r.name, label: r.name, type: r.type, colorVar: r.colorVar }]));
+  const keys = legendItems.map((d) => d.key);
   /* [LEGEND-06][LEGEND-14] 点击的两条状态线，按 legendSelect 分流、互不相干：
      hidden 是「筛」（multi / single 档改它，隐藏系列退出值域计算）、
      selected 是「强调」（focus 档改它，值域一点不动、只改视觉权重）。
@@ -119,7 +146,7 @@ export function CartesianChart(host, cfg) {
      hover 是临时态、选中是常驻态，**hover 优先**——指针停在 B 上时读的就该是 B，
      松开后自然回落到常驻的那个（PIE-10「两者独立叠加」的同一条取舍）。 */
   function applyDim() {
-    dimByKey(plotHost, 'g.dv-bar-series, g.dv-line-series, g.dv-data-label-series', emphasisKey(state));
+    dimByKey(plotHost, 'g.dv-bar-series, g.dv-line-series, g.dv-data-label-series, g.dv-earnings-layer', emphasisKey(state));
   }
 
   function drawLegend() {
@@ -164,15 +191,19 @@ export function CartesianChart(host, cfg) {
        缩放轴本体（下方）仍拿全量 categories/resolved 画迷你阴影。 */
     const viewCats = zoomOn ? categories.slice(win.i0, win.i1 + 1) : categories;
     const viewResolved = zoomOn ? resolved.map((r) => ({ ...r, data: r.data.slice(win.i0, win.i1 + 1) })) : resolved;
+    /* [AXIS-09] 副标题跟类目同窗切片；窗口内任一类目有副标题 → X 带按两行预留 */
+    const viewSub = Array.isArray(xSub) ? (zoomOn ? xSub.slice(win.i0, win.i1 + 1) : xSub) : null;
+    const xBandLines = viewSub?.some((s) => s?.text) ? 2 : 1;
 
     const primary = viewResolved.filter((r) => r.axis === 'primary');
     const secondary = viewResolved.filter((r) => r.axis === 'secondary');
     const yFormat = stack === 'percent' ? pctFormat : format;
 
-    /* [DATAZOOM-01] 缩放带高度：启用时预留「上间距 6 + max(轨道高, 手柄高) + 下间距 6」；不启用为 0（无回归）。
-       上下 6px 为结构留白常量（比 X 带的 4px 略大，给缩放轴与 X 标签多留分隔；待 token 化）。 */
+    /* [DATAZOOM-01] 缩放带高度：启用时预留「上留白 + max(轨道高, 手柄高) + 下留白」；不启用为 0（无回归）。
+       上下留白 = --spacing-datazoom-band-v（标准 6，Ainvest 紧凑 4）；读不到时回落 6。 */
     const dzSliderH = zoomOn ? (tokenNum(plotHost, '--size-slider-height') || 16) : 0;
-    const navH = zoomOn ? 6 + Math.max(dzSliderH, dzHandleH) + 6 : 0;
+    const dzPad = zoomOn ? (tokenNum(plotHost, '--spacing-datazoom-band-v') || 6) : 0;
+    const navH = zoomOn ? dzPad + Math.max(dzSliderH, dzHandleH) + dzPad : 0;
     /* [AXISTITLE-02] 标题带高：Y（主/副任一有标题）在顶、X 在底；无标题即 0，几何与原状一致。 */
     const titleGap = tokenNum(plotHost, '--spacing-axis-title-gap');
     const titleLineH = tokenNum(plotHost, '--line-height-axis-title');
@@ -198,9 +229,17 @@ export function CartesianChart(host, cfg) {
     const labelHeadroom = (showBarLabel || showLineLabel) ? labelLineH + labelGap : 0;
     const { gridH } = verticalGeometry(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
-      yForm, navH, titleTopH, titleBottomH,
+      yForm, navH, titleTopH, titleBottomH, xBandLines,
     });
-    const headroom = labelHeadroom > 0 && gridH > 0 ? labelHeadroom / gridH : 0;
+    /* [EARNINGS-08] 财报点（环 + 待公布标签）同样要落在首末网格线之内：上方并进同一个呼吸位，
+       取两者较大者（它们不会叠在同一个点上：财报点不出数据标签） */
+    const earnVisible = viewResolved.filter((r) => r.type === 'earnings' && r.axis === 'primary');
+    const earnPad = earnVisible.reduce((acc, r) => {
+      const p = earningsPadding(plotHost, r.data);
+      return { top: Math.max(acc.top, p.top), bottom: Math.max(acc.bottom, p.bottom) };
+    }, { top: 0, bottom: 0 });
+    const headroomPx = Math.max(labelHeadroom, earnPad.top);
+    const headroom = headroomPx > 0 && gridH > 0 ? headroomPx / gridH : 0;
 
     /* [SCALE-01/04] 值域（见 domain.js）：双轴共享刻度 + 0 对齐；单轴普通 niceSplit */
     let pSplit;
@@ -211,17 +250,42 @@ export function CartesianChart(host, cfg) {
     } else {
       pSplit = niceSplit(...axisDomain(viewCats, primary, stack, state.hidden), { headroom });
     }
+    /* [EARNINGS-08] 底部：刻度恒含 0，全正数据的下界被 0 卡住、headroom 管不到。
+       最低的点（含环半径）若会掉出末条网格线，就把值域下界扩到「最低值 − 半径对应的值」再算一次——
+       数据贴近 0 时轴上因此多出一段负值刻度，这是让点不出界的唯一办法（0 必须在刻度上，SCALE-01）。 */
+    /* 一个点都没有时 extentOf 回落 [0, 0]，不能当成「最低点在 0」去扩下界 */
+    const hasEarnPoints = earnVisible.some((r) => r.data.some((d) => d?.actual != null || d?.estimate != null));
+    if (!dual && hasEarnPoints && earnPad.bottom > 0 && gridH > 0) {
+      const [minV] = extentOf(earnVisible);
+      const perPx = (pSplit.max - pSplit.min) / gridH;
+      const floor = minV - earnPad.bottom * perPx;
+      if (floor < pSplit.min) {
+        const [lo, hi] = axisDomain(viewCats, primary, stack, state.hidden);
+        pSplit = niceSplit(Math.min(lo, floor), hi, { headroom });
+      }
+    }
+
+    /* [EARNINGS-09] 财报图的值全为 0：没有可取整的跨度，0 放在垂直正中，上下各一条网格线、只标 0。
+       （niceSplit 对 [0, 0] 会给出 0~某个间隔的整套刻度，读起来像「有数据、只是很小」） */
+    let labelTicks = pSplit.ticks;
+    if (!dual && earnVisible.length && viewResolved.every((r) => r.type === 'earnings')) {
+      const vals = earnVisible.flatMap((r) => r.data.flatMap((d) => [d?.actual, d?.estimate])).filter((v) => v != null);
+      if (vals.length && vals.every((v) => Number(v) === 0)) {
+        pSplit = { min: -1, max: 1, interval: 1, ticks: [-1, 0, 1] };
+        labelTicks = [0];
+      }
+    }
 
     /* [AXIS-02] 反侧 Y 标签的刻度来源：真·双量纲 = 副轴另一套（dual）；iFinD 单轴 = 镜像主轴同一套（mirror）；否则无 */
-    const oppTicks = dual ? sSplit.ticks : mirror ? pSplit.ticks : null;
+    const oppTicks = dual ? sSplit.ticks : mirror ? labelTicks : null;
 
     /* [AXIS-08] 列宽：outside 时主轴 + 反侧（副轴/镜像）各自测量。
        轴标题不参与——它贴画布外缘，与标签列宽无关（AXISTITLE-04）。 */
-    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, pSplit.ticks.map(yFormat)) : 0;
+    const yLabelWidth = yForm === 'outside' ? measureYLabelWidth(plotHost, labelTicks.map(yFormat)) : 0;
     const yLabelWidthSecondary = oppTicks && yForm === 'outside' ? measureYLabelWidth(plotHost, oppTicks.map(yFormat)) : 0;
     const frame = createFrame(plotHost, {
       ...(usesContainerHeight ? { height: plotHost.clientHeight } : {}),
-      yForm, ySide, yLabelWidth, yLabelWidthSecondary, navH,
+      yForm, ySide, yLabelWidth, yLabelWidthSecondary, navH, xBandLines,
       titleTopH, titleBottomH, titleGap,
     }); /* [GRID-03][DATAZOOM-01][AXISTITLE-02] */
 
@@ -233,7 +297,7 @@ export function CartesianChart(host, cfg) {
     let dataL = frame.grid.left;
     let dataR = frame.grid.right;
     if (yForm === 'inside') {
-      const insetP = yLabelInset(plotHost, pSplit.ticks, yFormat);
+      const insetP = yLabelInset(plotHost, labelTicks, yFormat);
       if (ySide === 'left') dataL += insetP; else dataR -= insetP;
       if (oppTicks) {
         const insetO = yLabelInset(plotHost, oppTicks, yFormat);
@@ -246,10 +310,11 @@ export function CartesianChart(host, cfg) {
     const x = bandX(viewCats, dataL, dataR, { mode: xMode });
 
     renderGrid(frame.svg.append('g'), frame, pSplit.ticks, yP); /* [GRID-01] 网格用主轴刻度像素位 */
-    renderYLabels(frame.svg.append('g'), frame, pSplit.ticks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03] */
+    renderYLabels(frame.svg.append('g'), frame, labelTicks, yP, { form: yForm, side: ySide, format: yFormat, align: yAlign }); /* [AXIS-01/03][EARNINGS-09] 网格画全部刻度，标签只标 labelTicks */
     if (oppTicks) renderYLabels(frame.svg.append('g'), frame, oppTicks, yS, { form: yForm, side: oppSide, format: yFormat, align: yAlign }); /* [AXIS-02] 反侧：副轴另一套 / iFinD 镜像同一套 */
     renderXLabels(frame.svg.append('g'), frame,
-      viewCats.map((c) => ({ label: c, x: x(c) + x.bandwidth() / 2 })), { collision }); /* [AXIS-04..06] */
+      viewCats.map((c, j) => ({ label: c, x: x(c) + x.bandwidth() / 2, sub: viewSub?.[j]?.text, subTone: viewSub?.[j]?.tone })),
+      { collision }); /* [AXIS-04..06][AXIS-09] */
 
     /* [TOOLTIP-11] 纯分组柱（判定按声明：全 bar + stack:none + ≥2 系列）hover 指示线换 block 底色带：
        层此刻创建 → 在网格/轴之上、后续 mark 之下（是底色不是遮罩）；渲染与显隐接线见 bindHover */
@@ -455,6 +520,28 @@ export function CartesianChart(host, cfg) {
       }
     });
 
+    /* [GRID-01] 0 轴基线在所有 mark 之后、数据标签 / 水印之前追加 ⇒ 压在柱 / 线之上。
+       不进 grow：入场生长只作用于图元，0 轴首帧即终态（MOTION）。 */
+    renderBaseline(frame.svg.append('g').attr('class', 'dv-baseline-layer'), frame, yP, pSplit.ticks);
+
+    /* ── [EARNINGS-01..04] 财报预期对比点：画在 0 轴**之后**（压在 0 轴上），数据标签之前。
+       预期环一组、实际点一组（实际点后建 = 在环之上）；两组各挂图例键，显隐 / 弱化分开。
+       状态在 L1 由数据判定，这里只给坐标。不参与入场生长：点没有「长出来」的方向，首帧即终态。 */
+    viewResolved.filter((r) => r.type === 'earnings').forEach((r) => {
+      const ringG = seriesG('dv-earnings-layer dv-earnings-estimates', earnKey(r, 'estimate'));
+      const dotG = seriesG('dv-earnings-layer dv-earnings-actuals', earnKey(r, 'actual'))
+        .style('color', `var(${r.colorVar})`);
+      renderEarningsPoints(ringG, dotG, frame, {
+        items: viewCats.map((c, j) => ({
+          i: j, cx: x(c) + x.bandwidth() / 2, actual: r.data[j]?.actual, estimate: r.data[j]?.estimate,
+        })),
+        y: yOf(r),
+        format,
+      });
+      if (state.hidden.has(earnKey(r, 'estimate'))) ringG.style('display', 'none');
+      if (state.hidden.has(earnKey(r, 'actual'))) dotG.style('display', 'none');
+    });
+
     /* [LABEL-08] 标签层在所有 mark 之后追加 = 压在柱 / 线之上（层级 = DOM 顺序，同 WATERMARK-05），
        水印仍在最末。每系列一个 <g>：color 下发系列色供档① 的 currentColor 取（LABEL-03），
        dataset.key 让图例 hover 弱化连同标签一起生效（applyDim）。
@@ -530,7 +617,9 @@ export function CartesianChart(host, cfg) {
        窗口高亮；拖手柄/拖选区/点击轨道经 onChange 改 win 后整图重绘（Y 轴随之按新窗口重算 = SCALE-02）。 */
     if (zoomOn) {
       const visAll = resolved.filter((r) => !state.hidden.has(r.name));
-      const shadowVals = categories.map((_, i) => Math.max(0, ...visAll.map((r) => Math.abs(r.data[i] ?? 0))));
+      /* 财报点（EARNINGS-01）的数据项是 { actual, estimate }：取实际值，没有就取预期值 */
+      const scalar = (v) => (v != null && typeof v === 'object' ? v.actual ?? v.estimate : v);
+      const shadowVals = categories.map((_, i) => Math.max(0, ...visAll.map((r) => Math.abs(scalar(r.data[i]) ?? 0))));
       renderDataZoom(frame.svg.append('g').attr('class', 'dv-datazoom'), frame, {
         categories, shadow: dzShadow ? shadowVals : null, win, platform,
         align: dzAlign, handle: dzHandle, sliderH: dzSliderH, showShadow: dzShadow, showLabel: dzLabel,

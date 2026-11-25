@@ -102,6 +102,7 @@
     "pc": "12px"
   },
   "line-height-axis": "12px",
+  "line-height-axis-x": "{line-height-axis}",
   "font-weight-axis": "{font-weight-medium}",
   "color-text-axis": {
     "light": "rgba(0, 0, 0, 0.6)",
@@ -150,6 +151,10 @@
     "dark": "rgba(255, 255, 255, 0.06)"
   },
   "color-visualization-tooltip": "#3B3B3B",
+  "color-foreground-layer1": {
+    "light": "#FFFFFF",
+    "dark": "#1A1A1A"
+  },
   "color-text-tooltip-title": "rgba(255, 255, 255, 0.6)",
   "color-text-tooltip-series": "rgba(255, 255, 255, 0.84)",
   "color-text-tooltip-value": "rgba(255, 255, 255, 0.84)",
@@ -200,10 +205,14 @@
   "size-world-heatmap-height": "240px",
   "$section-11": "提示框 Tooltip",
   "font-size-tooltip": "12px",
+  "line-height-tooltip": "16px",
   "font-family-tooltip": "{font-family-cn}",
   "font-weight-tooltip-value": "{font-weight-medium}",
   "spacing-tooltip-pad": "{spacing-8}",
   "spacing-tooltip-row": "{spacing-4}",
+  "spacing-tooltip-title-pad": "0px",
+  "spacing-tooltip-title-gap": "{spacing-tooltip-row}",
+  "size-tooltip-divider": "0px",
   "spacing-tooltip-row-gap": "{spacing-12}",
   "radius-tooltip": "{radius-4}",
   "size-tooltip-max-width": "280px",
@@ -254,6 +263,7 @@
   "size-slider-handle-border": "0.5px",
   "radius-slider-handle": "{radius-6}",
   "radius-slider-mask": "{radius-6}",
+  "spacing-datazoom-band-v": "6px",
   "color-playback-primary-bg": "#FF2436",
   "color-playback-primary-paused-bg": "{color-grey-05}",
   "radius-playback-step": "{radius-4}",
@@ -302,6 +312,13 @@
   "size-line-stroke": "1.5px",
   "size-line-stroke-multi": "1px",
   "size-line-point": "6px",
+  "size-earnings-estimate": "20px",
+  "size-earnings-estimate-stroke": "1.5px",
+  "size-earnings-actual": "16px",
+  "spacing-earnings-label-gap": "{spacing-4}",
+  "font-size-earnings-label": "10px",
+  "line-height-earnings-label": "12px",
+  "font-weight-earnings-label": "{font-weight-bold}",
   "color-visualization-line-point-hover": {
     "light": "#ffffff",
     "dark": "#000000"

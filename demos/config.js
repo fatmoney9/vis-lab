@@ -4,6 +4,7 @@
  * 由 demos/examples.js 统一转出；只装数据与纯函数，不 import d3、不碰 DOM。
  */
 
+import { applyScenario } from './scenarios.js';
 import { chartContentPresentation } from './chart-presentation.js';
 import { AXIS_TITLES, CHART_CAPABILITIES, INITIAL_ZOOM } from './capabilities.js';
 import { RADAR_RATING_BAND_LABELS } from './data/radar.js';
@@ -58,7 +59,8 @@ export const capabilitiesOf = (example) => {
   const ratingRadar = example.chart === 'radar' && sampleCfg.variant === 'rating';
   const singleSeriesRadar = example.chart === 'radar' && sampleCfg.series?.length === 1;
   return {
-    density: caps.density !== false,
+    /* 示例可单独关掉项数旋钮（数据有固定结构、不随 n 变，如 EPS 的 8 个季度） */
+    density: caps.density !== false && example.density !== false,
     zoom: !!caps.zoom, dataLabel: !!caps.dataLabel, axisTitle: !!caps.axisTitle,
     /* [CALLOUT-01] 标注的内容由示例携带，没声明内容的示例不出这个旋钮
        （按示例条件化，先例同 ratingStyle / radarEditable / area） */
@@ -126,6 +128,7 @@ export function buildConfig(example, state = {}) {
     radarGridShape = 'auto', radarShape = 'auto', ratingStyle = 'gradient', ratingBandCount = '6',
     axisLabelLayout = 'auto', radarEditable = 'auto', waterfallColor = 'primary',
     chordVariant = 'undirected', chordLabelLayout = 'arc',
+    scenario = 'normal', /* 数据场景（边界与极端情况，demos/scenarios.js）：playground 全局旋钮 */
   } = state;
   const caps = capabilitiesOf(example);
   const densityOptions = densityOptionsOf(example);
@@ -137,7 +140,8 @@ export function buildConfig(example, state = {}) {
     : (densityOptions[density] ?? densityOptions.few);
   const sourceCfg = example.cfg(count);
   const presentedCfg = example.presentation?.(sourceCfg, { theme }) ?? sourceCfg;
-  const cfg = { ...presentedCfg, platform };
+  /* 数据场景在示例 cfg 产出之后、Ainvest 翻译之前：变换造出的长名称同样经词表转英文 */
+  const cfg = { ...applyScenario(example.chart, presentedCfg, scenario), platform };
   const effectiveEditable = radarEditableOf(example, radarEditable);
   const effectiveAxisLabelLayout = radarAxisLabelLayoutOf(example, axisLabelLayout, radarEditable);
 

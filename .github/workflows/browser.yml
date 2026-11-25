@@ -2,7 +2,7 @@ name: 浏览器合同
 
 # 在真实 Chrome 里打开预览页、验证交互与渲染的合同（tests/browser/*.browser.mjs）。
 # 与「质量门禁」分开：这里不是 ruleset 的必需检查，红了只提示、不拦 PR——
-# 合同依赖 CDN 与系统字体，稳定性还在观察。
+# 合同依赖系统字体，全球热力图另从 CDN 取底图与国旗，稳定性还在观察（d3 已改为仓库内 vendor/d3.v7.9.0.js）。
 
 on:
   pull_request:

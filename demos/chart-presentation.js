@@ -27,6 +27,9 @@ const AINVEST_TEXT = new Map([
   ['该季度含一次性资产处置收益', 'Includes a one-off gain on asset disposal'],
   /* 直角坐标图 */
   ['营业收入', 'Revenue'],
+  /* EPS 预期对比（specs/earnings.md）：图例 / tooltip 行名与 X 轴副标题 */
+  ['实际', 'Actual'], ['预期', 'Estimate'], ['差值', 'Surprise'],
+  ['超预期', 'Beat'], ['符合', 'Met'], ['未达预期', 'Missed'], ['待公布', 'Upcoming'],
   ['成本', 'Cost'],
   ['利润', 'Profit'],
   ['税费', 'Taxes'],

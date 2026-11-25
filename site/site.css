@@ -472,6 +472,12 @@ a { color: inherit; text-decoration: none; }
   --chart-playback-timeline-height: 46px;
   --chart-playback-control-height: 36px;
 }
+/* [PLAYBACK-12] Ainvest 紧凑：外壳给播放条让出的格子同步缩到 80（播放条自身尺寸见 demos/playback/playback.css） */
+.stage__surface[data-theme="ainvest"][data-density="compact"] .chart-playback-layout {
+  --chart-playback-bar-height: 80px;
+  --chart-playback-timeline-height: 36px;
+  --chart-playback-control-height: 24px;
+}
 /* 播放区视觉与 DOM 模板统一由 demos/playback/* 提供，状态机在 demos/playback/controller.js。 */
 
 /* 参数面板与侧栏同形态：贴边、实心浅灰、无圆角无投影，只用一条左发丝线收边 */

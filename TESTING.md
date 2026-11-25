@@ -41,7 +41,7 @@ node --experimental-websocket tests/browser/chord.browser.mjs   # 只跑其中�
 把需要 Chrome 的用例放进去，等于让每个人的每次提交都启动一个浏览器，没装 Chrome 的机器更是直接无法提交。
 
 CI 里它是单独的「浏览器合同」工作流（`.github/workflows/browser.yml`），**不是必需检查**：红了只提示、不拦 PR，
-因为合同依赖 CDN 和系统字体，稳定性还要观察。改 hover、Tooltip、轴贴片相关代码时，合并前要看一眼这个 job。
+因为合同依赖系统字体，全球热力图还要从 CDN 取底图与国旗，稳定性还要观察（d3 自 2026-11-23 起从仓库内 `vendor/d3.v7.9.0.js` 加载，不再走 CDN——此前 jsdelivr `+esm` 首字节常要 15s，是合同间歇超时的主因）。改 hover、Tooltip、轴贴片相关代码时，合并前要看一眼这个 job。
 `tests/browser/run.mjs` 自动发现 `tests/browser/*.browser.mjs`，加合同不用改 `package.json` 或 CI。
 遗留一件：TOOLTIP-01 的宽度检查仍挂在瀑布合同里，应挪进按规则单独成的 `tooltip.browser.mjs`。
 

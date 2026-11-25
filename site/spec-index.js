@@ -39,6 +39,7 @@ export const SPEC_GROUPS = [
     pages: [
       { id: 'bar', label: '柱状图', prefixes: ['BAR'] },
       { id: 'line', label: '折线图', prefixes: ['LINE'] },
+      { id: 'earnings', label: '财报预期对比', prefixes: ['EARNINGS'] },
       { id: 'hbar', label: '横向条形图', prefixes: ['HBAR'] },
       { id: 'pie', label: '饼图与环形图', prefixes: ['PIE'] },
       { id: 'radar', label: '雷达图', prefixes: ['RADAR'] },
