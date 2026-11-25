@@ -5,14 +5,16 @@
    不设描边：扇区间无间隙（PIE-01），描边会在相邻扇区之间挤出一条比设计稿更宽的缝。 */
 .dv-pie-sector { fill: currentColor; }
 
-/* [PIE-12] 外侧标签的引线：跟随所在扇区 <g> 的 currentColor（= 该扇区的固定色槽，COLOR-08）——
-   色彩关联由线承担，文字才得以走中性色（LABEL-09 档③）。
+/* [PIE-12] 外侧标签的引线：中性灰，**与 hover 指示线（十字光标）同一个色 token**
+   --color-visualization-highlight-line——都是「指向某个数据」的辅助线，不承载数据本身。
+   早先跟随扇区色（currentColor），一圈彩色折线与扇区抢视觉；色彩关联交还给扇区与图例，
+   标签文字仍走中性色（LABEL-09 档③）。只取色、不取虚实：iFinD 的指示线是虚线，引线恒实线。
    线宽复用全库细线宽 --size-grid-line（网格线 / 轴线 / tooltip 指示线同源），不设自有 token。
    [PIE-17] 引线**参与命中**（早先是 pointer-events:none）：它与扇区在同一个 <g> 里、绑的是
    同一套处理器，抢不抢得到都指向同一个扇区，那条「会抢走本该落到扇区的 hover」的顾虑不成立。 */
 .dv-pie-label-line {
   fill: none;
-  stroke: currentColor;
+  stroke: var(--color-visualization-highlight-line);
   stroke-width: var(--size-grid-line);
 }
 /* [PIE-17] 引线的命中带：与可见引线同形同点、透明加粗，只为让 1px 的线能被指针够着。
@@ -22,4 +24,24 @@
   fill: none;
   stroke: transparent;
   pointer-events: stroke;
+}
+
+/* [PIE-18] 环心合计：两行文字（标签 + 合计值），整块在圆心上下居中。
+   字号 / 行高 / 字重全走 token（紧凑档只覆盖数值行，见 tokens/density.json）；
+   行高不写进 CSS——SVG <text> 不吃 line-height，行高 token 由 L2 读去排块高。
+   这两个类同时用于渲染与测量（measureTexts），放不下的判定才与所见一致。
+   不接命中：环心是空洞，不属于任何扇区，hover 落在这里不该触发谁。 */
+.dv-pie-center-label {
+  fill: var(--color-text-secondary);
+  font-size: var(--font-size-donut-center-label);
+  font-weight: var(--font-weight-donut-center-label);
+  pointer-events: none;
+}
+.dv-pie-center-value {
+  fill: var(--color-text-primary);
+  font-size: var(--font-size-donut-center-value);
+  font-weight: var(--font-weight-donut-center-value);
+  font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }

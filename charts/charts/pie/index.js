@@ -21,13 +21,15 @@
  *         labelLayout（形态语义）：'outside' 引线外侧（默认，PIE-12）/ 'inside' 扇区内（PIE-04）—— 互斥
  *         labelAlign（形态语义）：'anchor' 就近 / 'column' 同侧成列 / 'edge' 贴边（PIE-13）—— 仅 outside 生效
  *         animation（语义配置）：true 入场扫掠 / false 直接终态；系统「减弱动态效果」下恒终态（MOTION-07）
+ *         centerTotal（语义配置）：true（默认）环心写「合计 + 可见扇区之和」/ false 不写；仅 donut 生效（PIE-18）
+ *         text（可选）：组件固定文案整套替换（CHARTTEXT-02），键见 PIE_TEXT
  */
 import { select, arc } from 'd3';
 import { createFrame, observeResize, containerDrivesHeight, containerTookOver, createBuildRetry } from '../../core/frame.js';
 import { tokenNum } from '../../core/tokens.js';
 import { resolveBehavior, modeOf } from '../../core/theme.js';
 import { makeFormatter } from '../../core/format.js';
-import { measureTexts } from '../../core/measure.js';
+import { measureTexts, measureFontBox } from '../../core/measure.js';
 import { resolveSeriesColors } from '../../core/palette.js';
 import { renderLegend, dimByKey } from '../../core/legend.js';
 import { applyFocus, legendHandlers, emphasisKey } from '../../core/legend-state.js';
@@ -35,6 +37,7 @@ import { renderDataLabels, dropCollisions, dropOversized, truncateBatch } from '
 import { renderWatermark } from '../../core/watermark.js';
 import { createTooltip } from '../../core/tooltip.js';
 import { runGrowth, reducedMotion } from '../../core/motion.js';
+import { resolveChartText } from '../../core/chart-text.js';
 import { sliceAngles, donutRadii, labelAnchor, leaderElbow, alignOutside, labelBandPx } from './geometry.js';
 
 /* [PIE-03] 图例 marker 类型键：三主题都按这个键取「饼/环 6×6 圆点」——
@@ -62,12 +65,20 @@ const LEGEND_MAX_PLOT_RATIO = 2;
    ⚠️ 值再往上加要先验一遍密集档：它是以引线为中线向两侧摊开的，太宽会盖住邻扇区外扩后的那一圈。 */
 const LINE_HIT_WIDTH = 10;
 
+/* [PIE-18][CHARTTEXT-01] 组件写死的文案缺省表（中文）。英文由 L3 经 config.text 整套注入。 */
+const PIE_TEXT = {
+  centerLabel: '合计',
+};
+const CENTER_LABEL_CLASS = 'dv-pie-center-label';
+const CENTER_VALUE_CLASS = 'dv-pie-center-value';
+
 export function PieChart(host, cfg) {
   const {
     name, items, variant = 'donut', legend = 'right', platform = 'pc',
     dataLabel = 'auto', labelLayout = 'outside', labelAlign = 'anchor', animation = true,
-    legendSelect = 'multi',
+    legendSelect = 'multi', centerTotal = true,
   } = cfg;
+  const chartText = resolveChartText(PIE_TEXT, cfg.text, 'PieChart');
   /* [PIE-02] 调用方明确给容器高度时随容器适配；未给时用环形容器 token 作高度包络（口径同 GRID-03）。 */
   let usesContainerHeight = containerDrivesHeight(host.clientHeight);
   /* 本组件上一次 build 结束时图表根的高度。它是 observeResize 判断「这次变高是不是我自己弄的」
@@ -619,6 +630,45 @@ export function PieChart(host, cfg) {
       });
     }
 
+    /* [PIE-18] 环心合计：标签行 + 数值行，整块以圆心为中心上下居中。
+       合计 = **可见**扇区之和（与角度同一个分母，PIE-01）：点图例隐藏一项，合计跟着变，
+       环上的占比与环心的总量才说的是同一件事。格式化与标签 / 气泡同一份（FORMAT-01）。
+       放不下就整块不写（同 LABEL-06③「放不下就不放」）：可用宽取块的上下沿处内圆的弦长——
+       那是块里最窄的地方；合计值是读数，截断的数字是错的数字，故不截（同 PIE-16 的数值段）。
+       不进 sectorLayer：它不属于任何扇区，不该随图例 hover 弱化。 */
+    let centerLayer = null;
+    const total = visible.reduce((acc, r) => (r.value != null && r.value > 0 ? acc + r.value : acc), 0);
+    if (centerTotal && variant === 'donut' && slices.length && innerR > 0) {
+      const labelLH = tokenNum(plotHost, '--line-height-donut-center-label') || 16;
+      const valueLH = tokenNum(plotHost, '--line-height-donut-center-value') || 22;
+      const centerH = labelLH + valueLH;
+      const valueText = format(total);
+      const [labelW] = measureTexts(plotHost, [chartText.centerLabel], CENTER_LABEL_CLASS);
+      const [valueW] = measureTexts(plotHost, [valueText], CENTER_VALUE_CLASS);
+      const halfChord = innerR > centerH / 2 ? Math.sqrt(innerR ** 2 - (centerH / 2) ** 2) : 0;
+      if (Math.max(labelW, valueW) <= 2 * halfChord) {
+        centerLayer = frame.svg.append('g').attr('class', 'dv-pie-center')
+          .attr('transform', `translate(${cx},${cy})`);
+        /* 每行在自己的行框内上下居中（与 X 轴标签 AXIS-04 同一排字口径）：
+           基线 = 行框顶 + 半行距 + ascent，字体度量走 L1 measureFontBox；取不到度量时退回 central。 */
+        const baselineOf = (cls, boxTop, lh) => {
+          const fb = measureFontBox(plotHost, cls);
+          return Number.isFinite(fb?.ascent) ? { y: boxTop + (lh - fb.ascent - fb.descent) / 2 + fb.ascent, baseline: null }
+            : { y: boxTop + lh / 2, baseline: 'central' };
+        };
+        [
+          { cls: CENTER_LABEL_CLASS, text: chartText.centerLabel, ...baselineOf(CENTER_LABEL_CLASS, -centerH / 2, labelLH) },
+          { cls: CENTER_VALUE_CLASS, text: valueText, ...baselineOf(CENTER_VALUE_CLASS, -centerH / 2 + labelLH, valueLH) },
+        ].forEach((ln) => centerLayer.append('text')
+          .attr('class', ln.cls)
+          .attr('x', 0)
+          .attr('y', ln.y)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', ln.baseline)
+          .text(ln.text));
+      }
+    }
+
     applyDim();
 
     /* [PIE-07] 水印置顶：build 末尾追加 = DOM 顺序最上。锚 frame.grid——本族的 grid 就是整块画布
@@ -644,6 +694,7 @@ export function PieChart(host, cfg) {
     const leaderLines = sectorLayer.selectAll('polyline.dv-pie-label-line, polyline.dv-pie-label-line-hit');
     const showAnnotations = (on) => {
       if (labelLayer) labelLayer.style('display', on ? null : 'none');
+      if (centerLayer) centerLayer.style('display', on ? null : 'none'); /* [PIE-18] 合计随标签终态出现 */
       leaderLines.style('display', on ? null : 'none');
     };
     showAnnotations(false);
