@@ -308,7 +308,7 @@
   --font-weight-radar-label: var(--font-weight-regular);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
-  --color-waterfall-connector: var(--color-visualization-divider);
+  --color-waterfall-connector: rgba(0, 0, 0, 0.2);
   --size-waterfall-connector: 1px;
   --dash-waterfall-connector: 2 2;
   --opacity-waterfall-delta-fill: 0.2;
@@ -362,6 +362,7 @@
   --color-grey-03: #575757;
   --color-grey-04: #6E6E6E;
   --color-visualization-line-point-hover: #000000;
+  --color-waterfall-connector: rgba(255, 255, 255, 0.22);
 }
 
 [data-theme="ifind-pc"] {
@@ -669,7 +670,7 @@
   --font-weight-radar-label: var(--font-weight-regular);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
-  --color-waterfall-connector: var(--color-visualization-divider);
+  --color-waterfall-connector: rgba(0, 0, 0, 0.2);
   --size-waterfall-connector: 1px;
   --dash-waterfall-connector: 2 2;
   --opacity-waterfall-delta-fill: 0.2;
@@ -726,6 +727,7 @@
   --color-grey-02: #3B3B3B;
   --color-grey-03: #575757;
   --color-grey-04: #6E6E6E;
+  --color-waterfall-connector: rgba(255, 255, 255, 0.22);
 }
 
 [data-theme="ainvest"] {
@@ -1033,7 +1035,7 @@
   --font-weight-radar-label: var(--font-weight-bold);
   --font-size-radar-label-value: var(--font-size-extra-small);
   --line-height-radar-label-value: var(--line-height-small);
-  --color-waterfall-connector: var(--color-visualization-divider);
+  --color-waterfall-connector: rgba(0, 0, 0, 0.2);
   --size-waterfall-connector: 1px;
   --dash-waterfall-connector: 2 2;
   --opacity-waterfall-delta-fill: 0.2;
@@ -1111,6 +1113,7 @@
   --color-grey-03: #575757;
   --color-grey-04: #6E6E6E;
   --color-visualization-line-point-hover: #000000;
+  --color-waterfall-connector: rgba(255, 255, 255, 0.22);
 }
 
 [data-theme="ainvest"][data-platform="mobile"][data-mode="dark"] {
